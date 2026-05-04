@@ -14,39 +14,39 @@
  * The `fileId` field must be consistent across all APIs for the same file.
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Subject schemas
 // ---------------------------------------------------------------------------
 
 export const PersonSubjectSchema = z.object({
-  personId:  z.string().uuid(),
+  personId: z.uuid(),
   firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.string().email(),
-})
+  lastName: z.string(),
+  email: z.string().email(),
+});
 
 export const TextFileSubjectSchema = z.object({
-  fileId:   z.string().uuid(),
-  ownerId:  z.string().uuid(),
-  language: z.enum(['nl', 'en', 'de']),
+  fileId: z.uuid(),
+  ownerId: z.uuid(),
+  language: z.enum(["nl", "en", "de"]),
   sizeBytes: z.number().int().min(1).max(50_000_000),
-})
+});
 
 export const AudioFileSubjectSchema = z.object({
-  fileId:    z.string().uuid(),
-  ownerId:   z.string().uuid(),
+  fileId: z.uuid(),
+  ownerId: z.uuid(),
   durationS: z.number().int().min(1).max(7200),
   sizeBytes: z.number().int().min(1).max(500_000_000),
-})
+});
 
 export const BankFileSubjectSchema = z.object({
-  fileId:   z.string().uuid(),
-  ownerId:  z.string().uuid(),
-  bank:     z.enum(['ING', 'ABN', 'RABO', 'SNS']),
+  fileId: z.uuid(),
+  ownerId: z.uuid(),
+  bank: z.enum(["ING", "ABN", "RABO", "SNS"]),
   sizeBytes: z.number().int().min(1).max(5_000_000),
-})
+});
 
 // ---------------------------------------------------------------------------
 // API schemas
@@ -54,44 +54,49 @@ export const BankFileSubjectSchema = z.object({
 
 /** Rawdata API — one record per file, all types combined. */
 export const RawDataSchema = z.object({
-  id:        z.string().uuid(),
-  type:      z.enum(['text', 'audio', 'bank']),
+  id: z.uuid(),
+  type: z.enum(["text", "audio", "bank"]),
   sizeBytes: z.number().int().min(1),
   uploadedAt: z.date(),
-  status:    z.enum(['queued', 'processing', 'done', 'failed']),
-})
+  status: z.enum(["queued", "processing", "done", "failed"]),
+});
 
 /** Text API — transcript + language info for text files. */
 export const TextApiSchema = z.object({
-  fileId:      z.string().uuid(),
-  uploadedBy:  z.string().uuid(),
-  language:    z.enum(['nl', 'en', 'de']),
-  transcript:  z.string().min(1),
-  wordCount:   z.number().int().min(1),
-})
+  fileId: z.uuid(),
+  uploadedBy: z.uuid(),
+  language: z.enum(["nl", "en", "de"]),
+  transcript: z.string().min(1),
+  wordCount: z.number().int().min(1),
+});
 
 /** Audio API — audio file metadata and processing info. */
 export const AudioApiSchema = z.object({
-  fileId:     z.string().uuid(),
-  uploadedBy: z.string().uuid(),
-  durationS:  z.number().int().min(1),
-  sampleRate: z.union([z.literal(8000), z.literal(16000), z.literal(44100), z.literal(48000)]),
-})
+  fileId: z.uuid(),
+  uploadedBy: z.uuid(),
+  durationS: z.number().int().min(1),
+  sampleRate: z.union([
+    z.literal(8000),
+    z.literal(16000),
+    z.literal(44100),
+    z.literal(48000),
+  ]),
+});
 
 /** Bank API — bank statement metadata. */
 export const BankApiSchema = z.object({
-  fileId:     z.string().uuid(),
-  uploadedBy: z.string().uuid(),
-  bank:       z.enum(['ING', 'ABN', 'RABO', 'SNS']),
+  fileId: z.uuid(),
+  uploadedBy: z.uuid(),
+  bank: z.enum(["ING", "ABN", "RABO", "SNS"]),
   periodStart: z.date(),
-  periodEnd:   z.date(),
-})
+  periodEnd: z.date(),
+});
 
 /** Entity API — person with all their associated file IDs. */
 export const EntityApiSchema = z.object({
-  personId:   z.string().uuid(),
-  firstName:  z.string(),
-  lastName:   z.string(),
-  fileIds:    z.array(z.string().uuid()),
-  fileCount:  z.number().int().min(0),
-})
+  personId: z.uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  fileIds: z.array(z.uuid()),
+  fileCount: z.number().int().min(0),
+});

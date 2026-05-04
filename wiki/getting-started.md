@@ -21,14 +21,17 @@ npm install zod4-mock zod@^4
 A **subject type** is a named domain entity — the source of truth for its identity fields. Think of it as the "master record" for a person, company, file, or any other entity your API surfaces.
 
 ```ts
-import { z } from 'zod'
-import { defineSubjectType } from 'zod4-mock'
+import { z } from "zod";
+import { defineSubjectType } from "zod4-mock";
 
-const PersonSubject = defineSubjectType('person', z.object({
-  firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.string().email(),
-}))
+const PersonSubject = defineSubjectType(
+  "person",
+  z.object({
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email(),
+  }),
+);
 ```
 
 The schema you pass here does **not** need to match your API response shapes. It only needs to contain the fields you want to derive from (names, IDs, etc.). The library generates this subject data first, then you map it to your API shapes in Step 3.
@@ -40,10 +43,9 @@ The schema you pass here does **not** need to match your API response shapes. It
 A **world** is a seeded generation session. Pass a `seed` number; the same seed always produces the same data.
 
 ```ts
-import { createWorld } from 'zod4-mock'
+import { createWorld } from "zod4-mock";
 
-const world = createWorld({ seed: 42 })
-  .withSubject(PersonSubject)
+const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
 ```
 
 `.withSubject()` registers the subject type so the world knows how to create instances of it. Returns `this` for fluent chaining.
@@ -56,31 +58,33 @@ Your app schema is what your API actually returns. Bind it to the subject type w
 
 ```ts
 const PersonApiSchema = z.object({
-  id:        z.string().uuid(),
+  id: z.uuid(),
   firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.string().email(),
-  age:       z.number().int().min(18).max(90),
-  active:    z.boolean(),
-  role:      z.enum(['admin', 'user', 'viewer']),
-})
+  lastName: z.string(),
+  email: z.string().email(),
+  age: z.number().int().min(18).max(90),
+  active: z.boolean(),
+  role: z.enum(["admin", "user", "viewer"]),
+});
 
 const world = createWorld({ seed: 42 })
   .withSubject(PersonSubject)
   .withSchema(PersonApiSchema, PersonSubject, {
     // Derive these fields from the subject instance
     firstName: (s) => s.firstName,
-    lastName:  (s) => s.lastName,
-    email:     (s) => s.email,
+    lastName: (s) => s.lastName,
+    email: (s) => s.email,
     // id, age, active, role — not listed → auto-generated from field name / schema type
-  })
+  });
 ```
 
 Matcher functions receive `(subject, ctx)`:
+
 - `subject` — the active subject instance's data fields plus `_type` and `_id`
 - `ctx` — `{ prng, registry, fieldPath }` for advanced use
 
 Any field **not** covered by a matcher falls through the generation pipeline:
+
 1. Key-based heuristics (field named `id`? → UUID. `age`? → schema-based number.)
 2. Schema-based generator (reads Zod type: `z.enum(...)` → random member, etc.)
 
@@ -90,11 +94,11 @@ Any field **not** covered by a matcher falls through the generation pipeline:
 
 ```ts
 // Array — length from Zod constraints
-const people = world.generate(z.array(PersonApiSchema).min(3).max(10))
+const people = world.generate(z.array(PersonApiSchema).min(3).max(10));
 // → typed as { id: string; firstName: string; ... }[]
 
 // Single object
-const person = world.generate(PersonApiSchema)
+const person = world.generate(PersonApiSchema);
 ```
 
 The return type is fully inferred from the schema — no casting needed.
@@ -123,8 +127,8 @@ After generation, you can pin specific fields without re-doing the whole setup.
 
 ```ts
 const failedPerson = world.generate(PersonApiSchema, {
-  overrides: { active: false, role: 'viewer' },
-})
+  overrides: { active: false, role: "viewer" },
+});
 // → same person data but active=false, role='viewer'
 ```
 
@@ -133,7 +137,7 @@ const failedPerson = world.generate(PersonApiSchema, {
 ```ts
 const uppercased = world.generate(PersonApiSchema, {
   transform: (p) => ({ ...p, firstName: p.firstName.toUpperCase() }),
-})
+});
 ```
 
 Both can be combined: overrides are applied first, then the transform receives the merged result.

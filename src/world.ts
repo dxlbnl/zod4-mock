@@ -77,6 +77,7 @@ interface SubjectRegPair {
 interface ZodDefShape {
   type: string
   element?: ZodTypeAny
+  innerType?: ZodTypeAny
   shape?: Record<string, ZodTypeAny>
   checks?: Array<{ check: string; minimum?: number; maximum?: number; length?: number }>
 }
@@ -417,16 +418,36 @@ export class WorldImpl implements World {
 
       if (matcher) {
         result[key] = matcher(subjectArg, fieldCtx)
-      } else {
-        const customGen = this.customKeyGenerators.get(key.toLowerCase())
-        if (customGen !== undefined) {
-          result[key] = customGen(fieldSchema, fieldCtx)
-        } else {
-          const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
-          result[key] = keyResult !== undefined
-            ? keyResult
-            : generateFromSchema(fieldSchema, fieldCtx)
+        continue
+      }
+
+      // Unwrap optional/nullable so key-based generators see the inner schema,
+      // and handle the absent-value probability here rather than deep inside
+      // generateFromSchema where the field key is no longer available.
+      const fd = getZodDef(fieldSchema)
+      let innerSchema = fieldSchema
+      if (fd.type === 'optional') {
+        if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
+          result[key] = undefined
+          continue
         }
+        innerSchema = fd.innerType ?? fieldSchema
+      } else if (fd.type === 'nullable') {
+        if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
+          result[key] = null
+          continue
+        }
+        innerSchema = fd.innerType ?? fieldSchema
+      }
+
+      const customGen = this.customKeyGenerators.get(key.toLowerCase())
+      if (customGen !== undefined) {
+        result[key] = customGen(innerSchema, fieldCtx)
+      } else {
+        const keyResult = generateFromKey(key, innerSchema, fieldCtx)
+        result[key] = keyResult !== undefined
+          ? keyResult
+          : generateFromSchema(innerSchema, fieldCtx)
       }
     }
 

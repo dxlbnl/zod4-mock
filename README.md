@@ -24,7 +24,7 @@ const PersonSubject = defineSubjectType(
 
 // 2. Define your API schema
 const PersonApiSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().email(),
@@ -76,21 +76,21 @@ import { createWorld, defineSubjectType } from "zod4-mock";
 const TextFile = defineSubjectType(
   "text-file",
   z.object({
-    fileId: z.string().uuid(),
-    ownerId: z.string().uuid(),
+    fileId: z.uuid(),
+    ownerId: z.uuid(),
   }),
 );
 
 // Two completely different API response shapes...
 const RawDataSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   type: z.literal("text"),
   sizeBytes: z.number().int().min(1),
 });
 
 const TextApiSchema = z.object({
-  fileId: z.string().uuid(),
-  uploadedBy: z.string().uuid(),
+  fileId: z.uuid(),
+  uploadedBy: z.uuid(),
   wordCount: z.number().int().min(1),
 });
 

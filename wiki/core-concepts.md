@@ -6,7 +6,7 @@ This page explains the mental model behind `zod4-mock`. Read it once and the res
 
 ## The two-layer model
 
-`zod4-mock` separates *identity* from *representation*:
+`zod4-mock` separates _identity_ from _representation_:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -33,32 +33,32 @@ This separation is what enables cross-API consistency: two completely different 
 A **world** is a seeded generation session. It holds the PRNG, the registry, all registered subject types, and all schema bindings.
 
 ```ts
-import { createWorld } from 'zod4-mock'
+import { createWorld } from "zod4-mock";
 
 const world = createWorld({ seed: 42 })
   .withSubject(PersonSubject)
-  .withSchema(PersonApiSchema, PersonSubject, matchers)
+  .withSchema(PersonApiSchema, PersonSubject, matchers);
 ```
 
 One world = one seed = one deterministic dataset.
 
 ### WorldOptions
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `seed` | `number` | *(required)* | Master seed. Same seed → same output. |
-| `optionalProbability` | `number` | `0.2` | Probability in [0,1] that `z.optional()` / `z.nullable()` fields are omitted. |
-| `defaultArrayLength` | `[number, number]` | `[1, 5]` | Fallback length range for `z.array()` schemas with no min/max constraints. |
-| `generators` | `Record<string, KeyGenerator>` | `{}` | Custom key-based generators applied to every schema in the world. |
+| Option                | Type                           | Default      | Description                                                                   |
+| --------------------- | ------------------------------ | ------------ | ----------------------------------------------------------------------------- |
+| `seed`                | `number`                       | _(required)_ | Master seed. Same seed → same output.                                         |
+| `optionalProbability` | `number`                       | `0.2`        | Probability in [0,1] that `z.optional()` / `z.nullable()` fields are omitted. |
+| `defaultArrayLength`  | `[number, number]`             | `[1, 5]`     | Fallback length range for `z.array()` schemas with no min/max constraints.    |
+| `generators`          | `Record<string, KeyGenerator>` | `{}`         | Custom key-based generators applied to every schema in the world.             |
 
 ### Calling `generate` multiple times
 
 Each call to `world.generate()` advances an internal counter. For schemas bound to subject types, successive calls cycle through subjects deterministically. This means:
 
 ```ts
-const a = world.generate(PersonApiSchema) // → person#1's data
-const b = world.generate(PersonApiSchema) // → person#2's data
-const c = world.generate(PersonApiSchema) // → person#1's data again (cycles)
+const a = world.generate(PersonApiSchema); // → person#1's data
+const b = world.generate(PersonApiSchema); // → person#2's data
+const c = world.generate(PersonApiSchema); // → person#1's data again (cycles)
 ```
 
 The same seed + same call order = same output, always.
@@ -70,20 +70,23 @@ The same seed + same call order = same output, always.
 ### Defining a subject type
 
 ```ts
-import { defineSubjectType } from 'zod4-mock'
+import { defineSubjectType } from "zod4-mock";
 
-const PersonSubject = defineSubjectType('person', z.object({
-  firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.string().email(),
-}))
+const PersonSubject = defineSubjectType(
+  "person",
+  z.object({
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email(),
+  }),
+);
 ```
 
 `defineSubjectType(name, schema, options?)` returns a descriptor object. Register it with `world.withSubject(PersonSubject)`.
 
-The subject schema should be a `z.object(...)`. It defines the *identity fields* — the data you want to derive from in matchers. It does not need to match your API response shape.
+The subject schema should be a `z.object(...)`. It defines the _identity fields_ — the data you want to derive from in matchers. It does not need to match your API response shape.
 
-**Keep subject schemas minimal.** A subject schema like `z.object({ documentId: z.string().uuid() })` is perfectly valid if all you need from a document subject is its ID.
+**Keep subject schemas minimal.** A subject schema like `z.object({ documentId: z.uuid() })` is perfectly valid if all you need from a document subject is its ID.
 
 ### SubjectInstance shape
 
@@ -106,11 +109,11 @@ When the world creates a subject it produces an instance with three parts:
 ### Getting a subject instance directly
 
 ```ts
-const instance = world.subject('person')
+const instance = world.subject("person");
 // → { _type: 'person', _id: 'person#1', data: { firstName: '...', ... } }
 ```
 
-Each call returns the *next* instance of that type. The sequence is lazy and deterministic.
+Each call returns the _next_ instance of that type. The sequence is lazy and deterministic.
 
 ---
 
@@ -142,7 +145,7 @@ If neither matcher nor key heuristic fires, the generator introspects the Zod ty
 
 - `z.string()` → random words (respects `.min()`, `.max()`)
 - `z.string().email()` → valid email address
-- `z.string().uuid()` → RFC 4122 v4 UUID
+- `z.uuid()` → RFC 4122 v4 UUID
 - `z.number().int().min(1).max(100)` → integer in [1, 100]
 - `z.enum(['a', 'b', 'c'])` → random member
 - `z.literal(42)` → `42`
@@ -160,7 +163,9 @@ If neither matcher nor key heuristic fires, the generator introspects the Zod ty
 After generation, a `DeepPartial<T>` is deep-merged into the result. Nested objects are merged recursively; arrays are replaced entirely.
 
 ```ts
-world.generate(schema, { overrides: { status: 'failed', meta: { retries: 3 } } })
+world.generate(schema, {
+  overrides: { status: "failed", meta: { retries: 3 } },
+});
 ```
 
 ### 5. Transform
@@ -171,29 +176,31 @@ A final function `(data: T) => T` applied after overrides. Ideal for array-index
 world.generate(schema, {
   transform: (d) => ({
     ...d,
-    steps: d.steps.map((s, i) => i === 2 ? { ...s, status: 'failed' as const } : s),
+    steps: d.steps.map((s, i) =>
+      i === 2 ? { ...s, status: "failed" as const } : s,
+    ),
   }),
-})
+});
 ```
 
 ### Tracing a field through the pipeline
 
 ```ts
 const schema = z.object({
-  id:     z.string().uuid(),   // key heuristic: 'id' → UUID
-  email:  z.string().email(),  // matcher: derives from subject
-  status: z.enum(['a','b']),   // override: pinned to 'a'
-  notes:  z.string(),          // key heuristic: 'notes' → lorem text
-  count:  z.number().int(),    // schema-based: random int
-})
+  id: z.uuid(), // key heuristic: 'id' → UUID
+  email: z.string().email(), // matcher: derives from subject
+  status: z.enum(["a", "b"]), // override: pinned to 'a'
+  notes: z.string(), // key heuristic: 'notes' → lorem text
+  count: z.number().int(), // schema-based: random int
+});
 
 world.withSchema(schema, PersonSubject, {
-  email: (s) => s.email,       // ← matcher (priority 1)
-})
+  email: (s) => s.email, // ← matcher (priority 1)
+});
 
 world.generate(schema, {
-  overrides: { status: 'a' },  // ← override (priority 4)
-})
+  overrides: { status: "a" }, // ← override (priority 4)
+});
 // id    → UUID        (key heuristic, priority 2)
 // email → subject's email  (matcher, priority 1)
 // status → 'a'       (override, priority 4)
@@ -211,11 +218,11 @@ The registry is the bridge between independently generated datasets. Every subje
 
 ```ts
 interface Registry {
-  all<T>(type: string): T[]
-  pick<T>(type: string): T                                    // throws if empty
-  pickBy<T>(type: string, predicate: (item: T) => boolean): T // throws if no match
-  filter<T>(type: string | string[], predicate: (item: T) => boolean): T[]
-  count(type: string): number
+  all<T>(type: string): T[];
+  pick<T>(type: string): T; // throws if empty
+  pickBy<T>(type: string, predicate: (item: T) => boolean): T; // throws if no match
+  filter<T>(type: string | string[], predicate: (item: T) => boolean): T[];
+  count(type: string): number;
 }
 ```
 
@@ -254,9 +261,9 @@ Because all schemas pull from the same registry, `annotation.sentenceId` is guar
 ### Reading the registry after generation
 
 ```ts
-const invoices = world.generate(z.array(InvoiceSchema))
-const allCustomers = world.registry.all<CustomerData>('customer')
-const count = world.registry.count('customer')
+const invoices = world.generate(z.array(InvoiceSchema));
+const allCustomers = world.registry.all<CustomerData>("customer");
+const count = world.registry.count("customer");
 ```
 
 ---
@@ -266,10 +273,10 @@ const count = world.registry.count('customer')
 `optionalProbability` (default `0.2`) controls how often `z.optional()` and `z.nullable()` fields are omitted or nulled during schema-based generation.
 
 ```ts
-createWorld({ seed: 42, optionalProbability: 0 })
+createWorld({ seed: 42, optionalProbability: 0 });
 // → optional fields are always present (0% omission chance)
 
-createWorld({ seed: 42, optionalProbability: 1 })
+createWorld({ seed: 42, optionalProbability: 1 });
 // → optional fields are always absent (100% omission chance)
 ```
 
