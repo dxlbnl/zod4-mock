@@ -8,6 +8,7 @@
  */
 
 import { createWorld, defineSubjectType } from '../../../src/index.js'
+import type { Prng } from '../../../src/index.js'
 import {
   CustomerSubjectSchema,
   ProductSubjectSchema,
@@ -25,32 +26,46 @@ type ProductData = {
   unitPriceCents: number
 }
 
+function makeUuid(p: Prng): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = p.int(0, 15)
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
 export function createInvoicingWorld(seed = 42) {
+  const lineTotals = new Map<string, number>()
+
   return createWorld({ seed })
     .withSubject(CustomerSubject)
     .withSubject(ProductSubject)
 
     // Invoice: one per customer subject
     .withSchema(InvoiceSchema, CustomerSubject, {
-      id:         (_, ctx) => ctx.prng.fork('invoice-id').random().toString(36).slice(2),
+      id: (_, ctx) => makeUuid(ctx.prng.fork('invoice-id')),
       customerId: (s) => s.customerId,
-      lines: (_, ctx) => {
+      lines: (s, ctx) => {
         const count = ctx.prng.int(1, 4)
-        return Array.from({ length: count }, () => {
+        let total = 0
+        const lines = Array.from({ length: count }, () => {
           const product = ctx.registry.pick<ProductData>('product')
           const quantity       = ctx.prng.int(1, 10)
           const unitPriceCents = product.unitPriceCents
+          const lineTotalCents = quantity * unitPriceCents
+          total += lineTotalCents
           return {
             productId:      product.productId,
             sku:            product.sku,
             description:    product.name,
             quantity,
             unitPriceCents,
-            totalCents:     quantity * unitPriceCents,
+            totalCents:     lineTotalCents,
           }
         })
+        lineTotals.set(s._id, total)
+        return lines
       },
-      totalCents: () => 0,
+      totalCents: (s) => lineTotals.get(s._id) ?? 1,
     })
 
     // Customer summary: aggregates across customers in the registry

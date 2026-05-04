@@ -255,7 +255,23 @@ export class WorldImpl implements World {
       fieldPath:          '',
       optionalProbability: 0, // subject data always fully populated
     }
-    const data = generateFromSchema(subjectType.schema, ctx) as SubjectData<AnySubjectType>
+
+    // Apply key-based generators for subject fields so semantic field names
+    // (firstName, lastName, email, etc.) produce meaningful values.
+    const subjectShape = getZodDef(subjectType.schema).shape!
+    const rawData: Record<string, unknown> = {}
+    for (const [key, fieldSchema] of Object.entries(subjectShape)) {
+      const fieldCtx: GeneratorContext = {
+        ...ctx,
+        prng:      ctx.prng.fork(key),
+        fieldPath: key,
+      }
+      const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
+      rawData[key] = keyResult !== undefined
+        ? keyResult
+        : generateFromSchema(fieldSchema, fieldCtx)
+    }
+    const data = rawData as SubjectData<AnySubjectType>
 
     const instance: AnySubjectInstance = { _type: typeName, _id, data }
     this.allInstances.push(instance)

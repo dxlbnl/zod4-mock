@@ -247,7 +247,7 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return Array.from({ length }, (_, i) =>
         generateFromSchema(d.element!, {
           ...ctx,
-          prng: ctx.prng.fork(`[${i}]`),
+          prng: ctx.prng.fork(`el-${i}`),
           fieldPath: `${ctx.fieldPath}[${i}]`,
         }),
       )
