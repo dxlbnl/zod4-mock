@@ -88,10 +88,10 @@ describe("generateFromSchema — primitives", () => {
 // ---------------------------------------------------------------------------
 
 describe("generateFromSchema — string formats", () => {
-  it("generates a valid email for z.string().email()", () => {
-    const v = generateFromSchema(z.string().email(), makeCtx()) as string;
+  it("generates a valid email for z.email()", () => {
+    const v = generateFromSchema(z.email(), makeCtx()) as string;
     expect(v).toMatch(/@/);
-    expect(z.string().email().safeParse(v).success).toBe(true);
+    expect(z.email().safeParse(v).success).toBe(true);
   });
 
   it("generates a valid UUID for z.uuid()", () => {
@@ -222,7 +222,7 @@ describe("generateFromKey", () => {
 
   it('generates a valid email for key "email"', () => {
     const v = generateFromKey("email", z.string(), makeCtx());
-    expect(z.string().email().safeParse(v).success).toBe(true);
+    expect(z.email().safeParse(v).success).toBe(true);
   });
 
   it('generates a UUID-shaped value for key "id"', () => {

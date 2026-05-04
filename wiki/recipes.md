@@ -24,7 +24,7 @@ import { createWorld, defineSubjectType, generators } from "zod4-mock";
 const CustomerSubjectSchema = z.object({
   customerId: z.uuid(),
   name: z.string().min(2).max(80),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 const ProductSubjectSchema = z.object({
@@ -59,7 +59,7 @@ const InvoiceSchema = z.object({
 const CustomerSummarySchema = z.object({
   customerId: z.uuid(),
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   invoiceCount: z.number().int().min(0),
   totalOwedCents: z.number().int().min(0),
 });

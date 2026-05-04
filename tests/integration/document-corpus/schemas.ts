@@ -17,7 +17,7 @@ export const AuthorSubjectSchema = z.object({
   authorId: z.uuid(),
   firstName: z.string(),
   lastName: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   language: z.enum(["nl", "en", "de", "fr"]),
 });
 

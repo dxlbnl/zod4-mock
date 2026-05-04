@@ -112,7 +112,7 @@ describe("generators namespace", () => {
   it("generators.email returns an email-shaped string", () => {
     const v = generators.email(createPrng(42));
     expect(v).toMatch(/@/);
-    expect(z.string().email().safeParse(v).success).toBe(true);
+    expect(z.email().safeParse(v).success).toBe(true);
   });
 
   it("generators.uuid returns a valid UUID", () => {

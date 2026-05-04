@@ -7,8 +7,12 @@
  * …) and register the result with `world.withSubject(...)`.
  */
 
-import type { ZodObject, ZodRawShape } from 'zod'
-import type { AnySubjectType, RelationMap, SubjectTypeOptions } from './types.js'
+import type { ZodObject, ZodRawShape } from "zod";
+import type {
+  AnySubjectType,
+  RelationMap,
+  SubjectTypeOptions,
+} from "./types.js";
 
 /**
  * Define a named subject type backed by a Zod schema.
@@ -26,7 +30,7 @@ import type { AnySubjectType, RelationMap, SubjectTypeOptions } from './types.js
  * const PersonSubject = defineSubjectType('person', z.object({
  *   firstName: z.string(),
  *   lastName:  z.string(),
- *   email:     z.string().email(),
+ *   email:     z.email(),
  * }), {
  *   relations: {
  *     partner:  { type: 'person',  cardinality: '0..1' },
@@ -44,9 +48,9 @@ export function defineSubjectType<
   options?: SubjectTypeOptions<TRelations>,
 ): AnySubjectType & { schema: TSchema; relations: TRelations } {
   return {
-    _tag: 'SubjectType',
+    _tag: "SubjectType",
     name,
     schema,
     relations: (options?.relations ?? {}) as TRelations,
-  }
+  };
 }

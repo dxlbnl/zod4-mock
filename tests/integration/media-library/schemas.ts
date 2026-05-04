@@ -24,7 +24,7 @@ export const PersonSubjectSchema = z.object({
   personId: z.uuid(),
   firstName: z.string(),
   lastName: z.string(),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 export const TextFileSubjectSchema = z.object({

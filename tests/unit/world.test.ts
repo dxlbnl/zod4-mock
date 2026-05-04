@@ -17,7 +17,7 @@ import { createWorld, defineSubjectType } from "../../src/index.js";
 const PersonSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   age: z.number().int().min(18).max(90),
 });
 
@@ -26,7 +26,7 @@ const PersonSubject = defineSubjectType(
   z.object({
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().email(),
+    email: z.email(),
   }),
 );
 

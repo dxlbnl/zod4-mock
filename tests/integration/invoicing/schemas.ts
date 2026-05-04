@@ -15,7 +15,7 @@ export const CustomerSubjectSchema = z.object({
   customerId: z.uuid(),
   name: z.string().min(2).max(80),
   vatNumber: z.string().regex(/^NL\d{9}B\d{2}$/),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 export const ProductSubjectSchema = z.object({
@@ -52,7 +52,7 @@ export const InvoiceSchema = z.object({
 export const CustomerSummarySchema = z.object({
   customerId: z.uuid(),
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   invoiceCount: z.number().int().min(0),
   totalOwedCents: z.number().int().min(0),
 });

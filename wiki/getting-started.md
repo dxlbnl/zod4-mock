@@ -29,7 +29,7 @@ const PersonSubject = defineSubjectType(
   z.object({
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().email(),
+    email: z.email(),
   }),
 );
 ```
@@ -61,7 +61,7 @@ const PersonApiSchema = z.object({
   id: z.uuid(),
   firstName: z.string(),
   lastName: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   age: z.number().int().min(18).max(90),
   active: z.boolean(),
   role: z.enum(["admin", "user", "viewer"]),

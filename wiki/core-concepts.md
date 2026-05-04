@@ -77,7 +77,7 @@ const PersonSubject = defineSubjectType(
   z.object({
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().email(),
+    email: z.email(),
   }),
 );
 ```
@@ -144,7 +144,7 @@ See [Key-Based Field Heuristics](key-heuristics.md) for the full table.
 If neither matcher nor key heuristic fires, the generator introspects the Zod type:
 
 - `z.string()` → random words (respects `.min()`, `.max()`)
-- `z.string().email()` → valid email address
+- `z.email()` → valid email address
 - `z.uuid()` → RFC 4122 v4 UUID
 - `z.number().int().min(1).max(100)` → integer in [1, 100]
 - `z.enum(['a', 'b', 'c'])` → random member
@@ -188,7 +188,7 @@ world.generate(schema, {
 ```ts
 const schema = z.object({
   id: z.uuid(), // key heuristic: 'id' → UUID
-  email: z.string().email(), // matcher: derives from subject
+  email: z.email(), // matcher: derives from subject
   status: z.enum(["a", "b"]), // override: pinned to 'a'
   notes: z.string(), // key heuristic: 'notes' → lorem text
   count: z.number().int(), // schema-based: random int

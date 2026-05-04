@@ -11,7 +11,7 @@
  * const PersonSubject = defineSubjectType('person', z.object({
  *   firstName: z.string(),
  *   lastName:  z.string(),
- *   email:     z.string().email(),
+ *   email:     z.email(),
  * }))
  *
  * // 2. Create a seeded world
@@ -35,10 +35,10 @@
  * See the `media-library` integration test for a full example.
  */
 
-export { defineSubjectType } from './subject.js'
-export { createWorld } from './world.js'
-export { createPrng, fieldSeed } from './prng.js'
-export { generateFromSchema, generateFromKey } from './generators/index.js'
+export { defineSubjectType } from "./subject.js";
+export { createWorld } from "./world.js";
+export { createPrng, fieldSeed } from "./prng.js";
+export { generateFromSchema, generateFromKey } from "./generators/index.js";
 
 import {
   firstName,
@@ -50,7 +50,7 @@ import {
   url,
   date,
   loremText,
-} from './generators/key-based.js'
+} from "./generators/key-based.js";
 
 /**
  * Built-in primitive generators, for use inside custom `KeyGenerator` functions.
@@ -75,7 +75,7 @@ export const generators = {
   url,
   date,
   loremText,
-} as const
+} as const;
 
 export type {
   // Core
@@ -107,4 +107,4 @@ export type {
   // Override / transform
   DeepPartial,
   GenerateOptions,
-} from './types.js'
+} from "./types.js";
