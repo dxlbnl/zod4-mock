@@ -121,7 +121,7 @@ interface CheckDef {
 
 /** Extract inner `_zod.def` objects from a schema's checks array. */
 function getCheckDefs(schema: ZodTypeAny): CheckDef[] {
-  const raw = (getZodDef(schema).checks ?? []) as Array<{ _zod: { def: CheckDef } }>
+  const raw = (getZodDef(schema).checks ?? []) as unknown as Array<{ _zod: { def: CheckDef } }>
   return raw.map((c) => c._zod.def)
 }
 
@@ -499,7 +499,7 @@ export class WorldImpl implements World {
 
     // Generate one item per pair
     return pairs.map((pair) =>
-      this.generateItemForSubject(innerSchema, pair.instance, pair.reg, options),
+      this.generateItemForSubject(innerSchema, pair.instance, pair.reg, options as GenerateOptions<unknown>),
     )
   }
 
