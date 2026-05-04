@@ -1,7 +1,7 @@
 {
-  "name": "refactored-funicular",
-  "version": "1.0.0",
-  "description": "",
+  "name": "zod4-mock",
+  "version": "0.1.0",
+  "description": "Deterministic, schema-driven mock data generator for Zod v4",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "type": "module",
@@ -15,9 +15,9 @@
     "type": "git",
     "url": "http://local_proxy@127.0.0.1:45343/git/dxlbnl/refactored-funicular"
   },
-  "keywords": [],
+  "keywords": ["zod", "zod4", "mock", "faker", "test", "fixture", "deterministic"],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "zod": "^4.4.3"
   },
