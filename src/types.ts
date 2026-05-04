@@ -1,64 +1,132 @@
+/**
+ * @module types
+ * Core TypeScript interfaces and types for the zod-mock library.
+ *
+ * Consumers import from the root `index.ts`; this file is the single
+ * source of truth for every public type in the library.
+ */
+
 import type { ZodTypeAny, ZodObject, ZodRawShape, input } from 'zod'
 
 // ---------------------------------------------------------------------------
 // Cardinality & Relations
 // ---------------------------------------------------------------------------
 
+/**
+ * Expresses how many related subjects exist for a given relation.
+ *
+ * - `'0..1'` — optional, at most one
+ * - `'1'`    — exactly one (required)
+ * - `'0..n'` — optional, any number
+ * - `'1..n'` — at least one
+ */
 export type Cardinality = '0..1' | '1' | '0..n' | '1..n'
 
+/** A single relation from one subject type to another. */
 export interface RelationDef {
+  /** The target subject-type name (e.g. `'person'`, `'company'`). */
   readonly type: string
+  /** How many targets exist for this relation. */
   readonly cardinality: Cardinality
 }
 
+/** A map of relation names to their definitions, as declared on a `SubjectType`. */
 export type RelationMap = Record<string, RelationDef>
 
 // ---------------------------------------------------------------------------
 // SubjectType
 // ---------------------------------------------------------------------------
 
+/** Options passed to `defineSubjectType`. */
 export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap> {
+  /**
+   * Declares which other subject types this type can be related to, and the
+   * cardinality of each relation.  Cyclical relations are supported; the world
+   * resolves them lazily.
+   *
+   * @example
+   * ```ts
+   * relations: {
+   *   partner:  { type: 'person', cardinality: '0..1' },
+   *   children: { type: 'person', cardinality: '0..n' },
+   * }
+   * ```
+   */
   readonly relations?: TRelations
 }
 
+/**
+ * A named, typed subject definition produced by `defineSubjectType`.
+ *
+ * Subject types are application-specific — the library ships none of its own.
+ * Register them with `world.withSubject(...)`.
+ */
 export interface SubjectType<
   TSchema extends ZodObject<ZodRawShape>,
   TRelations extends RelationMap = RelationMap,
 > {
   readonly _tag: 'SubjectType'
+  /** Unique name used to look up this type in the world (e.g. `'person'`). */
   readonly name: string
+  /** The Zod schema that defines the subject's data fields. */
   readonly schema: TSchema
+  /** Declared relations to other subject types. */
   readonly relations: TRelations
 }
 
+/** Erased form of `SubjectType` used internally where the generics are irrelevant. */
 export type AnySubjectType = SubjectType<ZodObject<ZodRawShape>, RelationMap>
 
 // ---------------------------------------------------------------------------
 // Subject instances (generated data)
 // ---------------------------------------------------------------------------
 
+/** The inferred TypeScript type of a subject's data fields. */
 export type SubjectData<T extends AnySubjectType> = input<T['schema']>
 
+/**
+ * A generated instance of a subject: its identity metadata plus its data.
+ *
+ * The `_type` and `_id` fields are synthetic — they are **not** part of the
+ * Zod schema and will not appear in any generated app-schema output unless a
+ * matcher explicitly maps them.
+ */
 export interface SubjectInstance<T extends AnySubjectType = AnySubjectType> {
+  /** The subject-type name (e.g. `'person'`). */
   readonly _type: string
+  /** A deterministic, unique identifier for this instance within the world. */
   readonly _id: string
+  /** The generated data for this subject, matching its schema. */
   readonly data: SubjectData<T>
 }
 
+/** Erased form of `SubjectInstance` used internally. */
 export type AnySubjectInstance = SubjectInstance<AnySubjectType>
 
 // ---------------------------------------------------------------------------
 // PRNG
 // ---------------------------------------------------------------------------
 
+/**
+ * A seeded pseudo-random number generator (Mulberry32).
+ *
+ * All values produced by a `Prng` are deterministic: the same seed always
+ * yields the same sequence.  Use `fork(key)` to derive an independent PRNG
+ * from a stable string key; this is how per-field seeding is achieved.
+ */
 export interface Prng {
-  /** Returns a float in [0, 1) */
+  /** Returns a float in [0, 1). */
   random(): number
-  /** Returns an integer in [min, max] inclusive */
+  /** Returns an integer in [min, max] inclusive. */
   int(min: number, max: number): number
-  /** Returns one element from a non-empty array */
+  /** Returns one element from a non-empty tuple. */
   pick<T>(items: readonly [T, ...T[]]): T
-  /** Returns a new PRNG seeded deterministically from this one + a string key */
+  /**
+   * Derives a new, independent PRNG from a deterministic key.
+   * The parent PRNG's state is not consumed.
+   *
+   * @param key - A stable string used to compute the child seed via FNV-1a.
+   */
   fork(key: string): Prng
 }
 
@@ -66,18 +134,37 @@ export interface Prng {
 // Registry
 // ---------------------------------------------------------------------------
 
+/**
+ * Stores and retrieves all data generated within a world.
+ *
+ * Items are stored by a string type name (e.g. `'text-file'`, `'sentence'`).
+ * The registry is the bridge between independently generated datasets: a
+ * matcher can call `ctx.registry.pick('sentence')` to reference a previously
+ * generated sentence from within an annotation's matcher.
+ */
 export interface Registry {
-  /** Store a generated item under a named type */
+  /** Store an item under a named type. */
   store(type: string, item: unknown): void
-  /** All stored items of a given type */
+  /** Return all stored items of `type`. */
   all(type: string): unknown[]
-  /** Pick a random stored item of a given type (throws if none) */
+  /**
+   * Return a random stored item of `type`.
+   * @throws if no items of this type have been stored yet.
+   */
   pick(type: string): unknown
-  /** Pick a random stored item matching predicate (throws if none match) */
+  /**
+   * Return a random stored item of `type` that satisfies `predicate`.
+   * @throws if no matching items exist.
+   */
   pickBy(type: string, predicate: (item: unknown) => boolean): unknown
-  /** Filter stored items of one or more types */
+  /**
+   * Return all stored items of one or more types that satisfy `predicate`.
+   *
+   * When an array of types is passed the results are concatenated in
+   * registration order.
+   */
   filter(type: string | string[], predicate: (item: unknown) => boolean): unknown[]
-  /** Number of stored items of a given type */
+  /** Return the number of stored items of `type`. */
   count(type: string): number
 }
 
@@ -85,26 +172,81 @@ export interface Registry {
 // Generator context
 // ---------------------------------------------------------------------------
 
+/**
+ * Passed to every matcher function and generator during data generation.
+ * Provides access to the PRNG, the active subject instance, and the registry.
+ */
 export interface GeneratorContext {
-  /** The world-level PRNG, already forked for this field */
+  /**
+   * A PRNG already forked for the current field path.
+   * Using this PRNG instead of a global one ensures per-field stability:
+   * adding a new field to a schema does not disturb existing fields.
+   */
   readonly prng: Prng
-  /** The subject instance being used for this generation (if any) */
+  /**
+   * The subject instance currently being used to drive generation, if any.
+   * `undefined` for ad-hoc generation (schemas not bound to a subject type).
+   */
   readonly subject: AnySubjectInstance | undefined
-  /** Access to all generated & stored data */
+  /** Access to all data generated and stored in this world so far. */
   readonly registry: Registry
-  /** Full dot-path of the current field being generated (e.g. "address.street") */
+  /**
+   * The dot-separated path of the field being generated (e.g. `'address.street'`).
+   * Used internally for per-field PRNG seeding.
+   */
   readonly fieldPath: string
 }
 
 // ---------------------------------------------------------------------------
-// Matchers: field-level overrides tied to a subject
+// Matchers: field-level generators tied to a subject
 // ---------------------------------------------------------------------------
 
+/**
+ * The first argument to a matcher function.
+ *
+ * Combines the subject's schema data fields with the instance metadata
+ * (`_type` and `_id`) so that matchers can branch on the subject type
+ * without going through `ctx.subject`.
+ *
+ * @example
+ * ```ts
+ * // Accessing data fields:
+ * id: (s) => s.fileId
+ *
+ * // Accessing instance metadata (useful for multi-type schemas):
+ * type: (s) => s._type === 'text-file' ? 'text' : 'audio'
+ * ```
+ */
+export type SubjectMatcherArg<TData> = TData & {
+  readonly _type: string
+  readonly _id: string
+}
+
+/**
+ * A function that derives a specific field value from the active subject.
+ *
+ * @typeParam TSubjectData - The data shape of the subject (from its schema).
+ * @typeParam TValue - The type of the field being generated.
+ */
 export type MatcherFn<TSubjectData, TValue> = (
-  subject: TSubjectData,
+  subject: SubjectMatcherArg<TSubjectData>,
   ctx: GeneratorContext,
 ) => TValue
 
+/**
+ * A record of matcher functions keyed by schema field names.
+ *
+ * Only the fields you want to derive from the subject need to be listed —
+ * any unlisted field falls back to key-based → schema-based generation.
+ *
+ * @example
+ * ```ts
+ * const matchers: Matchers<typeof PersonApiSchema, PersonSubjectData> = {
+ *   firstName: (s) => s.firstName,
+ *   email:     (s) => `${s.firstName[0]}.${s.lastName}@example.nl`.toLowerCase(),
+ * }
+ * ```
+ */
 export type Matchers<TSchema extends ZodTypeAny, TSubjectData> = {
   [K in keyof input<TSchema>]?: MatcherFn<TSubjectData, input<TSchema>[K]>
 }
@@ -113,14 +255,19 @@ export type Matchers<TSchema extends ZodTypeAny, TSubjectData> = {
 // Deep partial (for overrides)
 // ---------------------------------------------------------------------------
 
+/**
+ * Recursively makes all properties of `T` optional.
+ * Used for the `overrides` option in `world.generate(schema, { overrides })`.
+ */
 export type DeepPartial<T> = T extends object
   ? { [K in keyof T]?: DeepPartial<T[K]> }
   : T
 
 // ---------------------------------------------------------------------------
-// withSchema registration
+// withSchema registration (internal)
 // ---------------------------------------------------------------------------
 
+/** Internal record of a schema registered via `world.withSchema`. */
 export interface SchemaRegistration<
   TSchema extends ZodTypeAny,
   TSubjectData,
@@ -134,12 +281,43 @@ export interface SchemaRegistration<
 // generate() options
 // ---------------------------------------------------------------------------
 
+/**
+ * Options accepted by `world.generate(schema, options)`.
+ *
+ * @typeParam T - The inferred output type of the schema being generated.
+ */
 export interface GenerateOptions<T> {
-  /** Force a specific subject type when ambiguous */
+  /**
+   * Force a specific subject type when the schema is registered for multiple
+   * types and you want to pin the generation to one of them.
+   */
   readonly subject?: string
-  /** Deep-partial overrides applied after generation */
+  /**
+   * Deep-partial overrides merged into the generated value after matchers run.
+   * Arrays are replaced (not merged); use `transform` for array-index edits.
+   *
+   * @example
+   * ```ts
+   * world.generate(FileSchema, { overrides: { status: 'failed' } })
+   * ```
+   */
   readonly overrides?: DeepPartial<T>
-  /** Transform function applied after overrides */
+  /**
+   * A function applied after `overrides`.  Receives the merged value and must
+   * return a new value of the same type.  Ideal for array-index manipulation.
+   *
+   * @example
+   * ```ts
+   * world.generate(FileSchema, {
+   *   transform: (data) => ({
+   *     ...data,
+   *     steps: data.steps.map((s, i) =>
+   *       i === 3 ? { ...s, status: 'failed' as const } : s
+   *     ),
+   *   }),
+   * })
+   * ```
+   */
   readonly transform?: (data: T) => T
 }
 
@@ -147,12 +325,27 @@ export interface GenerateOptions<T> {
 // World options
 // ---------------------------------------------------------------------------
 
+/**
+ * Configuration for `createWorld`.
+ */
 export interface WorldOptions {
-  /** Master seed for deterministic generation */
+  /**
+   * Master seed for deterministic generation.
+   * The same seed always produces the same world, including all subjects,
+   * relations, and generated values.
+   */
   readonly seed: number
-  /** Probability (0–1) that optional fields are omitted. Default: 0.2 */
+  /**
+   * Probability in [0, 1] that an optional field is omitted (`undefined`).
+   * Applies to `z.optional()` and `z.nullable()` fields.
+   * @default 0.2
+   */
   readonly optionalProbability?: number
-  /** Default array length range when no Zod constraints are present */
+  /**
+   * Fallback array length range `[min, max]` used when a `z.array()` schema
+   * carries no `.min()` / `.max()` / `.length()` constraints.
+   * @default [1, 5]
+   */
   readonly defaultArrayLength?: readonly [number, number]
 }
 
@@ -160,26 +353,112 @@ export interface WorldOptions {
 // World interface
 // ---------------------------------------------------------------------------
 
+/**
+ * The central context for one data-generation session.
+ *
+ * Build a world declaratively with `withSubject` and `withSchema`, then call
+ * `generate` to produce values.  The world is seeded and fully deterministic.
+ *
+ * @example
+ * ```ts
+ * const world = createWorld({ seed: 42 })
+ *   .withSubject(PersonSubject)
+ *   .withSchema(PersonApiSchema, 'person', {
+ *     firstName: (s) => s.firstName,
+ *     email:     (s) => `${s.firstName[0]}.${s.lastName}@example.nl`.toLowerCase(),
+ *   })
+ *
+ * const people = world.generate(z.array(PersonApiSchema).min(5).max(20))
+ * ```
+ */
 export interface World {
-  /** Register a subject type definition */
+  /**
+   * Register a subject type so the world can generate instances of it.
+   * Returns `this` for fluent chaining.
+   */
   withSubject(subjectType: AnySubjectType): this
 
-  /** Register an app schema bound to one or more subject types */
-  withSchema<TSchema extends ZodTypeAny, TSubjectData>(
+  /**
+   * Bind an app schema to a subject type and optionally provide matcher
+   * functions that derive field values from the active subject.
+   *
+   * Pass the `SubjectType` object (not just its name) to get full type
+   * inference in your matchers.  Pass a string name for a weakly-typed
+   * binding, or an array of strings to bind to multiple types at once.
+   *
+   * Returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * // Strongly typed: SubjectType object → matchers are fully type-safe
+   * world.withSchema(PersonApiSchema, PersonSubject, {
+   *   name: (s) => `${s.firstName} ${s.lastName}`,
+   * })
+   *
+   * // Multiple types: separate withSchema call per type (recommended)
+   * world.withSchema(RawDataSchema, TextFileSubject, { id: (s) => s.fileId, type: () => 'text' })
+   * world.withSchema(RawDataSchema, AudioFileSubject, { id: (s) => s.fileId, type: () => 'audio' })
+   *
+   * // Weakly typed: string name (TSubjectData = unknown)
+   * world.withSchema(PersonApiSchema, 'person', { name: (s) => (s as any).firstName })
+   * ```
+   */
+  // Strongly typed overload: SubjectType object → infers TSubjectData
+  withSchema<TSchema extends ZodTypeAny, TSubjectType extends AnySubjectType>(
+    schema: TSchema,
+    subjectType: TSubjectType,
+    matchers?: Matchers<TSchema, SubjectData<TSubjectType>>,
+  ): this
+  // Weakly typed overload: string name(s)
+  withSchema<TSchema extends ZodTypeAny>(
     schema: TSchema,
     subjectTypes: string | string[],
-    matchers?: Matchers<TSchema, TSubjectData>,
+    matchers?: Matchers<TSchema, unknown>,
   ): this
 
-  /** Generate a value (or array of values) from a schema */
+  /**
+   * Generate a value (or array of values) from the given Zod schema.
+   *
+   * - For a plain `z.object(...)` schema: returns a single generated object.
+   * - For a `z.array(schema)` schema: returns an array; length is derived from
+   *   Zod constraints (`.min()`, `.max()`, `.length()`), falling back to
+   *   `WorldOptions.defaultArrayLength`.
+   *
+   * Generation pipeline (in order):
+   * 1. Matchers (from `withSchema`)
+   * 2. Key-based generators (field name semantics)
+   * 3. Schema-based generator (Zod type introspection)
+   * 4. `options.overrides` (deep merge)
+   * 5. `options.transform` (final transform function)
+   *
+   * @example
+   * ```ts
+   * // Single object
+   * world.generate(PersonApiSchema)
+   *
+   * // Array with length constraints from Zod
+   * world.generate(z.array(PersonApiSchema).min(5).max(20))
+   *
+   * // With overrides
+   * world.generate(FileSchema, { overrides: { status: 'failed' } })
+   * ```
+   */
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
   ): input<TSchema>
 
-  /** Get or create a subject instance of the given type */
+  /**
+   * Get the next subject instance of the given type.
+   *
+   * Subjects are generated lazily and deterministically.  Successive calls
+   * with the same type return different subjects; the same world with the same
+   * seed always produces the same sequence.
+   *
+   * @throws if the subject type has not been registered via `withSubject`.
+   */
   subject(type: string): AnySubjectInstance
 
-  /** Access to the subject/data registry */
+  /** Access to all data generated and stored in this world. */
   readonly registry: Registry
 }
