@@ -40,6 +40,43 @@ export { createWorld } from './world.js'
 export { createPrng, fieldSeed } from './prng.js'
 export { generateFromSchema, generateFromKey } from './generators/index.js'
 
+import {
+  firstName,
+  lastName,
+  email,
+  uuid,
+  phone,
+  postalCode,
+  url,
+  date,
+  loremText,
+} from './generators/key-based.js'
+
+/**
+ * Built-in primitive generators, for use inside custom `KeyGenerator` functions.
+ *
+ * ```ts
+ * import { generators } from 'zod4-mock'
+ *
+ * world.withGenerators({
+ *   vendorCode: (_schema, ctx) => `V-${generators.uuid(ctx.prng)}`,
+ *   displayName: (_schema, ctx) =>
+ *     `${generators.firstName(ctx.prng)} ${generators.lastName(ctx.prng)}`,
+ * })
+ * ```
+ */
+export const generators = {
+  firstName,
+  lastName,
+  email,
+  uuid,
+  phone,
+  postalCode,
+  url,
+  date,
+  loremText,
+} as const
+
 export type {
   // Core
   World,
@@ -62,6 +99,7 @@ export type {
   // Generation
   GeneratorContext,
   Prng,
+  KeyGenerator,
   Matchers,
   MatcherFn,
   SubjectMatcherArg,

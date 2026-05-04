@@ -208,6 +208,27 @@ export interface GeneratorContext {
 }
 
 // ---------------------------------------------------------------------------
+// KeyGenerator: custom field-name generator
+// ---------------------------------------------------------------------------
+
+/**
+ * A custom field-name generator for use with `WorldOptions.generators` and
+ * `world.withGenerators()`.
+ *
+ * Receives the field's Zod schema so the generator can gate on schema type,
+ * mirroring how the built-in key-based heuristics work.
+ *
+ * @example
+ * ```ts
+ * const myGenerators: Record<string, KeyGenerator> = {
+ *   vendorCode: (_schema, ctx) => `V-${generators.uuid(ctx.prng)}`,
+ *   unitPrice:  (schema, ctx) => ctx.prng.int(100, 10000),
+ * }
+ * ```
+ */
+export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T
+
+// ---------------------------------------------------------------------------
 // Matchers: field-level generators tied to a subject
 // ---------------------------------------------------------------------------
 
@@ -357,6 +378,12 @@ export interface WorldOptions {
    * @default [1, 5]
    */
   readonly defaultArrayLength?: readonly [number, number]
+  /**
+   * Custom key-based generators applied to every schema generated in this world.
+   * Keys are matched case-insensitively. Takes priority over built-in heuristics.
+   * Per-call overrides via `world.withGenerators()` are merged on top of these.
+   */
+  readonly generators?: Record<string, KeyGenerator>
 }
 
 // ---------------------------------------------------------------------------
@@ -425,6 +452,20 @@ export interface World {
     subjectTypes: string | string[],
     matchers?: Matchers<TSchema, unknown>,
   ): this
+
+  /**
+   * Register additional key-based generators for this world.
+   *
+   * Calls are additive — each call merges new entries without removing prior ones.
+   * Keys are matched case-insensitively and take priority over built-in heuristics.
+   *
+   * ```ts
+   * world.withGenerators({
+   *   vendorCode: (_schema, ctx) => `V-${generators.uuid(ctx.prng)}`,
+   * })
+   * ```
+   */
+  withGenerators(map: Record<string, KeyGenerator>): this
 
   /**
    * Generate a value (or array of values) from the given Zod schema.

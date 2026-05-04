@@ -179,6 +179,20 @@ describe('media-library integration', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // Domain-specific generators
+  // ---------------------------------------------------------------------------
+
+  it('audio durations are realistic: 30 seconds to 1 hour', () => {
+    const world  = createMediaLibraryWorld()
+    world.generate(z.array(RawDataSchema).min(5))
+    const audios = world.generate(z.array(AudioApiSchema))
+    for (const audio of audios) {
+      expect(audio.durationS).toBeGreaterThanOrEqual(30)
+      expect(audio.durationS).toBeLessThanOrEqual(3600)
+    }
+  })
+
+  // ---------------------------------------------------------------------------
   // Override & transform in context of media-library
   // ---------------------------------------------------------------------------
 

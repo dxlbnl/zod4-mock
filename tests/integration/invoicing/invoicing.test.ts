@@ -95,6 +95,22 @@ describe('invoicing integration', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // Domain-specific generators
+  // ---------------------------------------------------------------------------
+
+  it('unit prices are realistic: multiples of 100 cents (€1 steps), €1–€500', () => {
+    const world    = createInvoicingWorld()
+    const invoices = world.generate(z.array(InvoiceSchema).min(5))
+    for (const inv of invoices) {
+      for (const line of inv.lines) {
+        expect(line.unitPriceCents % 100, 'unitPriceCents must be a multiple of 100').toBe(0)
+        expect(line.unitPriceCents).toBeGreaterThanOrEqual(100)
+        expect(line.unitPriceCents).toBeLessThanOrEqual(50_000)
+      }
+    }
+  })
+
+  // ---------------------------------------------------------------------------
   // Determinism
   // ---------------------------------------------------------------------------
 

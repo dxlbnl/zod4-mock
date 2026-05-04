@@ -48,6 +48,7 @@ import type {
   Registry,
   GeneratorContext,
   SubjectMatcherArg,
+  KeyGenerator,
 } from './types.js'
 import { SubjectRegistry } from './registry.js'
 import { createPrng, fieldSeed } from './prng.js'
@@ -158,13 +159,19 @@ export class WorldImpl implements World {
   /** Incremented on every `generate()` call; used to cycle through subject pairs. */
   private generationCounter = 0
 
+  /** Custom key-based generators, keyed by lowercased field name. */
+  private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map()
+
   constructor(private readonly options: WorldOptions) {
     this.prng = createPrng(options.seed)
     this.registry = new SubjectRegistry(this.prng.fork('registry'))
+    for (const [k, fn] of Object.entries(options.generators ?? {})) {
+      this.customKeyGenerators.set(k.toLowerCase(), fn)
+    }
   }
 
   // -------------------------------------------------------------------------
-  // withSubject / withSchema
+  // withSubject / withSchema / withGenerators
   // -------------------------------------------------------------------------
 
   withSubject(subjectType: AnySubjectType): this {
@@ -200,6 +207,13 @@ export class WorldImpl implements World {
       subjectTypes: types,
       matchers: (matchers ?? {}) as Record<string, MatcherFn<unknown, unknown>>,
     })
+    return this
+  }
+
+  withGenerators(map: Record<string, KeyGenerator>): this {
+    for (const [k, fn] of Object.entries(map)) {
+      this.customKeyGenerators.set(k.toLowerCase(), fn)
+    }
     return this
   }
 
@@ -266,10 +280,15 @@ export class WorldImpl implements World {
         prng:      ctx.prng.fork(key),
         fieldPath: key,
       }
-      const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
-      rawData[key] = keyResult !== undefined
-        ? keyResult
-        : generateFromSchema(fieldSchema, fieldCtx)
+      const customGen = this.customKeyGenerators.get(key.toLowerCase())
+      if (customGen !== undefined) {
+        rawData[key] = customGen(fieldSchema, fieldCtx)
+      } else {
+        const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
+        rawData[key] = keyResult !== undefined
+          ? keyResult
+          : generateFromSchema(fieldSchema, fieldCtx)
+      }
     }
     const data = rawData as SubjectData<AnySubjectType>
 
@@ -399,10 +418,15 @@ export class WorldImpl implements World {
       if (matcher) {
         result[key] = matcher(subjectArg, fieldCtx)
       } else {
-        const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
-        result[key] = keyResult !== undefined
-          ? keyResult
-          : generateFromSchema(fieldSchema, fieldCtx)
+        const customGen = this.customKeyGenerators.get(key.toLowerCase())
+        if (customGen !== undefined) {
+          result[key] = customGen(fieldSchema, fieldCtx)
+        } else {
+          const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
+          result[key] = keyResult !== undefined
+            ? keyResult
+            : generateFromSchema(fieldSchema, fieldCtx)
+        }
       }
     }
 

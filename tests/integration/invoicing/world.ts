@@ -7,8 +7,7 @@
  * - Cross-referencing stored subjects from registry within matchers
  */
 
-import { createWorld, defineSubjectType } from '../../../src/index.js'
-import type { Prng } from '../../../src/index.js'
+import { createWorld, defineSubjectType, generators } from '../../../src/index.js'
 import {
   CustomerSubjectSchema,
   ProductSubjectSchema,
@@ -26,23 +25,22 @@ type ProductData = {
   unitPriceCents: number
 }
 
-function makeUuid(p: Prng): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = p.int(0, 15)
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
-  })
-}
-
 export function createInvoicingWorld(seed = 42) {
   const lineTotals = new Map<string, number>()
 
-  return createWorld({ seed })
+  return createWorld({
+    seed,
+    generators: {
+      // B2B prices in €1 increments, €1–€500 — tighter range than the schema allows
+      unitPriceCents: (_schema, ctx) => ctx.prng.int(1, 500) * 100,
+    },
+  })
     .withSubject(CustomerSubject)
     .withSubject(ProductSubject)
 
     // Invoice: one per customer subject
     .withSchema(InvoiceSchema, CustomerSubject, {
-      id: (_, ctx) => makeUuid(ctx.prng.fork('invoice-id')),
+      id: (_, ctx) => generators.uuid(ctx.prng.fork('invoice-id')),
       customerId: (s) => s.customerId,
       lines: (s, ctx) => {
         const count = ctx.prng.int(1, 4)

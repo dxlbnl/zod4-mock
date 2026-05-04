@@ -29,7 +29,13 @@ export const BankFileSubject  = defineSubjectType('bank-file',  BankFileSubjectS
 type FileRef = { ownerId: string; fileId: string }
 
 export function createMediaLibraryWorld(seed = 42) {
-  return createWorld({ seed })
+  return createWorld({
+    seed,
+    generators: {
+      // Audio durations between 30 seconds and 1 hour
+      durationS: (_schema, ctx) => ctx.prng.int(30, 3600),
+    },
+  })
     .withSubject(PersonSubject)
     .withSubject(TextFileSubject)
     .withSubject(AudioFileSubject)

@@ -97,6 +97,21 @@ describe('document-corpus integration', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // Domain-specific generators
+  // ---------------------------------------------------------------------------
+
+  it('annotation offsets fit within a typical sentence (0–250)', () => {
+    const world = createDocumentCorpusWorld()
+    world.generate(z.array(DocumentSchema).min(3))
+    world.generate(z.array(SentenceSchema).min(10))
+    const annotations = world.generate(z.array(AnnotationSchema).min(5))
+    for (const a of annotations) {
+      expect(a.offset).toBeGreaterThanOrEqual(0)
+      expect(a.offset).toBeLessThanOrEqual(250)
+    }
+  })
+
+  // ---------------------------------------------------------------------------
   // Determinism
   // ---------------------------------------------------------------------------
 

@@ -65,15 +65,15 @@ const LOREM_WORDS = [
 // Primitive generators
 // ---------------------------------------------------------------------------
 
-function firstName(prng: GeneratorContext['prng']): string {
+export function firstName(prng: GeneratorContext['prng']): string {
   return FIRST_NAMES[prng.int(0, FIRST_NAMES.length - 1)]!
 }
 
-function lastName(prng: GeneratorContext['prng']): string {
+export function lastName(prng: GeneratorContext['prng']): string {
   return LAST_NAMES[prng.int(0, LAST_NAMES.length - 1)]!
 }
 
-function email(prng: GeneratorContext['prng']): string {
+export function email(prng: GeneratorContext['prng']): string {
   const fn = firstName(prng).toLowerCase().replace(/\s/g, '')
   const ln = lastName(prng).toLowerCase().replace(/[\s']/g, '').replace(/\s/g, '')
   const n = prng.int(1, 99)
@@ -81,36 +81,36 @@ function email(prng: GeneratorContext['prng']): string {
   return `${fn}.${ln}${n}@${domain}`
 }
 
-function uuid(prng: GeneratorContext['prng']): string {
+export function uuid(prng: GeneratorContext['prng']): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = prng.int(0, 15)
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
   })
 }
 
-function phone(prng: GeneratorContext['prng']): string {
+export function phone(prng: GeneratorContext['prng']): string {
   const prefix = prng.pick(['+31', '+44', '+49', '+33', '+32'] as const)
   const number = Array.from({ length: 9 }, () => prng.int(0, 9)).join('')
   return `${prefix} ${number}`
 }
 
-function postalCode(prng: GeneratorContext['prng']): string {
+export function postalCode(prng: GeneratorContext['prng']): string {
   return `${prng.int(1000, 9999)} ${String.fromCharCode(prng.int(65, 90))}${String.fromCharCode(prng.int(65, 90))}`
 }
 
-function url(prng: GeneratorContext['prng']): string {
+export function url(prng: GeneratorContext['prng']): string {
   const domain = DOMAINS[prng.int(0, DOMAINS.length - 1)]!
   const path = LOREM_WORDS[prng.int(0, LOREM_WORDS.length - 1)]!
   return `https://${domain}/${path}`
 }
 
-function date(prng: GeneratorContext['prng']): Date {
+export function date(prng: GeneratorContext['prng']): Date {
   const start = new Date('2020-01-01').getTime()
   const end   = new Date('2025-12-31').getTime()
   return new Date(start + prng.random() * (end - start))
 }
 
-function loremText(prng: GeneratorContext['prng'], words: number): string {
+export function loremText(prng: GeneratorContext['prng'], words: number): string {
   return Array.from({ length: words }, () => LOREM_WORDS[prng.int(0, LOREM_WORDS.length - 1)]!).join(' ')
 }
 

@@ -36,6 +36,10 @@ export const SentenceSubject = defineSubjectType('sentence', z.object({
 
 export function createDocumentCorpusWorld(seed = 42) {
   return createWorld({ seed })
+    .withGenerators({
+      // Annotation offsets and lengths should fit within a typical sentence
+      offset: (_schema, ctx) => ctx.prng.int(0, 250),
+    })
     .withSubject(AuthorSubject)
     .withSubject(DocumentSubject)
     .withSubject(SentenceSubject)

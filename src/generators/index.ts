@@ -9,4 +9,15 @@
  */
 
 export { generateFromSchema } from './schema-based.js'
-export { generateFromKey } from './key-based.js'
+export {
+  generateFromKey,
+  firstName,
+  lastName,
+  email,
+  uuid,
+  phone,
+  postalCode,
+  url,
+  date,
+  loremText,
+} from './key-based.js'
