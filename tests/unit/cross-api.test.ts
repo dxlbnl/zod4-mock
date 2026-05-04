@@ -93,10 +93,12 @@ function makeWorld() {
     .withSchema(EntityApiSchema, PersonSubject, {
       personId: (s) => s.personId,
       fileIds:  (s, ctx) =>
-        (ctx.registry.filter(
-          ['text-file', 'audio-file'],
-          (f: unknown) => (f as { ownerId: string }).ownerId === s.ownerId,
-        ) as { fileId: string }[]).map((f) => f.fileId),
+        ctx.registry
+          .filter<{ ownerId: string; fileId: string }>(
+            ['text-file', 'audio-file'],
+            (f) => f.ownerId === s.personId,
+          )
+          .map((f) => f.fileId),
     })
 }
 
@@ -188,9 +190,9 @@ describe('registry.filter', () => {
     const _      = world.generate(z.array(AudioApiSchema).length(5))
 
     const firstTextFileId = texts[0]?.fileId
-    const matches = world.registry.filter(
+    const matches = world.registry.filter<{ fileId: string }>(
       'text-file',
-      (f: unknown) => (f as { fileId: string }).fileId === firstTextFileId,
+      (f) => f.fileId === firstTextFileId,
     )
     expect(matches).toHaveLength(1)
   })

@@ -51,7 +51,7 @@ describe('invoicing integration', () => {
     const world      = createInvoicingWorld()
     const invoices   = world.generate(z.array(InvoiceSchema).min(5))
     const customerIds = new Set(
-      world.registry.all('customer').map((c) => (c as { customerId: string }).customerId),
+      world.registry.all<{ customerId: string }>('customer').map((c) => c.customerId),
     )
     for (const inv of invoices) {
       expect(customerIds.has(inv.customerId)).toBe(true)
@@ -62,7 +62,7 @@ describe('invoicing integration', () => {
     const world      = createInvoicingWorld()
     const invoices   = world.generate(z.array(InvoiceSchema).min(3))
     const productIds = new Set(
-      world.registry.all('product').map((p) => (p as { productId: string }).productId),
+      world.registry.all<{ productId: string }>('product').map((p) => p.productId),
     )
     for (const inv of invoices) {
       for (const line of inv.lines) {

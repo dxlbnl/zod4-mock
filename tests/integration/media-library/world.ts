@@ -26,6 +26,8 @@ export const TextFileSubject  = defineSubjectType('text-file',  TextFileSubjectS
 export const AudioFileSubject = defineSubjectType('audio-file', AudioFileSubjectSchema)
 export const BankFileSubject  = defineSubjectType('bank-file',  BankFileSubjectSchema)
 
+type FileRef = { ownerId: string; fileId: string }
+
 export function createMediaLibraryWorld(seed = 42) {
   return createWorld({ seed })
     .withSubject(PersonSubject)
@@ -84,14 +86,16 @@ export function createMediaLibraryWorld(seed = 42) {
       firstName: (s) => s.firstName,
       lastName:  (s) => s.lastName,
       fileIds: (s, ctx) =>
-        (ctx.registry.filter(
-          ['text-file', 'audio-file', 'bank-file'],
-          (f: unknown) => (f as { ownerId: string }).ownerId === s.personId,
-        ) as { fileId: string }[]).map((f) => f.fileId),
+        ctx.registry
+          .filter<FileRef>(
+            ['text-file', 'audio-file', 'bank-file'],
+            (f) => f.ownerId === s.personId,
+          )
+          .map((f) => f.fileId),
       fileCount: (s, ctx) =>
-        ctx.registry.filter(
+        ctx.registry.filter<FileRef>(
           ['text-file', 'audio-file', 'bank-file'],
-          (f: unknown) => (f as { ownerId: string }).ownerId === s.personId,
+          (f) => f.ownerId === s.personId,
         ).length,
     })
 }

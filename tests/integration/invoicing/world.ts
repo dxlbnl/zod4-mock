@@ -18,6 +18,13 @@ import {
 export const CustomerSubject = defineSubjectType('customer', CustomerSubjectSchema)
 export const ProductSubject  = defineSubjectType('product',  ProductSubjectSchema)
 
+type ProductData = {
+  productId:      string
+  sku:            string
+  name:           string
+  unitPriceCents: number
+}
+
 export function createInvoicingWorld(seed = 42) {
   return createWorld({ seed })
     .withSubject(CustomerSubject)
@@ -28,16 +35,10 @@ export function createInvoicingWorld(seed = 42) {
       id:         (_, ctx) => ctx.prng.fork('invoice-id').random().toString(36).slice(2),
       customerId: (s) => s.customerId,
       lines: (_, ctx) => {
-        // Each line references a random product from the registry
         const count = ctx.prng.int(1, 4)
         return Array.from({ length: count }, () => {
-          const product = ctx.registry.pick('product') as {
-            productId: string
-            sku: string
-            name: string
-            unitPriceCents: number
-          }
-          const quantity = ctx.prng.int(1, 10)
+          const product = ctx.registry.pick<ProductData>('product')
+          const quantity       = ctx.prng.int(1, 10)
           const unitPriceCents = product.unitPriceCents
           return {
             productId:      product.productId,
@@ -49,19 +50,18 @@ export function createInvoicingWorld(seed = 42) {
           }
         })
       },
-      totalCents: () => 0, // recomputed by transform if needed
+      totalCents: () => 0,
     })
 
-    // Customer summary: aggregates across invoices in the registry
+    // Customer summary: aggregates across customers in the registry
     .withSchema(CustomerSummarySchema, CustomerSubject, {
       customerId: (s) => s.customerId,
       name:       (s) => s.name,
       email:      (s) => s.email,
       invoiceCount: (s, ctx) =>
-        ctx.registry.filter(
+        ctx.registry.filter<{ customerId: string }>(
           'customer',
-          (inv: unknown) =>
-            (inv as { customerId: string }).customerId === s.customerId,
+          (inv) => inv.customerId === s.customerId,
         ).length,
       totalOwedCents: () => 0,
     })

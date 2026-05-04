@@ -139,31 +139,36 @@ export interface Prng {
  *
  * Items are stored by a string type name (e.g. `'text-file'`, `'sentence'`).
  * The registry is the bridge between independently generated datasets: a
- * matcher can call `ctx.registry.pick('sentence')` to reference a previously
- * generated sentence from within an annotation's matcher.
+ * matcher can call `ctx.registry.pick<SentenceData>('sentence')` to reference
+ * a previously generated sentence from within an annotation's matcher.
+ *
+ * All retrieval methods are generic so callers get typed results without casts:
+ * ```ts
+ * const file = ctx.registry.pick<{ fileId: string; ownerId: string }>('text-file')
+ * ```
  */
 export interface Registry {
   /** Store an item under a named type. */
   store(type: string, item: unknown): void
-  /** Return all stored items of `type`. */
-  all(type: string): unknown[]
+  /** Return all stored items of `type` as `T[]`. */
+  all<T = unknown>(type: string): T[]
   /**
-   * Return a random stored item of `type`.
+   * Return a random stored item of `type` as `T`.
    * @throws if no items of this type have been stored yet.
    */
-  pick(type: string): unknown
+  pick<T = unknown>(type: string): T
   /**
    * Return a random stored item of `type` that satisfies `predicate`.
    * @throws if no matching items exist.
    */
-  pickBy(type: string, predicate: (item: unknown) => boolean): unknown
+  pickBy<T = unknown>(type: string, predicate: (item: T) => boolean): T
   /**
    * Return all stored items of one or more types that satisfy `predicate`.
    *
    * When an array of types is passed the results are concatenated in
    * registration order.
    */
-  filter(type: string | string[], predicate: (item: unknown) => boolean): unknown[]
+  filter<T = unknown>(type: string | string[], predicate: (item: T) => boolean): T[]
   /** Return the number of stored items of `type`. */
   count(type: string): number
 }
@@ -195,6 +200,11 @@ export interface GeneratorContext {
    * Used internally for per-field PRNG seeding.
    */
   readonly fieldPath: string
+  /**
+   * Probability in [0, 1] that `z.optional()` / `z.nullable()` fields are omitted.
+   * Defaults to `WorldOptions.optionalProbability` (typically 0.2).
+   */
+  readonly optionalProbability?: number
 }
 
 // ---------------------------------------------------------------------------

@@ -43,11 +43,101 @@ import type {
   AnySubjectInstance,
   SubjectData,
   Matchers,
+  MatcherFn,
   GenerateOptions,
   Registry,
+  GeneratorContext,
+  SubjectMatcherArg,
 } from './types.js'
 import { SubjectRegistry } from './registry.js'
-import { createPrng } from './prng.js'
+import { createPrng, fieldSeed } from './prng.js'
+import { generateFromSchema } from './generators/schema-based.js'
+import { generateFromKey } from './generators/key-based.js'
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+interface SchemaReg {
+  schema: ZodTypeAny
+  subjectTypes: string[]
+  matchers: Record<string, MatcherFn<unknown, unknown>>
+}
+
+interface SubjectRegPair {
+  instance: AnySubjectInstance
+  reg: SchemaReg
+}
+
+// ---------------------------------------------------------------------------
+// Zod v4 def helpers
+// ---------------------------------------------------------------------------
+
+interface ZodDefShape {
+  type: string
+  element?: ZodTypeAny
+  shape?: Record<string, ZodTypeAny>
+  checks?: Array<{ check: string; minimum?: number; maximum?: number; length?: number }>
+}
+
+function getZodDef(schema: ZodTypeAny): ZodDefShape {
+  return (schema as unknown as { _zod: { def: ZodDefShape } })._zod.def
+}
+
+// ---------------------------------------------------------------------------
+// Deep merge helper (non-array, non-null objects only)
+// ---------------------------------------------------------------------------
+
+function deepMerge(target: unknown, source: unknown): unknown {
+  if (
+    typeof source !== 'object' || source === null || Array.isArray(source) ||
+    typeof target !== 'object' || target === null || Array.isArray(target)
+  ) {
+    return source
+  }
+  const result = { ...(target as Record<string, unknown>) }
+  for (const [k, sv] of Object.entries(source as Record<string, unknown>)) {
+    if (sv !== undefined) {
+      result[k] = deepMerge(result[k], sv)
+    }
+  }
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Minimum array-length resolver (reads only min/length_equals constraints)
+// ---------------------------------------------------------------------------
+
+interface CheckDef {
+  check: string
+  minimum?: number
+  maximum?: number
+  length?: number
+  value?: number
+  inclusive?: boolean
+  format?: string
+}
+
+/** Extract inner `_zod.def` objects from a schema's checks array. */
+function getCheckDefs(schema: ZodTypeAny): CheckDef[] {
+  const raw = (getZodDef(schema).checks ?? []) as Array<{ _zod: { def: CheckDef } }>
+  return raw.map((c) => c._zod.def)
+}
+
+function resolveMinRequired(schema: ZodTypeAny, defaultMin: number): number {
+  let min = defaultMin
+  for (const c of getCheckDefs(schema)) {
+    if (c.check === 'length_equals') return c.length!
+    if (c.check === 'min_length' && c.minimum !== undefined) {
+      min = Math.max(min, c.minimum)
+    }
+  }
+  return min
+}
+
+// ---------------------------------------------------------------------------
+// WorldImpl
+// ---------------------------------------------------------------------------
 
 export class WorldImpl implements World {
   private readonly prng: ReturnType<typeof createPrng>
@@ -56,26 +146,30 @@ export class WorldImpl implements World {
   /** Registered subject type definitions, keyed by type name. */
   private readonly subjectTypes: Map<string, AnySubjectType> = new Map()
 
-  /**
-   * Schema registrations: each entry binds a Zod schema to one or more subject
-   * types, along with optional matcher functions.
-   */
-  private readonly schemaRegistrations: Array<{
-    schema: ZodTypeAny
-    subjectTypes: string[]
-    matchers: Matchers<ZodTypeAny, unknown>
-  }> = []
+  /** Schema registrations: each entry binds a Zod schema to subject type(s) + matchers. */
+  private readonly schemaRegs: SchemaReg[] = []
 
-  /** Counter per subject type for generating stable sequential IDs. */
+  /** Counter per subject type for stable sequential IDs (`person#1`, `person#2`, …). */
   private readonly subjectCounters: Map<string, number> = new Map()
+
+  /** All created subject instances, in creation order. */
+  private readonly allInstances: AnySubjectInstance[] = []
+
+  /** Incremented on every `generate()` call; used to cycle through subject pairs. */
+  private generationCounter = 0
 
   constructor(private readonly options: WorldOptions) {
     this.prng = createPrng(options.seed)
     this.registry = new SubjectRegistry(this.prng.fork('registry'))
   }
 
+  // -------------------------------------------------------------------------
+  // withSubject / withSchema
+  // -------------------------------------------------------------------------
+
   withSubject(subjectType: AnySubjectType): this {
-    throw new Error('not implemented')
+    this.subjectTypes.set(subjectType.name, subjectType)
+    return this
   }
 
   withSchema<TSchema extends ZodTypeAny, TSubjectType extends AnySubjectType>(
@@ -89,24 +183,344 @@ export class WorldImpl implements World {
     matchers?: Matchers<TSchema, unknown>,
   ): this
   withSchema(
-    _schema: ZodTypeAny,
-    _subjectTypes: AnySubjectType | string | string[],
-    _matchers?: unknown,
+    schema: ZodTypeAny,
+    subjectTypes: AnySubjectType | string | string[],
+    matchers?: Record<string, unknown>,
   ): this {
-    throw new Error('not implemented')
+    let types: string[]
+    if (typeof subjectTypes === 'string') {
+      types = [subjectTypes]
+    } else if (Array.isArray(subjectTypes)) {
+      types = subjectTypes as string[]
+    } else {
+      types = [(subjectTypes as AnySubjectType).name]
+    }
+    this.schemaRegs.push({
+      schema,
+      subjectTypes: types,
+      matchers: (matchers ?? {}) as Record<string, MatcherFn<unknown, unknown>>,
+    })
+    return this
   }
+
+  // -------------------------------------------------------------------------
+  // subject()
+  // -------------------------------------------------------------------------
+
+  subject(typeName: string): AnySubjectInstance {
+    if (!this.subjectTypes.has(typeName)) {
+      throw new Error(
+        `Subject type '${typeName}' is not registered. Call .withSubject() first.`,
+      )
+    }
+    return this.createSubjectInstance(typeName)
+  }
+
+  // -------------------------------------------------------------------------
+  // generate()
+  // -------------------------------------------------------------------------
 
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
   ): input<TSchema> {
-    throw new Error('not implemented')
+    const d = getZodDef(schema)
+    if (d.type === 'array') {
+      return this.generateArray(
+        d.element!,
+        schema,
+        options as GenerateOptions<unknown[]> | undefined,
+      ) as input<TSchema>
+    }
+    return this.generateSingleItem(schema, options as GenerateOptions<unknown> | undefined) as input<TSchema>
   }
 
-  subject(type: string): AnySubjectInstance {
-    throw new Error('not implemented')
+  // -------------------------------------------------------------------------
+  // Private: subject creation
+  // -------------------------------------------------------------------------
+
+  private createSubjectInstance(typeName: string): AnySubjectInstance {
+    const subjectType = this.subjectTypes.get(typeName)!
+    const counter = (this.subjectCounters.get(typeName) ?? 0) + 1
+    this.subjectCounters.set(typeName, counter)
+
+    const _id = `${typeName}#${counter}`
+    // Per-subject PRNG — stable regardless of call order on the world
+    const subjectPrng = createPrng(fieldSeed(this.options.seed, _id, ''))
+
+    const ctx: GeneratorContext = {
+      prng:               subjectPrng,
+      subject:            undefined,
+      registry:           this.registry,
+      fieldPath:          '',
+      optionalProbability: 0, // subject data always fully populated
+    }
+    const data = generateFromSchema(subjectType.schema, ctx) as SubjectData<AnySubjectType>
+
+    const instance: AnySubjectInstance = { _type: typeName, _id, data }
+    this.allInstances.push(instance)
+    this.registry.store(typeName, data) // store raw subject data, not the wrapper
+    return instance
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: query helpers
+  // -------------------------------------------------------------------------
+
+  private getInstancesOfType(typeName: string): AnySubjectInstance[] {
+    return this.allInstances.filter((s) => s._type === typeName)
+  }
+
+  private findRegsForSchema(schema: ZodTypeAny): SchemaReg[] {
+    return this.schemaRegs.filter((r) => r.schema === schema)
+  }
+
+  /**
+   * Ensure every registered subject type has at least one instance.
+   * Called before any subject-based generation so that matchers that call
+   * `ctx.registry.pick(otherType)` always find data.
+   */
+  private ensureAllTypesHaveSubjects(): void {
+    for (const typeName of this.subjectTypes.keys()) {
+      if (this.getInstancesOfType(typeName).length === 0) {
+        this.createSubjectInstance(typeName)
+      }
+    }
+  }
+
+  /**
+   * Build an ordered list of (instance, reg) pairs for all existing subjects
+   * of the types referenced by `regs`.  Order: by registration order, then by
+   * subject creation order within each type.
+   */
+  private buildPairs(regs: SchemaReg[]): SubjectRegPair[] {
+    const pairs: SubjectRegPair[] = []
+    for (const reg of regs) {
+      for (const typeName of reg.subjectTypes) {
+        for (const instance of this.getInstancesOfType(typeName)) {
+          pairs.push({ instance, reg })
+        }
+      }
+    }
+    return pairs
+  }
+
+  /**
+   * Flat list of subject type names in registration order (for cycling when
+   * we need to create more subjects to satisfy a minimum array length).
+   */
+  private regTypeCycle(regs: SchemaReg[]): string[] {
+    return regs.flatMap((r) => r.subjectTypes)
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: item generation
+  // -------------------------------------------------------------------------
+
+  private generateItemForSubject(
+    schema: ZodTypeAny,
+    instance: AnySubjectInstance,
+    reg: SchemaReg,
+    options?: GenerateOptions<unknown>,
+  ): unknown {
+    // Stable PRNG per subject — independent of which other subjects exist
+    const itemPrng = this.prng.fork(instance._id)
+
+    const subjectArg = {
+      ...instance.data,
+      _type: instance._type,
+      _id:   instance._id,
+    } as SubjectMatcherArg<unknown>
+
+    const ctx: GeneratorContext = {
+      prng:                itemPrng,
+      subject:             instance,
+      registry:            this.registry,
+      fieldPath:           '',
+      optionalProbability: this.options.optionalProbability ?? 0.2,
+    }
+
+    const result = this.generateObjectFields(schema, subjectArg, reg.matchers, ctx)
+
+    let merged: unknown = result
+    if (options?.overrides) {
+      merged = deepMerge(result, options.overrides)
+    }
+    if (options?.transform) {
+      merged = options.transform(merged)
+    }
+    return merged
+  }
+
+  /**
+   * Generate all fields of an object schema, applying matchers first, then
+   * falling back to key-based → schema-based for unmatched fields.
+   */
+  private generateObjectFields(
+    schema: ZodTypeAny,
+    subjectArg: SubjectMatcherArg<unknown>,
+    matchers: Record<string, MatcherFn<unknown, unknown>>,
+    ctx: GeneratorContext,
+  ): Record<string, unknown> {
+    const d = getZodDef(schema)
+
+    // Non-object schema (shouldn't happen for registered schemas, but handle anyway)
+    if (d.type !== 'object') {
+      return generateFromSchema(schema, ctx) as Record<string, unknown>
+    }
+
+    const shape = d.shape!
+    const result: Record<string, unknown> = {}
+
+    for (const [key, fieldSchema] of Object.entries(shape)) {
+      const matcher = matchers[key]
+      const fieldCtx: GeneratorContext = {
+        ...ctx,
+        prng:      ctx.prng.fork(key),
+        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
+      }
+
+      if (matcher) {
+        result[key] = matcher(subjectArg, fieldCtx)
+      } else {
+        const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
+        result[key] = keyResult !== undefined
+          ? keyResult
+          : generateFromSchema(fieldSchema, fieldCtx)
+      }
+    }
+
+    return result
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: array generation
+  // -------------------------------------------------------------------------
+
+  private generateArray(
+    innerSchema: ZodTypeAny,
+    arraySchema: ZodTypeAny,
+    options?: GenerateOptions<unknown[]>,
+  ): unknown[] {
+    const regs = this.findRegsForSchema(innerSchema)
+
+    this.generationCounter++
+    const genPrng = this.prng.fork(`gen-${this.generationCounter}`)
+
+    const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5]
+
+    // -----------------------------------------------------------------------
+    // Ad-hoc: no registrations — pure schema-based generation
+    // -----------------------------------------------------------------------
+    if (regs.length === 0) {
+      let N = defMin
+      let max = defMax
+      for (const c of getCheckDefs(arraySchema)) {
+        if (c.check === 'length_equals') { N = c.length!; max = N; break }
+        if (c.check === 'min_length' && c.minimum !== undefined) N = Math.max(N, c.minimum)
+        if (c.check === 'max_length' && c.maximum !== undefined) max = Math.min(max, c.maximum)
+      }
+      N = genPrng.int(Math.min(N, max), Math.max(N, max))
+      return Array.from({ length: N }, (_, i) =>
+        generateFromSchema(innerSchema, {
+          prng:                genPrng.fork(`[${i}]`),
+          subject:             undefined,
+          registry:            this.registry,
+          fieldPath:           `[${i}]`,
+          optionalProbability: this.options.optionalProbability ?? 0.2,
+        }),
+      )
+    }
+
+    // -----------------------------------------------------------------------
+    // Registered schema: one item per subject
+    // -----------------------------------------------------------------------
+
+    // Ensure all registered types have at least one subject so that matchers
+    // calling ctx.registry.pick(otherType) always find data.
+    this.ensureAllTypesHaveSubjects()
+
+    // Collect existing (instance, reg) pairs for this schema's subject types
+    let pairs = this.buildPairs(regs)
+    const existingCount = pairs.length
+
+    // Determine the minimum number of items required by the array constraints
+    const minRequired = resolveMinRequired(arraySchema, defMin)
+    const target = Math.max(existingCount, minRequired)
+
+    // Create more subjects if needed, cycling through the registered types
+    const typeCycle = this.regTypeCycle(regs)
+    while (pairs.length < target) {
+      const nextType = typeCycle[pairs.length % typeCycle.length]!
+      const newInstance = this.createSubjectInstance(nextType)
+      const matchingReg = regs.find((r) => r.subjectTypes.includes(nextType))!
+      pairs.push({ instance: newInstance, reg: matchingReg })
+    }
+
+    // Generate one item per pair
+    return pairs.map((pair) =>
+      this.generateItemForSubject(innerSchema, pair.instance, pair.reg, options),
+    )
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: single-item generation
+  // -------------------------------------------------------------------------
+
+  private generateSingleItem(
+    schema: ZodTypeAny,
+    options?: GenerateOptions<unknown>,
+  ): unknown {
+    const regs = this.findRegsForSchema(schema)
+
+    this.generationCounter++
+
+    // -----------------------------------------------------------------------
+    // Ad-hoc: no registrations
+    // -----------------------------------------------------------------------
+    if (regs.length === 0) {
+      const ctx: GeneratorContext = {
+        prng:                this.prng.fork(`adhoc-${this.generationCounter}`),
+        subject:             undefined,
+        registry:            this.registry,
+        fieldPath:           '',
+        optionalProbability: this.options.optionalProbability ?? 0.2,
+      }
+      let result = generateFromSchema(schema, ctx)
+      if (options?.overrides) result = deepMerge(result, options.overrides) as typeof result
+      if (options?.transform) result = options.transform(result) as typeof result
+      return result
+    }
+
+    // -----------------------------------------------------------------------
+    // Registered schema: pick the next subject via cycling
+    // -----------------------------------------------------------------------
+
+    this.ensureAllTypesHaveSubjects()
+
+    let pairs = this.buildPairs(regs)
+
+    // If, somehow, no pairs exist yet (type registered but not in subjectTypes),
+    // create one on the fly.
+    if (pairs.length === 0) {
+      const firstType = regs[0]!.subjectTypes[0]!
+      if (this.subjectTypes.has(firstType)) {
+        const inst = this.createSubjectInstance(firstType)
+        pairs = [{ instance: inst, reg: regs[0]! }]
+      }
+    }
+
+    // Cycle through pairs deterministically
+    const idx = (this.generationCounter - 1) % pairs.length
+    const pair = pairs[idx]!
+
+    return this.generateItemForSubject(schema, pair.instance, pair.reg, options)
   }
 }
+
+// ---------------------------------------------------------------------------
+// Public factory
+// ---------------------------------------------------------------------------
 
 /**
  * Create a new world with the given options.

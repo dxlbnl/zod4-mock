@@ -52,7 +52,7 @@ describe('document-corpus integration', () => {
     const world = createDocumentCorpusWorld()
     const docs = world.generate(z.array(DocumentSchema).min(5).max(10))
     const authorIds = new Set(
-      world.registry.all('author').map((a) => (a as { authorId: string }).authorId),
+      world.registry.all<{ authorId: string }>('author').map((a) => a.authorId),
     )
     for (const doc of docs) {
       expect(authorIds.has(doc.authorId)).toBe(true)
@@ -89,7 +89,7 @@ describe('document-corpus integration', () => {
     const annotations = world.generate(z.array(AnnotationSchema).min(5))
 
     const authorIds = new Set(
-      world.registry.all('author').map((a) => (a as { authorId: string }).authorId),
+      world.registry.all<{ authorId: string }>('author').map((a) => a.authorId),
     )
     for (const a of annotations) {
       expect(authorIds.has(a.authorId)).toBe(true)
