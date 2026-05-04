@@ -9,7 +9,9 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "play": "vitest run --config vitest.playground.config.ts --reporter=verbose",
+    "play:watch": "vitest --config vitest.playground.config.ts --reporter=verbose"
   },
   "repository": {
     "type": "git",
