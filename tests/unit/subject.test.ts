@@ -67,18 +67,14 @@ describe("defineSubjectType", () => {
   });
 
   it("supports all four cardinality values", () => {
-    const SubjectWithAll = defineSubjectType(
-      "thing",
-      z.object({ id: z.string() }),
-      {
-        relations: {
-          a: { type: "other", cardinality: "0..1" },
-          b: { type: "other", cardinality: "1" },
-          c: { type: "other", cardinality: "0..n" },
-          d: { type: "other", cardinality: "1..n" },
-        },
+    const SubjectWithAll = defineSubjectType("thing", z.object({ id: z.string() }), {
+      relations: {
+        a: { type: "other", cardinality: "0..1" },
+        b: { type: "other", cardinality: "1" },
+        c: { type: "other", cardinality: "0..n" },
+        d: { type: "other", cardinality: "1..n" },
       },
-    );
+    });
 
     expect(SubjectWithAll.relations["a"]?.cardinality).toBe("0..1");
     expect(SubjectWithAll.relations["b"]?.cardinality).toBe("1");

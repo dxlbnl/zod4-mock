@@ -71,10 +71,7 @@ describe("media-library integration", () => {
 
     const rawIds = new Set(rawdata.map((r) => r.id));
     for (const text of texts) {
-      expect(
-        rawIds.has(text.fileId),
-        `text.fileId ${text.fileId} not found in rawdata`,
-      ).toBe(true);
+      expect(rawIds.has(text.fileId), `text.fileId ${text.fileId} not found in rawdata`).toBe(true);
     }
   });
 
@@ -85,10 +82,9 @@ describe("media-library integration", () => {
 
     const rawIds = new Set(rawdata.map((r) => r.id));
     for (const audio of audios) {
-      expect(
-        rawIds.has(audio.fileId),
-        `audio.fileId ${audio.fileId} not found in rawdata`,
-      ).toBe(true);
+      expect(rawIds.has(audio.fileId), `audio.fileId ${audio.fileId} not found in rawdata`).toBe(
+        true,
+      );
     }
   });
 
@@ -99,10 +95,7 @@ describe("media-library integration", () => {
 
     const rawIds = new Set(rawdata.map((r) => r.id));
     for (const bank of banks) {
-      expect(
-        rawIds.has(bank.fileId),
-        `bank.fileId ${bank.fileId} not found in rawdata`,
-      ).toBe(true);
+      expect(rawIds.has(bank.fileId), `bank.fileId ${bank.fileId} not found in rawdata`).toBe(true);
     }
   });
 
@@ -118,9 +111,9 @@ describe("media-library integration", () => {
     const bankIds = new Set(banks.map((b) => b.fileId));
 
     for (const row of rawdata) {
-      if (textIds.has(row.id)) expect(row.type).toBe("text");
-      if (audioIds.has(row.id)) expect(row.type).toBe("audio");
-      if (bankIds.has(row.id)) expect(row.type).toBe("bank");
+      if (row.id && textIds.has(row.id)) expect(row.type).toBe("text");
+      if (row.id && audioIds.has(row.id)) expect(row.type).toBe("audio");
+      if (row.id && bankIds.has(row.id)) expect(row.type).toBe("bank");
     }
   });
 
@@ -132,10 +125,7 @@ describe("media-library integration", () => {
     const rawIds = new Set(rawdata.map((r) => r.id));
     for (const entity of entities) {
       for (const fileId of entity.fileIds) {
-        expect(
-          rawIds.has(fileId),
-          `entity.fileId ${fileId} not found in rawdata`,
-        ).toBe(true);
+        expect(rawIds.has(fileId), `entity.fileId ${fileId} not found in rawdata`).toBe(true);
       }
     }
   });

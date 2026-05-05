@@ -176,9 +176,7 @@ A final function `(data: T) => T` applied after overrides. Ideal for array-index
 world.generate(schema, {
   transform: (d) => ({
     ...d,
-    steps: d.steps.map((s, i) =>
-      i === 2 ? { ...s, status: "failed" as const } : s,
-    ),
+    steps: d.steps.map((s, i) => (i === 2 ? { ...s, status: "failed" as const } : s)),
   }),
 });
 ```

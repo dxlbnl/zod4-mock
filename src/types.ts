@@ -6,7 +6,7 @@
  * source of truth for every public type in the library.
  */
 
-import type { ZodTypeAny, ZodObject, ZodRawShape, input } from 'zod'
+import type { ZodTypeAny, ZodObject, ZodRawShape, input } from "zod";
 
 // ---------------------------------------------------------------------------
 // Cardinality & Relations
@@ -20,28 +20,46 @@ import type { ZodTypeAny, ZodObject, ZodRawShape, input } from 'zod'
  * - `'0..n'` — optional, any number
  * - `'1..n'` — at least one
  */
-export type Cardinality = '0..1' | '1' | '0..n' | '1..n'
+export type Cardinality = "0..1" | "1" | "0..n" | "1..n";
 
 /** A single relation from one subject type to another. */
 export interface RelationDef {
   /** The target subject-type name (e.g. `'person'`, `'company'`). */
-  readonly type: string
+  readonly type: string;
   /** How many targets exist for this relation. */
-  readonly cardinality: Cardinality
+  readonly cardinality: Cardinality;
 }
 
 /** A map of relation names to their definitions, as declared on a `SubjectType`. */
-export type RelationMap = Record<string, RelationDef>
+export type RelationMap = Record<string, RelationDef>;
 
 // ---------------------------------------------------------------------------
 // SubjectType
 // ---------------------------------------------------------------------------
 
+/**
+ * A map of field names to `(prng: Prng) => T` generators scoped to a
+ * specific subject type's schema.  Declared on `SubjectTypeOptions.keyMap`.
+ *
+ * These generators override the built-in `DEFAULT_KEY_MAP` heuristics for
+ * subject data creation, but are themselves overridden by world-level
+ * `withGenerators`.  The `(prng) => T` signature matches the sub-namespace
+ * generator functions so they can be assigned directly:
+ *
+ * ```ts
+ * defineSubjectType('product', ProductSchema, {
+ *   keyMap: {
+ *     name: generators.lorem.sentence,   // direct reference
+ *   },
+ * })
+ * ```
+ */
+export type SubjectKeyMap<TData> = {
+  [K in keyof TData]?: (prng: Prng) => TData[K];
+};
+
 /** Options passed to `defineSubjectType`. */
-export interface SubjectTypeOptions<
-  TRelations extends RelationMap = RelationMap,
-  TData = unknown,
-> {
+export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap, TData = unknown> {
   /**
    * Declares which other subject types this type can be related to, and the
    * cardinality of each relation.  Cyclical relations are supported; the world
@@ -55,7 +73,7 @@ export interface SubjectTypeOptions<
    * }
    * ```
    */
-  readonly relations?: TRelations
+  readonly relations?: TRelations;
 
   /**
    * Derive field values from other already-generated fields of the same subject.
@@ -76,8 +94,21 @@ export interface SubjectTypeOptions<
    * ```
    */
   readonly derive?: {
-    [K in keyof TData]?: (partial: Partial<TData>, prng: Prng) => TData[K]
-  }
+    [K in keyof TData]?: (partial: Partial<TData>, prng: Prng) => TData[K];
+  };
+
+  /**
+   * Per-field key generators for this subject type.  Applied during subject
+   * data creation, after world-level `withGenerators` but before the built-in
+   * `DEFAULT_KEY_MAP` heuristics.
+   *
+   * Use this to give domain-specific meaning to ambiguous field names like
+   * `name` (default: person full name) for non-person subject types.
+   *
+   * Values are plain `(prng: Prng) => T` functions — `generators.*` can be
+   * assigned directly.
+   */
+  readonly keyMap?: SubjectKeyMap<TData>;
 }
 
 /**
@@ -90,26 +121,28 @@ export interface SubjectType<
   TSchema extends ZodObject<ZodRawShape>,
   TRelations extends RelationMap = RelationMap,
 > {
-  readonly _tag: 'SubjectType'
+  readonly _tag: "SubjectType";
   /** Unique name used to look up this type in the world (e.g. `'person'`). */
-  readonly name: string
+  readonly name: string;
   /** The Zod schema that defines the subject's data fields. */
-  readonly schema: TSchema
+  readonly schema: TSchema;
   /** Declared relations to other subject types. */
-  readonly relations: TRelations
+  readonly relations: TRelations;
   /** Intra-subject derived fields. Erased to `unknown` at the `AnySubjectType` level. */
-  readonly derive?: Record<string, (partial: Record<string, unknown>, prng: Prng) => unknown>
+  readonly derive?: Record<string, (partial: Record<string, unknown>, prng: Prng) => unknown>;
+  /** Per-field key generators. Erased to `unknown` at the `AnySubjectType` level. */
+  readonly keyMap?: Record<string, (prng: Prng) => unknown>;
 }
 
 /** Erased form of `SubjectType` used internally where the generics are irrelevant. */
-export type AnySubjectType = SubjectType<ZodObject<ZodRawShape>, RelationMap>
+export type AnySubjectType = SubjectType<ZodObject<ZodRawShape>, RelationMap>;
 
 // ---------------------------------------------------------------------------
 // Subject instances (generated data)
 // ---------------------------------------------------------------------------
 
 /** The inferred TypeScript type of a subject's data fields. */
-export type SubjectData<T extends AnySubjectType> = input<T['schema']>
+export type SubjectData<T extends AnySubjectType> = input<T["schema"]>;
 
 /**
  * A generated instance of a subject: its identity metadata plus its data.
@@ -120,15 +153,15 @@ export type SubjectData<T extends AnySubjectType> = input<T['schema']>
  */
 export interface SubjectInstance<T extends AnySubjectType = AnySubjectType> {
   /** The subject-type name (e.g. `'person'`). */
-  readonly _type: string
+  readonly _type: string;
   /** A deterministic, unique identifier for this instance within the world. */
-  readonly _id: string
+  readonly _id: string;
   /** The generated data for this subject, matching its schema. */
-  readonly data: SubjectData<T>
+  readonly data: SubjectData<T>;
 }
 
 /** Erased form of `SubjectInstance` used internally. */
-export type AnySubjectInstance = SubjectInstance<AnySubjectType>
+export type AnySubjectInstance = SubjectInstance<AnySubjectType>;
 
 // ---------------------------------------------------------------------------
 // PRNG
@@ -143,18 +176,18 @@ export type AnySubjectInstance = SubjectInstance<AnySubjectType>
  */
 export interface Prng {
   /** Returns a float in [0, 1). */
-  random(): number
+  random(): number;
   /** Returns an integer in [min, max] inclusive. */
-  int(min: number, max: number): number
+  int(min: number, max: number): number;
   /** Returns one element from a non-empty tuple. */
-  pick<T>(items: readonly [T, ...T[]]): T
+  pick<T>(items: readonly [T, ...T[]]): T;
   /**
    * Derives a new, independent PRNG from a deterministic key.
    * The parent PRNG's state is not consumed.
    *
    * @param key - A stable string used to compute the child seed via FNV-1a.
    */
-  fork(key: string): Prng
+  fork(key: string): Prng;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,28 +209,28 @@ export interface Prng {
  */
 export interface Registry {
   /** Store an item under a named type. */
-  store(type: string, item: unknown): void
+  store(type: string, item: unknown): void;
   /** Return all stored items of `type` as `T[]`. */
-  all<T = unknown>(type: string): T[]
+  all<T = unknown>(type: string): T[];
   /**
    * Return a random stored item of `type` as `T`.
    * @throws if no items of this type have been stored yet.
    */
-  pick<T = unknown>(type: string): T
+  pick<T = unknown>(type: string): T;
   /**
    * Return a random stored item of `type` that satisfies `predicate`.
    * @throws if no matching items exist.
    */
-  pickBy<T = unknown>(type: string, predicate: (item: T) => boolean): T
+  pickBy<T = unknown>(type: string, predicate: (item: T) => boolean): T;
   /**
    * Return all stored items of one or more types that satisfy `predicate`.
    *
    * When an array of types is passed the results are concatenated in
    * registration order.
    */
-  filter<T = unknown>(type: string | string[], predicate: (item: T) => boolean): T[]
+  filter<T = unknown>(type: string | string[], predicate: (item: T) => boolean): T[];
   /** Return the number of stored items of `type`. */
-  count(type: string): number
+  count(type: string): number;
 }
 
 // ---------------------------------------------------------------------------
@@ -214,24 +247,24 @@ export interface GeneratorContext {
    * Using this PRNG instead of a global one ensures per-field stability:
    * adding a new field to a schema does not disturb existing fields.
    */
-  readonly prng: Prng
+  readonly prng: Prng;
   /**
    * The subject instance currently being used to drive generation, if any.
    * `undefined` for ad-hoc generation (schemas not bound to a subject type).
    */
-  readonly subject: AnySubjectInstance | undefined
+  readonly subject: AnySubjectInstance | undefined;
   /** Access to all data generated and stored in this world so far. */
-  readonly registry: Registry
+  readonly registry: Registry;
   /**
    * The dot-separated path of the field being generated (e.g. `'address.street'`).
    * Used internally for per-field PRNG seeding.
    */
-  readonly fieldPath: string
+  readonly fieldPath: string;
   /**
    * Probability in [0, 1] that `z.optional()` / `z.nullable()` fields are omitted.
    * Defaults to `WorldOptions.optionalProbability` (typically 0.2).
    */
-  readonly optionalProbability?: number
+  readonly optionalProbability?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +286,32 @@ export interface GeneratorContext {
  * }
  * ```
  */
-export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T
+export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
+
+// ---------------------------------------------------------------------------
+// SchemaKeyMap: per-schema key overrides (no subject required)
+// ---------------------------------------------------------------------------
+
+/**
+ * A map of field names to generator functions for a specific schema.
+ *
+ * Unlike `Matchers`, these functions do not receive a subject — they are
+ * suitable for any schema, including those not bound to a subject type.
+ *
+ * Register via `world.withKeyMap(schema, map)`.  Takes priority over global
+ * `withGenerators` entries for the same field, but is overridden by `Matchers`.
+ *
+ * @example
+ * ```ts
+ * const map: SchemaKeyMap<typeof ProductSchema> = {
+ *   sku: (ctx) => `SKU-${ctx.prng.int(1000, 9999)}`,
+ * }
+ * world.withKeyMap(ProductSchema, map)
+ * ```
+ */
+export type SchemaKeyMap<TSchema extends ZodTypeAny> = {
+  [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
+};
 
 // ---------------------------------------------------------------------------
 // Matchers: field-level generators tied to a subject
@@ -276,9 +334,9 @@ export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorConte
  * ```
  */
 export type SubjectMatcherArg<TData> = TData & {
-  readonly _type: string
-  readonly _id: string
-}
+  readonly _type: string;
+  readonly _id: string;
+};
 
 /**
  * A function that derives a specific field value from the active subject.
@@ -289,7 +347,7 @@ export type SubjectMatcherArg<TData> = TData & {
 export type MatcherFn<TSubjectData, TValue> = (
   subject: SubjectMatcherArg<TSubjectData>,
   ctx: GeneratorContext,
-) => TValue
+) => TValue;
 
 /**
  * A record of matcher functions keyed by schema field names.
@@ -306,8 +364,8 @@ export type MatcherFn<TSubjectData, TValue> = (
  * ```
  */
 export type Matchers<TSchema extends ZodTypeAny, TSubjectData> = {
-  [K in keyof input<TSchema>]?: MatcherFn<TSubjectData, input<TSchema>[K]>
-}
+  [K in keyof input<TSchema>]?: MatcherFn<TSubjectData, input<TSchema>[K]>;
+};
 
 // ---------------------------------------------------------------------------
 // Deep partial (for overrides)
@@ -317,22 +375,17 @@ export type Matchers<TSchema extends ZodTypeAny, TSubjectData> = {
  * Recursively makes all properties of `T` optional.
  * Used for the `overrides` option in `world.generate(schema, { overrides })`.
  */
-export type DeepPartial<T> = T extends object
-  ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : T
+export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 // ---------------------------------------------------------------------------
 // withSchema registration (internal)
 // ---------------------------------------------------------------------------
 
 /** Internal record of a schema registered via `world.withSchema`. */
-export interface SchemaRegistration<
-  TSchema extends ZodTypeAny,
-  TSubjectData,
-> {
-  readonly schema: TSchema
-  readonly subjectTypes: string[]
-  readonly matchers: Matchers<TSchema, TSubjectData>
+export interface SchemaRegistration<TSchema extends ZodTypeAny, TSubjectData> {
+  readonly schema: TSchema;
+  readonly subjectTypes: string[];
+  readonly matchers: Matchers<TSchema, TSubjectData>;
 }
 
 // ---------------------------------------------------------------------------
@@ -349,7 +402,7 @@ export interface GenerateOptions<T> {
    * Force a specific subject type when the schema is registered for multiple
    * types and you want to pin the generation to one of them.
    */
-  readonly subject?: string
+  readonly subject?: string;
   /**
    * Deep-partial overrides merged into the generated value after matchers run.
    * Arrays are replaced (not merged); use `transform` for array-index edits.
@@ -359,7 +412,7 @@ export interface GenerateOptions<T> {
    * world.generate(FileSchema, { overrides: { status: 'failed' } })
    * ```
    */
-  readonly overrides?: DeepPartial<T>
+  readonly overrides?: DeepPartial<T>;
   /**
    * A function applied after `overrides`.  Receives the merged value and must
    * return a new value of the same type.  Ideal for array-index manipulation.
@@ -376,7 +429,7 @@ export interface GenerateOptions<T> {
    * })
    * ```
    */
-  readonly transform?: (data: T) => T
+  readonly transform?: (data: T) => T;
 }
 
 // ---------------------------------------------------------------------------
@@ -392,25 +445,25 @@ export interface WorldOptions {
    * The same seed always produces the same world, including all subjects,
    * relations, and generated values.
    */
-  readonly seed: number
+  readonly seed: number;
   /**
    * Probability in [0, 1] that an optional field is omitted (`undefined`).
    * Applies to `z.optional()` and `z.nullable()` fields.
    * @default 0.2
    */
-  readonly optionalProbability?: number
+  readonly optionalProbability?: number;
   /**
    * Fallback array length range `[min, max]` used when a `z.array()` schema
    * carries no `.min()` / `.max()` / `.length()` constraints.
    * @default [1, 5]
    */
-  readonly defaultArrayLength?: readonly [number, number]
+  readonly defaultArrayLength?: readonly [number, number];
   /**
    * Custom key-based generators applied to every schema generated in this world.
    * Keys are matched case-insensitively. Takes priority over built-in heuristics.
    * Per-call overrides via `world.withGenerators()` are merged on top of these.
    */
-  readonly generators?: Record<string, KeyGenerator>
+  readonly generators?: Record<string, KeyGenerator>;
 }
 
 // ---------------------------------------------------------------------------
@@ -440,7 +493,7 @@ export interface World {
    * Register a subject type so the world can generate instances of it.
    * Returns `this` for fluent chaining.
    */
-  withSubject(subjectType: AnySubjectType): this
+  withSubject(subjectType: AnySubjectType): this;
 
   /**
    * Bind an app schema to a subject type and optionally provide matcher
@@ -472,13 +525,13 @@ export interface World {
     schema: TSchema,
     subjectType: TSubjectType,
     matchers?: Matchers<TSchema, SubjectData<TSubjectType>>,
-  ): this
+  ): this;
   // Weakly typed overload: string name(s)
   withSchema<TSchema extends ZodTypeAny>(
     schema: TSchema,
     subjectTypes: string | string[],
     matchers?: Matchers<TSchema, unknown>,
-  ): this
+  ): this;
 
   /**
    * Register additional key-based generators for this world.
@@ -492,7 +545,33 @@ export interface World {
    * })
    * ```
    */
-  withGenerators(map: Record<string, KeyGenerator>): this
+  withGenerators(map: Record<string, KeyGenerator>): this;
+
+  /**
+   * Bind field generators to a specific schema.
+   *
+   * Unlike `withGenerators` (global, untyped), `withKeyMap` is schema-specific
+   * and fully type-safe — field names and return types are inferred from the
+   * schema.  Unlike `withSchema` matchers, no subject binding is required.
+   *
+   * Priority order (highest → lowest):
+   * 1. `withSchema` matchers
+   * 2. `withKeyMap` ← here
+   * 3. `withGenerators` (global)
+   * 4. Built-in key heuristics
+   * 5. Schema-based fallback
+   *
+   * Calls for the same schema are merged additively; later entries overwrite
+   * earlier ones for the same field key.
+   *
+   * ```ts
+   * world.withKeyMap(ProductSchema, {
+   *   sku:   (ctx) => `SKU-${ctx.prng.int(1000, 9999)}`,
+   *   price: (ctx) => ctx.prng.int(100, 50000),
+   * })
+   * ```
+   */
+  withKeyMap<T extends ZodTypeAny>(schema: T, map: SchemaKeyMap<T>): this;
 
   /**
    * Generate a value (or array of values) from the given Zod schema.
@@ -524,7 +603,7 @@ export interface World {
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
-  ): input<TSchema>
+  ): input<TSchema>;
 
   /**
    * Get the next subject instance of the given type.
@@ -535,7 +614,7 @@ export interface World {
    *
    * @throws if the subject type has not been registered via `withSubject`.
    */
-  subject(type: string): AnySubjectInstance
+  subject(type: string): AnySubjectInstance;
 
   /**
    * Return all subject instances currently in this world, optionally filtered
@@ -547,7 +626,7 @@ export interface World {
    * world.subjects('person')   // only person instances
    * ```
    */
-  subjects(type?: string): AnySubjectInstance[]
+  subjects(type?: string): AnySubjectInstance[];
 
   /**
    * Pre-create `count` subject instances of the given type.
@@ -564,8 +643,8 @@ export interface World {
    *   .populate(PersonSubject, 3)
    * ```
    */
-  populate(subjectType: AnySubjectType | string, count: number): this
+  populate(subjectType: AnySubjectType | string, count: number): this;
 
   /** Access to all data generated and stored in this world. */
-  readonly registry: Registry
+  readonly registry: Registry;
 }

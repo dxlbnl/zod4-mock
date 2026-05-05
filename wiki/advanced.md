@@ -84,10 +84,7 @@ const prng = createPrng(seed);
 `KeyGenerator` is typed as:
 
 ```ts
-type KeyGenerator<T = unknown> = (
-  schema: ZodTypeAny,
-  ctx: GeneratorContext,
-) => T;
+type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
 ```
 
 ### The full `GeneratorContext`

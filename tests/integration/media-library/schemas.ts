@@ -75,12 +75,7 @@ export const AudioApiSchema = z.object({
   fileId: z.uuid(),
   uploadedBy: z.uuid(),
   durationS: z.number().int().min(1),
-  sampleRate: z.union([
-    z.literal(8000),
-    z.literal(16000),
-    z.literal(44100),
-    z.literal(48000),
-  ]),
+  sampleRate: z.union([z.literal(8000), z.literal(16000), z.literal(44100), z.literal(48000)]),
 });
 
 /** Bank API — bank statement metadata. */

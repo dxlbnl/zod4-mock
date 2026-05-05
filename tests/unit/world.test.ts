@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "../../src/index.js";
+import { createWorld, defineSubjectType, generators } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -68,9 +68,7 @@ describe("createWorld", () => {
   });
 
   it("withSchema accepts string names (weakly typed)", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(CompanySubject);
+    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(CompanySubject);
     expect(() =>
       world.withSchema(z.object({ id: z.string() }), ["person", "company"]),
     ).not.toThrow();
@@ -103,8 +101,7 @@ describe("world.subject", () => {
   });
 
   it("is deterministic: same seed + same call order → same result", () => {
-    const makeWorld = () =>
-      createWorld({ seed: 42 }).withSubject(PersonSubject);
+    const makeWorld = () => createWorld({ seed: 42 }).withSubject(PersonSubject);
     const p1 = makeWorld().subject("person");
     const p2 = makeWorld().subject("person");
     expect(p1._id).toBe(p2._id);
@@ -183,8 +180,7 @@ describe("world.generate — registered schema", () => {
       .withSchema(PersonSchema, PersonSubject, {
         firstName: (s) => s.firstName,
         lastName: (s) => s.lastName,
-        email: (s) =>
-          `${s.firstName[0]}.${s.lastName}@example.nl`.toLowerCase(),
+        email: (s) => `${s.firstName[0]}.${s.lastName}@example.nl`.toLowerCase(),
       });
   }
 
@@ -292,9 +288,7 @@ describe("world.generate — optional and nullable fields in objects", () => {
 
   it("respects optionalProbability: 0 never omits optional fields", () => {
     const results = Array.from({ length: 20 }, (_, i) =>
-      createWorld({ seed: i, optionalProbability: 0 }).generate(
-        SchemaWithOptionals,
-      ),
+      createWorld({ seed: i, optionalProbability: 0 }).generate(SchemaWithOptionals),
     );
     expect(results.every((r) => r.bio !== undefined)).toBe(true);
     expect(results.every((r) => r.tag !== null)).toBe(true);
@@ -306,8 +300,7 @@ describe("world.generate — optional and nullable fields in objects", () => {
       z.object({ firstName: z.string(), lastName: z.string(), email: z.email() }),
       {
         derive: {
-          email: ({ firstName, lastName }) =>
-            `${firstName![0]}.${lastName}@test.com`.toLowerCase(),
+          email: ({ firstName, lastName }) => `${firstName![0]}.${lastName}@test.com`.toLowerCase(),
         },
       },
     );
@@ -318,15 +311,11 @@ describe("world.generate — optional and nullable fields in objects", () => {
   });
 
   it("derive: partial receives all base-generated sibling fields", () => {
-    const Subject = defineSubjectType(
-      "tagged",
-      z.object({ name: z.string(), tag: z.string() }),
-      {
-        derive: {
-          tag: ({ name }) => `tag-${name}`,
-        },
+    const Subject = defineSubjectType("tagged", z.object({ name: z.string(), tag: z.string() }), {
+      derive: {
+        tag: ({ name }) => `tag-${name}`,
       },
-    );
+    });
     const world = createWorld({ seed: 1 }).withSubject(Subject);
     const data = world.subject("tagged").data as { name: string; tag: string };
     expect(data.tag).toBe(`tag-${data.name}`);
@@ -372,10 +361,7 @@ describe("world.generate — optional and nullable fields in objects", () => {
     // not a generic word string. Without the fix, isStringSchema() returns false for
     // the optional wrapper, so the key-based email generator never fires and the
     // field gets a generic word string instead.
-    const UserSubject = defineSubjectType(
-      "user",
-      z.object({ userId: z.uuid() }),
-    );
+    const UserSubject = defineSubjectType("user", z.object({ userId: z.uuid() }));
     const ProfileSchema = z.object({
       userId: z.string(),
       email: z.string().optional(), // key-based: 'email' → email-formatted
@@ -387,10 +373,99 @@ describe("world.generate — optional and nullable fields in objects", () => {
       return world.generate(ProfileSchema);
     });
     // Every present email should be email-formatted (key-based generator fired)
-    expect(
-      results.every(
-        (r) => typeof r.email === "string" && r.email.includes("@"),
-      ),
-    ).toBe(true);
+    expect(results.every((r) => typeof r.email === "string" && r.email.includes("@"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Subject-type keyMap
+// ---------------------------------------------------------------------------
+
+describe("subject-type keyMap", () => {
+  const ProductSchema = z.object({
+    name: z.string(),
+    sku: z.string(),
+    quantity: z.number().int(),
+  });
+
+  const ProductSubject = defineSubjectType("product", ProductSchema, {
+    keyMap: {
+      name: (prng) => `Product ${prng.int(100, 999)}`,
+    },
+  });
+
+  it("subject keyMap overrides the default key heuristic for that field", () => {
+    const world = createWorld({ seed: 42 }).withSubject(ProductSubject);
+    const inst = world.subject("product");
+    const data = inst.data as { name: string };
+    // Default would produce a person full name; keyMap should produce "Product NNN"
+    expect(data.name).toMatch(/^Product \d{3}$/);
+  });
+
+  it("other fields still use the default heuristics when not in keyMap", () => {
+    const world = createWorld({ seed: 42 }).withSubject(ProductSubject);
+    const inst = world.subject("product");
+    const data = inst.data as { sku: string; quantity: number };
+    // 'sku' is in DEFAULT_KEY_MAP — should be code-like, e.g. 'AB-1234'
+    expect(typeof data.sku).toBe("string");
+    expect(data.sku).toMatch(/^[A-Z]{2}-\d{4}$/);
+    // 'quantity' is in DEFAULT_KEY_MAP.number
+    expect(Number.isInteger(data.quantity)).toBe(true);
+  });
+
+  it("world-level withGenerators overrides subject keyMap for the same field", () => {
+    const world = createWorld({
+      seed: 42,
+      generators: { name: () => "world-override" },
+    }).withSubject(ProductSubject);
+
+    const data = world.subject("product").data as { name: string };
+    expect(data.name).toBe("world-override");
+  });
+
+  it("subject keyMap is deterministic across worlds with the same seed", () => {
+    const make = () =>
+      createWorld({ seed: 42 }).withSubject(ProductSubject).subject("product").data as {
+        name: string;
+      };
+
+    expect(make().name).toBe(make().name);
+  });
+
+  it("subject keyMap receives a Prng that produces deterministic values", () => {
+    const calls: number[] = [];
+    const Subject = defineSubjectType("tracked", z.object({ val: z.number() }), {
+      keyMap: {
+        val: (prng) => {
+          const v = prng.int(1, 1000);
+          calls.push(v);
+          return v;
+        },
+      },
+    });
+    const world = createWorld({ seed: 7 }).withSubject(Subject);
+    world.subject("tracked");
+    world.subject("tracked");
+    // Both subjects should have produced values
+    expect(calls.length).toBe(2);
+    // Different subjects should get different seeded values
+    expect(calls[0]).not.toBe(calls[1]);
+  });
+
+  it("subject keyMap generator can use generators.* functions directly", () => {
+    const Subject = defineSubjectType(
+      "article",
+      z.object({ title: z.string(), name: z.string() }),
+      {
+        keyMap: {
+          // Direct reference to a generators.* function (prng-only signature)
+          name: generators.lorem.sentence,
+        },
+      },
+    );
+    const world = createWorld({ seed: 42 }).withSubject(Subject);
+    const data = world.subject("article").data as { name: string };
+    // lorem.sentence returns a capitalised string ending with a period
+    expect(data.name.endsWith(".")).toBe(true);
   });
 });

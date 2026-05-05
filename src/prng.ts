@@ -14,16 +14,16 @@
  * - **Hash**: FNV-1a 32-bit — fast, low collision rate for short strings.
  */
 
-import type { Prng } from './types.js'
+import type { Prng } from "./types.js";
 
 /** FNV-1a 32-bit hash over a UTF-16 string, returns an unsigned 32-bit integer. */
 function fnv1a(str: string): number {
-  let hash = 2166136261
+  let hash = 2166136261;
   for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i)
-    hash = Math.imul(hash, 16777619) >>> 0
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
   }
-  return hash
+  return hash;
 }
 
 /**
@@ -31,13 +31,13 @@ function fnv1a(str: string): number {
  * Each call advances the internal state and returns a float in [0, 1).
  */
 function mulberry32(seed: number): () => number {
-  let s = seed >>> 0
+  let s = seed >>> 0;
   return () => {
-    s = (s + 0x6d2b79f5) >>> 0
-    let t = Math.imul(s ^ (s >>> 15), 1 | s)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 /**
@@ -46,29 +46,29 @@ function mulberry32(seed: number): () => number {
  * @param seed - Any 32-bit integer.  The same seed always produces the same sequence.
  */
 export function createPrng(seed: number): Prng {
-  const rand = mulberry32(seed)
+  const rand = mulberry32(seed);
 
   const prng: Prng = {
     random() {
-      return rand()
+      return rand();
     },
 
     int(min, max) {
-      return min + Math.floor(rand() * (max - min + 1))
+      return min + Math.floor(rand() * (max - min + 1));
     },
 
     pick(items) {
-      return items[Math.floor(rand() * items.length)]!
+      return items[Math.floor(rand() * items.length)]!;
     },
 
     fork(key) {
       // Derive a child seed from the parent seed + key; does NOT consume
       // the parent's state, so the child is fully independent.
-      return createPrng(fnv1a(`${seed}:${key}`))
+      return createPrng(fnv1a(`${seed}:${key}`));
     },
-  }
+  };
 
-  return prng
+  return prng;
 }
 
 /**
@@ -82,5 +82,5 @@ export function createPrng(seed: number): Prng {
  * @param fieldPath  - Dot-separated field path (e.g. `'address.street'`).
  */
 export function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number {
-  return fnv1a(`${worldSeed}:${subjectId}:${fieldPath}`)
+  return fnv1a(`${worldSeed}:${subjectId}:${fieldPath}`);
 }

@@ -39,33 +39,68 @@ export { defineSubjectType } from "./subject.js";
 export { createWorld } from "./world.js";
 export { createPrng, fieldSeed } from "./prng.js";
 export { generateFromSchema, generateFromKey } from "./generators/index.js";
+export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/key-based.js";
+export type { PrngGen, KeyPattern } from "./generators/key-based.js";
 
 import {
   firstName,
   lastName,
+  fullName,
+  jobTitle,
+  jobArea,
   email,
-  uuid,
-  phone,
-  postalCode,
   url,
+  username,
+  domain,
+  ip,
+  city,
+  country,
+  streetAddress,
+  postalCode,
+  latitude,
+  longitude,
+  word,
+  sentence,
+  paragraph,
+  uuid,
+  alphanumeric,
+  hexadecimal,
+  nanoid,
+  phone,
   date,
   loremText,
 } from "./generators/key-based.js";
 
 /**
- * Built-in primitive generators, for use inside custom `KeyGenerator` functions.
+ * Built-in generators, organised into Faker-style sub-namespaces.
+ * All functions take a `Prng` as their first argument.
  *
  * ```ts
  * import { generators } from 'zod4-mock'
  *
- * world.withGenerators({
- *   vendorCode: (_schema, ctx) => `V-${generators.uuid(ctx.prng)}`,
- *   displayName: (_schema, ctx) =>
- *     `${generators.firstName(ctx.prng)} ${generators.lastName(ctx.prng)}`,
+ * world.withKeyMap(ProductSchema, {
+ *   name:  (ctx) => generators.person.fullName(ctx.prng),
+ *   email: (ctx) => generators.internet.email(ctx.prng),
  * })
  * ```
+ *
+ * The flat top-level properties (`generators.firstName`, etc.) are kept for
+ * backwards compatibility and are identical references to the sub-namespace
+ * functions.
  */
 export const generators = {
+  // -------------------------------------------------------------------------
+  // Sub-namespaces
+  // -------------------------------------------------------------------------
+  person: { firstName, lastName, fullName, jobTitle, jobArea },
+  internet: { email, url, username, domain, ip },
+  location: { city, country, streetAddress, postalCode, latitude, longitude },
+  lorem: { word, sentence, paragraph },
+  string: { uuid, alphanumeric, hexadecimal, nanoid },
+
+  // -------------------------------------------------------------------------
+  // Flat aliases (backwards compatibility)
+  // -------------------------------------------------------------------------
   firstName,
   lastName,
   email,
@@ -107,4 +142,8 @@ export type {
   // Override / transform
   DeepPartial,
   GenerateOptions,
+
+  // Key maps
+  SchemaKeyMap,
+  SubjectKeyMap,
 } from "./types.js";

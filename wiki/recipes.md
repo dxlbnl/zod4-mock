@@ -229,22 +229,18 @@ function createDocumentCorpusWorld(seed = 42) {
 
     .withSchema(DocumentSchema, DocumentSubject, {
       id: (s) => s.documentId,
-      authorId: (_, ctx) =>
-        ctx.registry.pick<{ authorId: string }>("author").authorId,
+      authorId: (_, ctx) => ctx.registry.pick<{ authorId: string }>("author").authorId,
       language: (_, ctx) =>
-        ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author")
-          .language,
+        ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
     })
 
     .withSchema(SentenceSchema, SentenceSubject, {
       id: (s) => s.sentenceId,
-      documentId: (_, ctx) =>
-        ctx.registry.pick<{ documentId: string }>("document").documentId,
+      documentId: (_, ctx) => ctx.registry.pick<{ documentId: string }>("document").documentId,
     })
 
     .withSchema(AnnotationSchema, AuthorSubject, {
-      sentenceId: (_, ctx) =>
-        ctx.registry.pick<{ sentenceId: string }>("sentence").sentenceId,
+      sentenceId: (_, ctx) => ctx.registry.pick<{ sentenceId: string }>("sentence").sentenceId,
       authorId: (s) => s.authorId,
     });
 }
@@ -342,10 +338,7 @@ const EntityApiSchema = z.object({
 
 const PersonSubject = defineSubjectType("person", PersonSubjectSchema);
 const TextFileSubject = defineSubjectType("text-file", TextFileSubjectSchema);
-const AudioFileSubject = defineSubjectType(
-  "audio-file",
-  AudioFileSubjectSchema,
-);
+const AudioFileSubject = defineSubjectType("audio-file", AudioFileSubjectSchema);
 const BankFileSubject = defineSubjectType("bank-file", BankFileSubjectSchema);
 
 type FileRef = { ownerId: string; fileId: string };
@@ -465,9 +458,7 @@ Use `transform` when you need array-index edits, since `overrides` replaces arra
 const invoice = world.generate(InvoiceSchema, {
   transform: (data) => ({
     ...data,
-    lines: data.lines.map((line, i) =>
-      i === 0 ? { ...line, quantity: 99 } : line,
-    ),
+    lines: data.lines.map((line, i) => (i === 0 ? { ...line, quantity: 99 } : line)),
   }),
 });
 // → first line has quantity 99; all other lines unchanged

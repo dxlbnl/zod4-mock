@@ -8,7 +8,7 @@
  * 3. Schema-based generator (`generateFromSchema`) — Zod type introspection
  */
 
-export { generateFromSchema } from './schema-based.js'
+export { generateFromSchema } from "./schema/index.js";
 export {
   generateFromKey,
   firstName,
@@ -20,4 +20,4 @@ export {
   url,
   date,
   loremText,
-} from './key-based.js'
+} from "./key-based.js";

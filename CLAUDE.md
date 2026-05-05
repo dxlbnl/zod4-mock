@@ -12,11 +12,13 @@ pnpm typecheck       # type-check without emitting
 ```
 
 Run a single test file:
+
 ```bash
 pnpm vitest run tests/unit/world.test.ts
 ```
 
 Run a single test by name pattern:
+
 ```bash
 pnpm vitest run --reporter=verbose -t "deterministic"
 ```
@@ -32,6 +34,7 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 **SubjectType** — an identity anchor representing a domain entity (Person, Company, TextFile, etc.). Defined with `defineSubjectType(name, zodObjectSchema)` ([src/subject.ts](src/subject.ts)). Subject instances get stable IDs (`person#1`, `person#2`, …) and their data is stored in the registry so matchers in other schemas can reference it.
 
 **Generation pipeline** — for each field of a registered schema, values are resolved in this order:
+
 1. **Matchers** (explicit functions provided in `world.withSchema(..., matchers)`)
 2. **Key-based generators** — field name heuristics (e.g. `email`, `firstName`, fields ending in `id`) ([src/generators/key-based.ts](src/generators/key-based.ts))
 3. **Schema-based generators** — Zod type introspection (string, number, enum, object, array, etc.) ([src/generators/schema-based.ts](src/generators/schema-based.ts))

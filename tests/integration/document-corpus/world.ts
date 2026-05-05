@@ -54,24 +54,20 @@ export function createDocumentCorpusWorld(seed = 42) {
       // Documents: one per document subject
       .withSchema(DocumentSchema, DocumentSubject, {
         id: (s) => s.documentId,
-        authorId: (_, ctx) =>
-          ctx.registry.pick<{ authorId: string }>("author").authorId,
+        authorId: (_, ctx) => ctx.registry.pick<{ authorId: string }>("author").authorId,
         language: (_, ctx) =>
-          ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author")
-            .language,
+          ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
       })
 
       // Sentences: one per sentence subject; each references an existing document
       .withSchema(SentenceSchema, SentenceSubject, {
         id: (s) => s.sentenceId,
-        documentId: (_, ctx) =>
-          ctx.registry.pick<{ documentId: string }>("document").documentId,
+        documentId: (_, ctx) => ctx.registry.pick<{ documentId: string }>("document").documentId,
       })
 
       // Annotations: one per author subject; reference existing sentences
       .withSchema(AnnotationSchema, AuthorSubject, {
-        sentenceId: (_, ctx) =>
-          ctx.registry.pick<{ sentenceId: string }>("sentence").sentenceId,
+        sentenceId: (_, ctx) => ctx.registry.pick<{ sentenceId: string }>("sentence").sentenceId,
         authorId: (s) => s.authorId,
       })
   );

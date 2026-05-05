@@ -7,75 +7,77 @@
  * - Cross-referencing stored subjects from registry within matchers
  */
 
-import { createWorld, defineSubjectType, generators } from '../../../src/index.js'
+import { createWorld, defineSubjectType, generators } from "../../../src/index.js";
 import {
   CustomerSubjectSchema,
   ProductSubjectSchema,
   InvoiceSchema,
   CustomerSummarySchema,
-} from './schemas.js'
+} from "./schemas.js";
 
-export const CustomerSubject = defineSubjectType('customer', CustomerSubjectSchema)
-export const ProductSubject  = defineSubjectType('product',  ProductSubjectSchema)
+export const CustomerSubject = defineSubjectType("customer", CustomerSubjectSchema);
+export const ProductSubject = defineSubjectType("product", ProductSubjectSchema);
 
 type ProductData = {
-  productId:      string
-  sku:            string
-  name:           string
-  unitPriceCents: number
-}
+  productId: string;
+  sku: string;
+  name: string;
+  unitPriceCents: number;
+};
 
 export function createInvoicingWorld(seed = 42) {
-  const lineTotals = new Map<string, number>()
+  const lineTotals = new Map<string, number>();
 
-  return createWorld({
-    seed,
-    generators: {
-      // B2B prices in €1 increments, €1–€500 — tighter range than the schema allows
-      unitPriceCents: (_schema, ctx) => ctx.prng.int(1, 500) * 100,
-    },
-  })
-    .withSubject(CustomerSubject)
-    .withSubject(ProductSubject)
-
-    // Invoice: one per customer subject
-    .withSchema(InvoiceSchema, CustomerSubject, {
-      id: (_, ctx) => generators.uuid(ctx.prng.fork('invoice-id')),
-      customerId: (s) => s.customerId,
-      lines: (s, ctx) => {
-        const count = ctx.prng.int(1, 4)
-        let total = 0
-        const lines = Array.from({ length: count }, () => {
-          const product = ctx.registry.pick<ProductData>('product')
-          const quantity       = ctx.prng.int(1, 10)
-          const unitPriceCents = product.unitPriceCents
-          const lineTotalCents = quantity * unitPriceCents
-          total += lineTotalCents
-          return {
-            productId:      product.productId,
-            sku:            product.sku,
-            description:    product.name,
-            quantity,
-            unitPriceCents,
-            totalCents:     lineTotalCents,
-          }
-        })
-        lineTotals.set(s._id, total)
-        return lines
+  return (
+    createWorld({
+      seed,
+      generators: {
+        // B2B prices in €1 increments, €1–€500 — tighter range than the schema allows
+        unitPriceCents: (_schema, ctx) => ctx.prng.int(1, 500) * 100,
       },
-      totalCents: (s) => lineTotals.get(s._id) ?? 1,
     })
+      .withSubject(CustomerSubject)
+      .withSubject(ProductSubject)
 
-    // Customer summary: aggregates across customers in the registry
-    .withSchema(CustomerSummarySchema, CustomerSubject, {
-      customerId: (s) => s.customerId,
-      name:       (s) => s.name,
-      email:      (s) => s.email,
-      invoiceCount: (s, ctx) =>
-        ctx.registry.filter<{ customerId: string }>(
-          'customer',
-          (inv) => inv.customerId === s.customerId,
-        ).length,
-      totalOwedCents: () => 0,
-    })
+      // Invoice: one per customer subject
+      .withSchema(InvoiceSchema, CustomerSubject, {
+        id: (_, ctx) => generators.uuid(ctx.prng.fork("invoice-id")),
+        customerId: (s) => s.customerId,
+        lines: (s, ctx) => {
+          const count = ctx.prng.int(1, 4);
+          let total = 0;
+          const lines = Array.from({ length: count }, () => {
+            const product = ctx.registry.pick<ProductData>("product");
+            const quantity = ctx.prng.int(1, 10);
+            const unitPriceCents = product.unitPriceCents;
+            const lineTotalCents = quantity * unitPriceCents;
+            total += lineTotalCents;
+            return {
+              productId: product.productId,
+              sku: product.sku,
+              description: product.name,
+              quantity,
+              unitPriceCents,
+              totalCents: lineTotalCents,
+            };
+          });
+          lineTotals.set(s._id, total);
+          return lines;
+        },
+        totalCents: (s) => lineTotals.get(s._id) ?? 1,
+      })
+
+      // Customer summary: aggregates across customers in the registry
+      .withSchema(CustomerSummarySchema, CustomerSubject, {
+        customerId: (s) => s.customerId,
+        name: (s) => s.name,
+        email: (s) => s.email,
+        invoiceCount: (s, ctx) =>
+          ctx.registry.filter<{ customerId: string }>(
+            "customer",
+            (inv) => inv.customerId === s.customerId,
+          ).length,
+        totalOwedCents: () => 0,
+      })
+  );
 }

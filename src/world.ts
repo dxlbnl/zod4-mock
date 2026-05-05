@@ -35,7 +35,7 @@
  * 5. `options.transform` function
  */
 
-import type { ZodTypeAny, input } from 'zod'
+import type { ZodTypeAny, input } from "zod";
 import type {
   World,
   WorldOptions,
@@ -49,25 +49,26 @@ import type {
   GeneratorContext,
   SubjectMatcherArg,
   KeyGenerator,
-} from './types.js'
-import { SubjectRegistry } from './registry.js'
-import { createPrng, fieldSeed } from './prng.js'
-import { generateFromSchema } from './generators/schema-based.js'
-import { generateFromKey } from './generators/key-based.js'
+  SchemaKeyMap,
+} from "./types.js";
+import { SubjectRegistry } from "./registry.js";
+import { createPrng, fieldSeed } from "./prng.js";
+import { generateFromSchema } from "./generators/schema/index.js";
+import { generateFromKey } from "./generators/key-based.js";
 
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
 
 interface SchemaReg {
-  schema: ZodTypeAny
-  subjectTypes: string[]
-  matchers: Record<string, MatcherFn<unknown, unknown>>
+  schema: ZodTypeAny;
+  subjectTypes: string[];
+  matchers: Record<string, MatcherFn<unknown, unknown>>;
 }
 
 interface SubjectRegPair {
-  instance: AnySubjectInstance
-  reg: SchemaReg
+  instance: AnySubjectInstance;
+  reg: SchemaReg;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,15 +76,15 @@ interface SubjectRegPair {
 // ---------------------------------------------------------------------------
 
 interface ZodDefShape {
-  type: string
-  element?: ZodTypeAny
-  innerType?: ZodTypeAny
-  shape?: Record<string, ZodTypeAny>
-  checks?: Array<{ check: string; minimum?: number; maximum?: number; length?: number }>
+  type: string;
+  element?: ZodTypeAny;
+  innerType?: ZodTypeAny;
+  shape?: Record<string, ZodTypeAny>;
+  checks?: Array<{ check: string; minimum?: number; maximum?: number; length?: number }>;
 }
 
 function getZodDef(schema: ZodTypeAny): ZodDefShape {
-  return (schema as unknown as { _zod: { def: ZodDefShape } })._zod.def
+  return (schema as unknown as { _zod: { def: ZodDefShape } })._zod.def;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,18 +93,22 @@ function getZodDef(schema: ZodTypeAny): ZodDefShape {
 
 function deepMerge(target: unknown, source: unknown): unknown {
   if (
-    typeof source !== 'object' || source === null || Array.isArray(source) ||
-    typeof target !== 'object' || target === null || Array.isArray(target)
+    typeof source !== "object" ||
+    source === null ||
+    Array.isArray(source) ||
+    typeof target !== "object" ||
+    target === null ||
+    Array.isArray(target)
   ) {
-    return source
+    return source;
   }
-  const result = { ...(target as Record<string, unknown>) }
+  const result = { ...(target as Record<string, unknown>) };
   for (const [k, sv] of Object.entries(source as Record<string, unknown>)) {
     if (sv !== undefined) {
-      result[k] = deepMerge(result[k], sv)
+      result[k] = deepMerge(result[k], sv);
     }
   }
-  return result
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,30 +116,30 @@ function deepMerge(target: unknown, source: unknown): unknown {
 // ---------------------------------------------------------------------------
 
 interface CheckDef {
-  check: string
-  minimum?: number
-  maximum?: number
-  length?: number
-  value?: number
-  inclusive?: boolean
-  format?: string
+  check: string;
+  minimum?: number;
+  maximum?: number;
+  length?: number;
+  value?: number;
+  inclusive?: boolean;
+  format?: string;
 }
 
 /** Extract inner `_zod.def` objects from a schema's checks array. */
 function getCheckDefs(schema: ZodTypeAny): CheckDef[] {
-  const raw = (getZodDef(schema).checks ?? []) as unknown as Array<{ _zod: { def: CheckDef } }>
-  return raw.map((c) => c._zod.def)
+  const raw = (getZodDef(schema).checks ?? []) as unknown as Array<{ _zod: { def: CheckDef } }>;
+  return raw.map((c) => c._zod.def);
 }
 
 function resolveMinRequired(schema: ZodTypeAny, defaultMin: number): number {
-  let min = defaultMin
+  let min = defaultMin;
   for (const c of getCheckDefs(schema)) {
-    if (c.check === 'length_equals') return c.length!
-    if (c.check === 'min_length' && c.minimum !== undefined) {
-      min = Math.max(min, c.minimum)
+    if (c.check === "length_equals") return c.length!;
+    if (c.check === "min_length" && c.minimum !== undefined) {
+      min = Math.max(min, c.minimum);
     }
   }
-  return min
+  return min;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,32 +147,38 @@ function resolveMinRequired(schema: ZodTypeAny, defaultMin: number): number {
 // ---------------------------------------------------------------------------
 
 export class WorldImpl implements World {
-  private readonly prng: ReturnType<typeof createPrng>
-  readonly registry: Registry
+  private readonly prng: ReturnType<typeof createPrng>;
+  readonly registry: Registry;
 
   /** Registered subject type definitions, keyed by type name. */
-  private readonly subjectTypes: Map<string, AnySubjectType> = new Map()
+  private readonly subjectTypes: Map<string, AnySubjectType> = new Map();
 
   /** Schema registrations: each entry binds a Zod schema to subject type(s) + matchers. */
-  private readonly schemaRegs: SchemaReg[] = []
+  private readonly schemaRegs: SchemaReg[] = [];
 
   /** Counter per subject type for stable sequential IDs (`person#1`, `person#2`, …). */
-  private readonly subjectCounters: Map<string, number> = new Map()
+  private readonly subjectCounters: Map<string, number> = new Map();
 
   /** All created subject instances, in creation order. */
-  private readonly allInstances: AnySubjectInstance[] = []
+  private readonly allInstances: AnySubjectInstance[] = [];
 
   /** Incremented on every `generate()` call; used to cycle through subject pairs. */
-  private generationCounter = 0
+  private generationCounter = 0;
 
   /** Custom key-based generators, keyed by lowercased field name. */
-  private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map()
+  private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
+
+  /** Per-schema key maps registered via withKeyMap, keyed by schema identity. */
+  private readonly schemaKeyMaps: Map<
+    ZodTypeAny,
+    Record<string, (ctx: GeneratorContext) => unknown>
+  > = new Map();
 
   constructor(private readonly options: WorldOptions) {
-    this.prng = createPrng(options.seed)
-    this.registry = new SubjectRegistry(this.prng.fork('registry'))
+    this.prng = createPrng(options.seed);
+    this.registry = new SubjectRegistry(this.prng.fork("registry"));
     for (const [k, fn] of Object.entries(options.generators ?? {})) {
-      this.customKeyGenerators.set(k.toLowerCase(), fn)
+      this.customKeyGenerators.set(k.toLowerCase(), fn);
     }
   }
 
@@ -176,46 +187,55 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   withSubject(subjectType: AnySubjectType): this {
-    this.subjectTypes.set(subjectType.name, subjectType)
-    return this
+    this.subjectTypes.set(subjectType.name, subjectType);
+    return this;
   }
 
   withSchema<TSchema extends ZodTypeAny, TSubjectType extends AnySubjectType>(
     schema: TSchema,
     subjectType: TSubjectType,
     matchers?: Matchers<TSchema, SubjectData<TSubjectType>>,
-  ): this
+  ): this;
   withSchema<TSchema extends ZodTypeAny>(
     schema: TSchema,
     subjectTypes: string | string[],
     matchers?: Matchers<TSchema, unknown>,
-  ): this
+  ): this;
   withSchema(
     schema: ZodTypeAny,
     subjectTypes: AnySubjectType | string | string[],
     matchers?: Record<string, unknown>,
   ): this {
-    let types: string[]
-    if (typeof subjectTypes === 'string') {
-      types = [subjectTypes]
+    let types: string[];
+    if (typeof subjectTypes === "string") {
+      types = [subjectTypes];
     } else if (Array.isArray(subjectTypes)) {
-      types = subjectTypes as string[]
+      types = subjectTypes as string[];
     } else {
-      types = [(subjectTypes as AnySubjectType).name]
+      types = [(subjectTypes as AnySubjectType).name];
     }
     this.schemaRegs.push({
       schema,
       subjectTypes: types,
       matchers: (matchers ?? {}) as Record<string, MatcherFn<unknown, unknown>>,
-    })
-    return this
+    });
+    return this;
   }
 
   withGenerators(map: Record<string, KeyGenerator>): this {
     for (const [k, fn] of Object.entries(map)) {
-      this.customKeyGenerators.set(k.toLowerCase(), fn)
+      this.customKeyGenerators.set(k.toLowerCase(), fn);
     }
-    return this
+    return this;
+  }
+
+  withKeyMap<T extends ZodTypeAny>(schema: T, map: SchemaKeyMap<T>): this {
+    const existing = this.schemaKeyMaps.get(schema) ?? {};
+    this.schemaKeyMaps.set(schema, {
+      ...existing,
+      ...(map as Record<string, (ctx: GeneratorContext) => unknown>),
+    });
+    return this;
   }
 
   // -------------------------------------------------------------------------
@@ -223,25 +243,23 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   subjects(type?: string): AnySubjectInstance[] {
-    if (type === undefined) return [...this.allInstances]
-    return this.allInstances.filter((s) => s._type === type)
+    if (type === undefined) return [...this.allInstances];
+    return this.allInstances.filter((s) => s._type === type);
   }
 
   populate(subjectType: AnySubjectType | string, count: number): this {
-    const name = typeof subjectType === 'string' ? subjectType : subjectType.name
+    const name = typeof subjectType === "string" ? subjectType : subjectType.name;
     for (let i = 0; i < count; i++) {
-      this.subject(name)
+      this.subject(name);
     }
-    return this
+    return this;
   }
 
   subject(typeName: string): AnySubjectInstance {
     if (!this.subjectTypes.has(typeName)) {
-      throw new Error(
-        `Subject type '${typeName}' is not registered. Call .withSubject() first.`,
-      )
+      throw new Error(`Subject type '${typeName}' is not registered. Call .withSubject() first.`);
     }
-    return this.createSubjectInstance(typeName)
+    return this.createSubjectInstance(typeName);
   }
 
   // -------------------------------------------------------------------------
@@ -252,15 +270,18 @@ export class WorldImpl implements World {
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
   ): input<TSchema> {
-    const d = getZodDef(schema)
-    if (d.type === 'array') {
+    const d = getZodDef(schema);
+    if (d.type === "array") {
       return this.generateArray(
         d.element!,
         schema,
         options as GenerateOptions<unknown[]> | undefined,
-      ) as input<TSchema>
+      ) as input<TSchema>;
     }
-    return this.generateSingleItem(schema, options as GenerateOptions<unknown> | undefined) as input<TSchema>
+    return this.generateSingleItem(
+      schema,
+      options as GenerateOptions<unknown> | undefined,
+    ) as input<TSchema>;
   }
 
   // -------------------------------------------------------------------------
@@ -268,56 +289,60 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   private createSubjectInstance(typeName: string): AnySubjectInstance {
-    const subjectType = this.subjectTypes.get(typeName)!
-    const counter = (this.subjectCounters.get(typeName) ?? 0) + 1
-    this.subjectCounters.set(typeName, counter)
+    const subjectType = this.subjectTypes.get(typeName)!;
+    const counter = (this.subjectCounters.get(typeName) ?? 0) + 1;
+    this.subjectCounters.set(typeName, counter);
 
-    const _id = `${typeName}#${counter}`
+    const _id = `${typeName}#${counter}`;
     // Per-subject PRNG — stable regardless of call order on the world
-    const subjectPrng = createPrng(fieldSeed(this.options.seed, _id, ''))
+    const subjectPrng = createPrng(fieldSeed(this.options.seed, _id, ""));
 
     const ctx: GeneratorContext = {
-      prng:               subjectPrng,
-      subject:            undefined,
-      registry:           this.registry,
-      fieldPath:          '',
+      prng: subjectPrng,
+      subject: undefined,
+      registry: this.registry,
+      fieldPath: "",
       optionalProbability: 0, // subject data always fully populated
-    }
+    };
 
     // Apply key-based generators for subject fields so semantic field names
     // (firstName, lastName, email, etc.) produce meaningful values.
-    const subjectShape = getZodDef(subjectType.schema).shape!
-    const rawData: Record<string, unknown> = {}
+    const subjectShape = getZodDef(subjectType.schema).shape!;
+    const rawData: Record<string, unknown> = {};
     for (const [key, fieldSchema] of Object.entries(subjectShape)) {
       const fieldCtx: GeneratorContext = {
         ...ctx,
-        prng:      ctx.prng.fork(key),
+        prng: ctx.prng.fork(key),
         fieldPath: key,
-      }
-      const customGen = this.customKeyGenerators.get(key.toLowerCase())
+      };
+      const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
-        rawData[key] = customGen(fieldSchema, fieldCtx)
+        rawData[key] = customGen(fieldSchema, fieldCtx);
       } else {
-        const keyResult = generateFromKey(key, fieldSchema, fieldCtx)
-        rawData[key] = keyResult !== undefined
-          ? keyResult
-          : generateFromSchema(fieldSchema, fieldCtx)
+        const subjectKeyMapFn = subjectType.keyMap?.[key];
+        if (subjectKeyMapFn !== undefined) {
+          rawData[key] = subjectKeyMapFn(fieldCtx.prng);
+        } else {
+          const keyResult = generateFromKey(key, fieldSchema, fieldCtx);
+          rawData[key] =
+            keyResult !== undefined ? keyResult : generateFromSchema(fieldSchema, fieldCtx);
+        }
       }
     }
     // Pass 2: derived fields — overwrite base values using sibling field data.
     // World-level custom generators take priority and are not overridden.
     for (const [key, fn] of Object.entries(subjectType.derive ?? {})) {
       if (!this.customKeyGenerators.has(key.toLowerCase())) {
-        rawData[key] = fn(rawData, ctx.prng.fork(`derive-${key}`))
+        rawData[key] = fn(rawData, ctx.prng.fork(`derive-${key}`));
       }
     }
 
-    const data = rawData as SubjectData<AnySubjectType>
+    const data = rawData as SubjectData<AnySubjectType>;
 
-    const instance: AnySubjectInstance = { _type: typeName, _id, data }
-    this.allInstances.push(instance)
-    this.registry.store(typeName, data) // store raw subject data, not the wrapper
-    return instance
+    const instance: AnySubjectInstance = { _type: typeName, _id, data };
+    this.allInstances.push(instance);
+    this.registry.store(typeName, data); // store raw subject data, not the wrapper
+    return instance;
   }
 
   // -------------------------------------------------------------------------
@@ -325,11 +350,11 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   private getInstancesOfType(typeName: string): AnySubjectInstance[] {
-    return this.allInstances.filter((s) => s._type === typeName)
+    return this.allInstances.filter((s) => s._type === typeName);
   }
 
   private findRegsForSchema(schema: ZodTypeAny): SchemaReg[] {
-    return this.schemaRegs.filter((r) => r.schema === schema)
+    return this.schemaRegs.filter((r) => r.schema === schema);
   }
 
   /**
@@ -340,7 +365,7 @@ export class WorldImpl implements World {
   private ensureAllTypesHaveSubjects(): void {
     for (const typeName of this.subjectTypes.keys()) {
       if (this.getInstancesOfType(typeName).length === 0) {
-        this.createSubjectInstance(typeName)
+        this.createSubjectInstance(typeName);
       }
     }
   }
@@ -351,15 +376,15 @@ export class WorldImpl implements World {
    * subject creation order within each type.
    */
   private buildPairs(regs: SchemaReg[]): SubjectRegPair[] {
-    const pairs: SubjectRegPair[] = []
+    const pairs: SubjectRegPair[] = [];
     for (const reg of regs) {
       for (const typeName of reg.subjectTypes) {
         for (const instance of this.getInstancesOfType(typeName)) {
-          pairs.push({ instance, reg })
+          pairs.push({ instance, reg });
         }
       }
     }
-    return pairs
+    return pairs;
   }
 
   /**
@@ -367,7 +392,7 @@ export class WorldImpl implements World {
    * we need to create more subjects to satisfy a minimum array length).
    */
   private regTypeCycle(regs: SchemaReg[]): string[] {
-    return regs.flatMap((r) => r.subjectTypes)
+    return regs.flatMap((r) => r.subjectTypes);
   }
 
   // -------------------------------------------------------------------------
@@ -381,32 +406,32 @@ export class WorldImpl implements World {
     options?: GenerateOptions<unknown>,
   ): unknown {
     // Stable PRNG per subject — independent of which other subjects exist
-    const itemPrng = this.prng.fork(instance._id)
+    const itemPrng = this.prng.fork(instance._id);
 
     const subjectArg = {
       ...instance.data,
       _type: instance._type,
-      _id:   instance._id,
-    } as SubjectMatcherArg<unknown>
+      _id: instance._id,
+    } as SubjectMatcherArg<unknown>;
 
     const ctx: GeneratorContext = {
-      prng:                itemPrng,
-      subject:             instance,
-      registry:            this.registry,
-      fieldPath:           '',
+      prng: itemPrng,
+      subject: instance,
+      registry: this.registry,
+      fieldPath: "",
       optionalProbability: this.options.optionalProbability ?? 0.2,
-    }
+    };
 
-    const result = this.generateObjectFields(schema, subjectArg, reg.matchers, ctx)
+    const result = this.generateObjectFields(schema, subjectArg, reg.matchers, ctx);
 
-    let merged: unknown = result
+    let merged: unknown = result;
     if (options?.overrides) {
-      merged = deepMerge(result, options.overrides)
+      merged = deepMerge(result, options.overrides);
     }
     if (options?.transform) {
-      merged = options.transform(merged)
+      merged = options.transform(merged);
     }
-    return merged
+    return merged;
   }
 
   /**
@@ -419,60 +444,65 @@ export class WorldImpl implements World {
     matchers: Record<string, MatcherFn<unknown, unknown>>,
     ctx: GeneratorContext,
   ): Record<string, unknown> {
-    const d = getZodDef(schema)
+    const d = getZodDef(schema);
 
     // Non-object schema (shouldn't happen for registered schemas, but handle anyway)
-    if (d.type !== 'object') {
-      return generateFromSchema(schema, ctx) as Record<string, unknown>
+    if (d.type !== "object") {
+      return generateFromSchema(schema, ctx) as Record<string, unknown>;
     }
 
-    const shape = d.shape!
-    const result: Record<string, unknown> = {}
+    const shape = d.shape!;
+    const result: Record<string, unknown> = {};
 
     for (const [key, fieldSchema] of Object.entries(shape)) {
-      const matcher = matchers[key]
+      const matcher = matchers[key];
       const fieldCtx: GeneratorContext = {
         ...ctx,
-        prng:      ctx.prng.fork(key),
+        prng: ctx.prng.fork(key),
         fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
-      }
+      };
 
       if (matcher) {
-        result[key] = matcher(subjectArg, fieldCtx)
-        continue
+        result[key] = matcher(subjectArg, fieldCtx);
+        continue;
       }
 
       // Unwrap optional/nullable so key-based generators see the inner schema,
       // and handle the absent-value probability here rather than deep inside
       // generateFromSchema where the field key is no longer available.
-      const fd = getZodDef(fieldSchema)
-      let innerSchema = fieldSchema
-      if (fd.type === 'optional') {
+      const fd = getZodDef(fieldSchema);
+      let innerSchema = fieldSchema;
+      if (fd.type === "optional") {
         if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
-          result[key] = undefined
-          continue
+          result[key] = undefined;
+          continue;
         }
-        innerSchema = fd.innerType ?? fieldSchema
-      } else if (fd.type === 'nullable') {
+        innerSchema = fd.innerType ?? fieldSchema;
+      } else if (fd.type === "nullable") {
         if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
-          result[key] = null
-          continue
+          result[key] = null;
+          continue;
         }
-        innerSchema = fd.innerType ?? fieldSchema
+        innerSchema = fd.innerType ?? fieldSchema;
       }
 
-      const customGen = this.customKeyGenerators.get(key.toLowerCase())
+      const keyMapFn = this.schemaKeyMaps.get(schema)?.[key];
+      if (keyMapFn !== undefined) {
+        result[key] = keyMapFn(fieldCtx);
+        continue;
+      }
+
+      const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
-        result[key] = customGen(innerSchema, fieldCtx)
+        result[key] = customGen(innerSchema, fieldCtx);
       } else {
-        const keyResult = generateFromKey(key, innerSchema, fieldCtx)
-        result[key] = keyResult !== undefined
-          ? keyResult
-          : generateFromSchema(innerSchema, fieldCtx)
+        const keyResult = generateFromKey(key, innerSchema, fieldCtx);
+        result[key] =
+          keyResult !== undefined ? keyResult : generateFromSchema(innerSchema, fieldCtx);
       }
     }
 
-    return result
+    return result;
   }
 
   // -------------------------------------------------------------------------
@@ -484,34 +514,38 @@ export class WorldImpl implements World {
     arraySchema: ZodTypeAny,
     options?: GenerateOptions<unknown[]>,
   ): unknown[] {
-    const regs = this.findRegsForSchema(innerSchema)
+    const regs = this.findRegsForSchema(innerSchema);
 
-    this.generationCounter++
-    const genPrng = this.prng.fork(`gen-${this.generationCounter}`)
+    this.generationCounter++;
+    const genPrng = this.prng.fork(`gen-${this.generationCounter}`);
 
-    const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5]
+    const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5];
 
     // -----------------------------------------------------------------------
     // Ad-hoc: no registrations — pure schema-based generation
     // -----------------------------------------------------------------------
     if (regs.length === 0) {
-      let N = defMin
-      let max = defMax
+      let N = defMin;
+      let max = defMax;
       for (const c of getCheckDefs(arraySchema)) {
-        if (c.check === 'length_equals') { N = c.length!; max = N; break }
-        if (c.check === 'min_length' && c.minimum !== undefined) N = Math.max(N, c.minimum)
-        if (c.check === 'max_length' && c.maximum !== undefined) max = Math.min(max, c.maximum)
+        if (c.check === "length_equals") {
+          N = c.length!;
+          max = N;
+          break;
+        }
+        if (c.check === "min_length" && c.minimum !== undefined) N = Math.max(N, c.minimum);
+        if (c.check === "max_length" && c.maximum !== undefined) max = Math.min(max, c.maximum);
       }
-      N = genPrng.int(Math.min(N, max), Math.max(N, max))
+      N = genPrng.int(Math.min(N, max), Math.max(N, max));
       return Array.from({ length: N }, (_, i) =>
         generateFromSchema(innerSchema, {
-          prng:                genPrng.fork(`[${i}]`),
-          subject:             undefined,
-          registry:            this.registry,
-          fieldPath:           `[${i}]`,
+          prng: genPrng.fork(`[${i}]`),
+          subject: undefined,
+          registry: this.registry,
+          fieldPath: `[${i}]`,
           optionalProbability: this.options.optionalProbability ?? 0.2,
         }),
-      )
+      );
     }
 
     // -----------------------------------------------------------------------
@@ -520,83 +554,100 @@ export class WorldImpl implements World {
 
     // Ensure all registered types have at least one subject so that matchers
     // calling ctx.registry.pick(otherType) always find data.
-    this.ensureAllTypesHaveSubjects()
+    this.ensureAllTypesHaveSubjects();
 
     // Collect existing (instance, reg) pairs for this schema's subject types
-    let pairs = this.buildPairs(regs)
-    const existingCount = pairs.length
+    let pairs = this.buildPairs(regs);
+    const existingCount = pairs.length;
 
     // Determine the minimum number of items required by the array constraints
-    const minRequired = resolveMinRequired(arraySchema, defMin)
-    const target = Math.max(existingCount, minRequired)
+    const minRequired = resolveMinRequired(arraySchema, defMin);
+    const target = Math.max(existingCount, minRequired);
 
     // Create more subjects if needed, cycling through the registered types
-    const typeCycle = this.regTypeCycle(regs)
+    const typeCycle = this.regTypeCycle(regs);
     while (pairs.length < target) {
-      const nextType = typeCycle[pairs.length % typeCycle.length]!
-      const newInstance = this.createSubjectInstance(nextType)
-      const matchingReg = regs.find((r) => r.subjectTypes.includes(nextType))!
-      pairs.push({ instance: newInstance, reg: matchingReg })
+      const nextType = typeCycle[pairs.length % typeCycle.length]!;
+      const newInstance = this.createSubjectInstance(nextType);
+      const matchingReg = regs.find((r) => r.subjectTypes.includes(nextType))!;
+      pairs.push({ instance: newInstance, reg: matchingReg });
     }
 
     // Generate one item per pair
     return pairs.map((pair) =>
-      this.generateItemForSubject(innerSchema, pair.instance, pair.reg, options as GenerateOptions<unknown>),
-    )
+      this.generateItemForSubject(
+        innerSchema,
+        pair.instance,
+        pair.reg,
+        options as GenerateOptions<unknown>,
+      ),
+    );
   }
 
   // -------------------------------------------------------------------------
   // Private: single-item generation
   // -------------------------------------------------------------------------
 
-  private generateSingleItem(
-    schema: ZodTypeAny,
-    options?: GenerateOptions<unknown>,
-  ): unknown {
-    const regs = this.findRegsForSchema(schema)
+  private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
+    const regs = this.findRegsForSchema(schema);
 
-    this.generationCounter++
+    this.generationCounter++;
 
     // -----------------------------------------------------------------------
     // Ad-hoc: no registrations
     // -----------------------------------------------------------------------
     if (regs.length === 0) {
       const ctx: GeneratorContext = {
-        prng:                this.prng.fork(`adhoc-${this.generationCounter}`),
-        subject:             undefined,
-        registry:            this.registry,
-        fieldPath:           '',
+        prng: this.prng.fork(`adhoc-${this.generationCounter}`),
+        subject: undefined,
+        registry: this.registry,
+        fieldPath: "",
         optionalProbability: this.options.optionalProbability ?? 0.2,
+      };
+
+      // If a keyMap is registered for this schema, route through
+      // generateObjectFields so the keyMap (and key-based heuristics) fire.
+      const keyMap = this.schemaKeyMaps.get(schema);
+      let result: unknown;
+      if (keyMap !== undefined && getZodDef(schema).type === "object") {
+        result = this.generateObjectFields(
+          schema,
+          undefined as unknown as SubjectMatcherArg<unknown>,
+          {},
+          ctx,
+        );
+      } else {
+        result = generateFromSchema(schema, ctx);
       }
-      let result = generateFromSchema(schema, ctx)
-      if (options?.overrides) result = deepMerge(result, options.overrides) as typeof result
-      if (options?.transform) result = options.transform(result) as typeof result
-      return result
+
+      if (options?.overrides) result = deepMerge(result, options.overrides);
+      if (options?.transform) result = options.transform(result as input<typeof schema>);
+      return result;
     }
 
     // -----------------------------------------------------------------------
     // Registered schema: pick the next subject via cycling
     // -----------------------------------------------------------------------
 
-    this.ensureAllTypesHaveSubjects()
+    this.ensureAllTypesHaveSubjects();
 
-    let pairs = this.buildPairs(regs)
+    let pairs = this.buildPairs(regs);
 
     // If, somehow, no pairs exist yet (type registered but not in subjectTypes),
     // create one on the fly.
     if (pairs.length === 0) {
-      const firstType = regs[0]!.subjectTypes[0]!
+      const firstType = regs[0]!.subjectTypes[0]!;
       if (this.subjectTypes.has(firstType)) {
-        const inst = this.createSubjectInstance(firstType)
-        pairs = [{ instance: inst, reg: regs[0]! }]
+        const inst = this.createSubjectInstance(firstType);
+        pairs = [{ instance: inst, reg: regs[0]! }];
       }
     }
 
     // Cycle through pairs deterministically
-    const idx = (this.generationCounter - 1) % pairs.length
-    const pair = pairs[idx]!
+    const idx = (this.generationCounter - 1) % pairs.length;
+    const pair = pairs[idx]!;
 
-    return this.generateItemForSubject(schema, pair.instance, pair.reg, options)
+    return this.generateItemForSubject(schema, pair.instance, pair.reg, options);
   }
 }
 
@@ -620,5 +671,5 @@ export class WorldImpl implements World {
  * ```
  */
 export function createWorld(options: WorldOptions): World {
-  return new WorldImpl(options)
+  return new WorldImpl(options);
 }
