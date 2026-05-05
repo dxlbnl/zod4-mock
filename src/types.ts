@@ -38,7 +38,10 @@ export type RelationMap = Record<string, RelationDef>
 // ---------------------------------------------------------------------------
 
 /** Options passed to `defineSubjectType`. */
-export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap> {
+export interface SubjectTypeOptions<
+  TRelations extends RelationMap = RelationMap,
+  TData = unknown,
+> {
   /**
    * Declares which other subject types this type can be related to, and the
    * cardinality of each relation.  Cyclical relations are supported; the world
@@ -53,6 +56,28 @@ export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap
    * ```
    */
   readonly relations?: TRelations
+
+  /**
+   * Derive field values from other already-generated fields of the same subject.
+   *
+   * Functions are called after all base fields are generated (key-based and
+   * schema-based), and their return value overwrites the base-generated value.
+   * Functions are called in declaration order, so a later entry can reference
+   * an earlier derived field.
+   *
+   * World-level `generators` take priority over `derive` for the same key.
+   *
+   * @example
+   * ```ts
+   * derive: {
+   *   email: ({ firstName, lastName }, prng) =>
+   *     `${firstName![0]}.${lastName}${prng.int(10, 99)}@${prng.pick(DOMAINS)}`.toLowerCase(),
+   * }
+   * ```
+   */
+  readonly derive?: {
+    [K in keyof TData]?: (partial: Partial<TData>, prng: Prng) => TData[K]
+  }
 }
 
 /**
@@ -72,6 +97,8 @@ export interface SubjectType<
   readonly schema: TSchema
   /** Declared relations to other subject types. */
   readonly relations: TRelations
+  /** Intra-subject derived fields. Erased to `unknown` at the `AnySubjectType` level. */
+  readonly derive?: Record<string, (partial: Record<string, unknown>, prng: Prng) => unknown>
 }
 
 /** Erased form of `SubjectType` used internally where the generics are irrelevant. */

@@ -44,7 +44,7 @@ const COUNTRIES = [
   'Austria', 'Switzerland', 'Denmark', 'Sweden', 'Norway',
 ] as const
 
-const DOMAINS = [
+export const DOMAINS = [
   'example.com', 'test.org', 'demo.nl', 'sample.io', 'mock.dev',
   'acme.com', 'corp.nl', 'enterprise.org', 'startup.io', 'labs.dev',
 ] as const

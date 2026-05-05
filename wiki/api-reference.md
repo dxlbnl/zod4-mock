@@ -240,11 +240,45 @@ interface SubjectTypeOptions<TRelations extends RelationMap> {
 const PersonSubject = defineSubjectType('person', z.object({
   firstName: z.string(),
   lastName:  z.string(),
+  email:     z.email(),
 }), {
   relations: {
     employer: { type: 'company', cardinality: '0..1' },
   },
+  derive: {
+    email: ({ firstName, lastName }, prng) => {
+      const ln = lastName!.toLowerCase().replace(/[\s']/g, '')
+      return `${firstName![0]}.${ln}${prng.int(10, 99)}@example.com`.toLowerCase()
+    },
+  },
 })
+```
+
+### `derive`
+
+```ts
+derive?: {
+  [K in keyof SubjectData<T>]?: (partial: Partial<SubjectData<T>>, prng: Prng) => SubjectData<T>[K]
+}
+```
+
+Derives field values from already-generated sibling fields of the same subject. Each function receives a `partial` snapshot of the subject's data (everything generated so far in declaration order) and a PRNG forked for that field.
+
+**Execution order:**
+1. All fields are generated via the normal pipeline first (world generators → key-based → schema-based).
+2. Then each `derive` entry runs in declaration order, overwriting the base-generated value.
+
+This means later entries see earlier entries' derived values — declare dependencies before dependents.
+
+**World-level `generators` take priority:** if the world registers a generator for the same field key, `derive` is skipped for that key.
+
+```ts
+derive: {
+  // mid is derived from base (a base field)
+  mid: ({ base }) => `mid-${base}`,
+  // top is derived from mid (a derived field — declared after mid, so it sees mid's value)
+  top: ({ mid }) => `top-${mid}`,
+}
 ```
 
 ### `Cardinality`

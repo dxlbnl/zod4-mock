@@ -300,6 +300,73 @@ describe("world.generate — optional and nullable fields in objects", () => {
     expect(results.every((r) => r.tag !== null)).toBe(true);
   });
 
+  it("derive: overwrites base-generated field with derived value", () => {
+    const Subject = defineSubjectType(
+      "person",
+      z.object({ firstName: z.string(), lastName: z.string(), email: z.email() }),
+      {
+        derive: {
+          email: ({ firstName, lastName }) =>
+            `${firstName![0]}.${lastName}@test.com`.toLowerCase(),
+        },
+      },
+    );
+    const world = createWorld({ seed: 42 }).withSubject(Subject);
+    const inst = world.subject("person");
+    const data = inst.data as { firstName: string; lastName: string; email: string };
+    expect(data.email).toBe(`${data.firstName[0]}.${data.lastName}@test.com`.toLowerCase());
+  });
+
+  it("derive: partial receives all base-generated sibling fields", () => {
+    const Subject = defineSubjectType(
+      "tagged",
+      z.object({ name: z.string(), tag: z.string() }),
+      {
+        derive: {
+          tag: ({ name }) => `tag-${name}`,
+        },
+      },
+    );
+    const world = createWorld({ seed: 1 }).withSubject(Subject);
+    const data = world.subject("tagged").data as { name: string; tag: string };
+    expect(data.tag).toBe(`tag-${data.name}`);
+  });
+
+  it("derive: declaration order enables chaining (B sees A's derived value)", () => {
+    const Subject = defineSubjectType(
+      "chained",
+      z.object({ base: z.string(), mid: z.string(), top: z.string() }),
+      {
+        derive: {
+          mid: ({ base }) => `mid-${base}`,
+          top: ({ mid }) => `top-${mid}`,
+        },
+      },
+    );
+    const world = createWorld({ seed: 1 }).withSubject(Subject);
+    const data = world.subject("chained").data as { base: string; mid: string; top: string };
+    expect(data.mid).toBe(`mid-${data.base}`);
+    expect(data.top).toBe(`top-${data.mid}`);
+  });
+
+  it("derive: world-level generator overrides derive for the same key", () => {
+    const Subject = defineSubjectType(
+      "person",
+      z.object({ firstName: z.string(), email: z.email() }),
+      {
+        derive: {
+          email: ({ firstName }) => `derive-${firstName}@test.com`,
+        },
+      },
+    );
+    const world = createWorld({
+      seed: 42,
+      generators: { email: () => "world@override.com" },
+    }).withSubject(Subject);
+    const data = world.subject("person").data as { email: string };
+    expect(data.email).toBe("world@override.com");
+  });
+
   it("key-based generator fires for optional fields in a registered (subject-bound) schema", () => {
     // 'email' wrapped in .optional() should still produce an email-formatted string,
     // not a generic word string. Without the fix, isStringSchema() returns false for

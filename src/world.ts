@@ -304,6 +304,14 @@ export class WorldImpl implements World {
           : generateFromSchema(fieldSchema, fieldCtx)
       }
     }
+    // Pass 2: derived fields — overwrite base values using sibling field data.
+    // World-level custom generators take priority and are not overridden.
+    for (const [key, fn] of Object.entries(subjectType.derive ?? {})) {
+      if (!this.customKeyGenerators.has(key.toLowerCase())) {
+        rawData[key] = fn(rawData, ctx.prng.fork(`derive-${key}`))
+      }
+    }
+
     const data = rawData as SubjectData<AnySubjectType>
 
     const instance: AnySubjectInstance = { _type: typeName, _id, data }

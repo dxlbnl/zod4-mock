@@ -7,11 +7,12 @@
  * …) and register the result with `world.withSubject(...)`.
  */
 
-import type { ZodObject, ZodRawShape } from "zod";
+import type { ZodObject, ZodRawShape, input } from "zod";
 import type {
   AnySubjectType,
   RelationMap,
   SubjectTypeOptions,
+  Prng,
 } from "./types.js";
 
 /**
@@ -45,12 +46,13 @@ export function defineSubjectType<
 >(
   name: string,
   schema: TSchema,
-  options?: SubjectTypeOptions<TRelations>,
+  options?: SubjectTypeOptions<TRelations, input<TSchema>>,
 ): AnySubjectType & { schema: TSchema; relations: TRelations } {
   return {
     _tag: "SubjectType",
     name,
     schema,
     relations: (options?.relations ?? {}) as TRelations,
+    derive: options?.derive as Record<string, (partial: Record<string, unknown>, prng: Prng) => unknown> | undefined,
   };
 }

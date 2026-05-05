@@ -9,6 +9,7 @@
  */
 
 import { createWorld, defineSubjectType } from '../../../src/index.js'
+import { DOMAINS } from '../../../src/generators/key-based.js'
 import {
   PersonSubjectSchema,
   TextFileSubjectSchema,
@@ -21,7 +22,14 @@ import {
   EntityApiSchema,
 } from './schemas.js'
 
-export const PersonSubject    = defineSubjectType('person',     PersonSubjectSchema)
+export const PersonSubject = defineSubjectType('person', PersonSubjectSchema, {
+  derive: {
+    email: ({ firstName, lastName }, prng) => {
+      const ln = lastName!.toLowerCase().replace(/[\s']/g, '')
+      return `${firstName![0]}.${ln}${prng.int(10, 99)}@${prng.pick(DOMAINS)}`.toLowerCase()
+    },
+  },
+})
 export const TextFileSubject  = defineSubjectType('text-file',  TextFileSubjectSchema)
 export const AudioFileSubject = defineSubjectType('audio-file', AudioFileSubjectSchema)
 export const BankFileSubject  = defineSubjectType('bank-file',  BankFileSubjectSchema)
