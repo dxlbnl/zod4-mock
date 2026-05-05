@@ -53,78 +53,80 @@ describe("generators namespace", () => {
 
   it("contains all primitive generator functions", () => {
     const expected = [
-      "firstName",
-      "lastName",
-      "email",
-      "uuid",
-      "phone",
-      "postalCode",
-      "url",
+      "commerce",
+      "company",
       "date",
-      "loremText",
+      "finance",
+      "internet",
+      "location",
+      "person",
+      "phone",
+      "vehicle",
+      "word",
+      "string",
     ];
     for (const name of expected) {
       expect(typeof (generators as Record<string, unknown>)[name], `generators.${name}`).toBe(
-        "function",
+        "object",
       );
     }
   });
 
-  it("generators.firstName returns a non-empty string", () => {
-    const v = generators.firstName(createPrng(42));
+  it("generators.person.firstName returns a non-empty string", () => {
+    const v = generators.person.firstName(createPrng(42));
     expect(typeof v).toBe("string");
     expect(v.length).toBeGreaterThan(0);
   });
 
-  it("generators.lastName returns a non-empty string", () => {
-    const v = generators.lastName(createPrng(42));
+  it("generators.person.lastName returns a non-empty string", () => {
+    const v = generators.person.lastName(createPrng(42));
     expect(typeof v).toBe("string");
     expect(v.length).toBeGreaterThan(0);
   });
 
-  it("generators.email returns an email-shaped string", () => {
-    const v = generators.email(createPrng(42));
+  it("generators.internet.email returns an email-shaped string", () => {
+    const v = generators.internet.email(createPrng(42));
     expect(v).toMatch(/@/);
     expect(z.email().safeParse(v).success).toBe(true);
   });
 
-  it("generators.uuid returns a valid UUID", () => {
-    const v = generators.uuid(createPrng(42));
+  it("generators.string.uuid returns a valid UUID", () => {
+    const v = generators.string.uuid(createPrng(42));
     expect(v).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     expect(z.uuid().safeParse(v).success).toBe(true);
   });
 
-  it("generators.phone returns a non-empty string", () => {
-    const v = generators.phone(createPrng(42));
+  it("generators.phone.number returns a non-empty string", () => {
+    const v = generators.phone.number(createPrng(42));
     expect(typeof v).toBe("string");
     expect(v.length).toBeGreaterThan(0);
   });
 
-  it("generators.postalCode returns a non-empty string", () => {
-    const v = generators.postalCode(createPrng(42));
+  it("generators.location.postalCode returns a non-empty string", () => {
+    const v = generators.location.postalCode(createPrng(42));
     expect(typeof v).toBe("string");
     expect(v.length).toBeGreaterThan(0);
   });
 
-  it("generators.url returns an https:// URL", () => {
-    const v = generators.url(createPrng(42));
+  it("generators.internet.url returns an https:// URL", () => {
+    const v = generators.internet.url(createPrng(42));
     expect(v).toMatch(/^https:\/\//);
   });
 
-  it("generators.date returns a Date", () => {
-    const v = generators.date(createPrng(42));
+  it("generators.date.anytime returns a Date", () => {
+    const v = generators.date.anytime(createPrng(42));
     expect(v).toBeInstanceOf(Date);
   });
 
-  it("generators.loremText returns a string with the requested number of words", () => {
-    const v = generators.loremText(createPrng(42), 5);
+  it("generators.lorem.words returns a string with the requested number of words", () => {
+    const v = generators.lorem.words(createPrng(42), 5);
     expect(typeof v).toBe("string");
     expect(v.split(" ")).toHaveLength(5);
   });
 
   it("primitive generators produce different values for different seeds", () => {
-    expect(generators.firstName(createPrng(1))).not.toBe(generators.firstName(createPrng(2)));
-    expect(generators.email(createPrng(1))).not.toBe(generators.email(createPrng(2)));
+    expect(generators.person.firstName(createPrng(1))).not.toBe(generators.person.firstName(createPrng(2)));
+    expect(generators.internet.email(createPrng(1))).not.toBe(generators.internet.email(createPrng(2)));
   });
 });
 
@@ -330,7 +332,7 @@ describe("KeyGenerator type", () => {
   it("can be used as a type annotation", () => {
     // This is a compile-time check — if KeyGenerator is exported correctly,
     // the annotation below will not cause a TypeScript error.
-    const gen: KeyGenerator<string> = (_schema, ctx) => generators.firstName(ctx.prng);
+    const gen: KeyGenerator<string> = (_schema, ctx) => generators.person.firstName(ctx.prng);
     expect(typeof gen).toBe("function");
     expect(typeof gen(z.string(), makeCtx())).toBe("string");
   });
@@ -543,16 +545,6 @@ describe("generators.string", () => {
   });
 });
 
-describe("generators flat aliases (backwards compatibility)", () => {
-  it("flat generators still resolve to the same functions as sub-namespace equivalents", () => {
-    expect(generators.firstName).toBe(generators.person.firstName);
-    expect(generators.lastName).toBe(generators.person.lastName);
-    expect(generators.email).toBe(generators.internet.email);
-    expect(generators.uuid).toBe(generators.string.uuid);
-    expect(generators.postalCode).toBe(generators.location.postalCode);
-    expect(generators.url).toBe(generators.internet.url);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // world.withKeyMap

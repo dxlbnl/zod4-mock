@@ -266,6 +266,11 @@ export interface GeneratorContext {
    */
   readonly fieldPath: string;
   /**
+   * The partially generated object containing sibling fields.
+   * Useful for cross-field inference (e.g. matching `firstName` to `gender`).
+   */
+  readonly parent?: Record<string, unknown>;
+  /**
    * Probability in [0, 1] that `z.optional()` / `z.nullable()` fields are omitted.
    * Defaults to `WorldOptions.optionalProbability` (typically 0.2).
    */

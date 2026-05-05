@@ -43,7 +43,7 @@ export function createInvoicingWorld(seed = 42) {
 
       // Invoice: one per customer subject
       .withSchema(InvoiceSchema, CustomerSubject, {
-        id: (_, ctx) => generators.uuid(ctx.prng.fork("invoice-id")),
+        id: (_, ctx) => generators.string.uuid(ctx.prng.fork("invoice-id")),
         customerId: (s) => s.customerId,
         lines: (s, ctx) => {
           let total = 0;

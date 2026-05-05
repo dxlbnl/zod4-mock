@@ -97,6 +97,8 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
   return result;
 }
 
+import { generateFromKey } from "../data/key-map.js";
+
 export function generateZodObject(
   schema: ZodTypeAny,
   ctx: GeneratorContext,
@@ -109,8 +111,13 @@ export function generateZodObject(
       ...ctx,
       prng: ctx.prng.fork(key),
       fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
+      parent: result,
     };
-    result[key] = generateFromSchema(fieldSchema, childCtx);
+
+    // Try key-based heuristics first
+    const keyResult = generateFromKey(key, fieldSchema, childCtx);
+    result[key] =
+      keyResult !== undefined ? keyResult : generateFromSchema(fieldSchema, childCtx);
   }
   return result;
 }

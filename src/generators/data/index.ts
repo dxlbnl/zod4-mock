@@ -1,0 +1,11 @@
+export * as commerce from "./commerce.js";
+export * as company from "./company.js";
+export * as date from "./date.js";
+export * as finance from "./finance.js";
+export * as internet from "./internet.js";
+export * as location from "./location.js";
+export * as person from "./person.js";
+export * as phone from "./phone.js";
+export * as vehicle from "./vehicle.js";
+export * as word from "./word.js";
+export * as string from "./string.js";

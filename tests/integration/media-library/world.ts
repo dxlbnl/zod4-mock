@@ -9,7 +9,7 @@
  */
 
 import { createWorld, defineSubjectType } from "../../../src/index.js";
-import { DOMAINS } from "../../../src/generators/key-based.js";
+const DOMAINS = ["example.com", "test.nl", "demo.io", "gmail.com", "outlook.com"] as const;
 import {
   PersonSubjectSchema,
   TextFileSubjectSchema,

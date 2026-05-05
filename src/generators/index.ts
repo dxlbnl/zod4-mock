@@ -8,16 +8,7 @@
  * 3. Schema-based generator (`generateFromSchema`) — Zod type introspection
  */
 
+export * as data from "./data/index.js";
 export { generateFromSchema } from "./schema/index.js";
-export {
-  generateFromKey,
-  firstName,
-  lastName,
-  email,
-  uuid,
-  phone,
-  postalCode,
-  url,
-  date,
-  loremText,
-} from "./key-based.js";
+export { generateFromKey, DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./data/key-map.js";
+export type { PrngGen, KeyPattern } from "./data/key-map.js";

@@ -54,7 +54,7 @@ import type {
 import { SubjectRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
-import { generateFromKey } from "./generators/key-based.js";
+import { generateFromKey } from "./generators/index.js";
 
 // ---------------------------------------------------------------------------
 // Internal types
