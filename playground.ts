@@ -3,7 +3,10 @@
 import { describe, it } from "vitest";
 import { z } from "zod";
 
-import { createMediaLibraryWorld } from "./tests/integration/media-library/world.js";
+import {
+  createMediaLibraryWorld,
+  PersonSubject,
+} from "./tests/integration/media-library/world.js";
 import {
   RawDataSchema,
   TextApiSchema,
@@ -32,10 +35,11 @@ const print = (data: unknown) => console.log(JSON.stringify(data, null, 2));
 // ---------------------------------------------------------------------------
 
 describe.only("Media Library", () => {
-  const world = createMediaLibraryWorld(42);
-  const rawdata = world.generate(z.array(RawDataSchema).min(1).max(2));
+  const world = createMediaLibraryWorld(42).populate(PersonSubject, 3);
+  const rawdata = world.generate(z.array(RawDataSchema).min(6).max(9));
 
-  it.only("rawdata", () => print(rawdata));
+  it("subjects", () => print(world.subjects()));
+  it("rawdata", () => print(rawdata));
   it("text API", () => print(world.generate(z.array(TextApiSchema))));
   it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
   it("bank API", () => print(world.generate(z.array(BankApiSchema))));

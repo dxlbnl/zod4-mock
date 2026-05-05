@@ -51,6 +51,10 @@ Zod v4 stores schema definitions at `schema._zod.def` (not `schema._def` as in v
 - `tests/unit/` — isolated unit tests for each module
 - `tests/integration/` — three full-scenario integration tests (document-corpus, invoicing, media-library), each with its own `schemas.ts` and `world.ts`. The media-library test demonstrates multi-subject, cross-API consistency.
 
+### Documentation rule
+
+**Whenever a public API changes — new method, removed method, changed signature, or changed behaviour — update `wiki/api-reference.md` in the same step.** Do not defer documentation to a follow-up; it will be forgotten.
+
 ### TypeScript strictness
 
 The `tsconfig.json` enables `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. Array indexing always returns `T | undefined`, requiring `!` assertions or null checks. All imports use `.js` extensions (Node16 ESM module resolution).

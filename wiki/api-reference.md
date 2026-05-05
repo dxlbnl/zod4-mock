@@ -169,6 +169,39 @@ interface AnySubjectInstance {
 
 Throws if the type has not been registered via `.withSubject()`.
 
+### `.subjects(type?)`
+
+```ts
+subjects(type?: string): AnySubjectInstance[]
+```
+
+Returns all subject instances currently in the world, optionally filtered by type name. Returns instances in creation order. Useful for inspecting or asserting on the full set of generated subjects.
+
+```ts
+world.subjects()           // all subjects across all types
+world.subjects('person')   // only person instances
+```
+
+### `.populate(subjectType, count)`
+
+```ts
+populate(subjectType: AnySubjectType | string, count: number): this
+```
+
+Pre-creates `count` subject instances of the given type. Returns `this` for fluent chaining.
+
+Call this before `generate` when you need a specific number of subjects to exist upfront — for example, to ensure 3 persons are available so that file subjects' `ownerId` fields distribute across all 3 owners rather than defaulting to a single auto-created one.
+
+```ts
+// Fluent — pre-create 3 persons before generating any data
+const world = createMediaLibraryWorld(42).populate(PersonSubject, 3)
+const rawdata = world.generate(z.array(RawDataSchema).min(6))
+const entities = world.generate(z.array(EntityApiSchema))
+// → entities has 3 items, files spread across all 3 owners
+```
+
+Accepts either a `SubjectType` object (type-safe) or a plain string name (same as `.withSubject` / `.subject`).
+
 ---
 
 ## `World` — registry

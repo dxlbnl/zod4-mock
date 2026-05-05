@@ -510,6 +510,35 @@ export interface World {
    */
   subject(type: string): AnySubjectInstance
 
+  /**
+   * Return all subject instances currently in this world, optionally filtered
+   * by type name.
+   *
+   * @example
+   * ```ts
+   * world.subjects()           // all subjects across all types
+   * world.subjects('person')   // only person instances
+   * ```
+   */
+  subjects(type?: string): AnySubjectInstance[]
+
+  /**
+   * Pre-create `count` subject instances of the given type.
+   *
+   * Call this before `generate` when you want to control how many subjects
+   * exist — for example, to ensure 3 persons exist before generating files so
+   * that files are distributed across all 3 owners.
+   *
+   * Returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * const world = createMediaLibraryWorld(42)
+   *   .populate(PersonSubject, 3)
+   * ```
+   */
+  populate(subjectType: AnySubjectType | string, count: number): this
+
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry
 }

@@ -54,9 +54,9 @@ export const BankFileSubjectSchema = z.object({
 
 /** Rawdata API — one record per file, all types combined. */
 export const RawDataSchema = z.object({
-  id: z.uuid(),
-  type: z.enum(["text", "audio", "bank"]),
-  sizeBytes: z.number().int().min(1),
+  id: z.uuid().optional(),
+  type: z.enum(["text", "audio", "bank"]).optional(),
+  sizeBytes: z.number().int(),
   uploadedAt: z.date(),
   status: z.enum(["queued", "processing", "done", "failed"]),
 });

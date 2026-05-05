@@ -222,6 +222,19 @@ export class WorldImpl implements World {
   // subject()
   // -------------------------------------------------------------------------
 
+  subjects(type?: string): AnySubjectInstance[] {
+    if (type === undefined) return [...this.allInstances]
+    return this.allInstances.filter((s) => s._type === type)
+  }
+
+  populate(subjectType: AnySubjectType | string, count: number): this {
+    const name = typeof subjectType === 'string' ? subjectType : subjectType.name
+    for (let i = 0; i < count; i++) {
+      this.subject(name)
+    }
+    return this
+  }
+
   subject(typeName: string): AnySubjectInstance {
     if (!this.subjectTypes.has(typeName)) {
       throw new Error(

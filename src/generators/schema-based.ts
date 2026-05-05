@@ -272,8 +272,10 @@ function generateStringMatchingRegex(
 
 function resolveNumber(schema: ZodTypeAny, prng: GeneratorContext['prng']): number {
   const d = def(schema)
-  let min = 0
+  let min = -1000
   let max = 1000
+  let hasMin = false
+  let hasMax = false
   let isInt = false
   let multipleOf: number | undefined
 
@@ -288,14 +290,20 @@ function resolveNumber(schema: ZodTypeAny, prng: GeneratorContext['prng']): numb
     }
     if (c.check === 'greater_than') {
       min = (c.value as number) + (c.inclusive ? 0 : 1)
+      hasMin = true
     }
     if (c.check === 'less_than') {
       max = (c.value as number) - (c.inclusive ? 0 : 1)
+      hasMax = true
     }
     if (c.check === 'multiple_of') {
       multipleOf = c.value as number
     }
   }
+
+  // When only one bound is set, keep the other side open at a sensible default
+  if (hasMin && !hasMax) max = min + 2000
+  if (hasMax && !hasMin) min = max - 2000
 
   if (multipleOf !== undefined) {
     const base  = Math.ceil(min / multipleOf) * multipleOf

@@ -401,7 +401,7 @@ describe('generateFromSchema — number multiple_of', () => {
     for (let i = 0; i < 20; i++) {
       const v = generateFromSchema(schema, makeCtx(i)) as number
       expect(schema.safeParse(v).success).toBe(true)
-      expect(v % 5).toBe(0)
+      expect(Math.abs(v % 5)).toBe(0)
     }
   })
 

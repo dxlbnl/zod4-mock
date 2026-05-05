@@ -34,6 +34,12 @@ export function createMediaLibraryWorld(seed = 42) {
     generators: {
       // Audio durations between 30 seconds and 1 hour
       durationS: (_schema, ctx) => ctx.prng.int(30, 3600),
+      // Link file subjects to a known person so entity.fileIds is populated.
+      // Persons are registered first so they always exist when file subjects are created.
+      ownerId: (_schema, ctx) => {
+        const persons = ctx.registry.all<{ personId: string }>('person')
+        return persons[ctx.prng.int(0, persons.length - 1)]!.personId
+      },
     },
   })
     .withSubject(PersonSubject)
