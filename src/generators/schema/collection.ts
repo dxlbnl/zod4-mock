@@ -116,8 +116,7 @@ export function generateZodObject(
 
     // Try key-based heuristics first
     const keyResult = generateFromKey(key, fieldSchema, childCtx);
-    result[key] =
-      keyResult !== undefined ? keyResult : generateFromSchema(fieldSchema, childCtx);
+    result[key] = keyResult !== undefined ? keyResult : generateFromSchema(fieldSchema, childCtx);
   }
   return result;
 }

@@ -5,13 +5,57 @@ import { lastName } from "./person.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
-const BUZZ_ADJECTIVES = ["Synergetisch", "Robuust", "Schaalbaar", "Gedistribueerd", "Naadloos", "Intuïtief", "Zakelijk"] as const;
-const BUZZ_NOUNS = ["Oplossingen", "Infrastructuur", "Paradigma's", "Architecturen", "Netwerken", "Platformen", "Ecosystemen"] as const;
-const BUZZ_VERBS = ["Stroomlijnen", "Optimaliseren", "Versterken", "Ontwrichten", "Benutten", "Verzilveren", "Schalen"] as const;
+const BUZZ_ADJECTIVES = [
+  "Synergetisch",
+  "Robuust",
+  "Schaalbaar",
+  "Gedistribueerd",
+  "Naadloos",
+  "Intuïtief",
+  "Zakelijk",
+] as const;
+const BUZZ_NOUNS = [
+  "Oplossingen",
+  "Infrastructuur",
+  "Paradigma's",
+  "Architecturen",
+  "Netwerken",
+  "Platformen",
+  "Ecosystemen",
+] as const;
+const BUZZ_VERBS = [
+  "Stroomlijnen",
+  "Optimaliseren",
+  "Versterken",
+  "Ontwrichten",
+  "Benutten",
+  "Verzilveren",
+  "Schalen",
+] as const;
 
-const CATCH_PHRASE_ADJECTIVES = ["Klantgericht", "Gelaagd", "Upgradebaar", "Compatibel", "Hoogwaardig"] as const;
-const CATCH_PHRASE_DESCRIPTORS = ["optimaal", "24/7", "modulair", "gemonitord", "logistiek", "directioneel"] as const;
-const CATCH_PHRASE_NOUNS = ["vermogen", "benutting", "interface", "onvoorzien", "projectie", "succes"] as const;
+const CATCH_PHRASE_ADJECTIVES = [
+  "Klantgericht",
+  "Gelaagd",
+  "Upgradebaar",
+  "Compatibel",
+  "Hoogwaardig",
+] as const;
+const CATCH_PHRASE_DESCRIPTORS = [
+  "optimaal",
+  "24/7",
+  "modulair",
+  "gemonitord",
+  "logistiek",
+  "directioneel",
+] as const;
+const CATCH_PHRASE_NOUNS = [
+  "vermogen",
+  "benutting",
+  "interface",
+  "onvoorzien",
+  "projectie",
+  "succes",
+] as const;
 
 const COMPANY_SUFFIXES = ["Groep", "BV", "NV", "VOF", "Oplossingen", "en Zonen"] as const;
 const COMPANY_PREFIXES = ["Globaal", "Quantum", "Cyber", "Bio", "Eco", "Toekomst"] as const;
@@ -25,7 +69,7 @@ export function name(prng: Prng): string {
     () => `${lastName(prng)} ${prng.pick(COMPANY_SUFFIXES)}`,
     () => `${lastName(prng)} & ${lastName(prng)}`,
     () => `${prng.pick(COMPANY_PREFIXES)} ${lastName(prng)}`,
-    () => `${lastName(prng)} Systemen`
+    () => `${lastName(prng)} Systemen`,
   ];
   return prng.pick(formats)();
 }

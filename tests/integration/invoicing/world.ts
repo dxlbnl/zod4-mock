@@ -17,8 +17,22 @@ import {
 
 export const CustomerSubject = defineSubjectType("customer", CustomerSubjectSchema, {
   relations: { purchasedProducts: { type: "product", cardinality: "1..n" } },
+  derive: {
+    email: ({ name }, ctx) => {
+      const [firstName, lastName] = name!.split(" ");
+      return `${firstName![0]}${ctx.prng.pick([
+        ".",
+        "_",
+        "",
+      ])}${lastName}${ctx.prng.int(10, 99)}@${generators.internet.domain(ctx.prng)}`.toLowerCase();
+    },
+  },
 });
-export const ProductSubject = defineSubjectType("product", ProductSubjectSchema);
+export const ProductSubject = defineSubjectType("product", ProductSubjectSchema, {
+  keyMap: {
+    name: (prng) => generators.lorem.words(prng, 3),
+  },
+});
 
 type ProductData = {
   productId: string;

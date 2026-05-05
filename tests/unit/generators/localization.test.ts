@@ -8,12 +8,14 @@ describe("Dutch Localization Verification", () => {
     it("generates Dutch first names", () => {
       const names = Array.from({ length: 50 }, () => generators.person.firstName(prng));
       const dutchFirstNames = ["Jan", "Piet", "Klaas", "Hans", "Dirk", "Marie", "Anna", "Lisa"];
-      expect(names.some(n => dutchFirstNames.includes(n))).toBe(true);
+      expect(names.some((n) => dutchFirstNames.includes(n))).toBe(true);
     });
 
     it("generates Dutch last names (including 'van de' etc.)", () => {
       const names = Array.from({ length: 50 }, () => generators.person.lastName(prng));
-      expect(names.some(n => n.includes("van") || n.includes("de") || n.includes("den"))).toBe(true);
+      expect(names.some((n) => n.includes("van") || n.includes("de") || n.includes("den"))).toBe(
+        true,
+      );
     });
   });
 
@@ -21,7 +23,7 @@ describe("Dutch Localization Verification", () => {
     it("generates Dutch cities", () => {
       const cities = Array.from({ length: 20 }, () => generators.location.city(prng));
       const dutchCities = ["Amsterdam", "Rotterdam", "Utrecht", "Den Haag", "Eindhoven"];
-      expect(cities.some(c => dutchCities.includes(c))).toBe(true);
+      expect(cities.some((c) => dutchCities.includes(c))).toBe(true);
     });
 
     it("generates Dutch postal codes (1234 AB format)", () => {
@@ -41,7 +43,18 @@ describe("Dutch Localization Verification", () => {
   describe("Commerce & Finance Generators", () => {
     it("generates Dutch department names", () => {
       const dept = generators.commerce.department(prng);
-      const dutchDepts = ["Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty", "Auto", "Sport", "Gezondheid"];
+      const dutchDepts = [
+        "Elektronica",
+        "Kleding",
+        "Huis",
+        "Tuin",
+        "Speelgoed",
+        "Boeken",
+        "Beauty",
+        "Auto",
+        "Sport",
+        "Gezondheid",
+      ];
       expect(dutchDepts).toContain(dept);
     });
 

@@ -7,9 +7,36 @@ import type { Prng } from "../../types.js";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_YEAR = 365 * MS_PER_DAY;
 
-const MONTHS = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"] as const;
-const WEEKDAYS = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"] as const;
-const TIME_ZONES = ["UTC", "Europe/Amsterdam", "Europe/London", "Europe/Paris", "Europe/Berlin"] as const;
+const MONTHS = [
+  "Januari",
+  "Februari",
+  "Maart",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Augustus",
+  "September",
+  "Oktober",
+  "November",
+  "December",
+] as const;
+const WEEKDAYS = [
+  "Maandag",
+  "Dinsdag",
+  "Woensdag",
+  "Donderdag",
+  "Vrijdag",
+  "Zaterdag",
+  "Zondag",
+] as const;
+const TIME_ZONES = [
+  "UTC",
+  "Europe/Amsterdam",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Generators
@@ -28,30 +55,32 @@ export function between(prng: Prng, start: Date, end: Date): Date {
 }
 
 export function betweens(prng: Prng, start: Date, end: Date, count = 3): Date[] {
-  return Array.from({ length: count }, () => between(prng, start, end)).sort((a, b) => a.getTime() - b.getTime());
+  return Array.from({ length: count }, () => between(prng, start, end)).sort(
+    (a, b) => a.getTime() - b.getTime(),
+  );
 }
 
 export function past(prng: Prng, years = 1): Date {
   const end = Date.now();
-  const start = end - (years * MS_PER_YEAR);
+  const start = end - years * MS_PER_YEAR;
   return new Date(start + prng.random() * (end - start));
 }
 
 export function future(prng: Prng, years = 1): Date {
   const start = Date.now();
-  const end = start + (years * MS_PER_YEAR);
+  const end = start + years * MS_PER_YEAR;
   return new Date(start + prng.random() * (end - start));
 }
 
 export function recent(prng: Prng, days = 7): Date {
   const end = Date.now();
-  const start = end - (days * MS_PER_DAY);
+  const start = end - days * MS_PER_DAY;
   return new Date(start + prng.random() * (end - start));
 }
 
 export function soon(prng: Prng, days = 7): Date {
   const start = Date.now();
-  const end = start + (days * MS_PER_DAY);
+  const end = start + days * MS_PER_DAY;
   return new Date(start + prng.random() * (end - start));
 }
 

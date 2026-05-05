@@ -41,7 +41,6 @@ export const generators = {
     ...gen.word,
     word: gen.word.noun, // Alias for tests
   },
-
 } as const;
 
 export type {

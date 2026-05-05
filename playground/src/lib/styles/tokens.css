@@ -1,0 +1,73 @@
+:root {
+  /* Dark — primary */
+  --bg-0: #0a0a0f;
+  --bg-1: #11111a;
+  --bg-2: #181822;
+  --bg-3: #1f1f2c;
+  --bg-hover: #232331;
+  --line: #252533;
+  --line-strong: #34344a;
+  --ink-0: #e8e8f0;
+  --ink-1: #b4b4c4;
+  --ink-2: #6f6f85;
+  --ink-3: #4a4a5e;
+
+  --accent: #a78bfa;
+  --accent-bright: #c4b5fd;
+  --accent-dim: #7c3aed;
+  --accent-soft: rgba(167, 139, 250, 0.12);
+  --accent-edge: rgba(167, 139, 250, 0.32);
+
+  --warn: #f59e0b;
+  --warn-soft: rgba(245, 158, 11, 0.14);
+  --ok: #34d399;
+
+  --syn-keyword: #c4b5fd;
+  --syn-type: #93c5fd;
+  --syn-string: #86efac;
+  --syn-number: #fca5a5;
+  --syn-comment: #5e5e74;
+  --syn-fn: #fde68a;
+  --syn-punct: #8484a0;
+
+  --row-h: 28px;
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
+
+  /* Shadow tokens */
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+
+  /* Motion tokens */
+  --ease-quick: 120ms ease-out;
+  --ease-deliberate: 150ms ease-in-out;
+}
+
+html.light {
+  --bg-0: #f7f7fa;
+  --bg-1: #ffffff;
+  --bg-2: #f1f1f6;
+  --bg-3: #e8e8f0;
+  --bg-hover: #ececf2;
+  --line: #e2e2eb;
+  --line-strong: #c8c8d4;
+  --ink-0: #14141c;
+  --ink-1: #4b4b5c;
+  --ink-2: #7a7a8e;
+  --ink-3: #a8a8ba;
+
+  --accent: #6d28d9;
+  --accent-bright: #5b21b6;
+  --accent-dim: #7c3aed;
+  --accent-soft: rgba(109, 40, 217, 0.08);
+  --accent-edge: rgba(109, 40, 217, 0.28);
+
+  --syn-keyword: #6d28d9;
+  --syn-type: #1d4ed8;
+  --syn-string: #047857;
+  --syn-number: #b91c1c;
+  --syn-comment: #94949e;
+  --syn-fn: #b45309;
+  --syn-punct: #6b6b80;
+}

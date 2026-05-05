@@ -170,20 +170,27 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 
 export const DEFAULT_KEY_PATTERNS: { string: KeyPattern[]; any: KeyPattern[] } = {
   string: [
-    { 
-      test: (k) => k === "id" || k.endsWith("id") || k.endsWith("uuid") || k.endsWith("guid"), 
-      generate: data.string.uuid as PrngGen
+    {
+      test: (k) => k === "id" || k.endsWith("id") || k.endsWith("uuid") || k.endsWith("guid"),
+      generate: data.string.uuid as PrngGen,
     },
     { test: (k) => k.endsWith("name"), generate: data.person.fullName as PrngGen },
-    { test: (k) => k.endsWith("url") || k.endsWith("link") || k.startsWith("url"), generate: data.internet.url as PrngGen },
+    {
+      test: (k) => k.endsWith("url") || k.endsWith("link") || k.startsWith("url"),
+      generate: data.internet.url as PrngGen,
+    },
     { test: (k) => k.endsWith("email"), generate: data.internet.email as PrngGen },
   ],
   any: [
-    { 
+    {
       // Only match 'on' if it's prefixed by something indicating a date (like 'at_on' or 'created_on')
       // and exclude common non-date 'on' suffixes like 'position'.
-      test: (k) => k.endsWith("at") || k.endsWith("date") || k.startsWith("date") || (k.endsWith("_on") && k !== "position"), 
-      generate: data.date.anytime as PrngGen 
+      test: (k) =>
+        k.endsWith("at") ||
+        k.endsWith("date") ||
+        k.startsWith("date") ||
+        (k.endsWith("_on") && k !== "position"),
+      generate: data.date.anytime as PrngGen,
     },
   ],
 };

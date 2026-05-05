@@ -1,0 +1,156 @@
+.export-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 14, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  animation: fadeIn 0.12s ease-out;
+}
+html.light .export-mask {
+  background: rgba(40, 40, 60, 0.25);
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.export-sheet {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  width: min(960px, 92vw);
+  height: min(720px, 88vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+html.light .export-sheet {
+  box-shadow: 0 24px 64px rgba(20, 20, 40, 0.18);
+}
+
+.export-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.export-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.export-head .sub {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+.export-head .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.export-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+.export-files {
+  border-right: 1px solid var(--line);
+  background: var(--bg-2);
+  overflow: auto;
+  padding: 6px;
+}
+.export-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  color: var(--ink-1);
+}
+.export-file:hover {
+  background: var(--bg-hover);
+  color: var(--ink-0);
+}
+.export-file[aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.export-file .ext {
+  color: var(--ink-3);
+}
+.export-file .lines {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 10px;
+}
+
+.export-files .grp {
+  color: var(--ink-2);
+  padding: 10px 10px 4px;
+  font-family: "Inter", sans-serif;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.export-preview {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.export-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.export-preview-head .file {
+  color: var(--ink-0);
+}
+.export-preview-head .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.export-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.export-options {
+  display: flex;
+  gap: 4px;
+  padding: 8px 18px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-2);
+  align-items: center;
+}
+.export-options .label {
+  color: var(--ink-2);
+  font-size: 11px;
+  margin-right: 8px;
+}

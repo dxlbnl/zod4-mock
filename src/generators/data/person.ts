@@ -6,25 +6,103 @@ import { sentence } from "./word.js";
 // ---------------------------------------------------------------------------
 
 const FIRST_NAMES_MALE = [
-  "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
-  "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem"
+  "Jan",
+  "Piet",
+  "Klaas",
+  "Hans",
+  "Dirk",
+  "Erik",
+  "Tom",
+  "Sven",
+  "Luc",
+  "Bas",
+  "Thijs",
+  "Bram",
+  "Luuk",
+  "Lars",
+  "Stijn",
+  "Gijs",
+  "Sem",
+  "Daan",
+  "Finn",
+  "Willem",
 ] as const;
 
 const FIRST_NAMES_FEMALE = [
-  "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
-  "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa"
+  "Marie",
+  "Anna",
+  "Lisa",
+  "Emma",
+  "Sara",
+  "Lena",
+  "Nora",
+  "Eva",
+  "Julia",
+  "Inge",
+  "Lieke",
+  "Noa",
+  "Lotte",
+  "Fleur",
+  "Tess",
+  "Mila",
+  "Sanne",
+  "Sophie",
+  "Roos",
+  "Isa",
 ] as const;
 
 const FIRST_NAMES_ALL = [...FIRST_NAMES_MALE, ...FIRST_NAMES_FEMALE] as const;
 
 const LAST_NAMES = [
-  "de Vries", "Janssen", "Bakker", "Visser", "Smit", "Meijer", "Peters", "van den Berg",
-  "Dekker", "Vermeer", "Brouwer", "Hendriks", "Kuiper", "Willems", "van der Linden",
-  "Mulder", "de Jong", "de Groot", "Bos", "Vos", "van Dijk", "Postma", "Dijkstra"
+  "de Vries",
+  "Janssen",
+  "Bakker",
+  "Visser",
+  "Smit",
+  "Meijer",
+  "Peters",
+  "van den Berg",
+  "Dekker",
+  "Vermeer",
+  "Brouwer",
+  "Hendriks",
+  "Kuiper",
+  "Willems",
+  "van der Linden",
+  "Mulder",
+  "de Jong",
+  "de Groot",
+  "Bos",
+  "Vos",
+  "van Dijk",
+  "Postma",
+  "Dijkstra",
 ] as const;
 
-const JOB_TITLES = ["Ontwikkelaar", "Ingenieur", "Manager", "Ontwerper", "Architect", "Consultant", "Specialist", "Analist", "Coördinator"] as const;
-const JOB_AREAS = ["Techniek", "Product", "Ontwerp", "Data", "Beveiliging", "Marketing", "Verkoop", "Financiën", "Operations", "Juridisch", "HR"] as const;
+const JOB_TITLES = [
+  "Ontwikkelaar",
+  "Ingenieur",
+  "Manager",
+  "Ontwerper",
+  "Architect",
+  "Consultant",
+  "Specialist",
+  "Analist",
+  "Coördinator",
+] as const;
+const JOB_AREAS = [
+  "Techniek",
+  "Product",
+  "Ontwerp",
+  "Data",
+  "Beveiliging",
+  "Marketing",
+  "Verkoop",
+  "Financiën",
+  "Operations",
+  "Juridisch",
+  "HR",
+] as const;
 const JOB_TYPES = ["Lead", "Senior", "Junior", "Hoofd", "Assistent", "Directeur"] as const;
 const JOB_DESCRIPTORS = ["Innovatief", "Globaal", "Centraal", "Direct", "Strategisch"] as const;
 
@@ -35,7 +113,20 @@ const SUFFIXES = ["Jr.", "Sr.", "III"] as const;
 const GENDERS = ["Man", "Vrouw", "Non-binair", "Anders"] as const;
 const SEX_TYPES = ["Man", "Vrouw"] as const;
 
-const ZODIAC_SIGNS = ["Ram", "Stier", "Tweelingen", "Kreeft", "Leeuw", "Maagd", "Weegschaal", "Schorpioen", "Boogschutter", "Steenbok", "Waterman", "Vissen"] as const;
+const ZODIAC_SIGNS = [
+  "Ram",
+  "Stier",
+  "Tweelingen",
+  "Kreeft",
+  "Leeuw",
+  "Maagd",
+  "Weegschaal",
+  "Schorpioen",
+  "Boogschutter",
+  "Steenbok",
+  "Waterman",
+  "Vissen",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Types

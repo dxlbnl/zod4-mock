@@ -4,16 +4,64 @@ import type { Prng } from "../../types.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
-const MANUFACTURERS = ["Tesla", "BMW", "Audi", "Mercedes-Benz", "Toyota", "Honda", "Ford", "Volkswagen", "Volvo", "Porsche", "Hyundai", "Kia", "Mazda"] as const;
-const VEHICLE_TYPES = ["Sedan", "SUV", "Hatchback", "Coupé", "Cabriolet", "Bestelwagen", "Vrachtwagen", "Elektrisch"] as const;
-const COLORS = ["Rood", "Blauw", "Zwart", "Wit", "Zilver", "Grijs", "Groen", "Geel", "Oranje", "Donkerblauw"] as const;
+const MANUFACTURERS = [
+  "Tesla",
+  "BMW",
+  "Audi",
+  "Mercedes-Benz",
+  "Toyota",
+  "Honda",
+  "Ford",
+  "Volkswagen",
+  "Volvo",
+  "Porsche",
+  "Hyundai",
+  "Kia",
+  "Mazda",
+] as const;
+const VEHICLE_TYPES = [
+  "Sedan",
+  "SUV",
+  "Hatchback",
+  "Coupé",
+  "Cabriolet",
+  "Bestelwagen",
+  "Vrachtwagen",
+  "Elektrisch",
+] as const;
+const COLORS = [
+  "Rood",
+  "Blauw",
+  "Zwart",
+  "Wit",
+  "Zilver",
+  "Grijs",
+  "Groen",
+  "Geel",
+  "Oranje",
+  "Donkerblauw",
+] as const;
 const FUELS = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof"] as const;
 
-const MODELS = ["Model 3", "X5", "A4", "C-Klasse", "Corolla", "Civic", "F-150", "Golf", "XC90", "911", "Ioniq 5", "EV6", "CX-5"] as const;
+const MODELS = [
+  "Model 3",
+  "X5",
+  "A4",
+  "C-Class",
+  "Corolla",
+  "Civic",
+  "F-150",
+  "Golf",
+  "XC90",
+  "911",
+  "Ioniq 5",
+  "EV6",
+  "CX-5",
+] as const;
 const BICYCLE_BRANDS = ["Gazelle", "Batavus", "VanMoof", "Giant", "Specialized", "Trek"] as const;
 
-const VRM_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("");
-const VIN_CHARS = "0123456789ABCDEFGHJKLMNPRSTUVWXYZ".split("");
+const VIN_CHARS = "0123456789ABCDEFGHJKLMNPRSTUVWXYZ".split("") as [string, ...string[]];
+const VRM_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("") as [string, ...string[]];
 
 // ---------------------------------------------------------------------------
 // Generators
@@ -44,11 +92,11 @@ export function fuel(prng: Prng): string {
 }
 
 export function vin(prng: Prng): string {
-  return Array.from({ length: 17 }, () => prng.pick(VIN_CHARS as any)).join("");
+  return Array.from({ length: 17 }, () => prng.pick(VIN_CHARS)).join("");
 }
 
 export function vrm(prng: Prng): string {
-  return `${prng.pick(VRM_LETTERS as any)}${prng.pick(VRM_LETTERS as any)}-${prng.int(100, 999)}-${prng.pick(VRM_LETTERS as any)}`;
+  return `${prng.pick(VRM_LETTERS)}${prng.pick(VRM_LETTERS)}-${prng.int(100, 999)}-${prng.pick(VRM_LETTERS)}`;
 }
 
 export function bicycle(prng: Prng): string {

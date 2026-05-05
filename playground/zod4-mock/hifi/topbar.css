@@ -1,0 +1,63 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+  padding: 0 10px;
+  user-select: none;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 14px;
+  margin-right: 14px;
+  border-right: 1px solid var(--line);
+  height: 100%;
+}
+.brand-logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--accent-dim), var(--accent-bright));
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  font-size: 11px;
+}
+.brand-name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.brand-sub {
+  color: var(--ink-2);
+  font-size: 11px;
+  padding-top: 1px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.workspace-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-1);
+  font-size: 12px;
+}
+.workspace-name .sep {
+  color: var(--ink-3);
+}
+.workspace-name .name {
+  color: var(--ink-0);
+  font-weight: 500;
+}
+
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

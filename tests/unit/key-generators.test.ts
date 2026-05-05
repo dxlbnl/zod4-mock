@@ -125,8 +125,12 @@ describe("generators namespace", () => {
   });
 
   it("primitive generators produce different values for different seeds", () => {
-    expect(generators.person.firstName(createPrng(1))).not.toBe(generators.person.firstName(createPrng(2)));
-    expect(generators.internet.email(createPrng(1))).not.toBe(generators.internet.email(createPrng(2)));
+    expect(generators.person.firstName(createPrng(1))).not.toBe(
+      generators.person.firstName(createPrng(2)),
+    );
+    expect(generators.internet.email(createPrng(1))).not.toBe(
+      generators.internet.email(createPrng(2)),
+    );
   });
 });
 
@@ -544,7 +548,6 @@ describe("generators.string", () => {
     expect(v).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 });
-
 
 // ---------------------------------------------------------------------------
 // world.withKeyMap

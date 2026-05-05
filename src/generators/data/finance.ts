@@ -4,20 +4,38 @@ import type { Prng } from "../../types.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
-interface Currency { code: string; name: string; symbol: string; numeric: string; }
+interface Currency {
+  code: string;
+  name: string;
+  symbol: string;
+  numeric: string;
+}
 const CURRENCIES: [Currency, ...Currency[]] = [
   { code: "EUR", name: "Euro", symbol: "€", numeric: "978" },
   { code: "USD", name: "Amerikaanse Dollar", symbol: "$", numeric: "840" },
   { code: "GBP", name: "Britse Pond", symbol: "£", numeric: "826" },
   { code: "JPY", name: "Japanse Yen", symbol: "¥", numeric: "392" },
-  { code: "CHF", name: "Zwitserse Frank", symbol: "CHF", numeric: "756" }
+  { code: "CHF", name: "Zwitserse Frank", symbol: "CHF", numeric: "756" },
 ];
 
 const TRANSACTION_TYPES = ["storting", "opname", "betaling", "factuur", "restitutie"] as const;
 
-const ACCOUNT_NAMES = ["Spaarrekening", "Betaalrekening", "Zakelijke Rekening", "Creditcard", "Beleggingsportefeuille"] as const;
+const ACCOUNT_NAMES = [
+  "Spaarrekening",
+  "Betaalrekening",
+  "Zakelijke Rekening",
+  "Creditcard",
+  "Beleggingsportefeuille",
+] as const;
 
-const TRANSACTION_DESCRIPTIONS = ["Supermarkt", "Maandelijkse huur", "Salaris", "Online winkelen", "Tankstation", "Restaurant rekening"] as const;
+const TRANSACTION_DESCRIPTIONS = [
+  "Supermarkt",
+  "Maandelijkse huur",
+  "Salaris",
+  "Online winkelen",
+  "Tankstation",
+  "Restaurant rekening",
+] as const;
 
 const BANK_CODES = ["ABNA", "INGB", "RABO", "SNSB", "TRIO"] as const;
 
@@ -25,8 +43,8 @@ const BIC_LOCATIONS = ["2U", "33", "88"] as const;
 
 const CARD_ISSUERS = ["Visa", "Mastercard", "American Express", "Discover"] as const;
 
-const HEX_CHARS = "0123456789abcdef".split("");
-const ALNUM_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789".split("");
+const HEX_CHARS = "0123456789abcdef".split("") as [string, ...string[]];
+const ALNUM_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789".split("") as [string, ...string[]];
 
 // ---------------------------------------------------------------------------
 // Generators
@@ -105,13 +123,13 @@ export function routingNumber(prng: Prng): string {
 }
 
 export function bitcoinAddress(prng: Prng): string {
-  return "1" + Array.from({ length: 33 }, () => prng.pick(ALNUM_CHARS as any)).join("");
+  return "1" + Array.from({ length: 33 }, () => prng.pick(ALNUM_CHARS)).join("");
 }
 
 export function ethereumAddress(prng: Prng): string {
-  return "0x" + Array.from({ length: 40 }, () => prng.pick(HEX_CHARS as any)).join("");
+  return "0x" + Array.from({ length: 40 }, () => prng.pick(HEX_CHARS)).join("");
 }
 
 export function litecoinAddress(prng: Prng): string {
-  return "L" + Array.from({ length: 33 }, () => prng.pick(ALNUM_CHARS as any)).join("");
+  return "L" + Array.from({ length: 33 }, () => prng.pick(ALNUM_CHARS)).join("");
 }

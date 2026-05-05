@@ -1,0 +1,2285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>zod4-mock · design system</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="hifi/tokens.css" />
+    <link rel="stylesheet" href="hifi/app.css" />
+    <link rel="stylesheet" href="hifi/builder.css" />
+    <link rel="stylesheet" href="hifi/floatmenu.css" />
+    <link rel="stylesheet" href="hifi/topbar.css" />
+    <link rel="stylesheet" href="hifi/leftrail.css" />
+    <link rel="stylesheet" href="hifi/statusbar.css" />
+    <link rel="stylesheet" href="hifi/output.css" />
+
+    <style>
+      body {
+        background: var(--bg-0);
+        color: var(--ink-0);
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .ds-shell {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+      }
+      .ds-nav {
+        border-right: 1px solid var(--line);
+        background: var(--bg-1);
+        padding: 24px 0;
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        overflow: auto;
+      }
+      .ds-nav .ds-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 20px 16px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 12px;
+        height: auto;
+      }
+      .ds-nav .ds-brand-logo {
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        background: linear-gradient(135deg, var(--accent-dim), var(--accent-bright));
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .ds-nav .ds-brand-name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .ds-nav .ds-brand-sub {
+        display: block;
+        font-size: 11px;
+        color: var(--ink-2);
+        font-family: "JetBrains Mono", monospace;
+      }
+      /* prevent reused component CSS from blowing up demo cards */
+      .ds-card .accordion-section[data-open="true"] {
+        flex: 0 1 auto !important;
+      }
+      .ds-card .rail {
+        height: auto;
+      }
+      .ds-nav .grp {
+        padding: 12px 20px 4px;
+        font-size: 10px;
+        color: var(--ink-2);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+      }
+      .ds-nav a {
+        display: block;
+        padding: 5px 20px;
+        color: var(--ink-1);
+        text-decoration: none;
+        font-size: 13px;
+        border-left: 2px solid transparent;
+      }
+      .ds-nav a:hover {
+        color: var(--ink-0);
+        background: var(--bg-2);
+      }
+      .ds-nav a.active {
+        color: var(--accent-bright);
+        border-left-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .ds-main {
+        padding: 40px 56px 120px;
+        max-width: 1100px;
+      }
+      .ds-section {
+        margin-bottom: 64px;
+        scroll-margin-top: 24px;
+      }
+      .ds-section h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+      }
+      .ds-section h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 32px 0 12px;
+        letter-spacing: -0.01em;
+      }
+      .ds-section h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 20px 0 8px;
+        color: var(--ink-1);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .ds-section p {
+        color: var(--ink-1);
+        max-width: 70ch;
+        margin: 0 0 16px;
+      }
+      .ds-section .lead {
+        font-size: 15px;
+        color: var(--ink-1);
+        max-width: 72ch;
+        margin-bottom: 24px;
+      }
+
+      .ds-card {
+        background: var(--bg-1);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+      .ds-card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--ink-1);
+        background: var(--bg-2);
+      }
+      .ds-card-head .label {
+        font-weight: 600;
+        color: var(--ink-0);
+      }
+      .ds-card-head .meta {
+        color: var(--ink-2);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+      }
+      .ds-card-body {
+        padding: 24px;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .ds-card-body.dense {
+        padding: 14px;
+      }
+      .ds-card-body.center {
+        justify-content: center;
+      }
+      .ds-card-body.col {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .ds-card pre,
+      .ds-snippet {
+        margin: 0;
+        padding: 14px 16px;
+        background: var(--bg-0);
+        border-top: 1px solid var(--line);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        color: var(--ink-1);
+        white-space: pre;
+        overflow-x: auto;
+      }
+
+      /* Token grids */
+      .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+      }
+      .swatch {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--bg-1);
+      }
+      .swatch .chip {
+        width: 36px;
+        height: 36px;
+        border-radius: 5px;
+        border: 1px solid var(--line-strong);
+        flex-shrink: 0;
+      }
+      .swatch .meta {
+        min-width: 0;
+      }
+      .swatch .name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11.5px;
+        color: var(--ink-0);
+      }
+      .swatch .hex {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: var(--ink-2);
+      }
+
+      .type-row {
+        display: grid;
+        grid-template-columns: 120px 1fr 110px;
+        align-items: baseline;
+        gap: 16px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .type-row:last-child {
+        border-bottom: 0;
+      }
+      .type-row .label {
+        color: var(--ink-2);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+      }
+      .type-row .meta {
+        color: var(--ink-2);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        text-align: right;
+      }
+
+      .scale-row {
+        display: grid;
+        grid-template-columns: 100px 1fr 80px;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+      }
+      .scale-row .name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--ink-0);
+      }
+      .scale-row .bar {
+        height: 16px;
+        border-radius: 3px;
+        background: var(--accent-soft);
+        border: 1px solid var(--accent-edge);
+      }
+      .scale-row .px {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--ink-2);
+        text-align: right;
+      }
+
+      .keyrow {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .keyrow:last-child {
+        border-bottom: 0;
+      }
+      .keyrow .keys {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .keyrow .desc {
+        color: var(--ink-1);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+      }
+
+      /* Inline code */
+      code,
+      .ic {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        background: var(--bg-2);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--syn-keyword);
+      }
+
+      .rule-list {
+        padding-left: 18px;
+      }
+      .rule-list li {
+        margin-bottom: 6px;
+        color: var(--ink-1);
+      }
+
+      .anatomy {
+        position: relative;
+        padding: 32px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg-0);
+      }
+      .anno-line {
+        position: absolute;
+        border-top: 1px dashed var(--accent-edge);
+        height: 1px;
+      }
+      .anno-tag {
+        position: absolute;
+        background: var(--bg-3);
+        border: 1px solid var(--accent-edge);
+        color: var(--accent-bright);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+      }
+
+      .props-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      .props-table th,
+      .props-table td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      .props-table th {
+        background: var(--bg-2);
+        color: var(--ink-1);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .props-table .col-name {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--ink-0);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .props-table .col-type {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--syn-type);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .props-table .col-default {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--syn-number);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .props-table td.col-desc {
+        color: var(--ink-1);
+      }
+
+      .ds-hero {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line);
+      }
+      .ds-hero .badge {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent-edge);
+        color: var(--accent-bright);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+      .ds-hero .ver {
+        color: var(--ink-2);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+      }
+
+      .files-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      .files-table th,
+      .files-table td {
+        text-align: left;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--line);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+      }
+      .files-table th {
+        color: var(--ink-2);
+        font-weight: 600;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-family: "Inter", sans-serif;
+      }
+      .files-table td:first-child {
+        color: var(--ink-0);
+      }
+      .files-table td:last-child {
+        color: var(--ink-2);
+      }
+
+      .accent-text {
+        color: var(--accent-bright);
+      }
+      .ink-2 {
+        color: var(--ink-2);
+      }
+
+      .demo-box {
+        padding: 16px;
+        background: var(--bg-1);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      /* re-using builder styles requires a tree wrapper */
+      .demo-tree {
+        background: var(--bg-1);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ds-shell">
+      <nav class="ds-nav">
+        <div class="ds-brand">
+          <div class="ds-brand-logo">z</div>
+          <div>
+            <div class="ds-brand-name">Design System</div>
+            <span class="ds-brand-sub">zod4-mock v1</span>
+          </div>
+        </div>
+        <div class="grp">Foundations</div>
+        <a href="#principles">Principles</a>
+        <a href="#color">Color</a>
+        <a href="#type">Typography</a>
+        <a href="#space">Spacing &amp; layout</a>
+        <a href="#radius">Radius &amp; shadows</a>
+        <a href="#motion">Motion</a>
+        <a href="#syntax">Syntax colors</a>
+
+        <div class="grp">Primitives</div>
+        <a href="#buttons">Buttons</a>
+        <a href="#segmented">Segmented control</a>
+        <a href="#kbd">Kbd</a>
+        <a href="#input">Input</a>
+        <a href="#chips">Type chip</a>
+
+        <div class="grp">Builder</div>
+        <a href="#mod">Modifier pill</a>
+        <a href="#addmod">Add-mod</a>
+        <a href="#row">Property row</a>
+        <a href="#group">Group header</a>
+        <a href="#floatmenu">Floating menu</a>
+
+        <div class="grp">Surfaces</div>
+        <a href="#topbar">Top bar</a>
+        <a href="#leftrail">Left rail</a>
+        <a href="#pane">Pane</a>
+        <a href="#tabs">Output tabs</a>
+        <a href="#sheet">Sheet</a>
+        <a href="#statusbar">Status bar</a>
+
+        <div class="grp">Reference</div>
+        <a href="#tokens-ref">Token reference</a>
+        <a href="#files-ref">File map</a>
+        <a href="#impl">Implementation notes</a>
+      </nav>
+
+      <main class="ds-main">
+        <div class="ds-hero">
+          <div>
+            <h1 style="margin: 0; font-size: 34px; letter-spacing: -0.02em">
+              zod4-mock design system
+            </h1>
+            <p style="margin: 6px 0 0; color: var(--ink-2); font-size: 14px">
+              A tight, dark-primary playground vocabulary. Token-driven, component-scoped,
+              theme-flippable.
+            </p>
+          </div>
+          <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+            <span class="badge">v1.0</span>
+            <span class="ver">last updated · today</span>
+          </div>
+        </div>
+
+        <!-- ─────────────────── PRINCIPLES ─────────────────── -->
+        <section class="ds-section" id="principles">
+          <h1>Principles</h1>
+          <p class="lead">
+            Five rules that the components and tokens enforce. Read these first; they decide every
+            trade-off below.
+          </p>
+
+          <div class="grid-2">
+            <div class="ds-card">
+              <div class="ds-card-head"><span class="label">1 · Density over decoration</span></div>
+              <div class="ds-card-body col">
+                <p style="margin: 0">
+                  Power users want lots on screen. Row height is 28px, padding 4–8, type 11–13. No
+                  drop shadows on inline elements; no avatars; no decorative iconography.
+                </p>
+              </div>
+            </div>
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">2 · One accent, used sparingly</span>
+              </div>
+              <div class="ds-card-body col">
+                <p style="margin: 0">
+                  Zod purple appears only on: active subject, focused row, focused tab, primary CTA,
+                  the open <code>+ mod</code> menu, and syntax keywords. Everything else is neutral.
+                </p>
+              </div>
+            </div>
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">3 · Tokens are the only source of truth</span>
+              </div>
+              <div class="ds-card-body col">
+                <p style="margin: 0">
+                  Every value (color, space, radius, type) lives in <code>tokens.css</code> as a CSS
+                  custom property. Components never hard-code. The light theme is one block of
+                  overrides.
+                </p>
+              </div>
+            </div>
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">4 · Mono for data, sans for UI</span>
+              </div>
+              <div class="ds-card-body col">
+                <p style="margin: 0">
+                  <b>JetBrains Mono</b> for: keys, types, modifiers, code, JSON, file names, kbd
+                  hints, counts. <b>Inter</b> for: button text, headings, titles, descriptive copy.
+                </p>
+              </div>
+            </div>
+            <div class="ds-card" style="grid-column: span 2">
+              <div class="ds-card-head"><span class="label">5 · Inline editing wins</span></div>
+              <div class="ds-card-body col">
+                <p style="margin: 0">
+                  Property keys, modifier values, file names — all editable in place. Modifiers are
+                  removable on hover. The <code>+ mod</code> pill opens a search menu directly under
+                  the row, never a dialog.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── COLOR ─────────────────── -->
+        <section class="ds-section" id="color">
+          <h1>Color</h1>
+          <p class="lead">
+            All colors are tokens. Every component reads from CSS custom properties; nothing is
+            hex-coded inline. Light theme is a tonal flip of the same token names.
+          </p>
+
+          <h2>Surfaces (dark)</h2>
+          <div class="ds-card">
+            <div class="ds-card-body">
+              <div class="swatch-grid" style="width: 100%">
+                <div class="swatch">
+                  <div class="chip" style="background: #0a0a0f"></div>
+                  <div class="meta">
+                    <div class="name">--bg-0</div>
+                    <div class="hex">#0a0a0f · app</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #11111a"></div>
+                  <div class="meta">
+                    <div class="name">--bg-1</div>
+                    <div class="hex">#11111a · pane</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #181822"></div>
+                  <div class="meta">
+                    <div class="name">--bg-2</div>
+                    <div class="hex">#181822 · header / hover</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #1f1f2c"></div>
+                  <div class="meta">
+                    <div class="name">--bg-3</div>
+                    <div class="hex">#1f1f2c · raised</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #252533"></div>
+                  <div class="meta">
+                    <div class="name">--line</div>
+                    <div class="hex">#252533 · border</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #34344a"></div>
+                  <div class="meta">
+                    <div class="name">--line-strong</div>
+                    <div class="hex">#34344a · button border</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2>Ink (text)</h2>
+          <div class="ds-card">
+            <div class="ds-card-body">
+              <div class="swatch-grid" style="width: 100%">
+                <div class="swatch">
+                  <div class="chip" style="background: #e8e8f0"></div>
+                  <div class="meta">
+                    <div class="name">--ink-0</div>
+                    <div class="hex">primary</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #b4b4c4"></div>
+                  <div class="meta">
+                    <div class="name">--ink-1</div>
+                    <div class="hex">body</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #6f6f85"></div>
+                  <div class="meta">
+                    <div class="name">--ink-2</div>
+                    <div class="hex">meta / dim</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #4a4a5e"></div>
+                  <div class="meta">
+                    <div class="name">--ink-3</div>
+                    <div class="hex">disabled / grip</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2>Accent &amp; states</h2>
+          <div class="ds-card">
+            <div class="ds-card-body">
+              <div class="swatch-grid" style="width: 100%">
+                <div class="swatch">
+                  <div class="chip" style="background: #a78bfa"></div>
+                  <div class="meta">
+                    <div class="name">--accent</div>
+                    <div class="hex">#a78bfa · primary accent</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #c4b5fd"></div>
+                  <div class="meta">
+                    <div class="name">--accent-bright</div>
+                    <div class="hex">#c4b5fd · text on accent bg</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #7c3aed"></div>
+                  <div class="meta">
+                    <div class="name">--accent-dim</div>
+                    <div class="hex">#7c3aed · primary button</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: rgba(167, 139, 250, 0.12)"></div>
+                  <div class="meta">
+                    <div class="name">--accent-soft</div>
+                    <div class="hex">selected row bg</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #f59e0b"></div>
+                  <div class="meta">
+                    <div class="name">--warn</div>
+                    <div class="hex">unbound enum / mismatch</div>
+                  </div>
+                </div>
+                <div class="swatch">
+                  <div class="chip" style="background: #34d399"></div>
+                  <div class="meta">
+                    <div class="name">--ok</div>
+                    <div class="hex">valid status</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2>Where each color is used</h2>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Used by</th>
+                <th>Never used for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">--accent</td>
+                <td class="col-desc">
+                  selected row stripe, focused tab underline, accent indicator dots, focus ring
+                </td>
+                <td class="col-desc">large fills, body text, headings</td>
+              </tr>
+              <tr>
+                <td class="col-name">--accent-dim</td>
+                <td class="col-desc">primary button bg, hover state of accent</td>
+                <td class="col-desc">borders</td>
+              </tr>
+              <tr>
+                <td class="col-name">--accent-bright</td>
+                <td class="col-desc">
+                  text on <code>--accent-soft</code> bg, syntax keywords, selected-subject name
+                </td>
+                <td class="col-desc">backgrounds</td>
+              </tr>
+              <tr>
+                <td class="col-name">--accent-soft</td>
+                <td class="col-desc">selected-row bg, +mod hover bg, focused enum chip</td>
+                <td class="col-desc">solid surface</td>
+              </tr>
+              <tr>
+                <td class="col-name">--warn</td>
+                <td class="col-desc">unbound enum, mismatch row stripe, validation icon</td>
+                <td class="col-desc">decorative</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── TYPE ─────────────────── -->
+        <section class="ds-section" id="type">
+          <h1>Typography</h1>
+          <p class="lead">
+            Two typefaces. Inter is for UI chrome; JetBrains Mono is for everything that represents
+            code or data. Never mix them within the same word.
+          </p>
+
+          <h2>Scale</h2>
+          <div class="ds-card">
+            <div class="ds-card-body col">
+              <div class="type-row">
+                <span class="label">heading-lg</span
+                ><span
+                  style="
+                    font-family: Inter;
+                    font-size: 28px;
+                    font-weight: 700;
+                    letter-spacing: -0.02em;
+                  "
+                  >Make it real</span
+                ><span class="meta">28 / 700 / -0.02</span>
+              </div>
+              <div class="type-row">
+                <span class="label">heading-md</span
+                ><span style="font-family: Inter; font-size: 18px; font-weight: 600"
+                  >Section heading</span
+                ><span class="meta">18 / 600</span>
+              </div>
+              <div class="type-row">
+                <span class="label">title</span
+                ><span style="font-family: Inter; font-size: 13px; font-weight: 600"
+                  >Pane title</span
+                ><span class="meta">13 / 600</span>
+              </div>
+              <div class="type-row">
+                <span class="label">body</span
+                ><span style="font-family: Inter; font-size: 13px"
+                  >Body text in panes and dialogs.</span
+                ><span class="meta">13 / 400</span>
+              </div>
+              <div class="type-row">
+                <span class="label">small</span
+                ><span style="font-family: Inter; font-size: 12px"
+                  >Tab labels, button labels, helper text.</span
+                ><span class="meta">12 / 400</span>
+              </div>
+              <div class="type-row">
+                <span class="label">tiny</span
+                ><span style="font-family: Inter; font-size: 11px; color: var(--ink-2)"
+                  >Meta, file paths in headers</span
+                ><span class="meta">11 / 400</span>
+              </div>
+              <div class="type-row">
+                <span class="label">eyebrow</span
+                ><span
+                  style="
+                    font-family: Inter;
+                    font-size: 10px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.06em;
+                    color: var(--ink-2);
+                  "
+                  >Section</span
+                ><span class="meta">10 / 600 caps</span>
+              </div>
+              <div class="type-row">
+                <span class="label">code</span
+                ><span style="font-family: &quot;JetBrains Mono&quot;, monospace; font-size: 12px"
+                  >z.string().min(2)</span
+                ><span class="meta">mono 12</span>
+              </div>
+              <div class="type-row">
+                <span class="label">code-tight</span
+                ><span style="font-family: &quot;JetBrains Mono&quot;, monospace; font-size: 10.5px"
+                  >.optional()</span
+                ><span class="meta">mono 10.5</span>
+              </div>
+              <div class="type-row">
+                <span class="label">number</span
+                ><span
+                  style="
+                    font-family: &quot;JetBrains Mono&quot;, monospace;
+                    font-size: 11px;
+                    font-variant-numeric: tabular-nums;
+                  "
+                  >12,345</span
+                ><span class="meta">mono · tabular-nums</span>
+              </div>
+            </div>
+          </div>
+
+          <h2>Rules</h2>
+          <ul class="rule-list">
+            <li>
+              <b>Mono</b> = anything that <i>is</i> code or could be typed: keys, types, modifier
+              names, modifier values, JSON, file names, kbd hints, counts, version strings.
+            </li>
+            <li>
+              <b>Sans</b> = chrome that describes UI: section labels, button labels, body copy,
+              headings.
+            </li>
+            <li>Never use mono for paragraph text; never use sans inside a code block.</li>
+            <li>
+              Numbers shown in tables or status bars use
+              <code>font-variant-numeric: tabular-nums</code>.
+            </li>
+          </ul>
+        </section>
+
+        <!-- ─────────────────── SPACE ─────────────────── -->
+        <section class="ds-section" id="space">
+          <h1>Spacing &amp; layout</h1>
+          <p class="lead">
+            A 4px base. Inside dense rows, 4 / 6 / 8 are the only step values. Cards and dialogs use
+            12 / 16 / 24.
+          </p>
+
+          <div class="ds-card">
+            <div class="ds-card-body col">
+              <div class="scale-row">
+                <span class="name">space-1</span>
+                <div class="bar" style="width: 4px"></div>
+                <span class="px">4px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-2</span>
+                <div class="bar" style="width: 6px"></div>
+                <span class="px">6px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-3</span>
+                <div class="bar" style="width: 8px"></div>
+                <span class="px">8px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-4</span>
+                <div class="bar" style="width: 12px"></div>
+                <span class="px">12px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-5</span>
+                <div class="bar" style="width: 16px"></div>
+                <span class="px">16px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-6</span>
+                <div class="bar" style="width: 24px"></div>
+                <span class="px">24px</span>
+              </div>
+              <div class="scale-row">
+                <span class="name">space-7</span>
+                <div class="bar" style="width: 32px"></div>
+                <span class="px">32px</span>
+              </div>
+            </div>
+          </div>
+
+          <h2>Heights</h2>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Value</th>
+                <th>Where</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">--row-h</td>
+                <td class="col-default">28px</td>
+                <td class="col-desc">property row, cardinality row, add-prop</td>
+              </tr>
+              <tr>
+                <td class="col-name">topbar</td>
+                <td class="col-default">40px</td>
+                <td class="col-desc">app top bar</td>
+              </tr>
+              <tr>
+                <td class="col-name">pane-head</td>
+                <td class="col-default">32px</td>
+                <td class="col-desc">pane header bar, output tabs</td>
+              </tr>
+              <tr>
+                <td class="col-name">statusbar</td>
+                <td class="col-default">24px</td>
+                <td class="col-desc">app status bar</td>
+              </tr>
+              <tr>
+                <td class="col-name">btn</td>
+                <td class="col-default">26px</td>
+                <td class="col-desc">all top-bar buttons</td>
+              </tr>
+              <tr>
+                <td class="col-name">mod / add-mod</td>
+                <td class="col-default">18px</td>
+                <td class="col-desc">pills inside rows</td>
+              </tr>
+              <tr>
+                <td class="col-name">input</td>
+                <td class="col-default">22px</td>
+                <td class="col-desc">left-rail inputs</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2>App grid</h2>
+          <pre class="ds-snippet">
+┌────────────────────────────────────────────────┐
+│ topbar         40px                            │
+├────────┬───────────────────┬───────────────────┤
+│ rail   │ builder pane      │ output pane       │
+│ 264px  │ minmax(0, 1.05fr) │ minmax(0, 1fr)    │
+│        │                   │                   │
+├────────┴───────────────────┴───────────────────┤
+│ statusbar      24px                            │
+└────────────────────────────────────────────────┘</pre
+          >
+        </section>
+
+        <!-- ─────────────────── RADIUS ─────────────────── -->
+        <section class="ds-section" id="radius">
+          <h1>Radius &amp; shadows</h1>
+          <div class="grid-3">
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">--r-sm</span><span class="meta">3px</span>
+              </div>
+              <div class="ds-card-body center">
+                <div
+                  style="
+                    width: 60px;
+                    height: 60px;
+                    background: var(--bg-3);
+                    border: 1px solid var(--line-strong);
+                    border-radius: 3px;
+                  "
+                ></div>
+              </div>
+              <pre class="ds-snippet">pills · inputs · rows</pre>
+            </div>
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">--r-md</span><span class="meta">5px</span>
+              </div>
+              <div class="ds-card-body center">
+                <div
+                  style="
+                    width: 60px;
+                    height: 60px;
+                    background: var(--bg-3);
+                    border: 1px solid var(--line-strong);
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+              <pre class="ds-snippet">buttons · seg control · float-menu</pre>
+            </div>
+            <div class="ds-card">
+              <div class="ds-card-head">
+                <span class="label">--r-lg</span><span class="meta">8px</span>
+              </div>
+              <div class="ds-card-body center">
+                <div
+                  style="
+                    width: 60px;
+                    height: 60px;
+                    background: var(--bg-3);
+                    border: 1px solid var(--line-strong);
+                    border-radius: 8px;
+                  "
+                ></div>
+              </div>
+              <pre class="ds-snippet">sheets · cards</pre>
+            </div>
+          </div>
+
+          <h2>Shadow</h2>
+          <p>
+            One shadow only — for floating menus and modal sheets. Inline elements never carry
+            shadow.
+          </p>
+          <pre class="ds-snippet">
+--shadow-pop:   0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02);
+--shadow-modal: 0 24px 64px rgba(0,0,0,0.60);</pre
+          >
+        </section>
+
+        <!-- ─────────────────── MOTION ─────────────────── -->
+        <section class="ds-section" id="motion">
+          <h1>Motion</h1>
+          <p>
+            Movement is purely functional — never decorative. Hover/active states are instant. The
+            only animated transitions are: accordion chevron rotation, sheet fade-in, and
+            tab-underline slide.
+          </p>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Duration</th>
+                <th>Easing</th>
+                <th>Where</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">--ease-quick</td>
+                <td class="col-default">120ms</td>
+                <td class="col-desc">ease-out</td>
+                <td class="col-desc">sheet fade, hover</td>
+              </tr>
+              <tr>
+                <td class="col-name">--ease-deliberate</td>
+                <td class="col-default">150ms</td>
+                <td class="col-desc">ease-in-out</td>
+                <td class="col-desc">chevron, tab</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── SYNTAX ─────────────────── -->
+        <section class="ds-section" id="syntax">
+          <h1>Syntax colors</h1>
+          <p>
+            Used in the Code pane and the Export sheet preview. Same token names work in light
+            theme.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-body col">
+              <pre class="ds-snippet" style="border-top: 0; padding: 16px; background: transparent">
+<span style="color:#5e5e74;font-style:italic;">// User subject</span>
+<span style="color:#c4b5fd;">const</span> <span style="color:#fde68a;">User</span> = <span style="color:#fde68a;">defineSubjectType</span>(<span style="color:#86efac;">"User"</span>,
+  <span style="color:#fde68a;">z</span>.<span style="color:#fde68a;">object</span>({
+    <span style="color:#e8e8f0;">id</span>: <span style="color:#fde68a;">z</span>.<span style="color:#fde68a;">uuid</span>(),
+    <span style="color:#e8e8f0;">age</span>: <span style="color:#fde68a;">z</span>.<span style="color:#fde68a;">number</span>().<span style="color:#fde68a;">int</span>().<span style="color:#fde68a;">min</span>(<span style="color:#fca5a5;">18</span>),
+  })
+);</pre>
+            </div>
+          </div>
+
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Color (dark)</th>
+                <th>Used for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">--syn-keyword</td>
+                <td class="col-default">#c4b5fd</td>
+                <td class="col-desc">const, let, async, return</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-type</td>
+                <td class="col-default">#93c5fd</td>
+                <td class="col-desc">JSON keys, named types</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-string</td>
+                <td class="col-default">#86efac</td>
+                <td class="col-desc">string literals</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-number</td>
+                <td class="col-default">#fca5a5</td>
+                <td class="col-desc">numeric literals, modifier values</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-comment</td>
+                <td class="col-default">#5e5e74</td>
+                <td class="col-desc">// comments (italic)</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-fn</td>
+                <td class="col-default">#fde68a</td>
+                <td class="col-desc">z, function names</td>
+              </tr>
+              <tr>
+                <td class="col-name">--syn-punct</td>
+                <td class="col-default">#8484a0</td>
+                <td class="col-desc">braces, dots, commas</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── BUTTONS ─────────────────── -->
+        <section class="ds-section" id="buttons">
+          <h1>Buttons</h1>
+          <p class="lead">
+            Three variants. All 26px tall. Primary uses <code>--accent-dim</code>, default uses
+            <code>--bg-2</code>, ghost is transparent. Icons are 12–13px and always Lucide-style.
+          </p>
+
+          <div class="ds-card">
+            <div class="ds-card-head">
+              <span class="label">Variants</span
+              ><span class="meta">.btn / .btn.primary / .btn.ghost</span>
+            </div>
+            <div class="ds-card-body">
+              <button class="btn primary">Run</button>
+              <button class="btn">Cancel</button>
+              <button class="btn ghost">Skip</button>
+              <button class="btn primary">+ Add subject</button>
+              <button class="btn" disabled style="opacity: 0.5; cursor: not-allowed">
+                Disabled
+              </button>
+            </div>
+          </div>
+
+          <h3>Props</h3>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Prop</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">variant</td>
+                <td class="col-type">"default" | "primary" | "ghost"</td>
+                <td class="col-default">"default"</td>
+                <td class="col-desc">primary for the page's single most important action</td>
+              </tr>
+              <tr>
+                <td class="col-name">leadingIcon</td>
+                <td class="col-type">node</td>
+                <td class="col-default">—</td>
+                <td class="col-desc">12 or 13px Icon</td>
+              </tr>
+              <tr>
+                <td class="col-name">disabled</td>
+                <td class="col-type">boolean</td>
+                <td class="col-default">false</td>
+                <td class="col-desc">opacity 0.5, cursor not-allowed</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Rules</h3>
+          <ul class="rule-list">
+            <li>
+              Only one <code>.primary</code> per pane region. Top bar's "Export" is the global
+              primary.
+            </li>
+            <li>Use <code>.ghost</code> for icon-only top-bar actions (refresh, theme toggle).</li>
+            <li>
+              Never put <code>.primary</code> inside a row or pill — primary is always
+              full-button-sized.
+            </li>
+          </ul>
+        </section>
+
+        <!-- ─────────────────── SEGMENTED ─────────────────── -->
+        <section class="ds-section" id="segmented">
+          <h1>Segmented control</h1>
+          <p>
+            Mutually-exclusive small choices. Replaces tabs when there are 2–4 short labels and the
+            choice doesn't change route.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.seg</span></div>
+            <div class="ds-card-body">
+              <div class="seg">
+                <button aria-pressed="true">auto-run</button>
+                <button>manual</button>
+              </div>
+              <div class="seg">
+                <button aria-pressed="true">JSON</button>
+                <button>Table</button>
+                <button>Tree</button>
+              </div>
+              <div class="seg">
+                <button aria-pressed="true">Schemas</button>
+                <button aria-pressed="true">Generated world</button>
+              </div>
+            </div>
+          </div>
+          <p style="margin-top: 8px">
+            <b>Multi-select variant:</b> when used as a multi-select (Export sheet's "Include"),
+            each button toggles independently — multiple can be <code>aria-pressed="true"</code>.
+          </p>
+        </section>
+
+        <!-- ─────────────────── KBD ─────────────────── -->
+        <section class="ds-section" id="kbd">
+          <h1>Keyboard hints (kbd)</h1>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.kbd</span></div>
+            <div class="ds-card-body">
+              <span class="kbd">⌘ K</span>
+              <span class="kbd">⏎</span>
+              <span class="kbd">esc</span>
+              <span class="kbd">⌘ ⏎</span>
+              <span class="kbd">⌘ 1</span>
+              <span class="kbd">↑↓</span>
+            </div>
+          </div>
+          <p>
+            Always pair with a verb in the same line: <code>"⌘ ⏎ download"</code>. Never used in
+            isolation as a primary CTA.
+          </p>
+        </section>
+
+        <!-- ─────────────────── INPUT ─────────────────── -->
+        <section class="ds-section" id="input">
+          <h1>Input</h1>
+          <p>
+            Single utility input used in left-rail fields and search boxes. Mono 11px, 22px tall.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.input</span></div>
+            <div class="ds-card-body" style="background: var(--bg-1)">
+              <div class="field" style="width: 240px">
+                <span class="field-label">label</span>
+                <input class="input" value="seed_42" />
+              </div>
+              <div class="field" style="width: 240px">
+                <span class="field-label">focus</span>
+                <input class="input" value="active" autofocus />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── TYPE CHIP ─────────────────── -->
+        <section class="ds-section" id="chips">
+          <h1>Type chip</h1>
+          <p>
+            Represents the schema type of a property (String, Number, Enum, etc). Click to open a
+            type-picker. Inactive uses neutral; active uses accent.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.type-chip</span></div>
+            <div class="ds-card-body">
+              <span class="type-chip">String <span class="chev">▾</span></span>
+              <span class="type-chip">Number <span class="chev">▾</span></span>
+              <span class="type-chip" data-active="true">Enum <span class="chev">▾</span></span>
+              <span class="type-chip">Array&lt;Order&gt; <span class="chev">▾</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── MOD ─────────────────── -->
+        <section class="ds-section" id="mod">
+          <h1>Modifier pill</h1>
+          <p class="lead">
+            A Zod modifier (<code>.min(1)</code>, <code>.email()</code>, <code>.optional()</code>).
+            Two shapes: parameterless (<code>.email()</code>) and parameterized
+            (<code>.min=1</code>).
+          </p>
+
+          <div class="ds-card">
+            <div class="ds-card-head">
+              <span class="label">.mod</span><span class="meta">18px tall · mono 10.5px</span>
+            </div>
+            <div class="ds-card-body">
+              <span class="mod"><span>.email()</span></span>
+              <span class="mod"><span>.uuid()</span></span>
+              <span class="mod"><span>.optional()</span></span>
+              <span class="mod"
+                ><span>.min</span><span class="eq">=</span><span class="val">1</span></span
+              >
+              <span class="mod"
+                ><span>.max</span><span class="eq">=</span><span class="val">40</span></span
+              >
+              <span class="mod"
+                ><span>.regex</span><span class="eq">=</span
+                ><span class="val">/^[0-9]{5}$/</span></span
+              >
+              <span class="mod" data-warn="true"><span>"US"</span></span>
+            </div>
+          </div>
+
+          <h3>States</h3>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Visual</th>
+                <th>Trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">default</td>
+                <td class="col-desc">
+                  <span class="mod"><span>.email()</span></span>
+                </td>
+                <td class="col-desc">always</td>
+              </tr>
+              <tr>
+                <td class="col-name">parameterized</td>
+                <td class="col-desc">
+                  <span class="mod"
+                    ><span>.min</span><span class="eq">=</span><span class="val">1</span></span
+                  >
+                </td>
+                <td class="col-desc">value editable in place</td>
+              </tr>
+              <tr>
+                <td class="col-name">hover</td>
+                <td class="col-desc">accent border + close × appears</td>
+                <td class="col-desc">pointer over pill</td>
+              </tr>
+              <tr>
+                <td class="col-name">warn</td>
+                <td class="col-desc">
+                  <span class="mod" data-warn="true"><span>"US"</span></span>
+                </td>
+                <td class="col-desc">unbound enum value, mismatch</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Props</h3>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Prop</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">name</td>
+                <td class="col-type">string</td>
+                <td class="col-default">required</td>
+                <td class="col-desc">e.g. ".min" or ".email()"</td>
+              </tr>
+              <tr>
+                <td class="col-name">value</td>
+                <td class="col-type">string | number</td>
+                <td class="col-default">undefined</td>
+                <td class="col-desc">render with =val chip</td>
+              </tr>
+              <tr>
+                <td class="col-name">warn</td>
+                <td class="col-type">boolean</td>
+                <td class="col-default">false</td>
+                <td class="col-desc">orange variant</td>
+              </tr>
+              <tr>
+                <td class="col-name">removable</td>
+                <td class="col-type">boolean</td>
+                <td class="col-default">false</td>
+                <td class="col-desc">show × on hover</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── ADDMOD ─────────────────── -->
+        <section class="ds-section" id="addmod">
+          <h1>Add-mod pill</h1>
+          <p>The trigger for the floating menu. Looks like a dashed-outline modifier slot.</p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.add-mod</span></div>
+            <div class="ds-card-body">
+              <span class="add-mod">+ mod</span>
+              <span class="add-mod" data-active="true">+ mod</span>
+            </div>
+          </div>
+          <ul class="rule-list">
+            <li>Always last child of a row; never floats free.</li>
+            <li><code>data-active="true"</code> when the floating menu is anchored to it.</li>
+          </ul>
+        </section>
+
+        <!-- ─────────────────── ROW ─────────────────── -->
+        <section class="ds-section" id="row">
+          <h1>Property row</h1>
+          <p class="lead">
+            The atomic unit of the Builder. Holds one property: name, type, modifiers, and an
+            add-mod slot. Modifiers wrap to a second line if they overflow.
+          </p>
+
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">Anatomy</span></div>
+            <div class="ds-card-body col" style="background: var(--bg-1); padding: 0">
+              <div class="demo-tree">
+                <div class="row">
+                  <span class="grip">⋮⋮</span>
+                  <input class="key mono" value="email" size="6" />
+                  <span class="colon">:</span>
+                  <span class="type-chip">Email <span class="chev">▾</span></span>
+                  <span class="mod"><span>.email()</span></span>
+                  <span class="add-mod">+ mod</span>
+                </div>
+                <div class="row" data-selected="true">
+                  <span class="grip">⋮⋮</span>
+                  <input class="key mono" value="age" size="4" />
+                  <span class="colon">:</span>
+                  <span class="type-chip" data-active="true"
+                    >Number <span class="chev">▾</span></span
+                  >
+                  <span class="mod"><span>.int()</span></span>
+                  <span class="mod"
+                    ><span>.min</span><span class="eq">=</span><span class="val">18</span></span
+                  >
+                  <span class="mod"
+                    ><span>.max</span><span class="eq">=</span><span class="val">99</span></span
+                  >
+                  <span class="mod"><span>.optional()</span></span>
+                  <span class="add-mod" data-active="true">+ mod</span>
+                </div>
+                <div class="row" data-warn="true">
+                  <span class="grip">⋮⋮</span>
+                  <input class="key mono" value="country" size="8" />
+                  <span class="colon">:</span>
+                  <span class="type-chip">Enum <span class="chev">▾</span></span>
+                  <span class="mod" data-warn="true"><span>"US"</span></span>
+                  <span class="mod" data-warn="true"><span>"CA"</span></span>
+                  <span class="mod" data-warn="true"><span>"UK"</span></span>
+                  <span class="add-mod">+ mod</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h3>States</h3>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Visual</th>
+                <th>Trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">default</td>
+                <td class="col-desc">no background</td>
+                <td class="col-desc">resting</td>
+              </tr>
+              <tr>
+                <td class="col-name">hover</td>
+                <td class="col-desc">--bg-2 background, grip visible</td>
+                <td class="col-desc">pointer over row</td>
+              </tr>
+              <tr>
+                <td class="col-name">selected</td>
+                <td class="col-desc">--accent-soft bg, 2px accent stripe on left</td>
+                <td class="col-desc">click row</td>
+              </tr>
+              <tr>
+                <td class="col-name">warn</td>
+                <td class="col-desc">--warn-soft bg, 2px warn stripe on left</td>
+                <td class="col-desc">validation issue</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Props</h3>
+          <table class="props-table">
+            <thead>
+              <tr>
+                <th>Prop</th>
+                <th>Type</th>
+                <th>Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-name">keyName</td>
+                <td class="col-type">string</td>
+                <td class="col-default">required</td>
+              </tr>
+              <tr>
+                <td class="col-name">type</td>
+                <td class="col-type">string</td>
+                <td class="col-default">required</td>
+              </tr>
+              <tr>
+                <td class="col-name">mods</td>
+                <td class="col-type">[name, value?, warn?][]</td>
+                <td class="col-default">[]</td>
+              </tr>
+              <tr>
+                <td class="col-name">indent</td>
+                <td class="col-type">number</td>
+                <td class="col-default">0</td>
+              </tr>
+              <tr>
+                <td class="col-name">selected</td>
+                <td class="col-type">boolean</td>
+                <td class="col-default">false</td>
+              </tr>
+              <tr>
+                <td class="col-name">warn</td>
+                <td class="col-type">boolean</td>
+                <td class="col-default">false</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── GROUP ─────────────────── -->
+        <section class="ds-section" id="group">
+          <h1>Group header</h1>
+          <p>Marks the start of a nested object or array. Renders inline above its children.</p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.group-head</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <div class="demo-tree" style="width: 100%">
+                <div class="group-head">
+                  <span class="chev">▾</span>
+                  <span class="gname">address</span>
+                  <span class="colon">:</span>
+                  <span class="type-chip">Object <span class="chev">▾</span></span>
+                </div>
+                <div class="group-head">
+                  <span class="chev">▾</span>
+                  <span class="gname">orders</span>
+                  <span class="colon">:</span>
+                  <span class="type-chip">Array&lt;Order&gt; <span class="chev">▾</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── FLOATMENU ─────────────────── -->
+        <section class="ds-section" id="floatmenu">
+          <h1>Floating menu</h1>
+          <p class="lead">
+            The picker that opens when you click a <code>+ mod</code> pill. Anchored 8px below the
+            pill with an upward caret. Width 256px.
+          </p>
+
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.float-menu</span></div>
+            <div
+              class="ds-card-body"
+              style="
+                background: var(--bg-0);
+                min-height: 340px;
+                align-items: flex-start;
+                padding-top: 60px;
+                justify-content: center;
+              "
+            >
+              <div style="position: relative">
+                <span class="add-mod" data-active="true">+ mod</span>
+                <div
+                  class="float-menu"
+                  style="position: absolute; top: 32px; left: 0; --caret: 14px"
+                >
+                  <div class="search">
+                    <input placeholder="filter…" />
+                    <span class="scope">z.number()</span>
+                  </div>
+                  <div class="grp">Refinements</div>
+                  <div class="item" data-active>
+                    <span>.positive()</span><span class="desc">&gt; 0</span>
+                  </div>
+                  <div class="item"><span>.negative()</span><span class="desc">&lt; 0</span></div>
+                  <div class="item">
+                    <span>.finite()</span><span class="desc">no Infinity</span>
+                  </div>
+                  <div class="grp">Wrappers</div>
+                  <div class="item">
+                    <span>.nullable()</span><span class="desc">allow null</span>
+                  </div>
+                  <div class="item"><span>.default(…)</span><span class="desc">fallback</span></div>
+                  <div class="foot">
+                    <span>↑↓ nav</span><span>⏎ add</span><span>esc close</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h3>Behavior</h3>
+          <ul class="rule-list">
+            <li>
+              Anchored to the pill via <code>getBoundingClientRect()</code>; uses
+              <code>position: fixed</code> so it escapes overflow:auto parents.
+            </li>
+            <li>
+              Caret horizontal offset is computed:
+              <code>--caret: anchorCenter - menuLeft - 5px</code>.
+            </li>
+            <li>
+              Search auto-focuses on open. <kbd>esc</kbd> closes; <kbd>⏎</kbd> adds the highlighted
+              item.
+            </li>
+            <li>Items grouped by category; the search filters across all categories.</li>
+            <li>
+              The <code>scope</code> chip shows which Zod base type the menu's options apply to.
+            </li>
+          </ul>
+        </section>
+
+        <!-- ─────────────────── TOPBAR ─────────────────── -->
+        <section class="ds-section" id="topbar">
+          <h1>Top bar</h1>
+          <p>40px tall, lives at the top of the app. Brand → workspace name → spacer → actions.</p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.topbar</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <div class="topbar" style="height: 40px; width: 100%">
+                <div class="brand">
+                  <div class="brand-logo">z</div>
+                  <div class="brand-name">zod4-mock</div>
+                  <div class="brand-sub">v0.4.2</div>
+                </div>
+                <div class="workspace-name">
+                  <span>workspace</span>
+                  <span class="sep">/</span>
+                  <span class="name">user-service</span>
+                </div>
+                <div class="top-actions">
+                  <div class="seg">
+                    <button aria-pressed="true">auto-run</button>
+                    <button>manual</button>
+                  </div>
+                  <button class="btn">▶ Run</button>
+                  <button class="btn primary">⬇ Export</button>
+                  <span class="kbd">⌘ K</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── LEFTRAIL ─────────────────── -->
+        <section class="ds-section" id="leftrail">
+          <h1>Left rail</h1>
+          <p>
+            264px wide. Three accordion sections: World, Subjects (always primary), Schemas.
+            Subjects expands to fill remaining vertical space.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.rail</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <aside
+                class="rail"
+                style="height: 360px; width: 264px; border-right: 1px solid var(--line)"
+              >
+                <section class="accordion-section" data-open="false">
+                  <div class="accordion-head">
+                    <span class="chev">▶</span><span class="accordion-title">World</span
+                    ><span class="accordion-meta">seed 42</span>
+                  </div>
+                </section>
+                <section
+                  class="accordion-section"
+                  data-open="true"
+                  style="flex: 1; display: flex; flex-direction: column; min-height: 0"
+                >
+                  <div class="accordion-head">
+                    <span class="chev">▶</span><span class="accordion-title">Subjects</span
+                    ><span class="accordion-meta">3</span>
+                  </div>
+                  <div class="accordion-body">
+                    <div class="subj-list">
+                      <div class="subj" aria-selected="true">
+                        <span class="grip">⋮⋮</span><span class="name">User</span
+                        ><span class="count">6</span>
+                      </div>
+                      <div class="subj">
+                        <span class="grip">⋮⋮</span><span class="name">Order</span
+                        ><span class="count">4</span><span class="badge">FK→User</span>
+                      </div>
+                      <div class="subj">
+                        <span class="grip">⋮⋮</span><span class="name">Product</span
+                        ><span class="count">5</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <section class="accordion-section" data-open="false">
+                  <div class="accordion-head">
+                    <span class="chev">▶</span><span class="accordion-title">Schemas</span
+                    ><span class="accordion-meta">2</span>
+                  </div>
+                </section>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── PANE ─────────────────── -->
+        <section class="ds-section" id="pane">
+          <h1>Pane</h1>
+          <p>
+            Generic surface used by Builder, Output, and any future content area.
+            <code>.pane-head</code> is 32px tall; <code>.pane-body</code> scrolls.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.pane</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <section class="pane" style="height: 240px">
+                <div class="pane-head">
+                  <span class="pane-title">Builder · <span class="accent">User</span></span>
+                  <span class="pane-sub">z.object()</span>
+                  <div class="pane-actions">
+                    <button class="icon-btn">⚙</button>
+                  </div>
+                </div>
+                <div class="pane-body" style="padding: 14px; color: var(--ink-2)">
+                  pane content goes here
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── TABS ─────────────────── -->
+        <section class="ds-section" id="tabs">
+          <h1>Output tabs</h1>
+          <p>
+            The tab strip at the top of the right output pane. Two tabs (Code / Data) plus action
+            affordances on the right.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.output-tabs</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <div
+                class="output-tabs"
+                style="
+                  background: var(--bg-2);
+                  border-bottom: 1px solid var(--line);
+                  height: 32px;
+                  display: flex;
+                  align-items: stretch;
+                "
+              >
+                <div
+                  class="output-tab"
+                  aria-selected="true"
+                  style="
+                    padding: 0 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    border-right: 1px solid var(--line);
+                    background: var(--bg-1);
+                    box-shadow: inset 0 -1px 0 var(--accent);
+                  "
+                >
+                  <span
+                    style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"
+                  ></span
+                  >Code
+                  <span
+                    style="
+                      color: var(--ink-2);
+                      font-family: &quot;JetBrains Mono&quot;;
+                      font-size: 11px;
+                    "
+                    >user.schema.ts</span
+                  >
+                </div>
+                <div
+                  class="output-tab"
+                  style="
+                    padding: 0 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    border-right: 1px solid var(--line);
+                    color: var(--ink-2);
+                  "
+                >
+                  <span
+                    style="width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3)"
+                  ></span
+                  >Data
+                  <span
+                    style="
+                      color: var(--ink-2);
+                      font-family: &quot;JetBrains Mono&quot;;
+                      font-size: 11px;
+                    "
+                    >3 of 6</span
+                  >
+                </div>
+                <div
+                  style="
+                    margin-left: auto;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 0 10px;
+                  "
+                >
+                  <span class="kbd">⌘ 1</span><span class="kbd">⌘ 2</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── SHEET ─────────────────── -->
+        <section class="ds-section" id="sheet">
+          <h1>Sheet (Export modal)</h1>
+          <p>
+            Centered modal with backdrop blur. 960px × 720px max, capped to 92vw × 88vh. Has head,
+            two-column body, and footer options.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.export-sheet</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <div
+                style="
+                  background: var(--bg-1);
+                  border: 1px solid var(--line-strong);
+                  border-radius: 8px;
+                  width: 100%;
+                  height: 240px;
+                  display: grid;
+                  grid-template-rows: auto 1fr auto;
+                "
+              >
+                <div
+                  style="
+                    padding: 14px 18px;
+                    border-bottom: 1px solid var(--line);
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                  "
+                >
+                  <span style="font-weight: 600">Export</span>
+                  <span
+                    style="
+                      color: var(--ink-2);
+                      font-family: &quot;JetBrains Mono&quot;;
+                      font-size: 12px;
+                    "
+                    >single file · world.ts · 194 lines</span
+                  >
+                  <div style="margin-left: auto; display: flex; gap: 6px">
+                    <button class="btn">Copy</button
+                    ><button class="btn primary">Download world.ts</button>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 200px 1fr; min-height: 0">
+                  <div
+                    style="
+                      border-right: 1px solid var(--line);
+                      background: var(--bg-2);
+                      padding: 8px;
+                      color: var(--ink-2);
+                      font-family: &quot;JetBrains Mono&quot;;
+                      font-size: 11px;
+                    "
+                  >
+                    // In file ...
+                  </div>
+                  <div
+                    style="
+                      padding: 14px;
+                      color: var(--ink-2);
+                      font-family: &quot;JetBrains Mono&quot;;
+                      font-size: 12px;
+                    "
+                  >
+                    preview · world.ts
+                  </div>
+                </div>
+                <div
+                  style="
+                    padding: 8px 18px;
+                    background: var(--bg-2);
+                    border-top: 1px solid var(--line);
+                    display: flex;
+                    gap: 6px;
+                    align-items: center;
+                  "
+                >
+                  <span style="color: var(--ink-2); font-size: 11px">Include</span>
+                  <div class="seg">
+                    <button aria-pressed="true">Schemas</button
+                    ><button aria-pressed="true">Generated world</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── STATUSBAR ─────────────────── -->
+        <section class="ds-section" id="statusbar">
+          <h1>Status bar</h1>
+          <p>
+            24px tall. Pipe-separated mono labels. Left: validation + counts. Right: regen time +
+            version.
+          </p>
+          <div class="ds-card">
+            <div class="ds-card-head"><span class="label">.statusbar</span></div>
+            <div class="ds-card-body" style="padding: 0">
+              <div class="statusbar" style="height: 24px; width: 100%">
+                <span class="ok">● valid</span>
+                <span class="seg-mark">│</span><span>3 subjects</span>
+                <span class="seg-mark">│</span><span>2 relationships</span>
+                <span class="seg-mark">│</span><span>seed 42</span>
+                <span class="grow"></span>
+                <span>regenerated 240ms ago</span>
+                <span class="seg-mark">│</span><span>z@4.0.1</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────────────── TOKENS REF ─────────────────── -->
+        <section class="ds-section" id="tokens-ref">
+          <h1>Token reference</h1>
+          <p>
+            The full list of CSS custom properties. All in <code>hifi/tokens.css</code>. Light theme
+            overrides are applied via <code>html.light</code>.
+          </p>
+          <pre class="ds-snippet" style="border-radius: 8px; border: 1px solid var(--line)">
+:root {
+  /* surfaces */
+  --bg-0: #0a0a0f;       /* app background */
+  --bg-1: #11111a;       /* panes, top bar, status bar */
+  --bg-2: #181822;       /* hover, pane head, group head */
+  --bg-3: #1f1f2c;       /* raised surfaces */
+  --bg-hover: #232331;   /* explicit button hover */
+  --line: #252533;       /* default border */
+  --line-strong: #34344a;/* button border */
+
+  /* ink */
+  --ink-0: #e8e8f0;      /* primary text */
+  --ink-1: #b4b4c4;      /* body text */
+  --ink-2: #6f6f85;      /* meta */
+  --ink-3: #4a4a5e;      /* disabled / grip */
+
+  /* accent */
+  --accent: #a78bfa;
+  --accent-bright: #c4b5fd;
+  --accent-dim: #7c3aed;
+  --accent-soft: rgba(167,139,250,0.12);
+  --accent-edge: rgba(167,139,250,0.32);
+
+  /* state */
+  --warn: #f59e0b;
+  --warn-soft: rgba(245,158,11,0.14);
+  --ok: #34d399;
+
+  /* syntax */
+  --syn-keyword: #c4b5fd;
+  --syn-type:    #93c5fd;
+  --syn-string:  #86efac;
+  --syn-number:  #fca5a5;
+  --syn-comment: #5e5e74;
+  --syn-fn:      #fde68a;
+  --syn-punct:   #8484a0;
+
+  /* shape */
+  --row-h: 28px;
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
+}</pre
+          >
+        </section>
+
+        <!-- ─────────────────── FILES REF ─────────────────── -->
+        <section class="ds-section" id="files-ref">
+          <h1>File map</h1>
+          <p>
+            Each component lives in its own JSX + CSS pair. The HTML shell pulls them all in via
+            <code>&lt;script&gt;</code> and <code>&lt;link&gt;</code> tags. Globals are exposed on
+            <code>window.*</code> because each Babel <code>&lt;script&gt;</code> gets its own scope.
+          </p>
+          <table class="files-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>JSX</th>
+                <th>CSS</th>
+                <th>Exports</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Tokens</td>
+                <td>—</td>
+                <td>hifi/tokens.css</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>App shell</td>
+                <td>hifi/app.jsx</td>
+                <td>hifi/app.css</td>
+                <td>App</td>
+              </tr>
+              <tr>
+                <td>Top bar</td>
+                <td>hifi/topbar.jsx</td>
+                <td>hifi/topbar.css</td>
+                <td>TopBar</td>
+              </tr>
+              <tr>
+                <td>Left rail</td>
+                <td>hifi/leftrail.jsx</td>
+                <td>hifi/leftrail.css</td>
+                <td>LeftRail</td>
+              </tr>
+              <tr>
+                <td>Mod pill</td>
+                <td>hifi/mod.jsx</td>
+                <td>hifi/builder.css</td>
+                <td>Mod, AddMod, TypeChip</td>
+              </tr>
+              <tr>
+                <td>Property row</td>
+                <td>hifi/row.jsx</td>
+                <td>hifi/builder.css</td>
+                <td>Row, GroupHead, CardinalityRow</td>
+              </tr>
+              <tr>
+                <td>Builder pane</td>
+                <td>hifi/builder.jsx</td>
+                <td>hifi/builder.css</td>
+                <td>BuilderPane</td>
+              </tr>
+              <tr>
+                <td>Float menu</td>
+                <td>hifi/floatmenu.jsx</td>
+                <td>hifi/floatmenu.css</td>
+                <td>FloatMenu</td>
+              </tr>
+              <tr>
+                <td>Code view</td>
+                <td>hifi/code.jsx</td>
+                <td>hifi/output.css</td>
+                <td>CodeView</td>
+              </tr>
+              <tr>
+                <td>Data view</td>
+                <td>hifi/datapane.jsx</td>
+                <td>hifi/output.css</td>
+                <td>DataView</td>
+              </tr>
+              <tr>
+                <td>Output pane</td>
+                <td>hifi/output.jsx</td>
+                <td>hifi/output.css</td>
+                <td>OutputPane</td>
+              </tr>
+              <tr>
+                <td>Export sheet</td>
+                <td>hifi/export.jsx</td>
+                <td>hifi/export.css</td>
+                <td>ExportSheet</td>
+              </tr>
+              <tr>
+                <td>Status bar</td>
+                <td>hifi/statusbar.jsx</td>
+                <td>hifi/statusbar.css</td>
+                <td>StatusBar</td>
+              </tr>
+              <tr>
+                <td>Icons</td>
+                <td>hifi/icon.jsx</td>
+                <td>—</td>
+                <td>Icon</td>
+              </tr>
+              <tr>
+                <td>Sample data</td>
+                <td>hifi/data.jsx</td>
+                <td>—</td>
+                <td>SUBJECTS, RELATIONSHIPS, BUILDER_ROWS, USER_CODE_LINES, USER_DATA</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ─────────────────── IMPL ─────────────────── -->
+        <section class="ds-section" id="impl">
+          <h1>Implementation notes for Claude Code</h1>
+          <p class="lead">
+            Read this before opening a PR. These are the conventions baked into the design —
+            breaking them will make the system feel inconsistent.
+          </p>
+
+          <h2>1. Theme</h2>
+          <ul class="rule-list">
+            <li>
+              Theme is controlled by <code>html.light</code> class on <code>&lt;html&gt;</code>. No
+              <code>data-theme</code> attribute, no React context — just toggle the class.
+            </li>
+            <li>
+              Persist user choice in <code>localStorage["theme"]</code>. Restore on page load before
+              React mounts to prevent flash.
+            </li>
+          </ul>
+
+          <h2>2. Tokens</h2>
+          <ul class="rule-list">
+            <li>
+              Components <b>never</b> reference hex colors directly. Always
+              <code>var(--token-name)</code>.
+            </li>
+            <li>
+              Adding a new color? Add it to <code>tokens.css</code> in both <code>:root</code> and
+              <code>html.light</code>.
+            </li>
+            <li>One-off colors are a smell. If you need a new color, name it.</li>
+          </ul>
+
+          <h2>3. Component conventions</h2>
+          <ul class="rule-list">
+            <li>One component per file. Each file: small JSX module + paired CSS file.</li>
+            <li>
+              Component name = file name in PascalCase (<code>row.jsx</code> → <code>Row</code>).
+            </li>
+            <li>
+              State lives close to the leaves; the top-level <code>App</code> only holds
+              cross-cutting state (theme, modal-open, selected-subject).
+            </li>
+            <li>Use plain props; avoid context unless 3+ levels of prop-drilling are involved.</li>
+          </ul>
+
+          <h2>4. Accessibility</h2>
+          <ul class="rule-list">
+            <li>
+              Selected items use <code>aria-selected="true"</code>; pressed seg buttons use
+              <code>aria-pressed</code>.
+            </li>
+            <li>
+              All interactive elements have a focus ring:
+              <code>outline: 0; box-shadow: 0 0 0 2px var(--accent-soft)</code>.
+            </li>
+            <li>Modal sheets trap focus; <kbd>esc</kbd> closes them.</li>
+          </ul>
+
+          <h2>5. Forbidden things</h2>
+          <ul class="rule-list">
+            <li>
+              No drop shadows on inline elements. Shadows only on <code>.float-menu</code> and
+              <code>.export-sheet</code>.
+            </li>
+            <li>No emoji in product UI.</li>
+            <li>No gradients except the brand-logo square.</li>
+            <li>No animation on hover. Hover is instantaneous.</li>
+            <li>
+              No icon without a paired label, except in the top bar's icon-only ghost buttons (which
+              carry tooltips).
+            </li>
+          </ul>
+
+          <h2>6. Spacing in JSX</h2>
+          <p>
+            Prefer flex/grid with <code>gap</code> over margin. Match the 4 / 6 / 8 / 12 / 16 / 24
+            scale; don't invent new values.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // active-link highlighting
+      const links = document.querySelectorAll(".ds-nav a");
+      const sections = [...document.querySelectorAll(".ds-section")];
+      function update() {
+        const y = window.scrollY + 80;
+        let active = sections[0];
+        for (const s of sections) if (s.offsetTop <= y) active = s;
+        links.forEach((l) =>
+          l.classList.toggle("active", l.getAttribute("href") === "#" + active.id),
+        );
+      }
+      window.addEventListener("scroll", update, { passive: true });
+      update();
+    </script>
+  </body>
+</html>

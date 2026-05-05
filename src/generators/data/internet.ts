@@ -16,14 +16,18 @@ const EXAMPLE_SUFFIXES = ["com", "net", "org", "nl"] as const;
 const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
 ] as const;
 
 const HTTP_STATUS_CODES = [200, 201, 204, 400, 401, 403, 404, 500, 502, 503] as const;
 
 const JWT_ALGORITHMS = ["HS256", "HS384", "HS512", "RS256"] as const;
 
-const PASSWORD_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()".split("");
+const PASSWORD_CHARS =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()".split("") as [
+    string,
+    ...string[],
+  ];
 
 // ---------------------------------------------------------------------------
 // Generators
@@ -34,7 +38,9 @@ export function domainSuffix(prng: Prng): string {
 }
 
 export function domainWord(prng: Prng): string {
-  return noun(prng).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return noun(prng)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 export function domainName(prng: Prng): string {
@@ -64,7 +70,7 @@ export function emoji(prng: Prng): string {
 }
 
 export function password(prng: Prng, length = 12): string {
-  return Array.from({ length }, () => prng.pick(PASSWORD_CHARS as any)).join("");
+  return Array.from({ length: length }, () => prng.pick(PASSWORD_CHARS)).join("");
 }
 
 export function protocol(prng: Prng): string {
@@ -113,6 +119,7 @@ export function jwtAlgorithm(prng: Prng): string {
 
 export function jwt(prng: Prng): string {
   // Just return random alphanumeric segments to simulate a JWT structure
-  const segment = (len: number) => Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
+  const segment = (len: number) =>
+    Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
   return `${segment(36)}.${segment(64)}.${segment(42)}`;
 }

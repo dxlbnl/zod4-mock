@@ -5,9 +5,42 @@ import { adjective, noun } from "./word.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
-const DEPARTMENTS = ["Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty", "Auto", "Sport", "Gezondheid"] as const;
-const MATERIALS = ["Hout", "Metaal", "Plastic", "Glas", "Stof", "Steen", "Leer", "Keramiek"] as const;
-const PRODUCT_ADJECTIVES = ["Klein", "Ergonomisch", "Rustiek", "Intelligent", "Prachtig", "Ongelooflijk", "Praktisch", "Handgemaakt", "Generiek", "Verfijnd", "Merkloos", "Lekker"] as const;
+const DEPARTMENTS = [
+  "Elektronica",
+  "Kleding",
+  "Huis",
+  "Tuin",
+  "Speelgoed",
+  "Boeken",
+  "Beauty",
+  "Auto",
+  "Sport",
+  "Gezondheid",
+] as const;
+const MATERIALS = [
+  "Hout",
+  "Metaal",
+  "Plastic",
+  "Glas",
+  "Stof",
+  "Steen",
+  "Leer",
+  "Keramiek",
+] as const;
+const PRODUCT_ADJECTIVES = [
+  "Klein",
+  "Ergonomisch",
+  "Rustiek",
+  "Intelligent",
+  "Prachtig",
+  "Ongelooflijk",
+  "Praktisch",
+  "Handgemaakt",
+  "Generiek",
+  "Verfijnd",
+  "Merkloos",
+  "Lekker",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Generators

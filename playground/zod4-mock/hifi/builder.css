@@ -1,0 +1,208 @@
+.tree {
+  padding: 8px 0;
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  height: 26px;
+}
+.group-head .chev {
+  color: var(--ink-3);
+  font-size: 10px;
+  width: 10px;
+}
+.group-head .gname {
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--row-h);
+  padding: 4px 12px 4px var(--ind, 12px);
+  border-bottom: 1px solid var(--bg-2);
+  position: relative;
+  flex-wrap: wrap;
+}
+.row:hover {
+  background: var(--bg-2);
+}
+.row[data-selected="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.row[data-warn="true"] {
+  background: var(--warn-soft);
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+
+.row .grip {
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  cursor: grab;
+  opacity: 0;
+}
+.row:hover .grip {
+  opacity: 1;
+}
+
+.row .key {
+  background: transparent;
+  border: 0;
+  color: var(--ink-0);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  padding: 2px 0;
+  min-width: 0;
+  width: auto;
+  field-sizing: content;
+}
+.row .key:focus {
+  outline: 0;
+  color: var(--accent-bright);
+}
+.row .colon {
+  color: var(--ink-3);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--syn-type);
+  cursor: pointer;
+}
+.type-chip[data-active="true"] {
+  border-color: var(--accent-edge);
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+}
+.type-chip .chev {
+  color: var(--ink-3);
+  font-size: 8px;
+}
+
+.row .spacer {
+  flex: 1;
+  min-width: 0;
+}
+.row .row-warn {
+  color: var(--warn);
+  display: inline-flex;
+  align-items: center;
+}
+
+.add-prop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  cursor: pointer;
+  height: var(--row-h);
+}
+.add-prop:hover {
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+}
+
+.mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px 0 6px;
+  height: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  color: var(--ink-1);
+  cursor: default;
+  white-space: nowrap;
+}
+.mod:hover {
+  border-color: var(--accent-edge);
+  color: var(--ink-0);
+}
+.mod .eq {
+  color: var(--ink-3);
+  margin: 0 1px;
+}
+.mod .val {
+  background: var(--bg-3);
+  border: 1px dashed var(--line-strong);
+  border-radius: 2px;
+  padding: 0 3px;
+  color: var(--syn-number);
+  cursor: text;
+}
+.mod .x {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: none;
+  place-items: center;
+  background: var(--ink-3);
+  color: var(--bg-1);
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 2px;
+}
+.mod:hover .x {
+  display: grid;
+}
+.mod[data-warn="true"] {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.mod[data-warn="true"] .val {
+  color: var(--warn);
+}
+
+.add-mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  height: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+.add-mod:hover {
+  color: var(--ink-0);
+  border-color: var(--accent-edge);
+  background: var(--accent-soft);
+}
+.add-mod[data-active="true"] {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #fff;
+}

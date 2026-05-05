@@ -8,8 +8,7 @@
  * The entity API aggregates file IDs per person using `registry.filter`.
  */
 
-import { createWorld, defineSubjectType } from "../../../src/index.js";
-const DOMAINS = ["example.com", "test.nl", "demo.io", "gmail.com", "outlook.com"] as const;
+import { createWorld, defineSubjectType, generators } from "../../../src/index.js";
 import {
   PersonSubjectSchema,
   TextFileSubjectSchema,
@@ -25,8 +24,8 @@ import {
 export const PersonSubject = defineSubjectType("person", PersonSubjectSchema, {
   derive: {
     email: ({ firstName, lastName }, ctx) => {
-      const ln = lastName!.toLowerCase().replace(/[\s']/g, "");
-      return `${firstName![0]}.${ln}${ctx.prng.int(10, 99)}@${ctx.prng.pick(DOMAINS)}`.toLowerCase();
+      const ln = lastName!.replace(/[\s']/g, "");
+      return `${firstName![0]}.${ln}${ctx.prng.int(10, 99)}@${generators.internet.domain(ctx.prng)}`.toLowerCase();
     },
   },
 });
