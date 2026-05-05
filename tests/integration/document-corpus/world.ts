@@ -31,6 +31,7 @@ export const DocumentSubject = defineSubjectType(
   z.object({
     documentId: z.uuid(),
   }),
+  { relations: { author: { type: "author", cardinality: "1" } } },
 );
 
 export const SentenceSubject = defineSubjectType(
@@ -38,6 +39,7 @@ export const SentenceSubject = defineSubjectType(
   z.object({
     sentenceId: z.uuid(),
   }),
+  { relations: { document: { type: "document", cardinality: "1" } } },
 );
 
 export function createDocumentCorpusWorld(seed = 42) {
@@ -54,15 +56,15 @@ export function createDocumentCorpusWorld(seed = 42) {
       // Documents: one per document subject
       .withSchema(DocumentSchema, DocumentSubject, {
         id: (s) => s.documentId,
-        authorId: (_, ctx) => ctx.registry.pick<{ authorId: string }>("author").authorId,
+        authorId: (_, ctx) => ctx.related<{ authorId: string }>("author").authorId,
         language: (_, ctx) =>
-          ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
+          ctx.related<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
       })
 
       // Sentences: one per sentence subject; each references an existing document
       .withSchema(SentenceSchema, SentenceSubject, {
         id: (s) => s.sentenceId,
-        documentId: (_, ctx) => ctx.registry.pick<{ documentId: string }>("document").documentId,
+        documentId: (_, ctx) => ctx.related<{ documentId: string }>("document").documentId,
       })
 
       // Annotations: one per author subject; reference existing sentences

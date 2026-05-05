@@ -94,7 +94,7 @@ export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap
    * ```
    */
   readonly derive?: {
-    [K in keyof TData]?: (partial: Partial<TData>, prng: Prng) => TData[K];
+    [K in keyof TData]?: (partial: Partial<TData>, ctx: GeneratorContext) => TData[K];
   };
 
   /**
@@ -129,7 +129,10 @@ export interface SubjectType<
   /** Declared relations to other subject types. */
   readonly relations: TRelations;
   /** Intra-subject derived fields. Erased to `unknown` at the `AnySubjectType` level. */
-  readonly derive?: Record<string, (partial: Record<string, unknown>, prng: Prng) => unknown>;
+  readonly derive?: Record<
+    string,
+    (partial: Record<string, unknown>, ctx: GeneratorContext) => unknown
+  >;
   /** Per-field key generators. Erased to `unknown` at the `AnySubjectType` level. */
   readonly keyMap?: Record<string, (prng: Prng) => unknown>;
 }
@@ -158,6 +161,8 @@ export interface SubjectInstance<T extends AnySubjectType = AnySubjectType> {
   readonly _id: string;
   /** The generated data for this subject, matching its schema. */
   readonly data: SubjectData<T>;
+  /** Stable record of resolved relationships for this instance. */
+  readonly _relations: Record<string, AnySubjectInstance | AnySubjectInstance[] | null>;
 }
 
 /** Erased form of `SubjectInstance` used internally. */
@@ -265,6 +270,26 @@ export interface GeneratorContext {
    * Defaults to `WorldOptions.optionalProbability` (typically 0.2).
    */
   readonly optionalProbability?: number;
+  /**
+   * Lazily resolves and returns the data of a related subject instance (or array of instances)
+   * based on the declared cardinality in `defineSubjectType`.
+   *
+   * @example
+   * ```ts
+   * ownerId: (_, ctx) => ctx.related<PersonData>('owner').personId
+   * ```
+   */
+  related<T = unknown>(relationName: string): T;
+  /**
+   * Finds all instances of `targetType` that have a relationship named `relationName`
+   * pointing to this subject. Returns their data.
+   *
+   * @example
+   * ```ts
+   * fileIds: (_, ctx) => ctx.relatedTo<TextFileData>('text-file', 'owner').map(f => f.fileId)
+   * ```
+   */
+  relatedTo<T = unknown>(targetType: string, relationName: string): T[];
 }
 
 // ---------------------------------------------------------------------------

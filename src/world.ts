@@ -297,18 +297,29 @@ export class WorldImpl implements World {
     // Per-subject PRNG — stable regardless of call order on the world
     const subjectPrng = createPrng(fieldSeed(this.options.seed, _id, ""));
 
+    const rawData: Record<string, unknown> = {};
+    const instance: AnySubjectInstance = {
+      _type: typeName,
+      _id,
+      data: rawData as SubjectData<AnySubjectType>,
+      _relations: {},
+    };
+    this.allInstances.push(instance);
+
     const ctx: GeneratorContext = {
       prng: subjectPrng,
-      subject: undefined,
+      subject: instance,
       registry: this.registry,
       fieldPath: "",
       optionalProbability: 0, // subject data always fully populated
+      related: <T>(relName: string) => this.resolveRelation<T>(instance, relName),
+      relatedTo: <T>(targetType: string, relName: string) =>
+        this.resolveReverseRelation<T>(instance, targetType, relName),
     };
 
     // Apply key-based generators for subject fields so semantic field names
     // (firstName, lastName, email, etc.) produce meaningful values.
     const subjectShape = getZodDef(subjectType.schema).shape!;
-    const rawData: Record<string, unknown> = {};
     for (const [key, fieldSchema] of Object.entries(subjectShape)) {
       const fieldCtx: GeneratorContext = {
         ...ctx,
@@ -333,21 +344,96 @@ export class WorldImpl implements World {
     // World-level custom generators take priority and are not overridden.
     for (const [key, fn] of Object.entries(subjectType.derive ?? {})) {
       if (!this.customKeyGenerators.has(key.toLowerCase())) {
-        rawData[key] = fn(rawData, ctx.prng.fork(`derive-${key}`));
+        const deriveCtx: GeneratorContext = {
+          ...ctx,
+          prng: ctx.prng.fork(`derive-${key}`),
+        };
+        rawData[key] = fn(rawData, deriveCtx);
       }
     }
 
-    const data = rawData as SubjectData<AnySubjectType>;
-
-    const instance: AnySubjectInstance = { _type: typeName, _id, data };
-    this.allInstances.push(instance);
-    this.registry.store(typeName, data); // store raw subject data, not the wrapper
+    this.registry.store(typeName, instance.data); // store raw subject data, not the wrapper
     return instance;
   }
 
   // -------------------------------------------------------------------------
   // Private: query helpers
   // -------------------------------------------------------------------------
+
+  private resolveRelation<T>(instance: AnySubjectInstance, relName: string): T {
+    if (relName in instance._relations) {
+      const cached = instance._relations[relName];
+      if (cached === null) return undefined as unknown as T;
+      if (Array.isArray(cached)) return cached.map((c) => c.data) as unknown as T;
+      return (cached as AnySubjectInstance).data as unknown as T;
+    }
+
+    const subjectType = this.subjectTypes.get(instance._type)!;
+    const relDef = subjectType.relations?.[relName];
+    if (!relDef) {
+      throw new Error(`Relation '${relName}' is not defined on subject type '${instance._type}'.`);
+    }
+
+    const relPrng = this.prng.fork(`rel-${instance._id}-${relName}`);
+    const targetType = relDef.type;
+
+    let existing = this.getInstancesOfType(targetType);
+    let count = 0;
+    switch (relDef.cardinality) {
+      case "1":
+        count = 1;
+        break;
+      case "0..1":
+        count = relPrng.random() < 0.5 ? 1 : 0;
+        break;
+      case "0..n":
+        count = relPrng.int(0, 3);
+        break;
+      case "1..n":
+        count = relPrng.int(1, 3);
+        break;
+    }
+
+    const selected: AnySubjectInstance[] = [];
+    for (let i = 0; i < count; i++) {
+      if (existing.length === 0) {
+        this.createSubjectInstance(targetType);
+        existing = this.getInstancesOfType(targetType);
+      }
+      selected.push(existing[relPrng.int(0, existing.length - 1)]!);
+    }
+
+    if (relDef.cardinality === "1" || relDef.cardinality === "0..1") {
+      const result = selected[0] ?? null;
+      instance._relations[relName] = result as any;
+      return (result ? result.data : undefined) as unknown as T;
+    } else {
+      instance._relations[relName] = selected;
+      return selected.map((s) => s.data) as unknown as T;
+    }
+  }
+
+  private resolveReverseRelation<T>(
+    instance: AnySubjectInstance,
+    targetType: string,
+    relName: string,
+  ): T[] {
+    const targets = this.getInstancesOfType(targetType);
+    const results: AnySubjectInstance[] = [];
+
+    for (const target of targets) {
+      this.resolveRelation(target, relName); // Force resolve
+
+      const related = target._relations[relName];
+      if (Array.isArray(related)) {
+        if (related.includes(instance)) results.push(target);
+      } else if (related === instance) {
+        results.push(target);
+      }
+    }
+
+    return results.map((r) => r.data) as unknown as T[];
+  }
 
   private getInstancesOfType(typeName: string): AnySubjectInstance[] {
     return this.allInstances.filter((s) => s._type === typeName);
@@ -357,13 +443,44 @@ export class WorldImpl implements World {
     return this.schemaRegs.filter((r) => r.schema === schema);
   }
 
+  private getTopologicallySortedTypes(): string[] {
+    const visited = new Set<string>();
+    const temp = new Set<string>();
+    const order: string[] = [];
+
+    const visit = (typeName: string) => {
+      if (temp.has(typeName))
+        throw new Error(`Circular dependency detected involving '${typeName}'`);
+      if (visited.has(typeName)) return;
+
+      temp.add(typeName);
+      const subjectType = this.subjectTypes.get(typeName);
+      if (subjectType?.relations) {
+        for (const rel of Object.values(subjectType.relations)) {
+          if (this.subjectTypes.has(rel.type)) {
+            visit(rel.type);
+          }
+        }
+      }
+      temp.delete(typeName);
+      visited.add(typeName);
+      order.push(typeName);
+    };
+
+    for (const typeName of this.subjectTypes.keys()) {
+      visit(typeName);
+    }
+    return order;
+  }
+
   /**
    * Ensure every registered subject type has at least one instance.
    * Called before any subject-based generation so that matchers that call
    * `ctx.registry.pick(otherType)` always find data.
    */
   private ensureAllTypesHaveSubjects(): void {
-    for (const typeName of this.subjectTypes.keys()) {
+    const order = this.getTopologicallySortedTypes();
+    for (const typeName of order) {
       if (this.getInstancesOfType(typeName).length === 0) {
         this.createSubjectInstance(typeName);
       }
@@ -420,6 +537,9 @@ export class WorldImpl implements World {
       registry: this.registry,
       fieldPath: "",
       optionalProbability: this.options.optionalProbability ?? 0.2,
+      related: <T>(relName: string) => this.resolveRelation<T>(instance, relName),
+      relatedTo: <T>(targetType: string, relName: string) =>
+        this.resolveReverseRelation<T>(instance, targetType, relName),
     };
 
     const result = this.generateObjectFields(schema, subjectArg, reg.matchers, ctx);
@@ -544,6 +664,12 @@ export class WorldImpl implements World {
           registry: this.registry,
           fieldPath: `[${i}]`,
           optionalProbability: this.options.optionalProbability ?? 0.2,
+          related: () => {
+            throw new Error("Cannot call related() on ad-hoc generation. No active subject.");
+          },
+          relatedTo: () => {
+            throw new Error("Cannot call relatedTo() on ad-hoc generation.");
+          },
         }),
       );
     }
@@ -603,6 +729,12 @@ export class WorldImpl implements World {
         registry: this.registry,
         fieldPath: "",
         optionalProbability: this.options.optionalProbability ?? 0.2,
+        related: () => {
+          throw new Error("Cannot call related() on ad-hoc generation. No active subject.");
+        },
+        relatedTo: () => {
+          throw new Error("Cannot call relatedTo() on ad-hoc generation.");
+        },
       };
 
       // If a keyMap is registered for this schema, route through

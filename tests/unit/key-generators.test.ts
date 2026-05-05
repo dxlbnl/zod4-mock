@@ -9,33 +9,16 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import { generators, createWorld, createPrng, defineSubjectType } from "../../src/index.js";
-import type { GeneratorContext, KeyGenerator, Registry } from "../../src/index.js";
+import type { GeneratorContext, KeyGenerator } from "../../src/index.js";
 
-// ---------------------------------------------------------------------------
-// Minimal stub registry
-// ---------------------------------------------------------------------------
-
-const stubRegistry: Registry = {
-  store: () => {
-    /* no-op */
-  },
-  all: () => [],
-  pick: () => {
-    throw new Error("no items in stub registry");
-  },
-  pickBy: () => {
-    throw new Error("no items in stub registry");
-  },
-  filter: () => [],
-  count: () => 0,
-};
-
-function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
+function makeCtx(seed = 42): GeneratorContext {
   return {
     prng: createPrng(seed),
     subject: undefined,
-    registry: stubRegistry,
-    fieldPath,
+    registry: {} as any,
+    fieldPath: "",
+    related: <T>(_: string) => ({}) as T,
+    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 

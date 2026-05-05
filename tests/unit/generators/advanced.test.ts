@@ -16,6 +16,8 @@ function ctx(seed = 42): GeneratorContext {
     registry: new SubjectRegistry(prng.fork("reg")),
     fieldPath: "",
     optionalProbability: 0,
+    related: <T>(_: string) => ({}) as T,
+    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 

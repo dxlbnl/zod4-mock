@@ -24,17 +24,24 @@ import {
 
 export const PersonSubject = defineSubjectType("person", PersonSubjectSchema, {
   derive: {
-    email: ({ firstName, lastName }, prng) => {
+    email: ({ firstName, lastName }, ctx) => {
       const ln = lastName!.toLowerCase().replace(/[\s']/g, "");
-      return `${firstName![0]}.${ln}${prng.int(10, 99)}@${prng.pick(DOMAINS)}`.toLowerCase();
+      return `${firstName![0]}.${ln}${ctx.prng.int(10, 99)}@${ctx.prng.pick(DOMAINS)}`.toLowerCase();
     },
   },
 });
-export const TextFileSubject = defineSubjectType("text-file", TextFileSubjectSchema);
-export const AudioFileSubject = defineSubjectType("audio-file", AudioFileSubjectSchema);
-export const BankFileSubject = defineSubjectType("bank-file", BankFileSubjectSchema);
-
-type FileRef = { ownerId: string; fileId: string };
+export const TextFileSubject = defineSubjectType("text-file", TextFileSubjectSchema, {
+  relations: { owner: { type: "person", cardinality: "1" } },
+  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
+});
+export const AudioFileSubject = defineSubjectType("audio-file", AudioFileSubjectSchema, {
+  relations: { owner: { type: "person", cardinality: "1" } },
+  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
+});
+export const BankFileSubject = defineSubjectType("bank-file", BankFileSubjectSchema, {
+  relations: { owner: { type: "person", cardinality: "1" } },
+  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
+});
 
 export function createMediaLibraryWorld(seed = 42) {
   return (
@@ -43,12 +50,6 @@ export function createMediaLibraryWorld(seed = 42) {
       generators: {
         // Audio durations between 30 seconds and 1 hour
         durationS: (_schema, ctx) => ctx.prng.int(30, 3600),
-        // Link file subjects to a known person so entity.fileIds is populated.
-        // Persons are registered first so they always exist when file subjects are created.
-        ownerId: (_schema, ctx) => {
-          const persons = ctx.registry.all<{ personId: string }>("person");
-          return persons[ctx.prng.int(0, persons.length - 1)]!.personId;
-        },
       },
     })
       .withSubject(PersonSubject)
@@ -106,18 +107,18 @@ export function createMediaLibraryWorld(seed = 42) {
         personId: (s) => s.personId,
         firstName: (s) => s.firstName,
         lastName: (s) => s.lastName,
-        fileIds: (s, ctx) =>
-          ctx.registry
-            .filter<FileRef>(
-              ["text-file", "audio-file", "bank-file"],
-              (f) => f.ownerId === s.personId,
-            )
-            .map((f) => f.fileId),
-        fileCount: (s, ctx) =>
-          ctx.registry.filter<FileRef>(
-            ["text-file", "audio-file", "bank-file"],
-            (f) => f.ownerId === s.personId,
-          ).length,
+        fileIds: (s, ctx) => {
+          const textFiles = ctx.relatedTo<{ fileId: string }>("text-file", "owner");
+          const audioFiles = ctx.relatedTo<{ fileId: string }>("audio-file", "owner");
+          const bankFiles = ctx.relatedTo<{ fileId: string }>("bank-file", "owner");
+          return [...textFiles, ...audioFiles, ...bankFiles].map((f) => f.fileId);
+        },
+        fileCount: (s, ctx) => {
+          const textFiles = ctx.relatedTo<{ fileId: string }>("text-file", "owner");
+          const audioFiles = ctx.relatedTo<{ fileId: string }>("audio-file", "owner");
+          const bankFiles = ctx.relatedTo<{ fileId: string }>("bank-file", "owner");
+          return textFiles.length + audioFiles.length + bankFiles.length;
+        },
       })
   );
 }

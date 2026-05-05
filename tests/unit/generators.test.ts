@@ -32,11 +32,15 @@ const stubRegistry: Registry = {
 };
 
 function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
+  const prng = createPrng(seed);
   return {
-    prng: createPrng(seed),
+    prng,
     subject: undefined,
     registry: stubRegistry,
     fieldPath,
+    optionalProbability: 0.2,
+    related: <T>(_: string) => ({}) as T,
+    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 

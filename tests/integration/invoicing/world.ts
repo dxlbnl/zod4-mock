@@ -15,7 +15,9 @@ import {
   CustomerSummarySchema,
 } from "./schemas.js";
 
-export const CustomerSubject = defineSubjectType("customer", CustomerSubjectSchema);
+export const CustomerSubject = defineSubjectType("customer", CustomerSubjectSchema, {
+  relations: { purchasedProducts: { type: "product", cardinality: "1..n" } },
+});
 export const ProductSubject = defineSubjectType("product", ProductSubjectSchema);
 
 type ProductData = {
@@ -44,10 +46,9 @@ export function createInvoicingWorld(seed = 42) {
         id: (_, ctx) => generators.uuid(ctx.prng.fork("invoice-id")),
         customerId: (s) => s.customerId,
         lines: (s, ctx) => {
-          const count = ctx.prng.int(1, 4);
           let total = 0;
-          const lines = Array.from({ length: count }, () => {
-            const product = ctx.registry.pick<ProductData>("product");
+          const products = ctx.related<ProductData[]>("purchasedProducts");
+          const lines = products.map((product) => {
             const quantity = ctx.prng.int(1, 10);
             const unitPriceCents = product.unitPriceCents;
             const lineTotalCents = quantity * unitPriceCents;

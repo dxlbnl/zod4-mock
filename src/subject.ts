@@ -8,7 +8,13 @@
  */
 
 import type { ZodObject, ZodRawShape, input } from "zod";
-import type { AnySubjectType, RelationMap, SubjectTypeOptions, Prng } from "./types.js";
+import type {
+  AnySubjectType,
+  RelationMap,
+  SubjectTypeOptions,
+  Prng,
+  GeneratorContext,
+} from "./types.js";
 
 /**
  * Define a named subject type backed by a Zod schema.
@@ -51,7 +57,7 @@ export function defineSubjectType<
     ...(options?.derive !== undefined && {
       derive: options.derive as Record<
         string,
-        (partial: Record<string, unknown>, prng: Prng) => unknown
+        (partial: Record<string, unknown>, ctx: GeneratorContext) => unknown
       >,
     }),
     ...(options?.keyMap !== undefined && {
