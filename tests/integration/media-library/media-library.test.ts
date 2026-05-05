@@ -29,7 +29,6 @@ describe("media-library integration", () => {
     const rawdata = world.generate(z.array(RawDataSchema).min(5).max(15));
     for (const r of rawdata) {
       const parsed = RawDataSchema.safeParse(r);
-      console.log(parsed.success, parsed.error);
       expect(parsed.success, JSON.stringify(r)).toBe(true);
     }
   });
