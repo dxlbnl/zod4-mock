@@ -40,7 +40,6 @@ export default defineConfig({
             instances: [{ browser: 'chromium' }],
             provider: playwright(),
           },
-          setupFiles: ['./.storybook/vitest.setup.ts'],
         },
       },
     ],

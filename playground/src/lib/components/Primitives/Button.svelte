@@ -6,7 +6,7 @@
 		disabled?: boolean;
 		label?: string;
 		children?: Snippet;
-		onclick?: () => void;
+		onclick?: (e: MouseEvent) => void;
 		type?: 'button' | 'submit' | 'reset';
 		class?: string;
 		[key: string]: any;
@@ -22,9 +22,14 @@
 		class: className = '',
 		...rest
 	}: Props = $props();
+
+	function handleClick(e: MouseEvent) {
+		if (disabled) return;
+		onclick?.(e);
+	}
 </script>
 
-<button {type} {disabled} {onclick} class="btn t-small {variant} {className}" {...rest}>
+<button {type} {disabled} onclick={handleClick} class="btn t-small {variant} {className}" {...rest}>
 	{#if label}
 		{label}
 	{:else if children}

@@ -7,7 +7,7 @@
 		class?: string;
 		autofocus?: boolean;
 		disabled?: boolean;
-		oninput?: (value: any) => void;
+		oninput?: (value: unknown) => void;
 	}
 
 	let {
@@ -31,6 +31,7 @@
 			{autofocus}
 			{disabled}
 			bind:value
+			oninput={(e) => oninput?.(e.currentTarget.value)}
 			class="input t-code-sm"
 		/>
 	</div>
@@ -41,6 +42,7 @@
 		{autofocus}
 		{disabled}
 		bind:value
+		oninput={(e) => oninput?.(e.currentTarget.value)}
 		class="input t-code-sm {className}"
 	/>
 {/if}

@@ -1,5 +1,6 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { userEvent, within, expect, fn } from '@storybook/test';
 	import FloatingMenu from './FloatingMenu.svelte';
 
 	const { Story } = defineMeta({
@@ -29,11 +30,34 @@ The picker that opens when you click a \`+ mod\` pill. Anchored 8px below the pi
 				{ name: '.finite()', desc: 'no Infinity', category: 'Refinements' },
 				{ name: '.nullable()', desc: 'allow null', category: 'Wrappers' },
 				{ name: '.default(…)', desc: 'fallback', category: 'Wrappers' }
-			]
+			],
+			onselect: fn(),
+			onclose: fn()
 		}
 	});
 </script>
 
-<Story name="Default" />
+<Story name="Default" play={async ({ args, canvasElement }) => {
+	args.onselect.mockClear();
+	args.onclose.mockClear();
+	const canvas = within(canvasElement);
+	const search = canvas.getByPlaceholderText('filter…');
+	
+	// Test filtering
+	await userEvent.type(search, 'positive');
+	await expect(canvas.getByText('.positive()')).toBeVisible();
+	await expect(canvas.queryByText('.negative()')).not.toBeInTheDocument();
+	
+	// Test keyboard navigation
+	await userEvent.clear(search);
+	await userEvent.keyboard('{ArrowDown}'); // Moves from 0 (.positive) to 1 (.negative)
+	await userEvent.keyboard('{Enter}');
+	
+	await expect(args.onselect).toHaveBeenCalledWith('.negative()');
+	
+	// Test close
+	await userEvent.keyboard('{Escape}');
+	await expect(args.onclose).toHaveBeenCalled();
+}} />
 
 <Story name="Custom Caret" args={{ caretOffset: 40 }} />

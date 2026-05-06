@@ -26,25 +26,58 @@
 		)
 	);
 
-	let categories = $derived([...new Set(filteredItems.map((item) => item.category))]);
+
+	let activeIndex = $state(0);
+
+	$effect(() => {
+		// Reset active index when filter changes
+		void filter;
+		activeIndex = 0;
+	});
+
+	function onkeydown(e: KeyboardEvent) {
+		if (filteredItems.length === 0) return;
+
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			activeIndex = (activeIndex + 1) % filteredItems.length;
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			activeIndex = (activeIndex - 1 + filteredItems.length) % filteredItems.length;
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			if (filteredItems[activeIndex]) {
+				onselect?.(filteredItems[activeIndex].name);
+			}
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			onclose?.();
+		}
+	}
 </script>
 
-<div class="float-menu" style="--caret: {caretOffset}px">
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<div class="float-menu" style="--caret: {caretOffset}px" {onkeydown} role="menu" tabindex="-1">
 	<div class="search">
 		<Input class="search-input" placeholder="filter…" bind:value={filter} autofocus />
 		<span class="scope t-code-tight">{scope}</span>
 	</div>
 
-	{#each categories as cat}
-		<div class="grp t-eyebrow">{cat}</div>
-		{#each filteredItems.filter((i) => i.category === cat) as item}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="item t-code-sm" onclick={() => onselect?.(item.name)}>
-				<span class="name">{item.name}</span>
-				<span class="desc t-code-tight">{item.desc}</span>
-			</div>
-		{/each}
+	{#each filteredItems as item, i}
+		{#if i === 0 || item.category !== filteredItems[i - 1].category}
+			<div class="grp t-eyebrow">{item.category}</div>
+		{/if}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div
+			class="item t-code-sm"
+			role="menuitem"
+			tabindex="-1"
+			class:active={activeIndex === i}
+			onclick={() => onselect?.(item.name)}
+		>
+			<span class="name">{item.name}</span>
+			<span class="desc t-code-tight">{item.desc}</span>
+		</div>
 	{/each}
 
 	{#if filteredItems.length === 0}
@@ -126,7 +159,8 @@
 		padding: var(--space-2) var(--space-4);
 		cursor: pointer;
 	}
-	.item:hover {
+	.item:hover,
+	.item.active {
 		background: var(--accent-soft);
 	}
 	.item .name {

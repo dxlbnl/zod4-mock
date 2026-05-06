@@ -9,13 +9,13 @@
 		ontoggle?: () => void;
 	}
 
-	let { title, meta, open = false, children, ontoggle }: Props = $props();
+	let { title, meta, open = $bindable(false), children, ontoggle }: Props = $props();
 </script>
 
 <section class="accordion-section" data-open={open}>
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="accordion-head" onclick={ontoggle}>
+	<div class="accordion-head" onclick={() => { open = !open; ontoggle?.(); }}>
 		<span class="chev">▶</span>
 		<span class="accordion-title t-small">{title}</span>
 		{#if meta}
