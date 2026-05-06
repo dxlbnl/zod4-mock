@@ -1,5 +1,6 @@
 <script lang="ts">
 	import TypeChip from '../Primitives/TypeChip.svelte';
+	import { tick } from 'svelte';
 	import ModifierPill from './ModifierPill.svelte';
 	import AddMod from './AddMod.svelte';
 
@@ -10,30 +11,57 @@
 	}
 
 	interface Props {
+		id: string;
 		keyName: string;
 		type: string;
-		mods?: Modifier[];
+		indent?: number;
 		selected?: boolean;
 		warn?: boolean;
-		indent?: number;
+		mods?: Modifier[];
+		
 		onselect?: () => void;
-		onchangekey?: (name: string) => void;
-		onchangetype?: () => void;
-		onaddmod?: () => void;
+		onremove?: () => void;
+		onaddprop?: () => void;
+		onupdatekey?: (val: string) => void;
+		onremovemodifier?: (id: string) => void;
+		onaddmod?: (e: MouseEvent | FocusEvent) => void;
+		onchangetype?: (e: MouseEvent | FocusEvent) => void;
 	}
 
-	let {
-		keyName = $bindable(),
-		type,
+	let { 
+		id, 
+		keyName, 
+		type, 
+		indent = 0, 
+		selected = false, 
+		warn = false, 
 		mods = [],
-		selected = false,
-		warn = false,
-		indent = 0,
 		onselect,
-		onchangekey,
+		onremove,
+		onaddprop,
+		onupdatekey,
+		onremovemodifier,
+		onaddmod,
 		onchangetype,
-		onaddmod
+		autofocus = false
 	}: Props = $props();
+
+	function handleKeyChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		onupdatekey?.(target.value);
+	}
+
+	function focusNode(node: HTMLElement) {
+		if (selected) node.focus();
+	}
+
+	let inputEl = $state<HTMLInputElement>();
+
+	$effect(() => {
+		if ((selected || autofocus) && inputEl) {
+			inputEl.focus();
+		}
+	});
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -42,23 +70,88 @@
 	class="row"
 	data-selected={selected}
 	data-warn={warn}
+	data-testid="property-row"
 	style="--ind: {12 + indent * 20}px"
-	onclick={onselect}
+	onclick={(e) => {
+		if ((e.target as HTMLElement).closest('.type-chip, .add-mod, .modifier-pill')) return;
+		onselect?.();
+	}}
 >
 	<span class="grip t-number">⋮⋮</span>
 	<input
+		bind:this={inputEl}
+		use:focusNode
 		class="key t-code"
-		bind:value={keyName}
-		size={keyName?.length || 1}
+		value={keyName}
+		placeholder="property_name"
+		oninput={handleKeyChange}
+		data-key-input
+		data-field-id={id}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') {
+				// Prevent new field from being added by standard row logic
+				// So we trigger add property
+				e.preventDefault();
+				e.stopPropagation();
+				onaddprop?.();
+			}
+		}}
 	/>
-	<span class="colon t-code-sm">:</span>
-	<TypeChip {type} active={selected} onclick={onchangetype} />
+	<span class="colon t-code">:</span>
+	
+	<TypeChip 
+		{type} 
+		active={selected} 
+		onclick={onchangetype} 
+		onfocus={(e) => {
+			const prev = e.relatedTarget as HTMLElement;
+			if (prev && prev.hasAttribute('data-key-input')) {
+				tick().then(() => onchangetype?.(e));
+			}
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				e.stopPropagation();
+				onaddprop?.();
+			}
+		}}
+	/>
 
-	{#each mods as mod}
-		<ModifierPill name={mod.name} value={mod.value} warn={mod.warn} removable={true} />
-	{/each}
+	<div class="actions">
+		{#each mods as mod, i}
+			<ModifierPill 
+				name={mod.name} 
+				value={mod.value} 
+				warn={mod.warn} 
+				removable={true} 
+				onremove={() => onremovemodifier?.(i.toString())}
+			/>
+		{/each}
 
-	<AddMod onclick={onaddmod} />
+		<AddMod 
+			fieldId={id}
+			onclick={onaddmod}
+			onfocus={(e) => {
+				const prev = e.relatedTarget as HTMLElement;
+				if (!prev) return;
+				
+				const sameRow = prev.closest('[data-testid="property-row"]') === e.currentTarget.closest('[data-testid="property-row"]');
+				if (sameRow && prev.hasAttribute('data-type-chip')) {
+					tick().then(() => onaddmod?.(e));
+				}
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					e.stopPropagation();
+					onaddprop?.();
+				}
+			}}
+		/>
+	</div>
+	
+	<button class="remove-row-btn" onclick={(e) => { e.stopPropagation(); onremove?.(); }}>×</button>
 </div>
 
 <style>
@@ -77,37 +170,67 @@
 		background: var(--bg-2);
 	}
 	.row[data-selected='true'] {
-		background: var(--accent-soft);
+		background: var(--bg-1);
 		box-shadow: inset 2px 0 0 var(--accent);
 	}
-	.row[data-warn='true'] {
-		background: var(--warn-soft);
-		box-shadow: inset 2px 0 0 var(--warn);
+	.row[data-selected='true'] .remove-row-btn,
+	.row:hover .remove-row-btn {
+		opacity: 1;
 	}
-
 	.row .grip {
-		color: var(--ink-3);
 		cursor: grab;
+		color: var(--ink-4);
+		font-size: 10px;
+		user-select: none;
 		opacity: 0;
 		transition: opacity var(--ease-quick);
 	}
 	.row:hover .grip {
 		opacity: 1;
 	}
-
-	.row .key {
+	.key {
 		background: transparent;
-		border: 0;
-		color: var(--ink-0);
-		padding: 2px 0;
-		min-width: 0;
-		width: auto;
+		border: none;
+		color: var(--syn-key);
+		width: 120px;
+		padding: 2px 4px;
+		border-radius: var(--r-sm);
 	}
-	.row .key:focus {
-		outline: 0;
-		color: var(--accent-bright);
+	.key:focus {
+		outline: none;
+		background: var(--bg-3);
+		box-shadow: 0 0 0 1px var(--accent-edge);
 	}
-	.row .colon {
+	.colon {
 		color: var(--ink-3);
+		margin-right: var(--space-1);
+	}
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+	.remove-row-btn {
+		position: absolute;
+		right: var(--space-2);
+		top: 50%;
+		transform: translateY(-50%);
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		border: none;
+		background: transparent;
+		color: var(--ink-3);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		opacity: 0;
+		transition: opacity var(--ease-quick);
+	}
+
+	.remove-row-btn:hover {
+		background: var(--red-soft);
+		color: var(--red-bright);
 	}
 </style>

@@ -20,15 +20,25 @@
 		disabled = false,
 		oninput
 	}: Props = $props();
+
+	let input = $state<HTMLInputElement>();
+	
+	export function focus() {
+		input?.focus();
+	}
+
+	$effect(() => {
+		if (autofocus) input?.focus();
+	});
 </script>
 
 {#if label}
 	<div class="field {className}">
 		<span class="field-label t-code-tight">{label}</span>
 		<input
+			bind:this={input}
 			{type}
 			{placeholder}
-			{autofocus}
 			{disabled}
 			bind:value
 			oninput={(e) => oninput?.(e.currentTarget.value)}
@@ -37,9 +47,9 @@
 	</div>
 {:else}
 	<input
+		bind:this={input}
 		{type}
 		{placeholder}
-		{autofocus}
 		{disabled}
 		bind:value
 		oninput={(e) => oninput?.(e.currentTarget.value)}

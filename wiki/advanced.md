@@ -311,7 +311,7 @@ When consuming the library in your project, import from the package name — no 
 import { createWorld, defineSubjectType } from "zod4-mock";
 ```
 
-If you copy-paste from the integration test files (which import from `'../../../src/index.js'`), change those paths to the package name.
+If you copy-paste from the integration test files (which import from `'../../../src/index'`), change those paths to the package name.
 
 ---
 

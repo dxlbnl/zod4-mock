@@ -1,13 +1,24 @@
 <script lang="ts">
 	interface Props {
 		active?: boolean;
-		onclick?: () => void;
+		fieldId?: string;
+		onclick?: (e: MouseEvent | FocusEvent) => void;
+		onfocus?: (e: FocusEvent) => void;
+		onkeydown?: (e: KeyboardEvent) => void;
 	}
 
-	let { active = false, onclick }: Props = $props();
+	let { active = false, fieldId, onclick, onfocus, onkeydown }: Props = $props();
 </script>
 
-<button type="button" class="add-mod t-code-tight" data-active={active} {onclick}>
+<button 
+	type="button" 
+	class="add-mod t-code-tight" 
+	data-active={active} 
+	data-field-id={fieldId}
+	{onclick}
+	onfocus={(e) => onfocus?.(e)}
+	onkeydown={(e) => onkeydown?.(e)}
+>
 	+ mod
 </button>
 

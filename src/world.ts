@@ -5,8 +5,8 @@
  * ## Usage
  *
  * ```ts
- * import { createWorld } from './world.js'
- * import { defineSubjectType } from './subject.js'
+ * import { createWorld } from './world'
+ * import { defineSubjectType } from './subject'
  *
  * const PersonSubject = defineSubjectType('person', PersonSchema)
  *

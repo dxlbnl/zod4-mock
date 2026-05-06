@@ -42,8 +42,9 @@ The picker that opens when you click a \`+ mod\` pill. Anchored 8px below the pi
 	args.onclose.mockClear();
 	const canvas = within(canvasElement);
 	const search = canvas.getByPlaceholderText('filter…');
-	
-	// Test filtering
+
+	// Verify autofocus
+	await expect(search).toHaveFocus();
 	await userEvent.type(search, 'positive');
 	await expect(canvas.getByText('.positive()')).toBeVisible();
 	await expect(canvas.queryByText('.negative()')).not.toBeInTheDocument();
@@ -53,7 +54,7 @@ The picker that opens when you click a \`+ mod\` pill. Anchored 8px below the pi
 	await userEvent.keyboard('{ArrowDown}'); // Moves from 0 (.positive) to 1 (.negative)
 	await userEvent.keyboard('{Enter}');
 	
-	await expect(args.onselect).toHaveBeenCalledWith('.negative()');
+	await expect(args.onselect).toHaveBeenCalledWith('.negative()', true);
 	
 	// Test close
 	await userEvent.keyboard('{Escape}');
@@ -61,3 +62,9 @@ The picker that opens when you click a \`+ mod\` pill. Anchored 8px below the pi
 }} />
 
 <Story name="Custom Caret" args={{ caretOffset: 40 }} />
+
+<Story name="Initial Highlight" args={{ value: '.finite()' }} play={async ({ canvasElement }) => {
+	const canvas = within(canvasElement);
+	const activeItem = canvas.getByText('.finite()').closest('.item');
+	expect(activeItem).toHaveClass('active');
+}} />

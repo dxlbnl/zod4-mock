@@ -2,13 +2,23 @@
 	interface Props {
 		type: string;
 		active?: boolean;
-		onclick?: () => void;
+		onclick?: (e: MouseEvent) => void;
+		onfocus?: (e: FocusEvent) => void;
+		onkeydown?: (e: KeyboardEvent) => void;
 	}
 
-	let { type, active = false, onclick }: Props = $props();
+	let { type, active = false, onclick, onfocus, onkeydown }: Props = $props();
 </script>
 
-<button type="button" class="type-chip t-code-tight" data-active={active} {onclick}>
+<button 
+	type="button" 
+	class="type-chip t-code-tight" 
+	data-active={active} 
+	data-type-chip
+	{onclick}
+	onfocus={(e) => onfocus?.(e)}
+	onkeydown={(e) => onkeydown?.(e)}
+>
 	{type}
 	<span class="chev">▾</span>
 </button>

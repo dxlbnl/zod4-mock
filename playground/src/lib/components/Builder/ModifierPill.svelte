@@ -11,7 +11,7 @@
 	let { name, value, warn = false, removable = false, onremove, onchange }: Props = $props();
 </script>
 
-<span class="mod t-code-tight" data-warn={warn}>
+<span class="mod t-code-tight" data-warn={warn} data-testid="modifier-pill">
 	<span>{name}</span>
 	{#if value !== undefined}
 		<span class="eq">=</span>
@@ -59,10 +59,10 @@
 		cursor: text;
 	}
 	.mod .x {
-		width: 10px;
-		height: 10px;
+		width: 12px;
+		height: 12px;
 		border-radius: 50%;
-		display: none;
+		display: grid;
 		place-items: center;
 		background: var(--ink-3);
 		color: var(--bg-1);
@@ -72,9 +72,11 @@
 		margin-left: 2px;
 		border: 0;
 		padding: 0;
+		opacity: 0;
+		transition: opacity var(--ease-quick);
 	}
 	.mod:hover .x {
-		display: grid;
+		opacity: 1;
 	}
 	.mod[data-warn='true'] {
 		border-color: var(--warn);

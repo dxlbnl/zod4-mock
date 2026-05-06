@@ -10,13 +10,23 @@
 	interface Props {
 		scope: string;
 		items: MenuItem[];
-		onselect?: (name: string) => void;
+		value?: string;
+		onselect?: (name: string, isKeyboard?: boolean) => void;
 		onclose?: () => void;
 		caretOffset?: number;
+		trigger?: HTMLElement;
 	}
 
-	let { scope, items, onselect, onclose, caretOffset = 14 }: Props = $props();
+	let { scope, items, value, onselect, onclose, caretOffset = 14, trigger }: Props = $props();
 	let filter = $state('');
+	
+	$effect.pre(() => {
+		// Reset filter when scope changes (e.g. from type to modifier)
+		void scope;
+		filter = '';
+	});
+	
+	let searchInput = $state<HTMLInputElement>();
 
 	let filteredItems = $derived(
 		items.filter(
@@ -26,17 +36,47 @@
 		)
 	);
 
-
 	let activeIndex = $state(0);
 
+	import { tick } from 'svelte';
 	$effect(() => {
-		// Reset active index when filter changes
-		void filter;
-		activeIndex = 0;
+		// Update active index when filter, items, scope, or value changes
+		if (filter === '') {
+			const target = (value || scope || '').toLowerCase();
+			const idx = items.findIndex((item) => item.name.toLowerCase() === target);
+			activeIndex = idx !== -1 ? idx : 0;
+		} else {
+			activeIndex = 0;
+		}
+	});
+
+	$effect(() => {
+		// Ensure focus when menu opens or scope changes
+		void scope;
+		tick().then(() => {
+			searchInput?.focus();
+		});
 	});
 
 	function onkeydown(e: KeyboardEvent) {
-		if (filteredItems.length === 0) return;
+		if (filteredItems.length === 0) {
+			if (e.key === 'Escape' || e.key === 'Tab') {
+				e.preventDefault();
+				onclose?.();
+			}
+			return;
+		}
+
+		if (e.key === 'Tab') {
+			// Committing current selection on Tab
+			e.preventDefault();
+			if (filteredItems[activeIndex]) {
+				onselect?.(filteredItems[activeIndex].name, true);
+			} else {
+				onclose?.();
+			}
+			return;
+		}
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
@@ -47,7 +87,7 @@
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			if (filteredItems[activeIndex]) {
-				onselect?.(filteredItems[activeIndex].name);
+				onselect?.(filteredItems[activeIndex].name, true);
 			}
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
@@ -59,7 +99,12 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div class="float-menu" style="--caret: {caretOffset}px" {onkeydown} role="menu" tabindex="-1">
 	<div class="search">
-		<Input class="search-input" placeholder="filter…" bind:value={filter} autofocus />
+		<Input 
+			bind:this={searchInput} 
+			class="search-input" 
+			placeholder="filter…" 
+			bind:value={filter} 
+		/>
 		<span class="scope t-code-tight">{scope}</span>
 	</div>
 
@@ -93,6 +138,7 @@
 
 <style>
 	.float-menu {
+		position: relative;
 		width: 256px;
 		background: var(--bg-1);
 		border: 1px solid var(--line-strong);
@@ -100,7 +146,7 @@
 		box-shadow: var(--shadow-pop);
 		display: flex;
 		flex-direction: column;
-		overflow: hidden;
+		overflow: visible; /* Allow caret to show outside */
 		z-index: 1000;
 	}
 
