@@ -1,0 +1,57 @@
+Loading svelte-check in workspace: /home/dexter/Projects/typescript/zod4-mock/playground
+Getting Svelte diagnostics...
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Primitives/Input.svelte:31:4
+Warn: Avoid using autofocus
+https://svelte.dev/e/a11y_autofocus (svelte)
+			{placeholder}
+			{autofocus}
+			{disabled}
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Primitives/Input.svelte:41:3
+Warn: Avoid using autofocus
+https://svelte.dev/e/a11y_autofocus (svelte)
+		{placeholder}
+		{autofocus}
+		{disabled}
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/ExportSheet.svelte:148:2
+Warn: Unused CSS selector ".close"
+https://svelte.dev/e/css_unused_selector (svelte)
+
+	.close {
+		font-size: 20px;
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/ExportSheet.svelte:153:2
+Warn: Unused CSS selector ".close:hover"
+https://svelte.dev/e/css_unused_selector (svelte)
+	}
+	.close:hover {
+		color: var(--ink-0);
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/ExportSheet.stories.svelte:35:42
+Error: Object literal may only specify known properties, and 'active' does not exist in type 'Option'. (js)
+		options={[
+			{ label: 'Schemas', value: 'schemas', active: true },
+			{ label: 'Generated world', value: 'world', active: true }
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/ExportSheet.stories.svelte:36:48
+Error: Object literal may only specify known properties, and 'active' does not exist in type 'Option'. (js)
+			{ label: 'Schemas', value: 'schemas', active: true },
+			{ label: 'Generated world', value: 'world', active: true }
+		]}
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/OutputTabs.stories.svelte:28:12
+Error: Object literal may only specify known properties, and 'actions' does not exist in type 'Partial<StoryAnnotations<Record<string, any> | Props, Component<Props, {}, "activeTab">>> & ({ id?: undefined; name?: string | undefined; exportName?: string | undefined; autodocs?: undefined; source?: undefined; } & (({ ...; } | { ...; }) & ({ ...; } | { ...; })))'. (js)
+<Story name="Default">
+	{#snippet actions()}
+		<Kbd keys="⌘ 1" />
+
+/home/dexter/Projects/typescript/zod4-mock/playground/src/lib/components/Surfaces/Pane.stories.svelte:30:12
+Error: Object literal may only specify known properties, and 'actions' does not exist in type '(Partial<StoryAnnotations<Record<string, any> | Props, Component<Props, {}, "">>> & { id?: undefined; name?: string | undefined; exportName?: string | undefined; autodocs?: undefined; source?: undefined; } & { ...; } & { ...; }) | (Partial<...> & ... 2 more ... & { ...; })'. (js)
+<Story name="Custom Actions" args={{ title: 'Output', accentTitle: undefined, subtitle: 'JSON' }}>
+	{#snippet actions()}
+		<Button variant="default">Copy</Button>
+
+====================================
+svelte-check found 4 errors and 4 warnings in 5 files

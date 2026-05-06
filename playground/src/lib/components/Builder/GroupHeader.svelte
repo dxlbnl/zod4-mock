@@ -14,8 +14,8 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="group-head" style="padding-left: {12 + indent * 20}px" onclick={ontoggle}>
-	<span class="chev">{isOpen ? '▾' : '▶'}</span>
+<div class="group-head t-code-sm" style="padding-left: {12 + indent * 20}px" onclick={ontoggle}>
+	<span class="chev t-code-tight">{isOpen ? '▾' : '▶'}</span>
 	<span class="gname">{name}</span>
 	<span class="colon">:</span>
 	<TypeChip {type} />
@@ -25,19 +25,16 @@
 	.group-head {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 4px 12px;
+		gap: var(--space-3);
+		padding: var(--space-1) var(--space-4);
 		color: var(--ink-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 		border-bottom: 1px solid var(--line);
 		background: var(--bg-2);
-		height: 26px;
+		height: var(--h-btn);
 		cursor: pointer;
 	}
 	.group-head .chev {
 		color: var(--ink-3);
-		font-size: 10px;
 		width: 10px;
 	}
 	.group-head .gname {

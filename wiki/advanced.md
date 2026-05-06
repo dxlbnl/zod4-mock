@@ -218,6 +218,7 @@ const PersonSubject = defineSubjectType("person", personSchema, {
 ### `ctx.related(name)`
 
 Returns the data of a related subject instance.
+
 - If cardinality is `1` or `0..1`: returns a single object.
 - If cardinality is `0..n` or `1..n`: returns an array of objects.
 

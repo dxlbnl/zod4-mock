@@ -23,8 +23,62 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.mono {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+/* Typography Scale */
+.t-heading-lg {
+  font-family: "Inter", sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.t-heading-md {
+  font-family: "Inter", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.t-title {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+.t-body {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+}
+.t-small {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+.t-tiny {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+}
+.t-eyebrow {
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.t-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+.t-code-sm {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+.t-code-tight {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+}
+.t-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Global focus ring */
@@ -37,12 +91,10 @@ body {
 .kbd {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
   color: var(--ink-1);
   background: var(--bg-2);
   line-height: 1;
@@ -60,9 +112,7 @@ body {
   background: none;
   border: 0;
   color: var(--ink-1);
-  padding: 4px 9px;
-  font: inherit;
-  font-size: 11px;
+  padding: var(--space-1) 9px;
   cursor: pointer;
   border-right: 1px solid var(--line);
 }
@@ -85,15 +135,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 26px;
+  gap: var(--space-2);
+  height: var(--h-btn);
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--bg-2);
   color: var(--ink-0);
-  font: inherit;
-  font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--ease-quick);
@@ -131,8 +179,8 @@ body {
 }
 
 .icon-btn {
-  width: 22px;
-  height: 22px;
+  width: var(--h-input);
+  height: var(--h-input);
   display: grid;
   place-items: center;
   background: transparent;

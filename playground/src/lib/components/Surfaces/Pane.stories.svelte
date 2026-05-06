@@ -1,6 +1,7 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Pane from './Pane.svelte';
+	import Button from '../Primitives/Button.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Surfaces/Pane',
@@ -25,9 +26,11 @@
 	<div style="padding: 14px; color: var(--ink-2);">pane content goes here</div>
 </Story>
 
-<Story name="Custom Actions" args={{ title: 'Output', accentTitle: undefined, subtitle: 'JSON' }}>
-	{#snippet actions()}
-		<button class="btn">Copy</button>
-	{/snippet}
-	<div style="padding: 14px; color: var(--ink-2);">custom content</div>
+<Story name="Custom Actions">
+	<Pane title="Output" subtitle="JSON">
+		{#snippet actions()}
+			<Button variant="default">Copy</Button>
+		{/snippet}
+		<div style="padding: 14px; color: var(--ink-2);">custom content</div>
+	</Pane>
 </Story>

@@ -30,7 +30,6 @@
   --syn-fn: #fde68a;
   --syn-punct: #8484a0;
 
-  --row-h: 28px;
   --r-sm: 3px;
   --r-md: 5px;
   --r-lg: 8px;
@@ -38,6 +37,24 @@
   /* Shadow tokens */
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.02);
   --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+
+  /* Spacing tokens */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  /* Component Heights */
+  --h-row: 28px;
+  --h-topbar: 40px;
+  --h-pane-head: 32px;
+  --h-statusbar: 24px;
+  --h-btn: 26px;
+  --h-mod: 18px;
+  --h-input: 22px;
 
   /* Motion tokens */
   --ease-quick: 120ms ease-out;

@@ -2,49 +2,49 @@
 </script>
 
 <div class="ds-section">
-	<h1>Radius & shadows</h1>
+	<h1 class="t-heading-lg">Radius & shadows</h1>
 	<div class="grid-3">
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label">--r-sm</span><span class="meta">3px</span>
+				<span class="label t-title">--r-sm</span><span class="meta t-code-sm">3px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: 3px;"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-sm);"
 				></div>
 			</div>
 			<pre class="ds-snippet">pills · inputs · rows</pre>
 		</div>
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label">--r-md</span><span class="meta">5px</span>
+				<span class="label t-title">--r-md</span><span class="meta t-code-sm">5px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: 5px;"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-md);"
 				></div>
 			</div>
 			<pre class="ds-snippet">buttons · seg control · float-menu</pre>
 		</div>
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label">--r-lg</span><span class="meta">8px</span>
+				<span class="label t-title">--r-lg</span><span class="meta t-code-sm">8px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: 8px;"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-lg);"
 				></div>
 			</div>
 			<pre class="ds-snippet">sheets · cards</pre>
 		</div>
 	</div>
 
-	<h2>Shadow</h2>
-	<p class="rule-text">
+	<h2 class="t-heading-md">Shadow</h2>
+	<p class="rule-text t-body">
 		One shadow only — for floating menus and modal sheets. Inline elements never carry
 		shadow.
 	</p>
-	<pre class="ds-snippet">
+	<pre class="ds-snippet t-code-sm">
 --shadow-pop:   0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02);
 --shadow-modal: 0 24px 64px rgba(0,0,0,0.60);</pre>
 </div>

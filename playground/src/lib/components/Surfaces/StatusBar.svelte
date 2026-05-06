@@ -18,7 +18,7 @@
 	}: Props = $props();
 </script>
 
-<div class="statusbar">
+<div class="statusbar t-number">
 	<span class={status}>● {statusLabel}</span>
 
 	{#each counts as count}
@@ -47,14 +47,12 @@
 	.statusbar {
 		display: flex;
 		align-items: center;
-		height: 24px;
-		padding: 0 12px;
+		height: var(--h-statusbar);
+		padding: 0 var(--space-4);
 		background: var(--bg-1);
 		border-top: 1px solid var(--line);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 		color: var(--ink-2);
-		gap: 8px;
+		gap: var(--space-3);
 	}
 	.statusbar .ok {
 		color: var(--ok);

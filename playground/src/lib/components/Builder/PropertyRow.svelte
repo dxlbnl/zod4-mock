@@ -45,13 +45,13 @@
 	style="--ind: {12 + indent * 20}px"
 	onclick={onselect}
 >
-	<span class="grip">⋮⋮</span>
+	<span class="grip t-number">⋮⋮</span>
 	<input
-		class="key mono"
+		class="key t-code"
 		bind:value={keyName}
 		size={keyName?.length || 1}
 	/>
-	<span class="colon">:</span>
+	<span class="colon t-code-sm">:</span>
 	<TypeChip {type} active={selected} onclick={onchangetype} />
 
 	{#each mods as mod}
@@ -65,9 +65,9 @@
 	.row {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		min-height: var(--row-h);
-		padding: 4px 12px 4px var(--ind, 12px);
+		gap: var(--space-2);
+		min-height: var(--h-row);
+		padding: var(--space-1) var(--space-4) var(--space-1) var(--ind, var(--space-4));
 		border-bottom: 1px solid var(--bg-2);
 		position: relative;
 		flex-wrap: wrap;
@@ -87,8 +87,6 @@
 
 	.row .grip {
 		color: var(--ink-3);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 		cursor: grab;
 		opacity: 0;
 		transition: opacity var(--ease-quick);
@@ -101,8 +99,6 @@
 		background: transparent;
 		border: 0;
 		color: var(--ink-0);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 12px;
 		padding: 2px 0;
 		min-width: 0;
 		width: auto;
@@ -113,6 +109,5 @@
 	}
 	.row .colon {
 		color: var(--ink-3);
-		font-family: 'JetBrains Mono', monospace;
 	}
 </style>

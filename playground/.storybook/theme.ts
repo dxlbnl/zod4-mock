@@ -1,12 +1,12 @@
-import { create } from 'storybook/theming';
+import { create } from "storybook/theming";
 
 export default create({
-  base: 'dark',
+  base: "dark",
 
   // UI
-  appBg: '#0a0a0f',
-  appContentBg: '#0a0a0f',
-  appBorderColor: '#252533',
+  appBg: "#0a0a0f",
+  appContentBg: "#0a0a0f",
+  appBorderColor: "#252533",
   appBorderRadius: 8,
 
   // Typography
@@ -14,11 +14,11 @@ export default create({
   fontCode: '"JetBrains Mono", monospace',
 
   // Colors
-  colorPrimary: '#a78bfa',
-  colorSecondary: '#a78bfa',
+  colorPrimary: "#a78bfa",
+  colorSecondary: "#a78bfa",
 
   // Branding
-  brandTitle: 'ZodMock Playground',
-  brandUrl: '/',
-  brandTarget: '_self',
+  brandTitle: "ZodMock Playground",
+  brandUrl: "/",
+  brandTarget: "_self",
 });

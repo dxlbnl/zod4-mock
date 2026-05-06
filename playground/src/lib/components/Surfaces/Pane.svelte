@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Button from '../Primitives/Button.svelte';
 
 	interface Props {
 		title: string;
@@ -14,20 +15,20 @@
 
 <section class="pane">
 	<div class="pane-head">
-		<span class="pane-title">
+		<span class="pane-title t-title">
 			{title}
 			{#if accentTitle}
 				· <span class="accent">{accentTitle}</span>
 			{/if}
 		</span>
 		{#if subtitle}
-			<span class="pane-sub">{subtitle}</span>
+			<span class="pane-sub t-code-sm">{subtitle}</span>
 		{/if}
 		<div class="pane-actions">
 			{#if actions}
 				{@render actions()}
 			{:else}
-				<button class="icon-btn" aria-label="Settings">⚙</button>
+				<Button variant="ghost" class="icon-btn" aria-label="Settings">⚙</Button>
 			{/if}
 		</div>
 	</div>
@@ -52,16 +53,14 @@
 	.pane-head {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		height: 32px;
-		padding: 0 12px;
+		gap: var(--space-3);
+		height: var(--h-pane-head);
+		padding: 0 var(--space-4);
 		border-bottom: 1px solid var(--line);
 		background: var(--bg-1);
 		flex-shrink: 0;
 	}
 	.pane-title {
-		font-weight: 600;
-		font-size: 12px;
 		color: var(--ink-0);
 	}
 	.pane-title .accent {
@@ -69,14 +68,12 @@
 	}
 	.pane-sub {
 		color: var(--ink-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 	}
 	.pane-actions {
 		margin-left: auto;
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: var(--space-1);
 	}
 	.pane-body {
 		flex: 1;

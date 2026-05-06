@@ -16,12 +16,12 @@
 
 <div class="topbar">
 	<div class="brand">
-		<div class="brand-logo">z</div>
-		<div class="brand-name">zod4-mock</div>
-		<div class="brand-sub">{version}</div>
+		<div class="brand-logo t-code">z</div>
+		<div class="brand-name t-title">zod4-mock</div>
+		<div class="brand-sub t-code-sm">{version}</div>
 	</div>
 
-	<div class="workspace-name">
+	<div class="workspace-name t-code">
 		<span>{workspace}</span>
 		<span class="sep">/</span>
 		<span class="name">{project}</span>
@@ -45,47 +45,39 @@
 	.topbar {
 		display: flex;
 		align-items: center;
-		height: 40px;
-		padding: 0 16px;
+		height: var(--h-topbar);
+		padding: 0 var(--space-5);
 		background: var(--bg-1);
 		border-bottom: 1px solid var(--line);
-		gap: 24px;
+		gap: var(--space-6);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: var(--space-3);
 	}
 	.brand-logo {
-		width: 22px;
-		height: 22px;
-		border-radius: 5px;
+		width: var(--h-input);
+		height: var(--h-input);
+		border-radius: var(--r-md);
 		background: linear-gradient(135deg, var(--accent-dim), var(--accent-bright));
 		display: grid;
 		place-items: center;
 		color: #fff;
-		font-family: 'JetBrains Mono', monospace;
 		font-weight: 700;
-		font-size: 13px;
 	}
 	.brand-name {
-		font-weight: 600;
-		font-size: 13px;
 		color: var(--ink-0);
 	}
 	.brand-sub {
 		color: var(--ink-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 	}
 
 	.workspace-name {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 12px;
+		gap: var(--space-2);
 		color: var(--ink-2);
 	}
 	.workspace-name .sep {
@@ -99,6 +91,6 @@
 		margin-left: auto;
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: var(--space-4);
 	}
 </style>

@@ -8,7 +8,7 @@
 	let { type, active = false, onclick }: Props = $props();
 </script>
 
-<button type="button" class="type-chip" data-active={active} {onclick}>
+<button type="button" class="type-chip t-code-tight" data-active={active} {onclick}>
 	{type}
 	<span class="chev">▾</span>
 </button>
@@ -17,13 +17,11 @@
 	.type-chip {
 		display: inline-flex;
 		align-items: center;
-		gap: 4px;
-		padding: 1px 6px;
+		gap: var(--space-1);
+		padding: 1px var(--space-2);
 		background: var(--bg-3);
 		border: 1px solid var(--line-strong);
 		border-radius: var(--r-sm);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 		color: var(--syn-type);
 		cursor: pointer;
 		transition:

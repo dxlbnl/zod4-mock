@@ -23,7 +23,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="output-tab"
+			class="output-tab t-small"
 			aria-selected={activeTab === tab.id}
 			onclick={() => {
 				activeTab = tab.id;
@@ -33,7 +33,7 @@
 			<span class="dot" data-status={tab.status || 'inactive'}></span>
 			{tab.label}
 			{#if tab.meta}
-				<span class="meta">{tab.meta}</span>
+				<span class="meta t-code-sm">{tab.meta}</span>
 			{/if}
 		</div>
 	{/each}
@@ -46,19 +46,18 @@
 	.output-tabs {
 		background: var(--bg-2);
 		border-bottom: 1px solid var(--line);
-		height: 32px;
+		height: var(--h-pane-head);
 		display: flex;
 		align-items: stretch;
 	}
 
 	.output-tab {
-		padding: 0 14px;
+		padding: 0 var(--space-4);
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
+		gap: var(--space-3);
 		border-right: 1px solid var(--line);
 		color: var(--ink-2);
-		font-size: 12px;
 		cursor: pointer;
 		user-select: none;
 		transition:
@@ -78,8 +77,8 @@
 	}
 
 	.output-tab .dot {
-		width: 6px;
-		height: 6px;
+		width: var(--space-2);
+		height: var(--space-2);
 		border-radius: 50%;
 		background: var(--ink-3);
 	}
@@ -94,15 +93,13 @@
 
 	.output-tab .meta {
 		color: var(--ink-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 	}
 
 	.actions {
 		margin-left: auto;
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 0 10px;
+		gap: var(--space-2);
+		padding: 0 var(--space-3);
 	}
 </style>

@@ -24,14 +24,14 @@
 
 {#if label}
 	<div class="field {className}">
-		<span class="field-label">{label}</span>
+		<span class="field-label t-code-tight">{label}</span>
 		<input
 			{type}
 			{placeholder}
 			{autofocus}
 			{disabled}
 			bind:value
-			class="input"
+			class="input t-code-sm"
 		/>
 	</div>
 {:else}
@@ -41,7 +41,7 @@
 		{autofocus}
 		{disabled}
 		bind:value
-		class="input {className}"
+		class="input t-code-sm {className}"
 	/>
 {/if}
 
@@ -50,13 +50,11 @@
 	.field {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 4px 6px;
+		gap: var(--space-2);
+		padding: var(--space-1) var(--space-2);
 		border-radius: var(--r-sm);
 	}
 	.field-label {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 10px;
 		color: var(--ink-2);
 		width: 56px;
 		flex-shrink: 0;
@@ -66,12 +64,10 @@
 		background: var(--bg-2);
 		border: 1px solid var(--line);
 		border-radius: var(--r-sm);
-		padding: 3px 6px;
+		padding: 3px var(--space-2);
 		color: var(--ink-0);
 		font: inherit;
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
-		height: 22px;
+		height: var(--h-input);
 		min-width: 0;
 	}
 	.input:focus:not(:disabled) {

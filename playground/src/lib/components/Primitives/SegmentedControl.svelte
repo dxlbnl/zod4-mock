@@ -42,7 +42,7 @@
 	{#each options as option}
 		<button
 			type="button"
-			class="seg-btn"
+			class="seg-btn t-tiny"
 			aria-pressed={isPressed(option.value)}
 			onclick={() => toggle(option.value)}
 		>

@@ -11,7 +11,7 @@
 	let { name, value, warn = false, removable = false, onremove, onchange }: Props = $props();
 </script>
 
-<span class="mod" data-warn={warn}>
+<span class="mod t-code-tight" data-warn={warn}>
 	<span>{name}</span>
 	{#if value !== undefined}
 		<span class="eq">=</span>
@@ -33,13 +33,11 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 3px;
-		padding: 0 4px 0 6px;
-		height: 18px;
+		padding: 0 var(--space-1) 0 var(--space-2);
+		height: var(--h-mod);
 		border: 1px solid var(--line-strong);
 		border-radius: var(--r-sm);
 		background: var(--bg-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 10.5px;
 		color: var(--ink-1);
 		cursor: default;
 		white-space: nowrap;
@@ -56,7 +54,7 @@
 		background: var(--bg-3);
 		border: 1px dashed var(--line-strong);
 		border-radius: 2px;
-		padding: 0 3px;
+		padding: 0 var(--space-1);
 		color: var(--syn-number);
 		cursor: text;
 	}

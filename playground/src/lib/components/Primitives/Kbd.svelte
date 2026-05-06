@@ -6,6 +6,6 @@
 	let { keys }: Props = $props();
 </script>
 
-<span class="kbd">
+<span class="kbd t-code-tight">
 	{keys}
 </span>

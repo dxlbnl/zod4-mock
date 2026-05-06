@@ -25,8 +25,13 @@
 </script>
 
 <Story name="Default">
-	{#snippet actions()}
-		<Kbd keys="⌘ 1" />
-		<Kbd keys="⌘ 2" />
-	{/snippet}
+	<OutputTabs tabs={[
+		{ label: 'Code', id: 'code', meta: 'user.schema.ts', status: 'active' },
+		{ label: 'Data', id: 'data', meta: '3 of 6' }
+	]} activeTab="code">
+		{#snippet actions()}
+			<Kbd keys="⌘ 1" />
+			<Kbd keys="⌘ 2" />
+		{/snippet}
+	</OutputTabs>
 </Story>

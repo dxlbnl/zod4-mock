@@ -540,8 +540,6 @@ import { generators } from "zod4-mock";
 | `hexadecimal`  | `(prng, length?: number) => string` | `'0x3f9a1c2b'` (default length 8) |
 | `nanoid`       | `(prng) => string`                  | 21-char URL-safe string           |
 
-
-
 **Example — using sub-namespaces in `withKeyMap`:**
 
 ```ts
@@ -581,10 +579,10 @@ Suffix/prefix pattern rules applied after `DEFAULT_KEY_MAP` exact-match lookup m
 
 **Built-in rules:**
 
-| Sub-map  | Pattern                                               | Generator                |
-| -------- | ----------------------------------------------------- | ------------------------ |
-| `string` | key `=== 'id'` or ends with `'id'` or `'uuid'`        | `generators.string.uuid` |
-| `any`    | ends with `'at'` or `'date'`, or starts with `'date'` | `generators.date.anytime`        |
+| Sub-map  | Pattern                                               | Generator                 |
+| -------- | ----------------------------------------------------- | ------------------------- |
+| `string` | key `=== 'id'` or ends with `'id'` or `'uuid'`        | `generators.string.uuid`  |
+| `any`    | ends with `'at'` or `'date'`, or starts with `'date'` | `generators.date.anytime` |
 
 ---
 

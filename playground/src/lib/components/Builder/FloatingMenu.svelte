@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Input from '../Primitives/Input.svelte';
+
 	interface MenuItem {
 		name: string;
 		desc: string;
@@ -29,18 +31,18 @@
 
 <div class="float-menu" style="--caret: {caretOffset}px">
 	<div class="search">
-		<input placeholder="filter…" bind:value={filter} autofocus />
-		<span class="scope">{scope}</span>
+		<Input class="search-input" placeholder="filter…" bind:value={filter} autofocus />
+		<span class="scope t-code-tight">{scope}</span>
 	</div>
 
 	{#each categories as cat}
-		<div class="grp">{cat}</div>
+		<div class="grp t-eyebrow">{cat}</div>
 		{#each filteredItems.filter((i) => i.category === cat) as item}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="item" onclick={() => onselect?.(item.name)}>
+			<div class="item t-code-sm" onclick={() => onselect?.(item.name)}>
 				<span class="name">{item.name}</span>
-				<span class="desc">{item.desc}</span>
+				<span class="desc t-code-tight">{item.desc}</span>
 			</div>
 		{/each}
 	{/each}
@@ -49,7 +51,7 @@
 		<div class="empty">No matches found</div>
 	{/if}
 
-	<div class="foot">
+	<div class="foot t-code-tight">
 		<span>↑↓ nav</span>
 		<span>⏎ add</span>
 		<span>esc close</span>
@@ -86,46 +88,43 @@
 	.search {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 8px;
+		gap: var(--space-3);
+		padding: var(--space-3);
 		border-bottom: 1px solid var(--line);
 		background: var(--bg-2);
 	}
-	.search input {
+	.search :global(.search-input) {
 		flex: 1;
 		background: transparent;
 		border: 0;
 		color: var(--ink-0);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 		outline: 0;
+		padding: 0;
+		height: auto;
+		box-shadow: none;
+	}
+	.search :global(.search-input:focus:not(:disabled)) {
+		box-shadow: none;
+		border: 0;
 	}
 	.search .scope {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 9px;
 		color: var(--ink-2);
-		padding: 1px 5px;
+		padding: 1px var(--space-1);
 		border: 1px solid var(--line);
-		border-radius: 4px;
+		border-radius: var(--r-sm);
 	}
 
 	.grp {
-		padding: 10px 12px 4px;
-		font-size: 10px;
+		padding: 10px var(--space-4) var(--space-1);
 		color: var(--ink-2);
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		font-weight: 600;
 	}
 
 	.item {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 6px 12px;
+		padding: var(--space-2) var(--space-4);
 		cursor: pointer;
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 11px;
 	}
 	.item:hover {
 		background: var(--accent-soft);
@@ -135,7 +134,6 @@
 	}
 	.item .desc {
 		color: var(--ink-2);
-		font-size: 10px;
 	}
 
 	.empty {
@@ -148,12 +146,10 @@
 	.foot {
 		margin-top: auto;
 		display: flex;
-		gap: 12px;
-		padding: 8px 12px;
+		gap: var(--space-4);
+		padding: var(--space-3) var(--space-4);
 		background: var(--bg-2);
 		border-top: 1px solid var(--line);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 9px;
 		color: var(--ink-3);
 	}
 </style>

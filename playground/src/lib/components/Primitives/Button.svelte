@@ -9,6 +9,7 @@
 		onclick?: () => void;
 		type?: 'button' | 'submit' | 'reset';
 		class?: string;
+		[key: string]: any;
 	}
 
 	let {
@@ -18,11 +19,12 @@
 		children,
 		onclick,
 		type = 'button',
-		class: className = ''
+		class: className = '',
+		...rest
 	}: Props = $props();
 </script>
 
-<button {type} {disabled} {onclick} class="btn {variant} {className}">
+<button {type} {disabled} {onclick} class="btn t-small {variant} {className}" {...rest}>
 	{#if label}
 		{label}
 	{:else if children}

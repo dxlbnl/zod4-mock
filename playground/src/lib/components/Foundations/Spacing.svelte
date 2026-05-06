@@ -2,8 +2,8 @@
 </script>
 
 <div class="ds-section">
-	<h1>Spacing & layout</h1>
-	<p class="lead">
+	<h1 class="t-heading-lg">Spacing & layout</h1>
+	<p class="lead t-body">
 		A 4px base. Inside dense rows, 4 / 6 / 8 are the only step values. Cards and dialogs use
 		12 / 16 / 24.
 	</p>
@@ -11,93 +11,93 @@
 	<div class="ds-card">
 		<div class="ds-card-body col">
 			<div class="scale-row">
-				<span class="name">space-1</span>
-				<div class="bar" style="width: 4px"></div>
-				<span class="px">4px</span>
+				<span class="name t-code-sm">var(--space-1)</span>
+				<div class="bar" style="width: var(--space-1)"></div>
+				<span class="px t-number">4px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-2</span>
-				<div class="bar" style="width: 6px"></div>
-				<span class="px">6px</span>
+				<span class="name t-code-sm">var(--space-2)</span>
+				<div class="bar" style="width: var(--space-2)"></div>
+				<span class="px t-number">6px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-3</span>
-				<div class="bar" style="width: 8px"></div>
-				<span class="px">8px</span>
+				<span class="name t-code-sm">var(--space-3)</span>
+				<div class="bar" style="width: var(--space-3)"></div>
+				<span class="px t-number">8px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-4</span>
-				<div class="bar" style="width: 12px"></div>
-				<span class="px">12px</span>
+				<span class="name t-code-sm">var(--space-4)</span>
+				<div class="bar" style="width: var(--space-4)"></div>
+				<span class="px t-number">12px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-5</span>
-				<div class="bar" style="width: 16px"></div>
-				<span class="px">16px</span>
+				<span class="name t-code-sm">var(--space-5)</span>
+				<div class="bar" style="width: var(--space-5)"></div>
+				<span class="px t-number">16px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-6</span>
-				<div class="bar" style="width: 24px"></div>
-				<span class="px">24px</span>
+				<span class="name t-code-sm">var(--space-6)</span>
+				<div class="bar" style="width: var(--space-6)"></div>
+				<span class="px t-number">24px</span>
 			</div>
 			<div class="scale-row">
-				<span class="name">space-7</span>
-				<div class="bar" style="width: 32px"></div>
-				<span class="px">32px</span>
+				<span class="name t-code-sm">var(--space-7)</span>
+				<div class="bar" style="width: var(--space-7)"></div>
+				<span class="px t-number">32px</span>
 			</div>
 		</div>
 	</div>
 
-	<h2>Heights</h2>
+	<h2 class="t-heading-md">Heights</h2>
 	<table class="props-table">
 		<thead>
 			<tr>
-				<th>Token</th>
-				<th>Value</th>
-				<th>Where</th>
+				<th class="t-eyebrow">Token</th>
+				<th class="t-eyebrow">Value</th>
+				<th class="t-eyebrow">Where</th>
 			</tr>
 		</thead>
 		<tbody>
 			<tr>
-				<td class="col-name">--row-h</td>
-				<td class="col-default">28px</td>
-				<td class="col-desc">property row, cardinality row, add-prop</td>
+				<td class="col-name t-code-sm">--h-row</td>
+				<td class="col-default t-number">28px</td>
+				<td class="col-desc t-small">property row, cardinality row, add-prop</td>
 			</tr>
 			<tr>
-				<td class="col-name">topbar</td>
-				<td class="col-default">40px</td>
-				<td class="col-desc">app top bar</td>
+				<td class="col-name t-code-sm">--h-topbar</td>
+				<td class="col-default t-number">40px</td>
+				<td class="col-desc t-small">app top bar</td>
 			</tr>
 			<tr>
-				<td class="col-name">pane-head</td>
-				<td class="col-default">32px</td>
-				<td class="col-desc">pane header bar, output tabs</td>
+				<td class="col-name t-code-sm">--h-pane-head</td>
+				<td class="col-default t-number">32px</td>
+				<td class="col-desc t-small">pane header bar, output tabs</td>
 			</tr>
 			<tr>
-				<td class="col-name">statusbar</td>
-				<td class="col-default">24px</td>
-				<td class="col-desc">app status bar</td>
+				<td class="col-name t-code-sm">--h-statusbar</td>
+				<td class="col-default t-number">24px</td>
+				<td class="col-desc t-small">app status bar</td>
 			</tr>
 			<tr>
-				<td class="col-name">btn</td>
-				<td class="col-default">26px</td>
-				<td class="col-desc">all top-bar buttons</td>
+				<td class="col-name t-code-sm">--h-btn</td>
+				<td class="col-default t-number">26px</td>
+				<td class="col-desc t-small">all top-bar buttons</td>
 			</tr>
 			<tr>
-				<td class="col-name">mod / add-mod</td>
-				<td class="col-default">18px</td>
-				<td class="col-desc">pills inside rows</td>
+				<td class="col-name t-code-sm">--h-mod</td>
+				<td class="col-default t-number">18px</td>
+				<td class="col-desc t-small">pills inside rows</td>
 			</tr>
 			<tr>
-				<td class="col-name">input</td>
-				<td class="col-default">22px</td>
-				<td class="col-desc">left-rail inputs</td>
+				<td class="col-name t-code-sm">--h-input</td>
+				<td class="col-default t-number">22px</td>
+				<td class="col-desc t-small">left-rail inputs</td>
 			</tr>
 		</tbody>
 	</table>
 
-	<h2>App grid</h2>
-	<pre class="ds-snippet">
+	<h2 class="t-heading-md">App grid</h2>
+	<pre class="ds-snippet t-code-sm">
 ┌────────────────────────────────────────────────┐
 │ topbar         40px                            │
 ├────────┬───────────────────┬───────────────────┤

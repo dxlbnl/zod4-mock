@@ -7,7 +7,7 @@
 	let { active = false, onclick }: Props = $props();
 </script>
 
-<button type="button" class="add-mod" data-active={active} {onclick}>
+<button type="button" class="add-mod t-code-tight" data-active={active} {onclick}>
 	+ mod
 </button>
 
@@ -16,14 +16,12 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 3px;
-		padding: 0 6px;
-		height: 18px;
+		padding: 0 var(--space-2);
+		height: var(--h-mod);
 		border: 1px dashed var(--line-strong);
 		border-radius: var(--r-sm);
 		background: transparent;
 		color: var(--ink-2);
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 10.5px;
 		cursor: pointer;
 		white-space: nowrap;
 		position: relative;
