@@ -95,7 +95,11 @@ interface GeneratorContext {
   subject: AnySubjectInstance | undefined;
   registry: Registry;
   fieldPath: string; // e.g. 'address.street'
+  parent?: Record<string, unknown>; // sibling field data
   optionalProbability?: number;
+
+  related<T = unknown>(relationName: string): T;
+  relatedTo<T = unknown>(targetType: string, relationName: string): T[];
 }
 ```
 
@@ -196,9 +200,11 @@ const rawdata = world.generate(z.array(RawDataSchema));
 
 ---
 
-## Relations (declared but not yet enforced)
+---
 
-`defineSubjectType` accepts an optional `relations` map:
+## Relations and lazy resolution
+
+Declared relations in `defineSubjectType` enable modeling graph-like data. The world resolves these relations lazily during generation.
 
 ```ts
 const PersonSubject = defineSubjectType("person", personSchema, {
@@ -209,17 +215,24 @@ const PersonSubject = defineSubjectType("person", personSchema, {
 });
 ```
 
-**Currently, relations are metadata only.** The world does not automatically generate related subjects or enforce referential constraints. They serve as inline documentation on the subject type.
+### `ctx.related(name)`
 
-Implement cross-subject references manually via matchers and the registry:
+Returns the data of a related subject instance.
+- If cardinality is `1` or `0..1`: returns a single object.
+- If cardinality is `0..n` or `1..n`: returns an array of objects.
 
 ```ts
-.withSchema(PersonApiSchema, PersonSubject, {
-  employerId: (_, ctx) => ctx.registry.pick<{ companyId: string }>('company').companyId,
-})
+employerId: (_, ctx) => ctx.related<{ companyId: string }>("employer").companyId,
 ```
 
-Future versions may use declared relations to auto-generate related subjects. For now, treat `relations` as a schema-level annotation.
+### `ctx.relatedTo(targetType, relationName)`
+
+The inverse lookup. Finds all instances of `targetType` that have a relationship named `relationName` pointing back to the current subject.
+
+```ts
+employeeIds: (_, ctx) =>
+  ctx.relatedTo<{ personId: string }>("person", "employer").map((p) => p.personId),
+```
 
 ---
 

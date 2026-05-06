@@ -289,7 +289,7 @@ interface SubjectTypeOptions<TRelations extends RelationMap, TData> {
 }
 ```
 
-**`relations`** — declares relationships to other subject types. Currently metadata only; the world does not enforce them automatically. See [Advanced Topics — Relations](advanced.md#relations-declared-but-not-yet-enforced).
+**`relations`** — declares relationships to other subject types. Used for lazy resolution of cross-subject links during generation. See [Core Concepts — Relations](core-concepts.md#relations).
 
 **`keyMap`** — per-field generators for this subject type. Consulted after `withKeyMap` and before `withGenerators` in the generation pipeline. Values are `(prng: Prng) => T` — they accept only a PRNG, so `generators.*` functions can be assigned directly.
 
