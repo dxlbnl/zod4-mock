@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Builder/GroupHeader',
 		component: GroupHeader,
+		parameters: {
+			docs: {
+				description: {
+					component: 'Marks the start of a nested object or array. Renders inline above its children.'
+				}
+			}
+		},
 		tags: ['autodocs']
 	});
 </script>

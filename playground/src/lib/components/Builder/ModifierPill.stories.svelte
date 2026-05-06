@@ -5,6 +5,20 @@
 	const { Story } = defineMeta({
 		title: 'Builder/ModifierPill',
 		component: ModifierPill,
+		parameters: {
+			docs: {
+				description: {
+					component: `
+A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: parameterless (\`.email()\`) and parameterized (\`.min=1\`).
+
+### States
+- **default**: No special styling.
+- **parameterized**: Value editable in place.
+- **hover**: Accent border + close × appears.
+- **warn**: Unbound enum value, mismatch (orange variant).`
+				}
+			}
+		},
 		tags: ['autodocs']
 	});
 </script>

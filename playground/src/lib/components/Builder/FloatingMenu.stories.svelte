@@ -5,6 +5,21 @@
 	const { Story } = defineMeta({
 		title: 'Builder/FloatingMenu',
 		component: FloatingMenu,
+		parameters: {
+			docs: {
+				description: {
+					component: `
+The picker that opens when you click a \`+ mod\` pill. Anchored 8px below the pill with an upward caret. Width 256px.
+
+### Behavior
+- Anchored to the pill via \`getBoundingClientRect()\`; uses \`position: fixed\` so it escapes overflow:auto parents.
+- Caret horizontal offset is computed: \`--caret: anchorCenter - menuLeft - 5px\`.
+- Search auto-focuses on open. \`esc\` closes; \`⏎\` adds the highlighted item.
+- Items grouped by category; the search filters across all categories.
+- The \`scope\` chip shows which Zod base type the menu's options apply to.`
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			scope: 'z.number()',

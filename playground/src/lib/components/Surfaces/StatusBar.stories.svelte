@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Surfaces/StatusBar',
 		component: StatusBar,
+		parameters: {
+			docs: {
+				description: {
+					component: '24px tall. Pipe-separated mono labels. Left: validation + counts. Right: regen time + version.'
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			status: 'ok',

@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Primitives/Input',
 		component: Input,
+		parameters: {
+			docs: {
+				description: {
+					component: 'Single utility input used in left-rail fields and search boxes. Mono 11px, 22px tall.'
+				}
+			}
+		},
 		tags: ['autodocs']
 	});
 </script>

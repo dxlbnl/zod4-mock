@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Surfaces/TopBar',
 		component: TopBar,
+		parameters: {
+			docs: {
+				description: {
+					component: '40px tall, lives at the top of the app. Brand → workspace name → spacer → actions.'
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			version: 'v0.4.2',

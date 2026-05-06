@@ -5,6 +5,18 @@
 	const { Story } = defineMeta({
 		title: 'Primitives/Kbd',
 		component: Kbd,
+		parameters: {
+			docs: {
+				description: {
+					component: `
+Keyboard hints.
+
+### Rules
+- Always pair with a verb in the same line: \`"⌘ ⏎ download"\`. 
+- Never used in isolation as a primary CTA.`
+				}
+			}
+		},
 		tags: ['autodocs']
 	});
 </script>

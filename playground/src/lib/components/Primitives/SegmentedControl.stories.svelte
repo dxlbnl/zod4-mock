@@ -5,6 +5,16 @@
 	const { Story } = defineMeta({
 		title: 'Primitives/SegmentedControl',
 		component: SegmentedControl,
+		parameters: {
+			docs: {
+				description: {
+					component: `
+Mutually-exclusive small choices. Replaces tabs when there are 2–4 short labels and the choice doesn't change route.
+
+**Multi-select variant:** when used as a multi-select (Export sheet's "Include"), each button toggles independently — multiple can be \`aria-pressed="true"\`.`
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			options: [

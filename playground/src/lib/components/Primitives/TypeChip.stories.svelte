@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Primitives/TypeChip',
 		component: TypeChip,
+		parameters: {
+			docs: {
+				description: {
+					component: 'Represents the schema type of a property (String, Number, Enum, etc). Click to open a type-picker. Inactive uses neutral; active uses accent.'
+				}
+			}
+		},
 		tags: ['autodocs']
 	});
 </script>

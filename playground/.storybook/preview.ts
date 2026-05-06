@@ -1,4 +1,4 @@
-import type { Preview } from "storybook/sveltekit";
+import type { Preview } from "@storybook/sveltekit";
 import { withThemeByClassName } from "@storybook/addon-themes";
 import theme from "./theme";
 import "../src/lib/styles/app.css";

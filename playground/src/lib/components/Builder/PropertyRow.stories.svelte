@@ -5,6 +5,20 @@
 	const { Story } = defineMeta({
 		title: 'Builder/PropertyRow',
 		component: Row,
+		parameters: {
+			docs: {
+				description: {
+					component: `
+The atomic unit of the Builder. Holds one property: name, type, modifiers, and an add-mod slot. Modifiers wrap to a second line if they overflow.
+
+### States
+- **default**: No background.
+- **hover**: \`--bg-2\` background, grip visible.
+- **selected**: \`--accent-soft\` bg, 2px accent stripe on left.
+- **warn**: \`--warn-soft\` bg, 2px warn stripe on left.`
+				}
+			}
+		},
 		tags: ['autodocs']
 	});	
 </script>

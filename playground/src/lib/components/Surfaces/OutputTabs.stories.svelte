@@ -6,6 +6,13 @@
 	const { Story } = defineMeta({
 		title: 'Surfaces/OutputTabs',
 		component: OutputTabs,
+		parameters: {
+			docs: {
+				description: {
+					component: 'The tab strip at the top of the right output pane. Two tabs (Code / Data) plus action affordances on the right.'
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			tabs: [

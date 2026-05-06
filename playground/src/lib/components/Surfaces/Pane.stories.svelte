@@ -5,6 +5,13 @@
 	const { Story } = defineMeta({
 		title: 'Surfaces/Pane',
 		component: Pane,
+		parameters: {
+			docs: {
+				description: {
+					component: 'Generic surface used by Builder, Output, and any future content area. `.pane-head` is 32px tall; `.pane-body` scrolls.'
+				}
+			}
+		},
 		tags: ['autodocs'],
 		args: {
 			title: 'Builder',
