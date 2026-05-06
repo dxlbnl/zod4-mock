@@ -8,4 +8,4 @@
 	});
 </script>
 
-<Story name="Spacing" />
+<Story name="Spacing & layout" />

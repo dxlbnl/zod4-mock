@@ -1,7 +1,7 @@
 <script lang="ts">
 	import TypeChip from '../Primitives/TypeChip.svelte';
-	import ModPill from './ModPill.svelte';
-	import AddModPill from './AddModPill.svelte';
+	import ModifierPill from './ModifierPill.svelte';
+	import AddMod from './AddMod.svelte';
 
 	interface Modifier {
 		name: string;
@@ -55,10 +55,10 @@
 	<TypeChip {type} active={selected} onclick={onchangetype} />
 
 	{#each mods as mod}
-		<ModPill name={mod.name} value={mod.value} warn={mod.warn} removable={true} />
+		<ModifierPill name={mod.name} value={mod.value} warn={mod.warn} removable={true} />
 	{/each}
 
-	<AddModPill onclick={onaddmod} />
+	<AddMod onclick={onaddmod} />
 </div>
 
 <style>

@@ -8,4 +8,4 @@
 	});
 </script>
 
-<Story name="Colors" />
+<Story name="Color" />

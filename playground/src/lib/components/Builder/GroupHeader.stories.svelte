@@ -1,10 +1,10 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import GroupHead from './GroupHead.svelte';
+	import GroupHeader from './GroupHeader.svelte';
 
 	const { Story } = defineMeta({
-		title: 'Builder/GroupHead',
-		component: GroupHead,
+		title: 'Builder/GroupHeader',
+		component: GroupHeader,
 		tags: ['autodocs']
 	});
 </script>

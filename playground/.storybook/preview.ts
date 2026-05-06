@@ -38,8 +38,20 @@ const preview: Preview = {
             "Motion",
             "Syntax colors",
           ],
-          "Primitives",
-          "Builder",
+          "Primitives",[
+            "Button",
+            "SegmentedControl",
+            "Kbd",
+            "Input",
+            "TypeChip"
+          ],
+          "Builder", [
+            "ModifierPill",
+            "AddMod",
+            "PropertyRow",
+            "GroupHeaderer",
+            "FloatingMenu",
+          ],
           "Surfaces",
           "Reference",
           "*",

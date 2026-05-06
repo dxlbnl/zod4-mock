@@ -1,10 +1,10 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import ModPill from './ModPill.svelte';
+	import ModifierPill from './ModifierPill.svelte';
 
 	const { Story } = defineMeta({
-		title: 'Builder/ModPill',
-		component: ModPill,
+		title: 'Builder/ModifierPill',
+		component: ModifierPill,
 		tags: ['autodocs']
 	});
 </script>

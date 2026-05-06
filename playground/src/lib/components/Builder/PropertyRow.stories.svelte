@@ -1,12 +1,12 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import Row from './Row.svelte';
+	import Row from './PropertyRow.svelte';
 
 	const { Story } = defineMeta({
-		title: 'Builder/Row',
+		title: 'Builder/PropertyRow',
 		component: Row,
 		tags: ['autodocs']
-	});
+	});	
 </script>
 
 <Story

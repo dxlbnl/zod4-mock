@@ -1,10 +1,10 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import FloatMenu from './FloatMenu.svelte';
+	import FloatingMenu from './FloatingMenu.svelte';
 
 	const { Story } = defineMeta({
-		title: 'Builder/FloatMenu',
-		component: FloatMenu,
+		title: 'Builder/FloatingMenu',
+		component: FloatingMenu,
 		tags: ['autodocs'],
 		args: {
 			scope: 'z.number()',
