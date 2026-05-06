@@ -6,6 +6,7 @@
 		type?: string;
 		class?: string;
 		autofocus?: boolean;
+		disabled?: boolean;
 		oninput?: (value: any) => void;
 	}
 
@@ -16,6 +17,7 @@
 		type = 'text',
 		class: className = '',
 		autofocus = false,
+		disabled = false,
 		oninput
 	}: Props = $props();
 </script>
@@ -27,6 +29,7 @@
 			{type}
 			{placeholder}
 			{autofocus}
+			{disabled}
 			bind:value
 			class="input"
 		/>
@@ -36,6 +39,7 @@
 		{type}
 		{placeholder}
 		{autofocus}
+		{disabled}
 		bind:value
 		class="input {className}"
 	/>
@@ -70,9 +74,14 @@
 		height: 22px;
 		min-width: 0;
 	}
-	.input:focus {
+	.input:focus:not(:disabled) {
 		outline: 0;
 		border-color: var(--accent-edge);
 		box-shadow: 0 0 0 2px var(--accent-soft);
+	}
+	.input:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		background: var(--bg-1);
 	}
 </style>

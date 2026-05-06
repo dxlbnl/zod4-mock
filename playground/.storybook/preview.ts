@@ -24,6 +24,28 @@ const preview: Preview = {
     a11y: {
       test: "todo",
     },
+    options: {
+      storySort: {
+        order: [
+          "Introduction",
+          "Foundations",
+          [
+            "Principles",
+            "Color",
+            "Typography",
+            "Spacing & layout",
+            "Radius & shadows",
+            "Motion",
+            "Syntax colors",
+          ],
+          "Primitives",
+          "Builder",
+          "Surfaces",
+          "Reference",
+          "*",
+        ],
+      },
+    },
   },
   decorators: [
     withThemeByClassName({

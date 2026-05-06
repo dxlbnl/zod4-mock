@@ -67,6 +67,11 @@ body {
   border-right: 1px solid var(--line);
 }
 
+.seg button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .seg button:last-child {
   border-right: 0;
 }
@@ -92,6 +97,12 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--ease-quick);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(0.5);
 }
 
 .btn:hover {
@@ -132,7 +143,12 @@ body {
   font: inherit;
 }
 
-.icon-btn:hover {
+.icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.icon-btn:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--ink-0);
 }
