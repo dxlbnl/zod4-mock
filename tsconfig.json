@@ -6,7 +6,7 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "src",
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
@@ -16,6 +16,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["src", "tests"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

@@ -113,16 +113,16 @@ const textApi = world.generate(z.array(TextApiSchema));
 console.log(rawdata[0]!.id === textApi[0]!.fileId); // true
 ```
 
-For a full multi-schema, multi-subject-type example see the [media library recipe](wiki/recipes.md#recipe-multi-api-media-library).
+For a full multi-schema, multi-subject-type example see the [media library recipe](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/recipes.md#recipe-multi-api-media-library).
 
 ## Documentation
 
-- [Getting Started](wiki/getting-started.md) — 5-minute tutorial
-- [Core Concepts](wiki/core-concepts.md) — World, Subject, generation pipeline, Registry
-- [API Reference](wiki/api-reference.md) — complete API reference
-- [Key-Based Field Heuristics](wiki/key-heuristics.md) — auto-generated field values by field name
-- [Recipes](wiki/recipes.md) — copy-pasteable patterns for common scenarios
-- [Advanced Topics](wiki/advanced.md) — PRNG internals, custom generators, TypeScript strictness
+- [Getting Started](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/getting-started.md) — 5-minute tutorial
+- [Core Concepts](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/core-concepts.md) — World, Subject, generation pipeline, Registry
+- [API Reference](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/api-reference.md) — complete API reference
+- [Key-Based Field Heuristics](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/key-heuristics.md) — auto-generated field values by field name
+- [Recipes](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/recipes.md) — copy-pasteable patterns for common scenarios
+- [Advanced Topics](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/advanced.md) — PRNG internals, custom generators, TypeScript strictness
 
 ## License
 
