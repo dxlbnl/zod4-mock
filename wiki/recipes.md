@@ -95,7 +95,7 @@ function createInvoicingWorld(seed = 42) {
 
       // Invoice: one per customer subject
       .withSchema(InvoiceSchema, CustomerSubject, {
-        id: (_, ctx) => generators.uuid(ctx.prng.fork("invoice-id")),
+        id: (_, ctx) => generators.string.uuid(ctx.prng.fork("invoice-id")),
         customerId: (s) => s.customerId,
         lines: (s, ctx) => {
           const count = ctx.prng.int(1, 4);
@@ -174,19 +174,34 @@ const AuthorSubjectSchema = z.object({
   language: z.enum(["nl", "en", "de", "fr"]),
 });
 
-// Document and Sentence subjects are pure ID anchors
 const DocumentSubject = defineSubjectType(
   "document",
   z.object({
     documentId: z.uuid(),
+    authorId: z.uuid(),
+    language: z.enum(["nl", "en", "de", "fr"]),
   }),
+  {
+    relations: { author: { type: "author", cardinality: "1" } },
+    derive: {
+      authorId: (_, ctx) => ctx.related<{ authorId: string }>("author").authorId,
+      language: (_, ctx) => ctx.related<{ language: string }>("author").language,
+    },
+  },
 );
 
 const SentenceSubject = defineSubjectType(
   "sentence",
   z.object({
     sentenceId: z.uuid(),
+    documentId: z.uuid(),
   }),
+  {
+    relations: { doc: { type: "document", cardinality: "1" } },
+    derive: {
+      documentId: (_, ctx) => ctx.related<{ documentId: string }>("doc").documentId,
+    },
+  },
 );
 
 // --- API schemas ---
@@ -229,14 +244,13 @@ function createDocumentCorpusWorld(seed = 42) {
 
     .withSchema(DocumentSchema, DocumentSubject, {
       id: (s) => s.documentId,
-      authorId: (_, ctx) => ctx.registry.pick<{ authorId: string }>("author").authorId,
-      language: (_, ctx) =>
-        ctx.registry.pick<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
+      authorId: (s) => s.authorId,
+      language: (s) => s.language,
     })
 
     .withSchema(SentenceSchema, SentenceSubject, {
       id: (s) => s.sentenceId,
-      documentId: (_, ctx) => ctx.registry.pick<{ documentId: string }>("document").documentId,
+      documentId: (s) => s.documentId,
     })
 
     .withSchema(AnnotationSchema, AuthorSubject, {
@@ -387,18 +401,18 @@ function createMediaLibraryWorld(seed = 42) {
         personId: (s) => s.personId,
         firstName: (s) => s.firstName,
         lastName: (s) => s.lastName,
-        fileIds: (s, ctx) =>
-          ctx.registry
-            .filter<FileRef>(
-              ["text-file", "audio-file", "bank-file"],
-              (f) => f.ownerId === s.personId,
-            )
-            .map((f) => f.fileId),
-        fileCount: (s, ctx) =>
-          ctx.registry.filter<FileRef>(
-            ["text-file", "audio-file", "bank-file"],
-            (f) => f.ownerId === s.personId,
-          ).length,
+        fileIds: (s, ctx) => {
+          const textFiles = ctx.relatedTo<FileRef>("text-file", "owner");
+          const audioFiles = ctx.relatedTo<FileRef>("audio-file", "owner");
+          const bankFiles = ctx.relatedTo<FileRef>("bank-file", "owner");
+          return [...textFiles, ...audioFiles, ...bankFiles].map((f) => f.fileId);
+        },
+        fileCount: (s, ctx) => {
+          const textFiles = ctx.relatedTo<FileRef>("text-file", "owner");
+          const audioFiles = ctx.relatedTo<FileRef>("audio-file", "owner");
+          const bankFiles = ctx.relatedTo<FileRef>("bank-file", "owner");
+          return textFiles.length + audioFiles.length + bankFiles.length;
+        },
       })
   );
 }

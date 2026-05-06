@@ -117,6 +117,7 @@ For a full multi-schema, multi-subject-type example see the [media library recip
 
 ## Documentation
 
+- **[Full Documentation Index](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/index.md)**
 - [Getting Started](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/getting-started.md) — 5-minute tutorial
 - [Core Concepts](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/core-concepts.md) — World, Subject, generation pipeline, Registry
 - [API Reference](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/api-reference.md) — complete API reference

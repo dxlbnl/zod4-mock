@@ -79,6 +79,12 @@ const PersonSubject = defineSubjectType(
     lastName: z.string(),
     email: z.email(),
   }),
+  {
+    derive: {
+      email: ({ firstName, lastName }, ctx) =>
+        `${firstName![0]}.${lastName}${ctx.prng.int(10, 99)}@example.nl`.toLowerCase(),
+    },
+  },
 );
 ```
 
@@ -114,6 +120,39 @@ const instance = world.subject("person");
 ```
 
 Each call returns the _next_ instance of that type. The sequence is lazy and deterministic.
+
+---
+
+## Relations
+
+Subject types can declare relationships to other types. This enables modeling graph-like data structures (one-to-one, one-to-many).
+
+```ts
+const DocumentSubject = defineSubjectType("document", DocumentSchema, {
+  relations: {
+    author: { type: "person", cardinality: "1" },
+  },
+});
+```
+
+Relations are resolved lazily using the world's population:
+
+- **`ctx.related(name)`** — Access a declared relation. Returns a single object or an array depending on cardinality.
+- **`ctx.relatedTo(type, name)`** — Find all instances of `type` that point to this subject via relationship `name`.
+
+---
+
+## Derived fields (intra-subject)
+
+The `derive` option on `defineSubjectType` allows fields to be calculated from other fields of the same subject.
+
+```ts
+derive: {
+  fullName: ({ firstName, lastName }) => `${firstName} ${lastName}`,
+}
+```
+
+Derivations run after all base fields are generated. They are perfect for ensuring internal consistency (e.g., an email address matching a person's name) without needing matchers in every schema.
 
 ---
 

@@ -117,7 +117,7 @@ Adds custom key-based generators. Calls are **additive** — each call merges wi
 
 ```ts
 world.withGenerators({
-  vendorCode: (_schema, ctx) => `V-${generators.uuid(ctx.prng)}`,
+  vendorCode: (_schema, ctx) => `V-${generators.string.uuid(ctx.prng)}`,
 });
 ```
 
@@ -273,9 +273,19 @@ Creates a subject type descriptor. The `name` string is used everywhere to look 
 
 ```ts
 interface SubjectTypeOptions<TRelations extends RelationMap, TData> {
-  relations?: TRelations
-  keyMap?:    SubjectKeyMap<TData>
-  derive?:    { ... }
+  readonly relations?: TRelations;
+
+  /**
+   * Derive field values from other already-generated fields of the same subject.
+   * Functions are called after all base fields (key-based/schema-based) are
+   * generated. Return value overwrites the base-generated value.
+   */
+  readonly derive?: {
+    [K in keyof TData]?: (partial: Partial<TData>, ctx: GeneratorContext) => TData[K];
+  };
+
+  /** Per-field key generators for this subject type. */
+  readonly keyMap?: SubjectKeyMap<TData>;
 }
 ```
 
@@ -530,21 +540,7 @@ import { generators } from "zod4-mock";
 | `hexadecimal`  | `(prng, length?: number) => string` | `'0x3f9a1c2b'` (default length 8) |
 | `nanoid`       | `(prng) => string`                  | 21-char URL-safe string           |
 
-### Flat aliases (backwards compatibility)
 
-The following top-level properties on `generators` are kept for compatibility. They are identical references to the sub-namespace functions:
-
-```ts
-generators.firstName; // → generators.person.firstName
-generators.lastName; // → generators.person.lastName
-generators.email; // → generators.internet.email
-generators.url; // → generators.internet.url
-generators.uuid; // → generators.string.uuid
-generators.postalCode; // → generators.location.postalCode
-generators.phone; // flat only (no sub-namespace; returns '+31 612345678')
-generators.date; // flat only (returns a random Date in 2020–2025)
-generators.loremText; // flat only ((prng, words: number) => string)
-```
 
 **Example — using sub-namespaces in `withKeyMap`:**
 
@@ -588,7 +584,7 @@ Suffix/prefix pattern rules applied after `DEFAULT_KEY_MAP` exact-match lookup m
 | Sub-map  | Pattern                                               | Generator                |
 | -------- | ----------------------------------------------------- | ------------------------ |
 | `string` | key `=== 'id'` or ends with `'id'` or `'uuid'`        | `generators.string.uuid` |
-| `any`    | ends with `'at'` or `'date'`, or starts with `'date'` | `generators.date`        |
+| `any`    | ends with `'at'` or `'date'`, or starts with `'date'` | `generators.date.anytime`        |
 
 ---
 
@@ -657,6 +653,13 @@ interface GeneratorContext {
   registry: Registry;
   fieldPath: string;
   optionalProbability?: number;
+  parent?: Record<string, unknown>;
+
+  /** Lazily resolves and returns the data of a related subject instance. */
+  related<T = unknown>(relationName: string): T;
+
+  /** Finds all instances that have a relationship pointing to this subject. */
+  relatedTo<T = unknown>(targetType: string, relationName: string): T[];
 }
 ```
 
@@ -668,7 +671,13 @@ interface GeneratorContext {
 
 **`fieldPath`** — dot-separated path (e.g., `'address.street'`). Useful for conditional logic in generators.
 
+**`parent`** — the partially generated object containing sibling fields. Useful for cross-field inference (e.g., matching `firstName` to `gender`).
+
 **`optionalProbability`** — the world's configured probability. Pass to schema-based generation if delegating.
+
+**`related(name)`** — lazily resolves a relationship declared on the subject type. If the cardinality is `1` or `0..1`, it returns a single object; if `0..n` or `1..n`, it returns an array of objects.
+
+**`relatedTo(type, name)`** — the inverse of `related`. It finds all instances of `targetType` whose relationship `name` points back to the current subject. Always returns an array.
 
 ---
 

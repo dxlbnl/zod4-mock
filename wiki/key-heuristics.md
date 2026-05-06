@@ -156,11 +156,11 @@ import { generators } from "zod4-mock";
 
 world.withGenerators({
   displayName: (_schema, ctx) =>
-    `${generators.firstName(ctx.prng)} ${generators.lastName(ctx.prng)}`,
+    `${generators.person.firstName(ctx.prng)} ${generators.person.lastName(ctx.prng)}`,
 
-  invoiceId: (_schema, ctx) => `INV-${generators.uuid(ctx.prng).slice(0, 8).toUpperCase()}`,
+  invoiceId: (_schema, ctx) => `INV-${generators.string.uuid(ctx.prng).slice(0, 8).toUpperCase()}`,
 
-  excerpt: (_schema, ctx) => generators.loremText(ctx.prng, 15),
+  excerpt: (_schema, ctx) => generators.word.words(ctx.prng, 15),
 });
 ```
 
