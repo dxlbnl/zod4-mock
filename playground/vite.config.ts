@@ -1,35 +1,49 @@
-import { defineConfig } from "vitest/config";
-import { playwright } from "@vitest/browser-playwright";
+import { defineConfig, mergeConfig } from 'vitest/config';
 import { sveltekit } from "@sveltejs/kit/vite";
+import { playwright } from '@vitest/browser-playwright';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [sveltekit()],
+  optimizeDeps: {
+    exclude: ['vitest'],
+    include: [
+      '@storybook/addon-vitest',
+      '@storybook/sveltekit',
+      '@storybook/addon-svelte-csf',
+      '@storybook/addon-themes',
+      'storybook/theming',
+    ],
+  },
   test: {
-    expect: { requireAssertions: true },
+    fileParallelism: false,
+    maxWorkers: 1,
+    retry: 1,
     projects: [
       {
-        extends: "./vite.config.ts",
+        extends: true,
+        plugins: [
+          storybookTest({
+            configDir: path.join(dirname, '.storybook'),
+            storybookScript: 'npm run storybook -- --no-open',
+          }),
+        ],
         test: {
-          name: "client",
+          name: 'storybook',
           browser: {
             enabled: true,
+            headless: true,
+            instances: [{ browser: 'chromium' }],
             provider: playwright(),
-            instances: [{ browser: "chromium", headless: true }],
           },
-          include: ["src/**/*.svelte.{test,spec}.{js,ts}"],
-          exclude: ["src/lib/server/**"],
-        },
-      },
-
-      {
-        extends: "./vite.config.ts",
-        test: {
-          name: "server",
-          environment: "node",
-          include: ["src/**/*.{test,spec}.{js,ts}"],
-          exclude: ["src/**/*.svelte.{test,spec}.{js,ts}"],
+          setupFiles: ['./.storybook/vitest.setup.ts'],
         },
       },
     ],
   },
 });
+
