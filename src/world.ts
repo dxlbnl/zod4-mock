@@ -523,7 +523,7 @@ export class WorldImpl implements World {
     options?: GenerateOptions<unknown>,
   ): unknown {
     // Stable PRNG per subject — independent of which other subjects exist
-    const itemPrng = this.prng.fork(instance._id);
+    const itemPrng = createPrng(fieldSeed(this.options.seed, instance._id, ""));
 
     const subjectArg = {
       ...instance.data,
@@ -590,21 +590,22 @@ export class WorldImpl implements World {
       // Unwrap optional/nullable so key-based generators see the inner schema,
       // and handle the absent-value probability here rather than deep inside
       // generateFromSchema where the field key is no longer available.
-      const fd = getZodDef(fieldSchema);
       let innerSchema = fieldSchema;
-      if (fd.type === "optional") {
+      let fd = getZodDef(innerSchema);
+      let skip = false;
+
+      while (fd.type === "optional" || fd.type === "nullable") {
         if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
-          result[key] = undefined;
-          continue;
+          result[key] = fd.type === "optional" ? undefined : null;
+          skip = true;
+          break;
         }
-        innerSchema = fd.innerType ?? fieldSchema;
-      } else if (fd.type === "nullable") {
-        if (fieldCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
-          result[key] = null;
-          continue;
-        }
-        innerSchema = fd.innerType ?? fieldSchema;
+        if (!fd.innerType) break;
+        innerSchema = fd.innerType;
+        fd = getZodDef(innerSchema);
       }
+
+      if (skip) continue;
 
       const keyMapFn = this.schemaKeyMaps.get(schema)?.[key];
       if (keyMapFn !== undefined) {

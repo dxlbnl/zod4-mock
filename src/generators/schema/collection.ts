@@ -114,9 +114,29 @@ export function generateZodObject(
       parent: result,
     };
 
+    // Unwrap optional/nullable so key-based generators see the inner schema,
+    // and handle the absent-value probability here rather than deep inside
+    // generateFromSchema where the field key is no longer available.
+    let innerSchema = fieldSchema;
+    let d = def(innerSchema);
+    let skip = false;
+
+    while (d.type === "optional" || d.type === "nullable") {
+      if (childCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
+        result[key] = d.type === "optional" ? undefined : null;
+        skip = true;
+        break;
+      }
+      if (!d.innerType) break;
+      innerSchema = d.innerType;
+      d = def(innerSchema);
+    }
+
+    if (skip) continue;
+
     // Try key-based heuristics first
-    const keyResult = generateFromKey(key, fieldSchema, childCtx);
-    result[key] = keyResult !== undefined ? keyResult : generateFromSchema(fieldSchema, childCtx);
+    const keyResult = generateFromKey(key, innerSchema, childCtx);
+    result[key] = keyResult !== undefined ? keyResult : generateFromSchema(innerSchema, childCtx);
   }
   return result;
 }

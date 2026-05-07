@@ -115,6 +115,7 @@ describe("transform", () => {
   });
 
   it("can modify an array element by index", () => {
+    const baseline = makeWorld().generate(FileSchema);
     const file = makeWorld().generate(FileSchema, {
       transform: (data) => ({
         ...data,
@@ -125,9 +126,9 @@ describe("transform", () => {
     });
     expect(file.steps[2]?.status).toBe("failed");
     // Other steps are untouched
-    expect(file.steps[0]?.status).not.toBe("failed");
-    expect(file.steps[1]?.status).not.toBe("failed");
-    expect(file.steps[3]?.status).not.toBe("failed");
+    expect(file.steps[0]).toEqual(baseline.steps[0]);
+    expect(file.steps[1]).toEqual(baseline.steps[1]);
+    expect(file.steps[3]).toEqual(baseline.steps[3]);
   });
 
   it("receives the full generated object", () => {
