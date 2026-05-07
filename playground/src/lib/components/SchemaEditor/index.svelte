@@ -27,6 +27,10 @@
 		onupdatemodifier?: (fieldId: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
 		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
+		/** Notify parent of selection change */
+		onselectfield?: (id: string | null) => void;
+		/** Currently selected field ID (controlled from parent) */
+		selectedFieldId?: string | null;
 	}
 
 	let {
@@ -40,11 +44,13 @@
 		onaddmodifier,
 		onupdatemodifier,
 		onremovemodifier,
-		onupdateenumvalues
+		onupdateenumvalues,
+		onselectfield,
+		selectedFieldId = null
 	}: Props = $props();
 
 	// ── Active line tracking ───────────────────────────────────────────────
-	let activeLineId = $state<string | null>(null);
+	let activeLineId = $derived(selectedFieldId);
 	let lastAddedId = $state<string | null>(null);
 
 	// ── Field helpers ──────────────────────────────────────────────────────
@@ -64,7 +70,7 @@
 		if (typeof newId === 'string') {
 			lastAddedId = newId;
 			await tick();
-			activeLineId = newId;
+			onselectfield?.(newId);
 		}
 	}
 
@@ -75,7 +81,7 @@
 		const prevId = idx > 0 ? ids[idx - 1] : ids[idx + 1] ?? null;
 		onremovefield?.(id);
 		tick().then(() => {
-			activeLineId = prevId;
+			onselectfield?.(prevId);
 		});
 	}
 
@@ -198,7 +204,7 @@
 				onremove={handleRemoveField}
 				onnextsibling={handleNextSibling}
 				onexitnesting={handleExitNesting}
-				onfocus={(id) => (activeLineId = id)}
+				onfocus={(id) => onselectfield?.(id)}
 			/>
 
 			<!-- Nested children for group fields -->

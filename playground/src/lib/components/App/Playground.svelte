@@ -1,7 +1,6 @@
 <script lang="ts">
 	import TopBar from '../Surfaces/TopBar.svelte';
 	import LeftRail from '../Surfaces/LeftRail.svelte';
-	import BuilderPane from './BuilderPane.svelte';
 	import SchemaEditor from '../SchemaEditor/index.svelte';
 	import OutputPane from './OutputPane.svelte';
 	import ExportSheet from '../Surfaces/ExportSheet.svelte';
@@ -21,11 +20,9 @@
 
 	interface Props {
 		initialState?: any;
-		/** Toggle between the new inline SchemaEditor (true) and the classic BuilderPane (false) */
-		useInlineEditor?: boolean;
 	}
 
-	let { initialState = undefined, useInlineEditor = true }: Props = $props();
+	let { initialState = undefined }: Props = $props();
 
 	// Initialize store
 	const store = createPlaygroundState(untrack(() => initialState));
@@ -111,33 +108,19 @@
 		</div>
 
 		<div class="builder-column">
-			{#if useInlineEditor}
-				<SchemaEditor
-					title={builderTitle}
-					fields={activeFields}
-					onaddfield={(pid) => (entityId ? store.addField(activeEntityType, entityId, pid) : null) ?? undefined}
-					onupdatefield={(id, p) => entityId && store.updateField(activeEntityType, entityId, id, p)}
-					onremovefield={(id) => entityId && store.removeField(activeEntityType, entityId, id)}
-					onaddmodifier={(id, m) => entityId && store.addModifier(activeEntityType, entityId, id, m)}
-					onupdatemodifier={(id, idx, val) => entityId && store.updateModifierValue(activeEntityType, entityId, id, idx, val)}
-					onremovemodifier={(fid, mid) => entityId && store.removeModifier(activeEntityType, entityId, fid, mid)}
-					onupdateenumvalues={(id, vals) => entityId && store.updateField(activeEntityType, entityId, id, { enumValues: vals })}
-				/>
-			{:else}
-				<BuilderPane
-					title={builderTitle}
-					fields={activeFields}
-					{selectedFieldId}
-					onselectfield={(id) => selectedFieldId = id}
-					onaddfield={(pid) => (entityId ? store.addField(activeEntityType, entityId, pid) : null) ?? undefined}
-					onupdatefield={(id, p) => entityId && store.updateField(activeEntityType, entityId, id, p)}
-					onremovefield={(id) => entityId && store.removeField(activeEntityType, entityId, id)}
-					onaddmodifier={(id, m) => entityId && store.addModifier(activeEntityType, entityId, id, m)}
-					onupdatemodifier={(id, idx, val) => entityId && store.updateModifierValue(activeEntityType, entityId, id, idx, val)}
-					onremovemodifier={(fid, mid) => entityId && store.removeModifier(activeEntityType, entityId, fid, typeof mid === 'string' ? parseInt(mid, 10) : mid)}
-					onupdateenumvalues={(id, vals) => entityId && store.updateField(activeEntityType, entityId, id, { enumValues: vals })}
-				/>
-			{/if}
+			<SchemaEditor
+				title={builderTitle}
+				fields={activeFields}
+				{selectedFieldId}
+				onselectfield={(id) => (selectedFieldId = id)}
+				onaddfield={(pid) => (entityId ? store.addField(activeEntityType, entityId, pid) : null) ?? undefined}
+				onupdatefield={(id, p) => entityId && store.updateField(activeEntityType, entityId, id, p)}
+				onremovefield={(id) => entityId && store.removeField(activeEntityType, entityId, id)}
+				onaddmodifier={(id, m) => entityId && store.addModifier(activeEntityType, entityId, id, m)}
+				onupdatemodifier={(id, idx, val) => entityId && store.updateModifierValue(activeEntityType, entityId, id, idx, val)}
+				onremovemodifier={(fid, mid) => entityId && store.removeModifier(activeEntityType, entityId, fid, mid)}
+				onupdateenumvalues={(id, vals) => entityId && store.updateField(activeEntityType, entityId, id, { enumValues: vals })}
+			/>
 		</div>
 		
 		<div class="output-column">
