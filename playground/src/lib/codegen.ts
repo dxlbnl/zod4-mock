@@ -4,392 +4,368 @@
  * Walks PlaygroundState and produces TypeScript source strings.
  */
 
-import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef, SubjectDef } from './state.svelte';
+import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef, SubjectDef } from "./state.svelte";
 
 // ─── Token types for syntax highlighting ─────────────────────────────────────
 
-export type TokenKind = 'keyword' | 'type' | 'fn' | 'string' | 'number' | 'comment' | 'punct' | 'plain';
+export type TokenKind =
+  | "keyword"
+  | "type"
+  | "fn"
+  | "string"
+  | "number"
+  | "comment"
+  | "punct"
+  | "plain";
 
 export interface CodeToken {
-	kind: TokenKind;
-	text: string;
+  kind: TokenKind;
+  text: string;
 }
 
 export interface CodeLine {
-	/** 1-based line number */
-	lineNumber: number;
-	tokens: CodeToken[];
-	/** The field ID this line corresponds to (for active-line tracking) */
-	fieldId?: string;
+  /** 1-based line number */
+  lineNumber: number;
+  tokens: CodeToken[];
+  /** The field ID this line corresponds to (for active-line tracking) */
+  fieldId?: string;
 }
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
 const t = (kind: TokenKind, text: string): CodeToken => ({ kind, text });
-const kw = (text: string) => t('keyword', text);
-const ty = (text: string) => t('type', text);
-const fn = (text: string) => t('fn', text);
-const str = (text: string) => t('string', text);
-const num = (text: string) => t('number', text);
-const pt = (text: string) => t('punct', text);
-const pl = (text: string) => t('plain', text);
-const cm = (text: string) => t('comment', text);
+const kw = (text: string) => t("keyword", text);
+const ty = (text: string) => t("type", text);
+const fn = (text: string) => t("fn", text);
+const str = (text: string) => t("string", text);
+const num = (text: string) => t("number", text);
+const pt = (text: string) => t("punct", text);
+const pl = (text: string) => t("plain", text);
 
 // ─── Modifier codegen ─────────────────────────────────────────────────────────
 
 function modifierToCode(mod: ModifierDef): string {
-	if (mod.value !== undefined) {
-		const val = typeof mod.value === 'string' ? `"${mod.value}"` : String(mod.value);
-		// Strip trailing () from name if present, then add (value)
-		const base = mod.name.replace(/\(\)$/, '');
-		return `${base}(${val})`;
-	}
-	// Already has parens (e.g. ".int()")
-	return mod.name.endsWith('()') ? mod.name : `${mod.name}()`;
+  if (mod.value !== undefined) {
+    const val = typeof mod.value === "string" ? `"${mod.value}"` : String(mod.value);
+    // Strip trailing () from name if present, then add (value)
+    const base = mod.name.replace(/\(\)$/, "");
+    return `${base}(${val})`;
+  }
+  // Already has parens (e.g. ".int()")
+  return mod.name.endsWith("()") ? mod.name : `${mod.name}()`;
 }
 
 // ─── Field → Zod expression ───────────────────────────────────────────────────
 
 function fieldToZodExpr(field: FieldDef, indent = 0): string {
-	const pad = '  '.repeat(indent);
-	let base: string;
+  const pad = "  ".repeat(indent);
+  let base: string;
 
-	switch (field.type) {
-		case 'string':  base = 'z.string()'; break;
-		case 'number':  base = 'z.number()'; break;
-		case 'boolean': base = 'z.boolean()'; break;
-		case 'date':    base = 'z.date()'; break;
-		case 'uuid':    base = 'z.uuid()'; break;
-		case 'email':   base = 'z.email()'; break;
-		case 'url':     base = 'z.url()'; break;
-		case 'enum':
-			if (field.enumValues.length === 0) {
-				base = 'z.enum([])';
-			} else {
-				const vals = field.enumValues.map((v) => `"${v}"`).join(', ');
-				base = `z.enum([${vals}])`;
-			}
-			break;
-		case 'object':
-			if (field.children.length === 0) {
-				base = 'z.object({})';
-			} else {
-				const childLines = field.children
-					.map((c) => `${pad}    ${c.key}: ${fieldToZodExpr(c, indent + 2)},`)
-					.join('\n');
-				base = `z.object({\n${childLines}\n${pad}  })`;
-			}
-			break;
-		case 'array':
-			base = 'z.array(z.unknown())'; // placeholder — array item type TBD
-			break;
-		default:
-			base = 'z.unknown()';
-	}
+  switch (field.type) {
+    case "string":
+      base = "z.string()";
+      break;
+    case "number":
+      base = "z.number()";
+      break;
+    case "boolean":
+      base = "z.boolean()";
+      break;
+    case "date":
+      base = "z.date()";
+      break;
+    case "uuid":
+      base = "z.uuid()";
+      break;
+    case "email":
+      base = "z.email()";
+      break;
+    case "url":
+      base = "z.url()";
+      break;
+    case "enum":
+      if (field.enumValues.length === 0) {
+        base = "z.enum([])";
+      } else {
+        const vals = field.enumValues.map((v) => `"${v}"`).join(", ");
+        base = `z.enum([${vals}])`;
+      }
+      break;
+    case "object":
+      if (field.children.length === 0) {
+        base = "z.object({})";
+      } else {
+        const childLines = field.children
+          .map((c) => `${pad}    ${c.key}: ${fieldToZodExpr(c, indent + 2)},`)
+          .join("\n");
+        base = `z.object({\n${childLines}\n${pad}  })`;
+      }
+      break;
+    case "array":
+      base = "z.array(z.unknown())"; // placeholder — array item type TBD
+      break;
+    default:
+      base = "z.unknown()";
+  }
 
-	const mods = field.modifiers.map(modifierToCode).join('');
-	return `${base}${mods}`;
+  const mods = field.modifiers.map(modifierToCode).join("");
+  return `${base}${mods}`;
 }
 
 // ─── Subject → defineSubjectType code ─────────────────────────────────────────
 
 export function generateSubjectCode(subject: SubjectDef): string {
-	if (subject.fields.length === 0) {
-		return `const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({}));`;
-	}
-	const fields = subject.fields
-		.map((f) => `  ${f.key || '_'}: ${fieldToZodExpr(f, 1)},`)
-		.join('\n');
-	return (
-		`const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({\n` +
-		`${fields}\n` +
-		`}));`
-	);
+  if (subject.fields.length === 0) {
+    return `const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({}));`;
+  }
+  const fields = subject.fields
+    .map((f) => `  ${f.key || "_"}: ${fieldToZodExpr(f, 1)},`)
+    .join("\n");
+  return (
+    `const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({\n` +
+    `${fields}\n` +
+    `}));`
+  );
 }
 
 // ─── Schema → const declaration ───────────────────────────────────────────────
 
 export function generateSchemaCode(schema: SchemaDef): string {
-	if (schema.fields.length === 0) {
-		return `const ${schema.name}Schema = z.object({});`;
-	}
-	const fields = schema.fields
-		.map((f) => `  ${f.key || '_'}: ${fieldToZodExpr(f, 1)},`)
-		.join('\n');
-	return `const ${schema.name}Schema = z.object({\n${fields}\n});`;
+  if (schema.fields.length === 0) {
+    return `const ${schema.name}Schema = z.object({});`;
+  }
+  const fields = schema.fields.map((f) => `  ${f.key || "_"}: ${fieldToZodExpr(f, 1)},`).join("\n");
+  return `const ${schema.name}Schema = z.object({\n${fields}\n});`;
 }
 
 // ─── World setup code ─────────────────────────────────────────────────────────
 
 export function generateWorldCode(state: PlaygroundState): string {
-	const lines: string[] = [];
+  const lines: string[] = [];
 
-	// createWorld options
-	const opts: string[] = [`seed: ${state.world.seed}`];
-	if (state.world.optionalProbability !== 0.2) {
-		opts.push(`optionalProbability: ${state.world.optionalProbability}`);
-	}
-	if (state.world.defaultArrayLengthMin !== 1 || state.world.defaultArrayLengthMax !== 5) {
-		opts.push(`defaultArrayLength: [${state.world.defaultArrayLengthMin}, ${state.world.defaultArrayLengthMax}]`);
-	}
+  // createWorld options
+  const opts: string[] = [`seed: ${state.world.seed}`];
+  if (state.world.optionalProbability !== 0.2) {
+    opts.push(`optionalProbability: ${state.world.optionalProbability}`);
+  }
+  if (state.world.defaultArrayLengthMin !== 1 || state.world.defaultArrayLengthMax !== 5) {
+    opts.push(
+      `defaultArrayLength: [${state.world.defaultArrayLengthMin}, ${state.world.defaultArrayLengthMax}]`,
+    );
+  }
 
-	lines.push(`const world = createWorld({ ${opts.join(', ')} })`);
+  lines.push(`const world = createWorld({ ${opts.join(", ")} })`);
 
-	// withSubject
-	for (const subj of state.subjects) {
-		lines.push(`  .withSubject(${subj.name}Subject)`);
-	}
+  // withSubject
+  for (const subj of state.subjects) {
+    lines.push(`  .withSubject(${subj.name}Subject)`);
+  }
 
-	// withSchema
-	for (const schema of state.schemas) {
-		const binding = state.bindings.find((b) => b.schemaId === schema.id);
-		if (!binding) continue;
-		const subj = state.subjects.find((s) => s.id === binding.subjectId);
-		if (!subj) continue;
+  // withSchema
+  for (const schema of state.schemas) {
+    const binding = state.bindings.find((b) => b.schemaId === schema.id);
+    if (!binding) continue;
+    const subj = state.subjects.find((s) => s.id === binding.subjectId);
+    if (!subj) continue;
 
-		const matchers = Object.entries(binding.fieldMap)
-			.map(([schemaKey, subjectKey]) => `    ${schemaKey}: (s) => s.${subjectKey},`)
-			.join('\n');
+    const matchers = Object.entries(binding.fieldMap)
+      .map(([schemaKey, subjectKey]) => `    ${schemaKey}: (s) => s.${subjectKey},`)
+      .join("\n");
 
-		if (matchers) {
-			lines.push(
-				`  .withSchema(${schema.name}Schema, ${subj.name}Subject, {\n${matchers}\n  })`,
-			);
-		} else {
-			lines.push(`  .withSchema(${schema.name}Schema, ${subj.name}Subject)`);
-		}
-	}
+    if (matchers) {
+      lines.push(`  .withSchema(${schema.name}Schema, ${subj.name}Subject, {\n${matchers}\n  })`);
+    } else {
+      lines.push(`  .withSchema(${schema.name}Schema, ${subj.name}Subject)`);
+    }
+  }
 
-	// populate
-	for (const subj of state.subjects) {
-		if (subj.count > 0) {
-			lines.push(`  .populate(${subj.name}Subject, ${subj.count})`);
-		}
-	}
+  // populate
+  for (const subj of state.subjects) {
+    if (subj.count > 0) {
+      lines.push(`  .populate(${subj.name}Subject, ${subj.count})`);
+    }
+  }
 
-	return lines.join('\n') + ';';
+  return lines.join("\n") + ";";
 }
 
 // ─── Full export file ─────────────────────────────────────────────────────────
 
 export function generateFullExport(state: PlaygroundState): string {
-	const parts: string[] = [];
+  const parts: string[] = [];
 
-	// Imports
-	parts.push(`import { z } from "zod";`);
-	parts.push(`import { createWorld, defineSubjectType } from "zod4-mock";\n`);
+  // Imports
+  parts.push(`import { z } from "zod";`);
+  parts.push(`import { createWorld, defineSubjectType } from "zod4-mock";\n`);
 
-	// Subject schemas
-	if (state.subjects.length > 0) {
-		parts.push(`// ── Subjects ─────────────────────────────────────────────────────────────`);
-		for (const subj of state.subjects) {
-			parts.push(generateSubjectCode(subj));
-		}
-		parts.push('');
-	}
+  // Subject schemas
+  if (state.subjects.length > 0) {
+    parts.push(`// ── Subjects ─────────────────────────────────────────────────────────────`);
+    for (const subj of state.subjects) {
+      parts.push(generateSubjectCode(subj));
+    }
+    parts.push("");
+  }
 
-	// API Schemas
-	if (state.schemas.length > 0) {
-		parts.push(`// ── Schemas ──────────────────────────────────────────────────────────────`);
-		for (const schema of state.schemas) {
-			parts.push(generateSchemaCode(schema));
-		}
-		parts.push('');
-	}
+  // API Schemas
+  if (state.schemas.length > 0) {
+    parts.push(`// ── Schemas ──────────────────────────────────────────────────────────────`);
+    for (const schema of state.schemas) {
+      parts.push(generateSchemaCode(schema));
+    }
+    parts.push("");
+  }
 
-	// World
-	parts.push(`// ── World ────────────────────────────────────────────────────────────────`);
-	parts.push(generateWorldCode(state));
-	parts.push('');
+  // World
+  parts.push(`// ── World ────────────────────────────────────────────────────────────────`);
+  parts.push(generateWorldCode(state));
+  parts.push("");
 
-	// Generation calls
-	parts.push(`// ── Generate ─────────────────────────────────────────────────────────────`);
-	for (const schema of state.schemas) {
-		parts.push(`const ${lcFirst(schema.name)} = world.generate(z.array(${schema.name}Schema));`);
-	}
-	for (const subj of state.subjects) {
-		parts.push(`const ${lcFirst(subj.name)}s = world.generate(z.array(z.object({})));`);
-	}
+  // Generation calls
+  parts.push(`// ── Generate ─────────────────────────────────────────────────────────────`);
+  for (const schema of state.schemas) {
+    parts.push(`const ${lcFirst(schema.name)} = world.generate(z.array(${schema.name}Schema));`);
+  }
+  for (const subj of state.subjects) {
+    parts.push(`const ${lcFirst(subj.name)}s = world.generate(z.array(z.object({})));`);
+  }
 
-	return parts.join('\n');
+  return parts.join("\n");
 }
 
 // ─── Tokenized code (for CodeView syntax highlighting) ───────────────────────
 
 export function generateTokenizedCode(subject: SubjectDef): CodeLine[] {
-	const lines: CodeLine[] = [];
-	let lineNum = 1;
+  const lines: CodeLine[] = [];
+  let lineNum = 1;
 
-	function pushLine(tokens: CodeToken[], fieldId?: string) {
-		lines.push({ lineNumber: lineNum++, tokens, fieldId });
-	}
+  function pushLine(tokens: CodeToken[], fieldId?: string) {
+    lines.push({ lineNumber: lineNum++, tokens, fieldId });
+  }
 
-	// const UserSubject = defineSubjectType("User", z.object({
-	pushLine([
-		kw('const '), pl(`${subject.name}Subject`), pt(' = '),
-		fn('defineSubjectType'), pt('('), pt('"'), str(subject.name), pt('"'), pt(', '),
-		ty('z'), pt('.'), fn('object'), pt('({'),
-	]);
+  // const UserSubject = defineSubjectType("User", z.object({
+  pushLine([
+    kw("const "),
+    pl(`${subject.name}Subject`),
+    pt(" = "),
+    fn("defineSubjectType"),
+    pt("("),
+    pt('"'),
+    str(subject.name),
+    pt('"'),
+    pt(", "),
+    ty("z"),
+    pt("."),
+    fn("object"),
+    pt("({"),
+  ]);
 
-	for (const field of subject.fields) {
-		const zodExpr = fieldToZodExpr(field, 1);
-		const zodTokens = tokenizeZodExpr(zodExpr);
-		pushLine([pl(`  ${field.key || '_'}`), pt(': '), ...zodTokens, pt(',')], field.id);
-	}
+  for (const field of subject.fields) {
+    const zodExpr = fieldToZodExpr(field, 1);
+    const zodTokens = tokenizeZodExpr(zodExpr);
+    pushLine([pl(`  ${field.key || "_"}`), pt(": "), ...zodTokens, pt(",")], field.id);
+  }
 
-	// }));
-	pushLine([pt('}));')]);
+  // }));
+  pushLine([pt("}));")]);
 
-	return lines;
+  return lines;
 }
 
 /** Tokenize a JSON string with field correlation */
 export function generateTokenizedData(data: unknown, fields: FieldDef[]): CodeLine[] {
-	const lines: CodeLine[] = [];
-	let lineNum = 1;
+  const lines: CodeLine[] = [];
+  // Pretty print the JSON and then use regex to find keys and match them to fields
+  const json = JSON.stringify(data, null, 2);
+  const jsonLines = json.split("\n");
 
-	function pushLine(tokens: CodeToken[], fieldId?: string) {
-		lines.push({ lineNumber: lineNum++, tokens, fieldId });
-	}
+  jsonLines.forEach((line, i) => {
+    const tokens: CodeToken[] = [];
+    let fieldId: string | undefined;
 
-	function walk(val: any, currentFields: FieldDef[], indent: number) {
-		const pad = '  '.repeat(indent);
+    // Regex to find "key":
+    const keyMatch = line.match(/^\s*"([^"]+)"\s*:/);
+    if (keyMatch) {
+      const key = keyMatch[1];
+      // Find field ID by key name (this is a heuristic, might be ambiguous for nested)
+      // A better way would be to track paths
+      fieldId = findFieldIdByKey(fields, key);
+    }
 
-		if (Array.isArray(val)) {
-			pushLine([pt('[')]);
-			val.forEach((item, i) => {
-				walk(item, currentFields, indent + 1);
-				if (i < val.length - 1) {
-					// Add comma to the last line of the item
-					const lastLine = lines[lines.length - 1];
-					lastLine.tokens.push(pt(','));
-				}
-			});
-			pushLine([pl(pad), pt(']')]);
-		} else if (val !== null && typeof val === 'object') {
-			pushLine([pt('{')]);
-			const keys = Object.keys(val);
-			keys.forEach((key, i) => {
-				const field = currentFields.find(f => f.key === key);
-				const fieldId = field?.id;
-				
-				const valueTokens = tokenizeJsonValue(val[key]);
-				pushLine([
-					pl(`${pad}  `), str(`"${key}"`), pt(': '), ...valueTokens,
-					...(i < keys.length - 1 ? [pt(',')] : [])
-				], fieldId);
+    // Basic JSON line tokenizer
+    const parts = line.split(/(".*?"|[:,{}[\]]|\s+)/g).filter(Boolean);
+    for (const p of parts) {
+      if (p.startsWith('"')) tokens.push(str(p));
+      else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
+      else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
+      else if (/^[:,{}[\]]$/.test(p.trim())) tokens.push(pt(p));
+      else tokens.push(pl(p));
+    }
 
-				// If it's an object/array, we might want to walk deeper, 
-				// but for now we keep it simple since JSON.stringify is flat-ish in terms of lines
-				// Actually, we should probably just use a real JSON tokenizer on a pretty-printed string
-			});
-			pushLine([pl(pad), pt('}')]);
-		} else {
-			pushLine([pl(pad), ...tokenizeJsonValue(val)]);
-		}
-	}
+    lines.push({ lineNumber: i + 1, tokens, fieldId });
+  });
 
-	// For now, let's use a simpler approach: 
-	// Pretty print the JSON and then use regex to find keys and match them to fields
-	const json = JSON.stringify(data, null, 2);
-	const jsonLines = json.split('\n');
-	
-	jsonLines.forEach((line, i) => {
-		const tokens: CodeToken[] = [];
-		let fieldId: string | undefined;
-
-		// Regex to find "key": 
-		const keyMatch = line.match(/^\s*"([^"]+)"\s*:/);
-		if (keyMatch) {
-			const key = keyMatch[1];
-			// Find field ID by key name (this is a heuristic, might be ambiguous for nested)
-			// A better way would be to track paths
-			fieldId = findFieldIdByKey(fields, key);
-		}
-
-		// Basic JSON line tokenizer
-		const parts = line.split(/(".*?"|[:,\{\}\[\]]|\s+)/g).filter(Boolean);
-		for (const p of parts) {
-			if (p.startsWith('"')) tokens.push(str(p));
-			else if (/^[\d\.]+$/.test(p.trim())) tokens.push(num(p));
-			else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
-			else if (/^[:,\{\}\[\]]$/.test(p.trim())) tokens.push(pt(p));
-			else tokens.push(pl(p));
-		}
-
-		lines.push({ lineNumber: i + 1, tokens, fieldId });
-	});
-
-	return lines;
-}
-
-function tokenizeJsonValue(val: any): CodeToken[] {
-	if (typeof val === 'string') return [str(`"${val}"`)];
-	if (typeof val === 'number') return [num(String(val))];
-	if (typeof val === 'boolean') return [kw(String(val))];
-	if (val === null) return [kw('null')];
-	if (Array.isArray(val)) return [pt('[...]')];
-	return [pt('{...}')];
+  return lines;
 }
 
 function findFieldIdByKey(fields: FieldDef[], key: string): string | undefined {
-	for (const f of fields) {
-		if (f.key === key) return f.id;
-		if (f.children) {
-			const found = findFieldIdByKey(f.children, key);
-			if (found) return found;
-		}
-	}
-	return undefined;
+  for (const f of fields) {
+    if (f.key === key) return f.id;
+    if (f.children) {
+      const found = findFieldIdByKey(f.children, key);
+      if (found) return found;
+    }
+  }
+  return undefined;
 }
 
 /** Lightweight tokenizer for Zod expression chains (e.g. "z.string().min(5)") */
 function tokenizeZodExpr(expr: string): CodeToken[] {
-	const tokens: CodeToken[] = [];
-	
-	// Split by boundary points but keep them
-	// We look for: . ( ) "..." 0-9
-	const parts = expr.split(/(\.|\(|\)|"|'|,|\[|\])/g).filter(Boolean);
-	
-	let inString = false;
-	
-	for (const p of parts) {
-		if (p === '"' || p === "'") {
-			inString = !inString;
-			tokens.push(pt(p));
-			continue;
-		}
+  const tokens: CodeToken[] = [];
 
-		if (inString) {
-			tokens.push(str(p));
-			continue;
-		}
+  // Split by boundary points but keep them
+  // We look for: . ( ) "..." 0-9
+  const parts = expr.split(/(\.|\(|\)|"|'|,|\[|\])/g).filter(Boolean);
 
-		if (p === 'z') {
-			tokens.push(ty(p));
-		} else if (p === '.' || p === '(' || p === ')' || p === ',' || p === '[' || p === ']') {
-			tokens.push(pt(p));
-		} else if (/^\d+$/.test(p)) {
-			tokens.push(num(p));
-		} else if (/^[a-zA-Z]+$/.test(p)) {
-			// If it's followed by ( in the original string, it's a function
-			// But since we split, we just assume words in Zod chain are functions
-			tokens.push(fn(p));
-		} else {
-			tokens.push(pl(p));
-		}
-	}
+  let inString = false;
 
-	return tokens;
+  for (const p of parts) {
+    if (p === '"' || p === "'") {
+      inString = !inString;
+      tokens.push(pt(p));
+      continue;
+    }
+
+    if (inString) {
+      tokens.push(str(p));
+      continue;
+    }
+
+    if (p === "z") {
+      tokens.push(ty(p));
+    } else if (p === "." || p === "(" || p === ")" || p === "," || p === "[" || p === "]") {
+      tokens.push(pt(p));
+    } else if (/^\d+$/.test(p)) {
+      tokens.push(num(p));
+    } else if (/^[a-zA-Z]+$/.test(p)) {
+      // If it's followed by ( in the original string, it's a function
+      // But since we split, we just assume words in Zod chain are functions
+      tokens.push(fn(p));
+    } else {
+      tokens.push(pl(p));
+    }
+  }
+
+  return tokens;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function lcFirst(s: string): string {
-	return s.charAt(0).toLowerCase() + s.slice(1);
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 /** Count total lines in the full export */
 export function exportLineCount(state: PlaygroundState): number {
-	return generateFullExport(state).split('\n').length;
+  return generateFullExport(state).split("\n").length;
 }

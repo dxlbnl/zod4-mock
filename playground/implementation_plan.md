@@ -6,12 +6,12 @@ Component-first, bottom-up: each phase builds one composite component with stori
 
 ## Resolved Questions
 
-| Question | Decision |
-|---|---|
-| Schemas section | First-class — schemas are plain schemas built with the builder. Link to subjects with simple property matching. |
-| Relationship editing | Dropdown selects for `from`/`to`/`cardinality` |
-| Auto-run vs manual | Always auto-run (remove toggle entirely) |
-| Enum values | Modifier pills, consistent with all other modifiers |
+| Question             | Decision                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Schemas section      | First-class — schemas are plain schemas built with the builder. Link to subjects with simple property matching. |
+| Relationship editing | Dropdown selects for `from`/`to`/`cardinality`                                                                  |
+| Auto-run vs manual   | Always auto-run (remove toggle entirely)                                                                        |
+| Enum values          | Modifier pills, consistent with all other modifiers                                                             |
 
 ---
 
@@ -21,13 +21,13 @@ Component-first, bottom-up: each phase builds one composite component with stori
 
 Both are built with the same builder UI — the difference is their role:
 
-| | Subject | Schema |
-|---|---|---|
-| Library API | `defineSubjectType(name, z.object({...}))` | Plain `z.object({...})` passed to `withSchema()` |
-| Purpose | Identity anchor — stable data to derive from | API shape — what your endpoint returns |
-| Fields | Always fully populated (optionalProbability = 0) | Can have optional/nullable fields |
-| Binding | Registered via `world.withSubject()` | Bound to a subject via `world.withSchema(schema, subject, matchers)` |
-| Matching | N/A | Each schema field can map to a subject field (simple `(s) => s.fieldName` matcher) |
+|             | Subject                                          | Schema                                                                             |
+| ----------- | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Library API | `defineSubjectType(name, z.object({...}))`       | Plain `z.object({...})` passed to `withSchema()`                                   |
+| Purpose     | Identity anchor — stable data to derive from     | API shape — what your endpoint returns                                             |
+| Fields      | Always fully populated (optionalProbability = 0) | Can have optional/nullable fields                                                  |
+| Binding     | Registered via `world.withSubject()`             | Bound to a subject via `world.withSchema(schema, subject, matchers)`               |
+| Matching    | N/A                                              | Each schema field can map to a subject field (simple `(s) => s.fieldName` matcher) |
 
 ### How simple property matching works
 
@@ -39,7 +39,7 @@ For each entry in `SchemaBinding.fieldMap`, the codegen produces a matcher:
 world.withSchema(UserApiSchema, UserSubject, {
   userId: (s) => s.id,
   email: (s) => s.email,
-})
+});
 ```
 
 Fields **not** in the `fieldMap` fall through to key heuristics → schema-based generation.
@@ -57,12 +57,12 @@ interface PlaygroundState {
   activeSubjectId: string | null;
   schemas: SchemaDef[];
   activeSchemaId: string | null;
-  activeEntityType: 'subject' | 'schema';
+  activeEntityType: "subject" | "schema";
   relationships: RelationshipDef[];
   bindings: SchemaBinding[];
   ui: {
     exportOpen: boolean;
-    outputTab: 'code' | 'data';
+    outputTab: "code" | "data";
     sectionStates: Record<string, boolean>;
   };
 }
@@ -82,7 +82,7 @@ interface SchemaDef {
 
 interface FieldDef {
   id: string;
-  kind: 'field' | 'group';
+  kind: "field" | "group";
   key: string;
   type: ZodFieldType;
   modifiers: ModifierDef[];
@@ -100,7 +100,7 @@ interface RelationshipDef {
   id: string;
   from: string;
   to: string;
-  cardinality: '1' | '0..1' | '0..n' | '1..n';
+  cardinality: "1" | "0..1" | "0..n" | "1..n";
 }
 
 interface SchemaBinding {
@@ -123,12 +123,14 @@ Pure TypeScript modules — unit-testable with vitest.
 #### [NEW] `src/lib/state.svelte.ts`
 
 Central `$state` runes store. Exports `createPlaygroundState(initialData?)`:
+
 - Mutation functions: `addSubject`, `removeSubject`, `addField`, `updateField`, `addModifier`, etc.
 - Default scenario matching the hi-fi mockup (User/Order/Product + UserApi schema)
 
 #### [NEW] `src/lib/codegen.ts`
 
 Pure functions:
+
 - `generateSubjectCode(subject)` → `defineSubjectType("User", z.object({...}))`
 - `generateSchemaCode(schema)` → `const UserApiSchema = z.object({...})`
 - `generateWorldCode(state)` → `createWorld({...}).withSubject(...).withSchema(...)`
@@ -138,6 +140,7 @@ Pure functions:
 #### [NEW] `src/lib/schema-builder.ts`
 
 State → real Zod schemas at runtime for live data generation:
+
 - `buildZodSchema(fields: FieldDef[]): ZodObject`
 - `buildWorld(state: PlaygroundState): World`
 
@@ -170,12 +173,14 @@ Stories: **Default** (User fields), **Empty**, **With Float Menu**, **Nested Obj
 
 **BP-1 · Add a property**
 As a user, I want to click "add property" so that a new empty field row appears.
+
 - [ ] Clicking the dashed button appends a new `PropertyRow`
 - [ ] New row has empty key input, focused automatically, default type `String`
 - [ ] Code output updates to include the new field
 
 **BP-2 · Rename a field key**
 As a user, I want to click a field's key name and type a new name so that the property name updates everywhere.
+
 - [ ] Key input is inline-editable
 - [ ] On blur/Enter, key updates in state
 - [ ] Code and data reflect the new key
@@ -183,6 +188,7 @@ As a user, I want to click a field's key name and type a new name so that the pr
 
 **BP-3 · Change a field's type**
 As a user, I want to click the type chip so that I can pick a different Zod type.
+
 - [ ] Clicking `TypeChip` opens a type picker
 - [ ] Available: String, Number, Boolean, Date, UUID, Email, Enum, Object, Array
 - [ ] Selecting a type clears incompatible modifiers
@@ -191,6 +197,7 @@ As a user, I want to click the type chip so that I can pick a different Zod type
 
 **BP-4 · Select a field row**
 As a user, I want to click a row to select it so that I see context in code/data views.
+
 - [ ] Clicking a row sets `data-selected="true"`
 - [ ] Only one row selected at a time
 - [ ] `+ mod` pill on selected row becomes active
@@ -199,6 +206,7 @@ As a user, I want to click a row to select it so that I see context in code/data
 
 **BP-5 · Add a modifier**
 As a user, I want to click `+ mod` so that a floating menu appears with available modifiers.
+
 - [ ] `+ mod` opens `FloatingMenu` anchored below the pill
 - [ ] Menu shows modifiers for current field type
 - [ ] Scope chip shows Zod base type (e.g. `z.number()`)
@@ -210,12 +218,14 @@ As a user, I want to click `+ mod` so that a floating menu appears with availabl
 
 **BP-6 · Remove a modifier**
 As a user, I want to click × on a modifier pill so that the modifier is removed.
+
 - [ ] × appears on pills when row is selected
 - [ ] Clicking × removes the modifier
 - [ ] Code and data update
 
 **BP-7 · Edit a modifier's value**
 As a user, I want to click a modifier's value so that I can change the constraint inline.
+
 - [ ] Value is editable inline
 - [ ] Enter/blur commits
 - [ ] Invalid values rejected
@@ -223,18 +233,21 @@ As a user, I want to click a modifier's value so that I can change the constrain
 
 **BP-8 · Reorder fields (stretch)**
 As a user, I want to drag a row by its grip handle so that I can reorder properties.
+
 - [ ] Grip appears on hover
 - [ ] Dragging moves the row
 - [ ] Nested fields move with parent
 
 **BP-9 · Remove a field**
 As a user, I want to delete a selected field so that it's removed from the schema.
+
 - [ ] Selected row shows delete affordance
 - [ ] Removing a group removes all children
 - [ ] Code and data update
 
 **BP-10 · Nested object fields**
 As a user, I want to add a field with type Object so that I can define nested properties.
+
 - [ ] Type Object converts row into `GroupHeader`
 - [ ] Indented "add property" button appears below group
 - [ ] Child fields are indented one level
@@ -259,6 +272,7 @@ Stories: **Default** (User schema), **Active Line**, **Empty**
 
 **CV-1 · See generated code in real time**
 As a user, I want to see TypeScript code update as I edit so that I understand what my schema produces.
+
 - [ ] Code renders with syntax highlighting (`--syn-keyword`, `--syn-string`, etc.)
 - [ ] Line numbers in gutter column
 - [ ] Updates reactively when fields/modifiers change
@@ -266,6 +280,7 @@ As a user, I want to see TypeScript code update as I edit so that I understand w
 
 **CV-2 · Active line follows selection**
 As a user, I want the code line for my selected field highlighted so I can correlate fields to code.
+
 - [ ] Selected row → corresponding code line gets active background
 - [ ] Code view auto-scrolls to keep active line visible
 - [ ] Deselecting removes highlight
@@ -288,6 +303,7 @@ Stories: **Default** (3 user records), **Single Record**, **Empty**, **Highlight
 
 **DV-1 · Preview generated mock data**
 As a user, I want to see real mock data so that I can verify the output.
+
 - [ ] Data rendered as syntax-highlighted JSON
 - [ ] Keys colored distinctly from values
 - [ ] Data generated by calling `createWorld()` + `world.generate()` in browser
@@ -296,11 +312,13 @@ As a user, I want to see real mock data so that I can verify the output.
 
 **DV-2 · Field highlight follows selection**
 As a user, I want my selected field highlighted in the data so I see what values it produces.
+
 - [ ] Matching key in each record gets highlighted background
 - [ ] Nested fields highlight correctly (e.g. `address.street`)
 
 **DV-3 · Relation annotations**
 As a user, I want inline comments on relation fields so I understand cross-subject references.
+
 - [ ] Array fields show count annotation (e.g. `// → 3 Order rows`)
 - [ ] Empty relations show `// ∅`
 
@@ -322,16 +340,19 @@ Stories: **Code Tab**, **Data Tab**, **With Actions**
 
 **OP-1 · Switch between code and data tabs**
 As a user, I want to click Code or Data tabs to alternate views.
+
 - [ ] Code tab shows `CodeView`, Data tab shows `DataView`
 - [ ] Active tab has accent underline + dot indicator
 - [ ] Tab metadata shows filename / record count
 
 **OP-2 · Copy output to clipboard**
 As a user, I want to click copy so the current output is on my clipboard.
+
 - [ ] Copy copies active tab's raw content (no line numbers for code)
 
 **OP-3 · Download output as file**
 As a user, I want to click download so I get a file.
+
 - [ ] Code tab → `{name}.schema.ts`
 - [ ] Data tab → `{name}.data.json`
 
@@ -363,6 +384,7 @@ Add World content, Relationships sub-section, Schemas section.
 
 **LR-1 · Configure seed**
 As a user, I want to change the seed so I get a different dataset.
+
 - [ ] Expanding World accordion reveals seed input
 - [ ] Changing seed regenerates all data
 - [ ] StatusBar shows new seed
@@ -370,12 +392,14 @@ As a user, I want to change the seed so I get a different dataset.
 
 **LR-2 · Configure optional probability**
 As a user, I want to adjust optional probability to control field omission.
+
 - [ ] Number input, range 0–1
 - [ ] 0 → always present; 1 → always omitted
 - [ ] Export includes `optionalProbability` when non-default
 
 **LR-3 · Configure default array length**
 As a user, I want to set array length range for unconstrained arrays.
+
 - [ ] Two number inputs (min, max), clamped
 - [ ] Export includes `defaultArrayLength` when non-default
 
@@ -383,6 +407,7 @@ As a user, I want to set array length range for unconstrained arrays.
 
 **LR-4 · Select a subject**
 As a user, I want to click a subject so the builder loads its fields.
+
 - [ ] Click highlights with `aria-selected="true"`
 - [ ] Builder title updates to "Builder · {Name}"
 - [ ] Builder rows switch to subject's fields
@@ -390,24 +415,28 @@ As a user, I want to click a subject so the builder loads its fields.
 
 **LR-5 · Add a subject**
 As a user, I want to click "add subject" to define a new entity.
+
 - [ ] Appends subject with default name, immediately editable
 - [ ] Starts with zero fields, auto-selected
 - [ ] Accordion header count increments
 
 **LR-6 · Rename a subject**
 As a user, I want to rename a subject inline.
+
 - [ ] Name becomes text input on interaction
 - [ ] Enter/blur commits
 - [ ] Builder title, code output, and relationships update
 
 **LR-7 · Change population count**
 As a user, I want to edit the count badge to control instance count.
+
 - [ ] Count badge is editable
 - [ ] Changes `world.populate()` in generated code
 - [ ] Data output shows new record count
 
 **LR-8 · Remove a subject**
 As a user, I want to remove a subject I don't need.
+
 - [ ] Delete affordance exists
 - [ ] Removes relationships and schema bindings
 - [ ] Next subject selected (or empty state)
@@ -416,6 +445,7 @@ As a user, I want to remove a subject I don't need.
 
 **LR-9 · Add a relationship**
 As a user, I want to click + next to "Relationships" to declare a relation.
+
 - [ ] New row with three dropdowns: from, cardinality, to
 - [ ] Dropdowns populated from current subjects
 - [ ] Header count updates
@@ -423,11 +453,13 @@ As a user, I want to click + next to "Relationships" to declare a relation.
 
 **LR-10 · Edit a relationship**
 As a user, I want to change a relationship's endpoints or cardinality.
+
 - [ ] Changing any dropdown updates immediately
 - [ ] Code and data reflect changes
 
 **LR-11 · Remove a relationship**
 As a user, I want to remove a relationship.
+
 - [ ] × button removes it
 - [ ] Code no longer includes the relation
 
@@ -435,12 +467,14 @@ As a user, I want to remove a relationship.
 
 **LR-12 · Add a schema**
 As a user, I want to add a new API schema to define a response shape.
+
 - [ ] "add schema" appends with default name, editable
 - [ ] Selecting switches builder to schema's fields
 - [ ] Builder title changes context
 
 **LR-13 · Bind a schema to a subject**
 As a user, I want to link my schema to a subject for identity derivation.
+
 - [ ] Badge/dropdown for binding
 - [ ] Selecting creates `SchemaBinding`
 - [ ] Badge shows bound subject (e.g. `→ User`)
@@ -448,6 +482,7 @@ As a user, I want to link my schema to a subject for identity derivation.
 
 **LR-14 · Map schema fields to subject fields**
 As a user, I want to map a schema field to a subject field for property matching.
+
 - [ ] Bound schema fields show a link indicator
 - [ ] Click opens dropdown with subject's field names
 - [ ] Selecting creates a match entry
@@ -477,29 +512,34 @@ Full app layout. Initializes state, passes slices to components, auto-run via `$
 
 **EX-1 · Open export sheet**
 As a user, I want to click "Export all" so I see a full code preview.
+
 - [ ] ExportSheet opens with backdrop blur + scale/fade animation
 - [ ] Header shows file info (e.g. `single file · world.ts · 194 lines`)
 - [ ] Escape or backdrop click closes
 
 **EX-2 · Preview full export**
 As a user, I want to see the complete `world.ts` in the preview.
+
 - [ ] Syntax-highlighted TypeScript
 - [ ] Includes imports, subjects, schemas, world setup, generation calls
 - [ ] TOC sidebar lists all subjects and schemas
 
 **EX-3 · Toggle inclusions**
 As a user, I want to toggle schemas/world on/off to export just what I need.
+
 - [ ] Toggling Schemas off removes definitions from preview
 - [ ] Toggling Generated world off removes `createWorld()` calls
 - [ ] Line count and TOC update
 
 **EX-4 · Copy export**
 As a user, I want to click Copy so the full code is on my clipboard.
+
 - [ ] Copies full file as plain text
 - [ ] Brief "Copied!" confirmation
 
 **EX-5 · Download export**
 As a user, I want to click Download so I get `world.ts` on disk.
+
 - [ ] Browser download triggers
 - [ ] File named `world.ts`, content matches preview
 
@@ -507,12 +547,14 @@ As a user, I want to click Download so I get `world.ts` on disk.
 
 **SB-1 · Validation status**
 As a user, I want to see whether my schema is valid at a glance.
+
 - [ ] `● valid` (green) when schemas build successfully
 - [ ] `● error` (amber) when building/generation fails
 - [ ] Hover shows error message
 
 **SB-2 · World summary metrics**
 As a user, I want quick overview counts in the status bar.
+
 - [ ] Shows: `N subjects │ N schemas │ N relationships │ seed N`
 - [ ] All values reactive
 - [ ] Right side shows `z@4.x`
@@ -521,6 +563,7 @@ As a user, I want quick overview counts in the status bar.
 
 **TB-1 · Toggle theme**
 As a user, I want to switch between dark and light mode.
+
 - [ ] Click toggles `html.light` class
 - [ ] All components update to light tokens
 - [ ] Preference persists (localStorage)
@@ -531,30 +574,30 @@ As a user, I want to switch between dark and light mode.
 
 ### New Files (16)
 
-| File | Phase |
-|---|---|
-| `src/lib/state.svelte.ts` | 0 |
-| `src/lib/codegen.ts` | 0 |
-| `src/lib/schema-builder.ts` | 0 |
-| `src/lib/field-types.ts` | 0 |
-| `src/lib/components/App/BuilderPane.svelte` + `.stories.svelte` | 1 |
-| `src/lib/components/App/CodeView.svelte` + `.stories.svelte` | 2 |
-| `src/lib/components/App/DataView.svelte` + `.stories.svelte` | 3 |
-| `src/lib/components/App/OutputPane.svelte` + `.stories.svelte` | 4 |
-| `src/lib/components/App/WorldConfig.svelte` | 5 |
-| `src/lib/components/App/RelationshipRow.svelte` | 5 |
-| `src/lib/components/App/SchemaItem.svelte` | 5 |
-| `src/lib/components/App/ExportContent.svelte` | 6 |
+| File                                                            | Phase |
+| --------------------------------------------------------------- | ----- |
+| `src/lib/state.svelte.ts`                                       | 0     |
+| `src/lib/codegen.ts`                                            | 0     |
+| `src/lib/schema-builder.ts`                                     | 0     |
+| `src/lib/field-types.ts`                                        | 0     |
+| `src/lib/components/App/BuilderPane.svelte` + `.stories.svelte` | 1     |
+| `src/lib/components/App/CodeView.svelte` + `.stories.svelte`    | 2     |
+| `src/lib/components/App/DataView.svelte` + `.stories.svelte`    | 3     |
+| `src/lib/components/App/OutputPane.svelte` + `.stories.svelte`  | 4     |
+| `src/lib/components/App/WorldConfig.svelte`                     | 5     |
+| `src/lib/components/App/RelationshipRow.svelte`                 | 5     |
+| `src/lib/components/App/SchemaItem.svelte`                      | 5     |
+| `src/lib/components/App/ExportContent.svelte`                   | 6     |
 
 ### Modified Files (5)
 
-| File | Phase |
-|---|---|
-| `src/routes/+page.svelte` | 6 |
-| `src/routes/+layout.svelte` | 6 |
-| `src/lib/components/Surfaces/TopBar.svelte` | 6 |
-| `src/lib/components/Surfaces/LeftRail.svelte` | 5 |
-| `src/lib/components/Surfaces/ExportSheet.svelte` | 6 |
+| File                                             | Phase |
+| ------------------------------------------------ | ----- |
+| `src/routes/+page.svelte`                        | 6     |
+| `src/routes/+layout.svelte`                      | 6     |
+| `src/lib/components/Surfaces/TopBar.svelte`      | 6     |
+| `src/lib/components/Surfaces/LeftRail.svelte`    | 5     |
+| `src/lib/components/Surfaces/ExportSheet.svelte` | 6     |
 
 ---
 
@@ -562,10 +605,10 @@ As a user, I want to switch between dark and light mode.
 
 Two vitest projects, configured in `vite.config.ts`:
 
-| Project | Runner | Scope | Files |
-|---|---|---|---|
-| `unit` | Node (no browser) | Pure TS: codegen, schema-builder, state | `src/lib/**/*.test.ts` |
-| `storybook` | Chromium (Playwright) | Component interactions via stories | `*.stories.svelte` |
+| Project     | Runner                | Scope                                   | Files                  |
+| ----------- | --------------------- | --------------------------------------- | ---------------------- |
+| `unit`      | Node (no browser)     | Pure TS: codegen, schema-builder, state | `src/lib/**/*.test.ts` |
+| `storybook` | Chromium (Playwright) | Component interactions via stories      | `*.stories.svelte`     |
 
 ```bash
 # Phase 0 — pure logic

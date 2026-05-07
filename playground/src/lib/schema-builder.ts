@@ -4,187 +4,204 @@
  * Used for the DataView live preview.
  */
 
-import { z, type ZodTypeAny } from 'zod';
-import { createWorld } from 'zod4-mock';
-import type { FieldDef, ModifierDef, PlaygroundState, SubjectDef } from './state.svelte';
+import { z, type ZodTypeAny } from "zod";
+import type { FieldDef, ModifierDef, PlaygroundState } from "./state.svelte";
+import { defineSubjectType, createWorld as _createWorld } from "zod4-mock";
 
 // ─── Field → Zod schema ───────────────────────────────────────────────────────
 
 function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAny {
-	let s = schema;
-	for (const mod of modifiers) {
-		const val = mod.value;
-		const name = mod.name.replace(/\(\)$/, ''); // strip trailing ()
-		try {
-			switch (name) {
-				case '.min':
-					if ('min' in s && typeof (s as any).min === 'function') s = (s as any).min(Number(val));
-					break;
-				case '.max':
-					if ('max' in s && typeof (s as any).max === 'function') s = (s as any).max(Number(val));
-					break;
-				case '.length':
-					if ('length' in s && typeof (s as any).length === 'function') s = (s as any).length(Number(val));
-					break;
-				case '.int':
-					if ('int' in s && typeof (s as any).int === 'function') s = (s as any).int();
-					break;
-				case '.multipleOf':
-					if ('multipleOf' in s && typeof (s as any).multipleOf === 'function') s = (s as any).multipleOf(Number(val));
-					break;
-				case '.optional':
-					s = s.optional();
-					break;
-				case '.nullable':
-					s = s.nullable();
-					break;
-				case '.default':
-					s = s.default(val ?? '');
-					break;
-				case '.toLowerCase':
-					if ('toLowerCase' in s && typeof (s as any).toLowerCase === 'function') s = (s as any).toLowerCase();
-					break;
-				case '.toUpperCase':
-					if ('toUpperCase' in s && typeof (s as any).toUpperCase === 'function') s = (s as any).toUpperCase();
-					break;
-				case '.trim':
-					if ('trim' in s && typeof (s as any).trim === 'function') s = (s as any).trim();
-					break;
-				case '.startsWith':
-					if ('startsWith' in s && typeof (s as any).startsWith === 'function') s = (s as any).startsWith(String(val ?? ''));
-					break;
-				case '.endsWith':
-					if ('endsWith' in s && typeof (s as any).endsWith === 'function') s = (s as any).endsWith(String(val ?? ''));
-					break;
-			}
-		} catch {
-			// Silently skip invalid modifier application
-		}
-	}
-	return s;
+  let s = schema;
+  for (const mod of modifiers) {
+    const val = mod.value;
+    const name = mod.name.replace(/\(\)$/, ""); // strip trailing ()
+    try {
+      switch (name) {
+        case ".min":
+          if ("min" in s && typeof (s as any).min === "function") s = (s as any).min(Number(val));
+          break;
+        case ".max":
+          if ("max" in s && typeof (s as any).max === "function") s = (s as any).max(Number(val));
+          break;
+        case ".length":
+          if ("length" in s && typeof (s as any).length === "function")
+            s = (s as any).length(Number(val));
+          break;
+        case ".int":
+          if ("int" in s && typeof (s as any).int === "function") s = (s as any).int();
+          break;
+        case ".multipleOf":
+          if ("multipleOf" in s && typeof (s as any).multipleOf === "function")
+            s = (s as any).multipleOf(Number(val));
+          break;
+        case ".optional":
+          s = s.optional();
+          break;
+        case ".nullable":
+          s = s.nullable();
+          break;
+        case ".default":
+          s = s.default(val ?? "");
+          break;
+        case ".toLowerCase":
+          if ("toLowerCase" in s && typeof (s as any).toLowerCase === "function")
+            s = (s as any).toLowerCase();
+          break;
+        case ".toUpperCase":
+          if ("toUpperCase" in s && typeof (s as any).toUpperCase === "function")
+            s = (s as any).toUpperCase();
+          break;
+        case ".trim":
+          if ("trim" in s && typeof (s as any).trim === "function") s = (s as any).trim();
+          break;
+        case ".startsWith":
+          if ("startsWith" in s && typeof (s as any).startsWith === "function")
+            s = (s as any).startsWith(String(val ?? ""));
+          break;
+        case ".endsWith":
+          if ("endsWith" in s && typeof (s as any).endsWith === "function")
+            s = (s as any).endsWith(String(val ?? ""));
+          break;
+      }
+    } catch {
+      // Silently skip invalid modifier application
+    }
+  }
+  return s;
 }
 
 export function buildZodField(field: FieldDef): ZodTypeAny {
-	let base: ZodTypeAny;
+  let base: ZodTypeAny;
 
-	switch (field.type) {
-		case 'string':  base = z.string(); break;
-		case 'number':  base = z.number(); break;
-		case 'boolean': base = z.boolean(); break;
-		case 'date':    base = z.date(); break;
-		case 'uuid':    base = z.uuid(); break;
-		case 'email':   base = z.email(); break;
-		case 'url':     base = z.url(); break;
-		case 'enum':
-			if (field.enumValues.length === 0) {
-				base = z.string(); // fallback
-			} else {
-				base = z.enum(field.enumValues as [string, ...string[]]);
-			}
-			break;
-		case 'object':
-			if (field.children.length === 0) {
-				base = z.object({});
-			} else {
-				const shape: Record<string, ZodTypeAny> = {};
-				for (const child of field.children) {
-					if (child.key) shape[child.key] = buildZodField(child);
-				}
-				base = z.object(shape);
-			}
-			break;
-		case 'array':
-			base = z.array(z.unknown());
-			break;
-		default:
-			base = z.unknown();
-	}
+  switch (field.type) {
+    case "string":
+      base = z.string();
+      break;
+    case "number":
+      base = z.number();
+      break;
+    case "boolean":
+      base = z.boolean();
+      break;
+    case "date":
+      base = z.date();
+      break;
+    case "uuid":
+      base = z.uuid();
+      break;
+    case "email":
+      base = z.email();
+      break;
+    case "url":
+      base = z.url();
+      break;
+    case "enum":
+      if (field.enumValues.length === 0) {
+        base = z.string(); // fallback
+      } else {
+        base = z.enum(field.enumValues as [string, ...string[]]);
+      }
+      break;
+    case "object":
+      if (field.children.length === 0) {
+        base = z.object({});
+      } else {
+        const shape: Record<string, ZodTypeAny> = {};
+        for (const child of field.children) {
+          if (child.key) shape[child.key] = buildZodField(child);
+        }
+        base = z.object(shape);
+      }
+      break;
+    case "array":
+      base = z.array(z.unknown());
+      break;
+    default:
+      base = z.unknown();
+  }
 
-	return applyModifiers(base, field.modifiers);
+  return applyModifiers(base, field.modifiers);
 }
 
 export function buildZodSchema(fields: FieldDef[]): ReturnType<typeof z.object> {
-	const shape: Record<string, ZodTypeAny> = {};
-	for (const field of fields) {
-		if (!field.key) continue;
-		shape[field.key] = buildZodField(field);
-	}
-	return z.object(shape);
+  const shape: Record<string, ZodTypeAny> = {};
+  for (const field of fields) {
+    if (!field.key) continue;
+    shape[field.key] = buildZodField(field);
+  }
+  return z.object(shape);
 }
 
 // ─── PlaygroundState → World ──────────────────────────────────────────────────
 
-import { defineSubjectType, createWorld as _createWorld } from 'zod4-mock';
-
 export function buildWorld(state: PlaygroundState) {
-	const subjectMap = new Map<string, ReturnType<typeof defineSubjectType>>();
+  const subjectMap = new Map<string, ReturnType<typeof defineSubjectType>>();
 
-	let world = _createWorld({
-		seed: state.world.seed,
-		optionalProbability: state.world.optionalProbability,
-		defaultArrayLength: [state.world.defaultArrayLengthMin, state.world.defaultArrayLengthMax],
-	});
+  let world = _createWorld({
+    seed: state.world.seed,
+    optionalProbability: state.world.optionalProbability,
+    defaultArrayLength: [state.world.defaultArrayLengthMin, state.world.defaultArrayLengthMax],
+  });
 
-	// Register subjects
-	for (const subj of state.subjects) {
-		const schema = buildZodSchema(subj.fields);
-		const subjectType = defineSubjectType(subj.name, schema);
-		subjectMap.set(subj.id, subjectType);
-		world = world.withSubject(subjectType) as typeof world;
-	}
+  // Register subjects
+  for (const subj of state.subjects) {
+    const schema = buildZodSchema(subj.fields);
+    const subjectType = defineSubjectType(subj.name, schema);
+    subjectMap.set(subj.id, subjectType);
+    world = world.withSubject(subjectType) as typeof world;
+  }
 
-	// Register schemas with bindings
-	for (const schemaDef of state.schemas) {
-		const binding = state.bindings.find((b) => b.schemaId === schemaDef.id);
-		if (!binding) continue;
-		const subjectType = subjectMap.get(binding.subjectId);
-		if (!subjectType) continue;
+  // Register schemas with bindings
+  for (const schemaDef of state.schemas) {
+    const binding = state.bindings.find((b) => b.schemaId === schemaDef.id);
+    if (!binding) continue;
+    const subjectType = subjectMap.get(binding.subjectId);
+    if (!subjectType) continue;
 
-		const apiSchema = buildZodSchema(schemaDef.fields);
+    const apiSchema = buildZodSchema(schemaDef.fields);
 
-		// Build matchers from fieldMap
-		const matchers: Record<string, (s: Record<string, unknown>) => unknown> = {};
-		for (const [schemaKey, subjectKey] of Object.entries(binding.fieldMap)) {
-			matchers[schemaKey] = (s) => s[subjectKey];
-		}
+    // Build matchers from fieldMap
+    const matchers: Record<string, (s: Record<string, unknown>) => unknown> = {};
+    for (const [schemaKey, subjectKey] of Object.entries(binding.fieldMap)) {
+      matchers[schemaKey] = (s) => s[subjectKey];
+    }
 
-		world = world.withSchema(apiSchema, subjectType, matchers as any) as typeof world;
-	}
+    world = world.withSchema(apiSchema, subjectType, matchers as any) as typeof world;
+  }
 
-	// Populate subjects
-	for (const subj of state.subjects) {
-		const subjectType = subjectMap.get(subj.id);
-		if (subjectType && subj.count > 0) {
-			world = world.populate(subjectType, subj.count) as typeof world;
-		}
-	}
+  // Populate subjects
+  for (const subj of state.subjects) {
+    const subjectType = subjectMap.get(subj.id);
+    if (subjectType && subj.count > 0) {
+      world = world.populate(subjectType, subj.count) as typeof world;
+    }
+  }
 
-	return { world, subjectMap };
+  return { world, subjectMap };
 }
 
 // ─── Generate preview data for a subject ─────────────────────────────────────
 
 export interface GenerationResult {
-	ok: boolean;
-	data?: unknown[];
-	error?: string;
+  ok: boolean;
+  data?: unknown[];
+  error?: string;
 }
 
 export function generateSubjectData(state: PlaygroundState, subjectId: string): GenerationResult {
-	try {
-		const subj = state.subjects.find((s) => s.id === subjectId);
-		if (!subj) return { ok: false, error: 'Subject not found' };
+  try {
+    const subj = state.subjects.find((s) => s.id === subjectId);
+    if (!subj) return { ok: false, error: "Subject not found" };
 
-		const schema = buildZodSchema(subj.fields);
-		const subjectType = defineSubjectType(subj.name, schema);
-		const world = _createWorld({ seed: state.world.seed })
-			.withSubject(subjectType)
-			.populate(subjectType, subj.count);
+    const schema = buildZodSchema(subj.fields);
+    const subjectType = defineSubjectType(subj.name, schema);
+    const world = _createWorld({ seed: state.world.seed })
+      .withSubject(subjectType)
+      .populate(subjectType, subj.count);
 
-		const data = world.generate(z.array(schema)) as unknown[];
-		return { ok: true, data };
-	} catch (e) {
-		return { ok: false, error: e instanceof Error ? e.message : String(e) };
-	}
+    const data = world.generate(z.array(schema)) as unknown[];
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
-

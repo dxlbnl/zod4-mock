@@ -33,17 +33,11 @@ const config: StorybookConfig = {
           {
             name: "storybook:svelte-dep-scan-resolve",
             resolveId(source: string, importer: string | undefined) {
-              if (
-                !source.endsWith(".svelte") ||
-                !importer ||
-                !source.startsWith(".")
-              ) {
+              if (!source.endsWith(".svelte") || !importer || !source.startsWith(".")) {
                 return;
               }
               if (importer.startsWith(VIRTUAL_MODULE_PREFIX)) {
-                const realPath = importer
-                  .slice(VIRTUAL_MODULE_PREFIX.length)
-                  .replace(/\?.*$/, "");
+                const realPath = importer.slice(VIRTUAL_MODULE_PREFIX.length).replace(/\?.*$/, "");
                 return {
                   id: resolve(dirname(realPath), source),
                   external: true,
