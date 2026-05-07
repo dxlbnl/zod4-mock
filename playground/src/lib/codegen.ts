@@ -16,6 +16,7 @@ export type TokenKind =
   | "number"
   | "comment"
   | "punct"
+  | "property"
   | "plain";
 
 export interface CodeToken {
@@ -298,9 +299,16 @@ export function generateTokenizedData(data: unknown, fields: FieldDef[]): CodeLi
 
     // Basic JSON line tokenizer
     const parts = line.split(/(".*?"|[:,{}[\]]|\s+)/g).filter(Boolean);
+    let hasFoundKey = false;
     for (const p of parts) {
-      if (p.startsWith('"')) tokens.push(str(p));
-      else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
+      if (p.startsWith('"')) {
+        if (!hasFoundKey && line.includes(`${p}:`)) {
+          tokens.push(t("property", p));
+          hasFoundKey = true;
+        } else {
+          tokens.push(str(p));
+        }
+      } else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
       else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
       else if (/^[:,{}[\]]$/.test(p.trim())) tokens.push(pt(p));
       else tokens.push(pl(p));
@@ -374,9 +382,16 @@ export function generateTokenizedWorldData(data: Record<string, unknown[]>): Cod
 
     // Basic JSON line tokenizer (same as generateTokenizedData but no fieldId matching for now)
     const parts = line.split(/(".*?"|[:,{}[\]]|\s+)/g).filter(Boolean);
+    let hasFoundKey = false;
     for (const p of parts) {
-      if (p.startsWith('"')) tokens.push(str(p));
-      else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
+      if (p.startsWith('"')) {
+        if (!hasFoundKey && line.includes(`${p}:`)) {
+          tokens.push(t("property", p));
+          hasFoundKey = true;
+        } else {
+          tokens.push(str(p));
+        }
+      } else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
       else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
       else if (/^[:,{}[\]]$/.test(p.trim())) tokens.push(pt(p));
       else tokens.push(pl(p));

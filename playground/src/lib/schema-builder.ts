@@ -149,6 +149,8 @@ export function buildWorld(state: PlaygroundState) {
     const subjectType = defineSubjectType(subj.name, schema);
     subjectMap.set(subj.id, subjectType);
     world = world.withSubject(subjectType) as typeof world;
+    // Register the subject's own schema so world.generate(z.array(schema)) pulls from the registry
+    world = world.withSchema(schema, subjectType) as typeof world;
   }
 
   // Register schemas with bindings
@@ -193,9 +195,11 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
     const subj = state.subjects.find((s) => s.id === subjectId);
     if (!subj) return { ok: false, error: "Subject not found" };
 
-    const { world } = buildWorld(state);
-    const schema = buildZodSchema(subj.fields);
-    const data = world.generate(z.array(schema)) as unknown[];
+    const { world, subjectMap } = buildWorld(state);
+    const subjectType = subjectMap.get(subj.id);
+    if (!subjectType) return { ok: false, error: "Subject not registered" };
+    
+    const data = world.generate(z.array(subjectType.schema)) as unknown[];
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -204,12 +208,15 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
 
 export function generateWorldData(state: PlaygroundState): GenerationResult {
   try {
-    const { world } = buildWorld(state);
+    const { world, subjectMap } = buildWorld(state);
     const results: Record<string, unknown[]> = {};
 
     for (const subj of state.subjects) {
-      const schema = buildZodSchema(subj.fields);
-      results[subj.name] = world.generate(z.array(schema)) as unknown[];
+      const subjectType = subjectMap.get(subj.id);
+      if (subjectType) {
+        // Use the EXACT schema instance that was registered
+        results[subj.name] = world.generate(z.array(subjectType.schema)) as unknown[];
+      }
     }
 
     return { ok: true, data: results };

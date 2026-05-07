@@ -62,7 +62,7 @@
 		{:else if activeTab === 'data'}
 			<DataView lines={dataLines} {selectedFieldId} title="" />
 		{:else}
-			<WorldView data={{}} lines={worldLines} />
+			<WorldView lines={worldLines} />
 		{/if}
 	</div>
 </div>
