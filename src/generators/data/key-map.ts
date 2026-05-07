@@ -168,7 +168,7 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 // DEFAULT_KEY_PATTERNS
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_KEY_PATTERNS: { string: KeyPattern[]; any: KeyPattern[] } = {
+export const DEFAULT_KEY_PATTERNS: Record<string, KeyPattern[]> = {
   string: [
     {
       test: (k) => k === "id" || k.endsWith("id") || k.endsWith("uuid") || k.endsWith("guid"),
@@ -180,17 +180,33 @@ export const DEFAULT_KEY_PATTERNS: { string: KeyPattern[]; any: KeyPattern[] } =
       generate: data.internet.url as PrngGen,
     },
     { test: (k) => k.endsWith("email"), generate: data.internet.email as PrngGen },
-  ],
-  any: [
     {
-      // Only match 'on' if it's prefixed by something indicating a date (like 'at_on' or 'created_on')
-      // and exclude common non-date 'on' suffixes like 'position'.
+      test: (k) =>
+        k.endsWith("at") ||
+        k.endsWith("date") ||
+        k.startsWith("date") ||
+        (k.endsWith("_on") && k !== "position"),
+      generate: (p) => data.date.anytime(p).toISOString(),
+    },
+  ],
+  date: [
+    {
       test: (k) =>
         k.endsWith("at") ||
         k.endsWith("date") ||
         k.startsWith("date") ||
         (k.endsWith("_on") && k !== "position"),
       generate: data.date.anytime as PrngGen,
+    },
+  ],
+  number: [
+    {
+      test: (k) =>
+        k.endsWith("at") ||
+        k.endsWith("date") ||
+        k.startsWith("date") ||
+        (k.endsWith("_on") && k !== "position"),
+      generate: (p) => data.date.anytime(p).getTime(),
     },
   ],
 };
@@ -209,11 +225,7 @@ export function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorC
   const fn = DEFAULT_KEY_MAP[schemaType]?.[lk];
   if (fn !== undefined) return fn(ctx.prng, ctx);
 
-  for (const p of (DEFAULT_KEY_PATTERNS as Record<string, KeyPattern[]>)[schemaType] ?? []) {
-    if (p.test(lk)) return p.generate(ctx.prng, ctx);
-  }
-
-  for (const p of DEFAULT_KEY_PATTERNS.any) {
+  for (const p of DEFAULT_KEY_PATTERNS[schemaType] ?? []) {
     if (p.test(lk)) return p.generate(ctx.prng, ctx);
   }
 

@@ -754,9 +754,10 @@ describe("DEFAULT_KEY_MAP", () => {
 // ---------------------------------------------------------------------------
 
 describe("DEFAULT_KEY_PATTERNS", () => {
-  it("is exported and has string and any arrays", () => {
+  it("is exported and has string, date and number arrays", () => {
     expect(Array.isArray(DEFAULT_KEY_PATTERNS.string)).toBe(true);
-    expect(Array.isArray(DEFAULT_KEY_PATTERNS.any)).toBe(true);
+    expect(Array.isArray(DEFAULT_KEY_PATTERNS.date)).toBe(true);
+    expect(Array.isArray(DEFAULT_KEY_PATTERNS.number)).toBe(true);
   });
 
   it("string patterns: *id suffix → UUID for string schema", () => {
@@ -774,19 +775,33 @@ describe("DEFAULT_KEY_PATTERNS", () => {
     expect(z.uuid().safeParse(v).success).toBe(true);
   });
 
-  it("any patterns: *at suffix → Date regardless of schema type", () => {
+  it("date patterns: *at suffix → Date for date schema", () => {
     const v = generateFromKey("createdAt", z.date(), makeCtx());
     expect(v).toBeInstanceOf(Date);
   });
 
-  it("any patterns: *date suffix → Date", () => {
-    const v = generateFromKey("invoiceDate", z.date(), makeCtx());
-    expect(v).toBeInstanceOf(Date);
+  it("string patterns: *at suffix → ISO string for string schema", () => {
+    const v = generateFromKey("createdAt", z.string(), makeCtx());
+    expect(typeof v).toBe("string");
+    expect(new Date(v as string).toISOString()).toBe(v);
   });
 
-  it("any patterns: date* prefix → Date", () => {
-    const v = generateFromKey("dateOfBirth", z.date(), makeCtx());
-    expect(v).toBeInstanceOf(Date);
+  it("number patterns: *at suffix → timestamp for number schema", () => {
+    const v = generateFromKey("createdAt", z.number(), makeCtx());
+    expect(typeof v).toBe("number");
+    expect((v as number) > 946684800000).toBe(true); // After 2000-01-01
+  });
+
+  it("patterns: *date suffix → appropriate type", () => {
+    expect(generateFromKey("invoiceDate", z.date(), makeCtx())).toBeInstanceOf(Date);
+    expect(typeof generateFromKey("invoiceDate", z.string(), makeCtx())).toBe("string");
+    expect(typeof generateFromKey("invoiceDate", z.number(), makeCtx())).toBe("number");
+  });
+
+  it("patterns: date* prefix → appropriate type", () => {
+    expect(generateFromKey("dateOfBirth", z.date(), makeCtx())).toBeInstanceOf(Date);
+    expect(typeof generateFromKey("dateOfBirth", z.string(), makeCtx())).toBe("string");
+    expect(typeof generateFromKey("dateOfBirth", z.number(), makeCtx())).toBe("number");
   });
 
   it("string patterns do NOT fire for a number schema (wrong Zod type)", () => {
