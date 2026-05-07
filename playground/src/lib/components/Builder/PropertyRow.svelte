@@ -18,13 +18,16 @@
 		selected?: boolean;
 		warn?: boolean;
 		mods?: Modifier[];
+		enumValues?: string[];
 		
 		onselect?: () => void;
 		onremove?: () => void;
 		onaddprop?: () => void;
 		onupdatekey?: (val: string) => void;
-		onremovemodifier?: (id: string) => void;
+		onupdatemodifier?: (index: number, val: string | number) => void;
+		onremovemodifier?: (index: number) => void;
 		onaddmod?: (e: MouseEvent | FocusEvent) => void;
+		onupdateenumvalues?: (values: string[]) => void;
 		onchangetype?: (e: MouseEvent | FocusEvent) => void;
 		autofocus?: boolean;
 	}
@@ -37,12 +40,15 @@
 		selected = false, 
 		warn = false, 
 		mods = [],
+		enumValues = [],
 		onselect,
 		onremove,
 		onaddprop,
 		onupdatekey,
+		onupdatemodifier,
 		onremovemodifier,
 		onaddmod,
+		onupdateenumvalues,
 		onchangetype,
 		autofocus = false
 	}: Props = $props();
@@ -63,6 +69,22 @@
 			inputEl.focus();
 		}
 	});
+
+	function handleEnumChange(index: number, val: string) {
+		const newVals = [...enumValues];
+		newVals[index] = val;
+		onupdateenumvalues?.(newVals);
+	}
+
+	function handleRemoveEnum(index: number) {
+		const newVals = [...enumValues];
+		newVals.splice(index, 1);
+		onupdateenumvalues?.(newVals);
+	}
+
+	function handleAddEnum() {
+		onupdateenumvalues?.([...enumValues, `val${enumValues.length + 1}`]);
+	}
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -74,7 +96,7 @@
 	data-testid="property-row"
 	style="--ind: {12 + indent * 20}px"
 	onclick={(e) => {
-		if ((e.target as HTMLElement).closest('.type-chip, .add-mod, .modifier-pill')) return;
+		if ((e.target as HTMLElement).closest('.type-chip, .add-mod, .modifier-pill, .add-enum-val')) return;
 		onselect?.();
 	}}
 >
@@ -90,8 +112,6 @@
 		data-field-id={id}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') {
-				// Prevent new field from being added by standard row logic
-				// So we trigger add property
 				e.preventDefault();
 				e.stopPropagation();
 				onaddprop?.();
@@ -120,13 +140,27 @@
 	/>
 
 	<div class="actions">
+		{#if type === 'enum'}
+			{#each enumValues as val, i}
+				<ModifierPill 
+					name={val} 
+					kind="enum"
+					removable={true}
+					onremove={() => handleRemoveEnum(i)}
+					onchange={(newVal) => handleEnumChange(i, newVal)}
+				/>
+			{/each}
+			<button class="add-enum-val t-code-tight" onclick={handleAddEnum}>+ val</button>
+		{/if}
+
 		{#each mods as mod, i}
 			<ModifierPill 
 				name={mod.name} 
 				value={mod.value} 
 				warn={mod.warn} 
 				removable={true} 
-				onremove={() => onremovemodifier?.(i.toString())}
+				onremove={() => onremovemodifier?.(i)}
+				onchange={(newVal) => onupdatemodifier?.(i, newVal)}
 			/>
 		{/each}
 

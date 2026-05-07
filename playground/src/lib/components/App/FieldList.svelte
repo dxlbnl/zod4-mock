@@ -14,7 +14,9 @@
 		onaddmod?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onchangetype?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onremovefield?: (id: string) => void;
+		onupdatemodifier?: (fieldId: string, index: number, value: string | number) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
+		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
 		onaddprop?: () => void;
 	}
 
@@ -28,7 +30,9 @@
 		onaddmod,
 		onchangetype,
 		onremovefield,
+		onupdatemodifier,
 		onremovemodifier,
+		onupdateenumvalues,
 		onaddprop
 	}: Props = $props();
 </script>
@@ -56,7 +60,9 @@
 				{onaddmod} 
 				{onchangetype} 
 				{onremovefield}
+				{onupdatemodifier}
 				{onremovemodifier}
+				{onupdateenumvalues}
 				onaddprop={() => onaddfield?.(field.id)}
 			/>
 		{/if}
@@ -72,6 +78,7 @@
 			keyName={field.key}
 			type={field.type}
 			mods={field.modifiers}
+			enumValues={field.enumValues}
 			selected={selectedFieldId === field.id}
 			autofocus={lastAddedId === field.id}
 			indent={field.indent}
@@ -80,7 +87,9 @@
 			onaddmod={(e) => onaddmod?.(field.id, e)}
 			onchangetype={(e) => onchangetype?.(field.id, e)}
 			onremove={() => onremovefield?.(field.id)}
-			onremovemodifier={(modId) => onremovemodifier?.(field.id, Number(modId))}
+			onupdatemodifier={(idx, val) => onupdatemodifier?.(field.id, idx, val)}
+			onremovemodifier={(idx) => onremovemodifier?.(field.id, idx)}
+			onupdateenumvalues={(vals) => onupdateenumvalues?.(field.id, vals)}
 			{onaddprop}
 		/>
 	{/if}

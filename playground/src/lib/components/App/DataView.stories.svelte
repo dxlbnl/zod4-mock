@@ -1,5 +1,6 @@
 <script module lang='ts'>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { within, expect } from '@storybook/test';
 	import DataView from './DataView.svelte';
 
 	function tokenize(data: any) {
@@ -39,4 +40,19 @@
 			{ id: 1, name: "Product A", price: 100 },
 			{ id: 2, name: "Product B", price: 200 }
 		])
+	}} />
+
+<Story name='Highlighted' args={{
+		lines: [
+			{ lineNumber: 1, tokens: [{ kind: 'plain', text: '{' }] },
+			{ lineNumber: 2, tokens: [{ kind: 'key', text: '  "id"' }, { kind: 'plain', text: ': "user_123"' }] },
+			{ lineNumber: 3, tokens: [{ kind: 'plain', text: '}' }] }
+		],
+		selectedFieldId: 'id'
+	}} play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		// In DataView, highlighted lines get the .active class
+		const activeLine = canvasElement.querySelector('.line.active');
+		expect(activeLine).toBeInTheDocument();
+		expect(activeLine).toHaveTextContent(/"id"/);
 	}} />

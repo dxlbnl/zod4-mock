@@ -4,85 +4,164 @@
 		value?: string | number;
 		warn?: boolean;
 		removable?: boolean;
+		kind?: 'modifier' | 'enum';
+		category?: 'Constraints' | 'Format' | 'Wrappers';
 		onremove?: () => void;
-		onchange?: (value: any) => void;
+		onchange?: (value: string) => void;
 	}
 
-	let { name, value, warn = false, removable = false, onremove, onchange }: Props = $props();
+	let { 
+		name, 
+		value, 
+		warn = false, 
+		removable = false, 
+		kind = 'modifier',
+		category,
+		onremove, 
+		onchange 
+	}: Props = $props();
+
+	let editing = $state(false);
+	let displayValue = $state(String(value ?? ''));
+
+	$effect(() => {
+		displayValue = String(value ?? '');
+	});
+
+	function handleBlur() {
+		editing = false;
+		if (displayValue !== String(value)) {
+			onchange?.(displayValue);
+		}
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			(e.target as HTMLElement).blur();
+		}
+		if (e.key === 'Escape') {
+			displayValue = String(value ?? '');
+			editing = false;
+			(e.target as HTMLElement).blur();
+		}
+	}
 </script>
 
-<span class="mod t-code-tight" data-warn={warn} data-testid="modifier-pill">
-	<span>{name}</span>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<span 
+	class="pill t-code-tight" 
+	data-warn={warn} 
+	data-kind={kind}
+	data-category={category}
+	data-editing={editing}
+	data-testid="modifier-pill"
+	onmousedown={(e) => editing && e.stopPropagation()}
+>
+	<span class="name">{name}</span>
 	{#if value !== undefined}
-		<span class="eq">=</span>
+		<span class="eq">{kind === 'modifier' ? '=' : ''}</span>
 		<span
 			class="val"
 			contenteditable="true"
-			onblur={(e) => onchange?.(e.currentTarget.textContent)}
-		>
-			{value}
-		</span>
+			onfocus={() => editing = true}
+			onblur={handleBlur}
+			onkeydown={handleKeydown}
+			bind:textContent={displayValue}
+		></span>
 	{/if}
 	{#if removable}
-		<button class="x" onclick={onremove} aria-label="Remove modifier">×</button>
+		<button class="x" onclick={onremove} aria-label="Remove">×</button>
 	{/if}
 </span>
 
 <style>
-	.mod {
+	.pill {
 		display: inline-flex;
 		align-items: center;
-		gap: 3px;
-		padding: 0 var(--space-1) 0 var(--space-2);
+		gap: 2px;
+		padding: 0 var(--space-2);
 		height: var(--h-mod);
 		border: 1px solid var(--line-strong);
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 		background: var(--bg-2);
 		color: var(--ink-1);
 		cursor: default;
 		white-space: nowrap;
+		transition: all var(--ease-quick);
+		user-select: none;
 	}
-	.mod:hover {
+
+	.pill:hover {
 		border-color: var(--accent-edge);
-		color: var(--ink-0);
-	}
-	.mod .eq {
-		color: var(--ink-3);
-		margin: 0 1px;
-	}
-	.mod .val {
 		background: var(--bg-3);
-		border: 1px dashed var(--line-strong);
-		border-radius: 2px;
-		padding: 0 var(--space-1);
-		color: var(--syn-number);
-		cursor: text;
 	}
-	.mod .x {
-		width: 12px;
-		height: 12px;
+
+	.pill[data-kind='enum'] {
+		background: var(--accent-soft);
+		border-color: var(--accent-edge);
+		color: var(--accent);
+		border-style: dashed;
+	}
+
+	.pill[data-category='Constraints'] { border-left: 3px solid var(--blue-bright); }
+	.pill[data-category='Format'] { border-left: 3px solid var(--green-bright); }
+	.pill[data-category='Wrappers'] { border-left: 3px solid var(--purple-bright); }
+
+	.pill .name {
+		font-weight: 500;
+	}
+
+	.pill .eq {
+		color: var(--ink-3);
+		opacity: 0.7;
+	}
+
+	.pill .val {
+		color: var(--syn-number);
+		padding: 0 2px;
+		border-radius: 2px;
+		min-width: 1ch;
+		outline: none;
+		cursor: text;
+		user-select: text;
+	}
+
+	.pill[data-editing='true'] .val {
+		background: var(--bg-0);
+		box-shadow: 0 0 0 1px var(--accent);
+	}
+
+	.pill .x {
+		width: 14px;
+		height: 14px;
 		border-radius: 50%;
 		display: grid;
 		place-items: center;
-		background: var(--ink-3);
-		color: var(--bg-1);
-		font-size: 8px;
+		background: transparent;
+		color: var(--ink-3);
+		font-size: 12px;
 		line-height: 1;
 		cursor: pointer;
 		margin-left: 2px;
 		border: 0;
 		padding: 0;
 		opacity: 0;
-		transition: opacity var(--ease-quick);
+		transition: all var(--ease-quick);
 	}
-	.mod:hover .x {
+
+	.pill:hover .x {
 		opacity: 1;
 	}
-	.mod[data-warn='true'] {
+
+	.pill .x:hover {
+		background: var(--ink-3);
+		color: var(--bg-1);
+	}
+
+	.pill[data-warn='true'] {
 		border-color: var(--warn);
 		color: var(--warn);
-	}
-	.mod[data-warn='true'] .val {
-		color: var(--warn);
+		background: var(--warn-soft);
 	}
 </style>

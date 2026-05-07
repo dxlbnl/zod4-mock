@@ -102,7 +102,9 @@
 				onupdatefield={(id, p) => store.updateField(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, id, p)}
 				onremovefield={(id) => store.removeField(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, id)}
 				onaddmodifier={(id, m) => store.addModifier(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, id, m)}
+				onupdatemodifier={(id, idx, val) => store.updateModifierValue(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, id, idx, val)}
 				onremovemodifier={(fid, mid) => store.removeModifier(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, fid, typeof mid === 'string' ? parseInt(mid, 10) : mid)}
+				onupdateenumvalues={(id, vals) => store.updateField(activeEntityType, activeEntityType === 'subject' ? store.activeSubject!.id : store.activeSchema!.id, id, { enumValues: vals })}
 			/>
 		</div>
 		

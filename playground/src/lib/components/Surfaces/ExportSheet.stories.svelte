@@ -1,7 +1,9 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { userEvent, within, expect, fn } from '@storybook/test';
 	import ExportSheet from './ExportSheet.svelte';
 	import SegmentedControl from '../Primitives/SegmentedControl.svelte';
+	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
 		title: 'Surfaces/ExportSheet',
@@ -13,7 +15,12 @@
 				}
 			}
 		},
-		tags: ['autodocs']
+		tags: ['autodocs'],
+		args: {
+			onclose: fn(),
+			oncopy: fn(),
+			ondownload: fn()
+		}
 	});
 </script>
 
@@ -39,4 +46,22 @@
 	/>
 {/snippet}
 
-<Story name="Default" args={{ open: true, preview: true, children: content, footer: footer }} />
+<Story name="Interactions" args={{ open: true, preview: true, children: content, footer: footer }} play={async ({ canvasElement, args }) => {
+	const canvas = within(canvasElement);
+	const body = within(document.body);
+
+	// EX-4: Copy export
+	const copyBtn = body.getByRole('button', { name: /copy/i });
+	await userEvent.click(copyBtn);
+	expect(args.oncopy).toHaveBeenCalled();
+
+	// EX-5: Download export
+	const downloadBtn = body.getByRole('button', { name: /download/i });
+	await userEvent.click(downloadBtn);
+	expect(args.ondownload).toHaveBeenCalled();
+
+	// EX-1: Close export sheet
+	const closeBtn = body.getByRole('button', { name: /×/i }); // Assuming there's a close button with ×
+	await userEvent.click(closeBtn);
+	expect(args.onclose).toHaveBeenCalled();
+}} />

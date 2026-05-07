@@ -1,6 +1,8 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { userEvent, within, expect, fn } from '@storybook/test';
 	import Row from './PropertyRow.svelte';
+	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
 		title: 'Builder/PropertyRow',
@@ -9,34 +11,70 @@
 			docs: {
 				description: {
 					component: `
-The atomic unit of the Builder. Holds one property: name, type, modifiers, and an add-mod slot. Modifiers wrap to a second line if they overflow.
+The atomic unit of the Builder. Holds one property: name, type, modifiers, and enum values.
 
 ### States
 - **default**: No background.
 - **hover**: \`--bg-2\` background, grip visible.
-- **selected**: \`--accent-soft\` bg, 2px accent stripe on left.
+- **selected**: \`--bg-1\` bg, 2px accent stripe on left.
 - **warn**: \`--warn-soft\` bg, 2px warn stripe on left.`
 				}
 			}
 		},
-		tags: ['autodocs']
+		tags: ['autodocs'],
+		args: {
+			onselect: fn(),
+			onremove: fn(),
+			onupdatekey: fn(),
+			onupdatemodifier: fn(),
+			onremovemodifier: fn(),
+			onaddmod: fn(),
+			onupdateenumvalues: fn(),
+			onchangetype: fn(),
+			onaddprop: fn()
+		}
 	});	
 </script>
 
 <Story
 	name="Simple Row"
 	args={{
+		id: '1',
 		keyName: 'email',
-		type: 'Email',
+		type: 'string',
 		mods: [{ name: '.email()' }]
+	}}
+/>
+
+<Story
+	name="Enum with Values"
+	args={{
+		id: '2',
+		keyName: 'role',
+		type: 'enum',
+		enumValues: ['admin', 'user']
+	}}
+	play={async ({ canvasElement, args }) => {
+		const canvas = within(canvasElement);
+		
+		// PR-1: Add enum value
+		const addValBtn = canvas.getByText('+ val');
+		await userEvent.click(addValBtn);
+		await expect(args.onupdateenumvalues).toHaveBeenCalledWith(['admin', 'user', 'val3']);
+
+		// PR-2: Remove enum value
+		const removeBtns = canvas.getAllByLabelText('Remove');
+		await userEvent.click(removeBtns[0]);
+		await expect(args.onupdateenumvalues).toHaveBeenCalledWith(['user']);
 	}}
 />
 
 <Story
 	name="Selected Row"
 	args={{
+		id: '3',
 		keyName: 'age',
-		type: 'Number',
+		type: 'number',
 		selected: true,
 		mods: [
 			{ name: '.int()' },
@@ -50,18 +88,20 @@ The atomic unit of the Builder. Holds one property: name, type, modifiers, and a
 <Story
 	name="Warn State"
 	args={{
+		id: '4',
 		keyName: 'country',
-		type: 'Enum',
+		type: 'enum',
 		warn: true,
-		mods: [{ name: '"US"', warn: true }, { name: '"CA"', warn: true }]
+		mods: [{ name: '.optional()', warn: true }]
 	}}
 />
 
 <Story
 	name="Indented"
 	args={{
+		id: '5',
 		keyName: 'street',
-		type: 'String',
+		type: 'string',
 		indent: 1
 	}}
 />

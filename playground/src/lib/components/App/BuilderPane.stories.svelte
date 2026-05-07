@@ -49,8 +49,10 @@
 		onselectfield={(id) => selectedFieldId.value = id}
 		onupdatefield={(id, patch) => subject && store.updateField('subject', subject.id, id, patch)}
 		onaddmodifier={(id, mod) => subject && store.addModifier('subject', subject.id, id, mod)}
+		onupdatemodifier={(id, idx, val) => subject && store.updateModifierValue('subject', subject.id, id, idx, val)}
 		onremovefield={(id) => subject && store.removeField('subject', subject.id, id)}
-		onremovemodifier={(fid, mid) => subject && store.removeModifier('subject', subject.id, fid, typeof mid === 'string' ? parseInt(mid, 10) : mid)}
+		onremovemodifier={(fid, mid) => subject && store.removeModifier('subject', subject.id, fid, mid)}
+		onupdateenumvalues={(id, vals) => subject && store.updateField('subject', subject.id, id, { enumValues: vals })}
 	/>
 {/snippet}
 
@@ -91,43 +93,36 @@
 	await tick();
 	expect(within(rows[0]).getByText(/number/i)).toBeInTheDocument();
 
-	// BP-5: Add a modifier
+	// BP-5: Add a modifier (with default value)
 	const addModBtn = within(rows[0]).getByRole('button', { name: /\+ mod/i });
 	await userEvent.click(addModBtn);
 	
 	const modMenu = await body.findByRole('menu');
-	const intItem = await within(modMenu).findByRole('menuitem', { name: /.int\(\)/i });
-	await userEvent.click(intItem);
-	
-	await tick();
-	const pills = await canvas.findAllByTestId('modifier-pill');
-	expect(pills.length).toBeGreaterThan(0);
-	expect(pills[0]).toHaveTextContent('.int()');
-
-	// BP-7: Edit a modifier's value
-	await userEvent.click(addModBtn);
-	const modMenu2 = await body.findByRole('menu');
-	const minItem = await within(modMenu2).findByRole('menuitem', { name: /.min/i });
+	const minItem = await within(modMenu).findByRole('menuitem', { name: /.min/i });
 	await userEvent.click(minItem);
 	
 	await tick();
-	const allPills = await canvas.findAllByTestId('modifier-pill');
-	const minPill = allPills.find(p => p.textContent.includes('.min'));
+	const pills = await canvas.findAllByTestId('modifier-pill');
+	const minPill = pills.find(p => p.textContent.includes('.min'));
+	expect(minPill).toBeInTheDocument();
+	// Should have default value 0 for number.min
+	expect(minPill).toHaveTextContent('.min=0');
+
+	// BP-7: Edit a modifier's value
 	if (minPill) {
 		const modVal = minPill.querySelector('[contenteditable="true"]');
 		
 		if (modVal) {
 			await userEvent.click(modVal);
 			await userEvent.clear(modVal);
-			await userEvent.type(modVal, '5');
-			await userEvent.tab();
+			await userEvent.type(modVal, '5{enter}');
 			await tick();
 			expect(modVal).toHaveTextContent('5');
 		}
 
 		// BP-6: Remove a modifier
 		await userEvent.hover(minPill as HTMLElement);
-		const removeModBtn = await within(minPill as HTMLElement).findByLabelText(/remove modifier/i);
+		const removeModBtn = await within(minPill as HTMLElement).findByLabelText(/remove/i);
 		await userEvent.click(removeModBtn);
 		await tick();
 		expect(canvas.queryByText('.min')).not.toBeInTheDocument();

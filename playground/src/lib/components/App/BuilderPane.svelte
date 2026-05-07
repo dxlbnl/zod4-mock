@@ -4,7 +4,7 @@
 	import FloatingMenu from '../Builder/FloatingMenu.svelte';
 	import type { FieldDef, ModifierDef } from '../../state.svelte';
 	import { findField } from '../../state.svelte';
-	import { getMenuItems, SELECTABLE_FIELD_TYPES } from '../../field-types';
+	import { getMenuItems, getModifiers, SELECTABLE_FIELD_TYPES } from '../../field-types';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -19,7 +19,9 @@
 		onremovefield?: (id: string) => void;
 		onupdatefield?: (id: string, patch: Partial<FieldDef>) => void;
 		onaddmodifier?: (fieldId: string, mod: ModifierDef) => void;
+		onupdatemodifier?: (fieldId: string, index: number, value: string | number) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
+		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
 	}
 
 	let {
@@ -33,7 +35,9 @@
 		onremovefield,
 		onupdatefield,
 		onaddmodifier,
-		onremovemodifier
+		onupdatemodifier,
+		onremovemodifier,
+		onupdateenumvalues
 	}: Props = $props();
 
 	let menuOpen = $state(false);
@@ -97,7 +101,8 @@
 		if (!field) return;
 
 		if (menuMode === 'modifier') {
-			onaddmodifier?.(menuTargetId, { name });
+			const spec = getModifiers(field.type).find(m => m.name === name);
+			onaddmodifier?.(menuTargetId, { name, value: spec?.defaultValue });
 			menuOpen = false;
 			
 			// After adding a modifier, focus the +mod button again so user can add more or tab away
@@ -144,7 +149,9 @@
 				onaddmod={(id, e) => openMenu(id, e, 'modifier')}
 				onchangetype={(id, e) => openMenu(id, e, 'type')}
 				{onremovefield}
+				{onupdatemodifier}
 				{onremovemodifier}
+				{onupdateenumvalues}
 				onaddprop={() => handleAddField()}
 			/>
 		</div>
