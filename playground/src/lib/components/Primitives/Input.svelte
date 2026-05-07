@@ -7,7 +7,10 @@
 		class?: string;
 		autofocus?: boolean;
 		disabled?: boolean;
-		oninput?: (value: unknown) => void;
+		min?: number | string;
+		max?: number | string;
+		step?: number | string;
+		oninput?: (e: Event & { currentTarget: HTMLInputElement }) => void;
 	}
 
 	let {
@@ -18,6 +21,9 @@
 		class: className = '',
 		autofocus = false,
 		disabled = false,
+		min,
+		max,
+		step,
 		oninput
 	}: Props = $props();
 
@@ -40,8 +46,11 @@
 			{type}
 			{placeholder}
 			{disabled}
+			{min}
+			{max}
+			{step}
 			bind:value
-			oninput={(e) => oninput?.(e.currentTarget.value)}
+			{oninput}
 			class="input t-code-sm"
 		/>
 	</div>
@@ -51,8 +60,11 @@
 		{type}
 		{placeholder}
 		{disabled}
+		{min}
+		{max}
+		{step}
 		bind:value
-		oninput={(e) => oninput?.(e.currentTarget.value)}
+		{oninput}
 		class="input t-code-sm {className}"
 	/>
 {/if}

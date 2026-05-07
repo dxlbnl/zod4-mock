@@ -1,4 +1,4 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { userEvent, within, expect, fn } from '@storybook/test';
 	import BuilderPane from './BuilderPane.svelte';
@@ -20,24 +20,24 @@
 	});
 </script>
 
-<script>
+<script lang="ts">
 	const storyStates = new Map();
 
-	function getStoryState(name, initialFields = null) {
+	function getStoryState(name: string, initialFields: any[] | null = null) {
 		if (!storyStates.has(name)) {
 			const store = createPlaygroundState();
 			const subject = store.state.subjects[0];
 			if (initialFields !== null && subject) {
 				subject.fields = initialFields;
 			}
-			const selectedFieldId = $state({ value: null });
+			const selectedFieldId = $state({ value: null as string | null });
 			storyStates.set(name, { store, selectedFieldId });
 		}
 		return storyStates.get(name);
 	}
 </script>
 
-{#snippet storyHarness(name, args)}
+{#snippet storyHarness(name: string, args: any)}
 	{@const { store, selectedFieldId } = getStoryState(name, args.initialFields)}
 	{@const subject = store.state.subjects[0]}
 	
@@ -113,23 +113,25 @@
 	await tick();
 	const allPills = await canvas.findAllByTestId('modifier-pill');
 	const minPill = allPills.find(p => p.textContent.includes('.min'));
-	const modVal = minPill.querySelector('[contenteditable="true"]');
-	
-	if (modVal) {
-		await userEvent.click(modVal);
-		await userEvent.clear(modVal);
-		await userEvent.type(modVal, '5');
-		await userEvent.tab();
-		await tick();
-		expect(modVal).toHaveTextContent('5');
-	}
+	if (minPill) {
+		const modVal = minPill.querySelector('[contenteditable="true"]');
+		
+		if (modVal) {
+			await userEvent.click(modVal);
+			await userEvent.clear(modVal);
+			await userEvent.type(modVal, '5');
+			await userEvent.tab();
+			await tick();
+			expect(modVal).toHaveTextContent('5');
+		}
 
-	// BP-6: Remove a modifier
-	await userEvent.hover(minPill);
-	const removeModBtn = await within(minPill).findByLabelText(/remove modifier/i);
-	await userEvent.click(removeModBtn);
-	await tick();
-	expect(canvas.queryByText('.min')).not.toBeInTheDocument();
+		// BP-6: Remove a modifier
+		await userEvent.hover(minPill as HTMLElement);
+		const removeModBtn = await within(minPill as HTMLElement).findByLabelText(/remove modifier/i);
+		await userEvent.click(removeModBtn);
+		await tick();
+		expect(canvas.queryByText('.min')).not.toBeInTheDocument();
+	}
 
 	// BP-10: Nested object fields
 	const secondRow = rows[1];

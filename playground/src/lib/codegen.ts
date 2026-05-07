@@ -243,6 +243,106 @@ export function generateTokenizedCode(subject: SubjectDef): CodeLine[] {
 	return lines;
 }
 
+/** Tokenize a JSON string with field correlation */
+export function generateTokenizedData(data: unknown, fields: FieldDef[]): CodeLine[] {
+	const lines: CodeLine[] = [];
+	let lineNum = 1;
+
+	function pushLine(tokens: CodeToken[], fieldId?: string) {
+		lines.push({ lineNumber: lineNum++, tokens, fieldId });
+	}
+
+	function walk(val: any, currentFields: FieldDef[], indent: number) {
+		const pad = '  '.repeat(indent);
+
+		if (Array.isArray(val)) {
+			pushLine([pt('[')]);
+			val.forEach((item, i) => {
+				walk(item, currentFields, indent + 1);
+				if (i < val.length - 1) {
+					// Add comma to the last line of the item
+					const lastLine = lines[lines.length - 1];
+					lastLine.tokens.push(pt(','));
+				}
+			});
+			pushLine([pl(pad), pt(']')]);
+		} else if (val !== null && typeof val === 'object') {
+			pushLine([pt('{')]);
+			const keys = Object.keys(val);
+			keys.forEach((key, i) => {
+				const field = currentFields.find(f => f.key === key);
+				const fieldId = field?.id;
+				
+				const valueTokens = tokenizeJsonValue(val[key]);
+				pushLine([
+					pl(`${pad}  `), str(`"${key}"`), pt(': '), ...valueTokens,
+					...(i < keys.length - 1 ? [pt(',')] : [])
+				], fieldId);
+
+				// If it's an object/array, we might want to walk deeper, 
+				// but for now we keep it simple since JSON.stringify is flat-ish in terms of lines
+				// Actually, we should probably just use a real JSON tokenizer on a pretty-printed string
+			});
+			pushLine([pl(pad), pt('}')]);
+		} else {
+			pushLine([pl(pad), ...tokenizeJsonValue(val)]);
+		}
+	}
+
+	// For now, let's use a simpler approach: 
+	// Pretty print the JSON and then use regex to find keys and match them to fields
+	const json = JSON.stringify(data, null, 2);
+	const jsonLines = json.split('\n');
+	
+	jsonLines.forEach((line, i) => {
+		const tokens: CodeToken[] = [];
+		let fieldId: string | undefined;
+
+		// Regex to find "key": 
+		const keyMatch = line.match(/^\s*"([^"]+)"\s*:/);
+		if (keyMatch) {
+			const key = keyMatch[1];
+			// Find field ID by key name (this is a heuristic, might be ambiguous for nested)
+			// A better way would be to track paths
+			fieldId = findFieldIdByKey(fields, key);
+		}
+
+		// Basic JSON line tokenizer
+		const parts = line.split(/(".*?"|[:,\{\}\[\]]|\s+)/g).filter(Boolean);
+		for (const p of parts) {
+			if (p.startsWith('"')) tokens.push(str(p));
+			else if (/^[\d\.]+$/.test(p.trim())) tokens.push(num(p));
+			else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
+			else if (/^[:,\{\}\[\]]$/.test(p.trim())) tokens.push(pt(p));
+			else tokens.push(pl(p));
+		}
+
+		lines.push({ lineNumber: i + 1, tokens, fieldId });
+	});
+
+	return lines;
+}
+
+function tokenizeJsonValue(val: any): CodeToken[] {
+	if (typeof val === 'string') return [str(`"${val}"`)];
+	if (typeof val === 'number') return [num(String(val))];
+	if (typeof val === 'boolean') return [kw(String(val))];
+	if (val === null) return [kw('null')];
+	if (Array.isArray(val)) return [pt('[...]')];
+	return [pt('{...}')];
+}
+
+function findFieldIdByKey(fields: FieldDef[], key: string): string | undefined {
+	for (const f of fields) {
+		if (f.key === key) return f.id;
+		if (f.children) {
+			const found = findFieldIdByKey(f.children, key);
+			if (found) return found;
+		}
+	}
+	return undefined;
+}
+
 /** Lightweight tokenizer for Zod expression chains (e.g. "z.string().min(5)") */
 function tokenizeZodExpr(expr: string): CodeToken[] {
 	const tokens: CodeToken[] = [];

@@ -14,7 +14,7 @@
 		onaddmod?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onchangetype?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onremovefield?: (id: string) => void;
-		onremovemodifier?: (fieldId: string, modifierId: string) => void;
+		onremovemodifier?: (fieldId: string, index: number) => void;
 		onaddprop?: () => void;
 	}
 
@@ -80,7 +80,7 @@
 			onaddmod={(e) => onaddmod?.(field.id, e)}
 			onchangetype={(e) => onchangetype?.(field.id, e)}
 			onremove={() => onremovefield?.(field.id)}
-			onremovemodifier={(modId) => onremovemodifier?.(field.id, modId)}
+			onremovemodifier={(modId) => onremovemodifier?.(field.id, Number(modId))}
 			{onaddprop}
 		/>
 	{/if}

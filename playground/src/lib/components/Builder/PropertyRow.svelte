@@ -26,6 +26,7 @@
 		onremovemodifier?: (id: string) => void;
 		onaddmod?: (e: MouseEvent | FocusEvent) => void;
 		onchangetype?: (e: MouseEvent | FocusEvent) => void;
+		autofocus?: boolean;
 	}
 
 	let { 
@@ -136,7 +137,8 @@
 				const prev = e.relatedTarget as HTMLElement;
 				if (!prev) return;
 				
-				const sameRow = prev.closest('[data-testid="property-row"]') === e.currentTarget.closest('[data-testid="property-row"]');
+				const target = e.currentTarget as HTMLElement;
+				const sameRow = prev.closest('[data-testid="property-row"]') === target.closest('[data-testid="property-row"]');
 				if (sameRow && prev.hasAttribute('data-type-chip')) {
 					tick().then(() => onaddmod?.(e));
 				}

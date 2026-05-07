@@ -1,74 +1,91 @@
 <script lang="ts">
 	import Accordion from '../Primitives/Accordion.svelte';
 	import SubjectItem from '../Builder/SubjectItem.svelte';
-
-	interface Subject {
-		name: string;
-		count?: number;
-		badge?: string;
-		selected?: boolean;
-	}
-
-	interface Section {
-		title: string;
-		meta?: string;
-		open: boolean;
-		id: string;
-	}
+	import SchemaItem from '../App/SchemaItem.svelte';
+	import WorldConfig from '../App/WorldConfig.svelte';
+	import type { PlaygroundStore } from '../../state.svelte';
 
 	interface Props {
-		sections?: Section[];
-		subjects?: Subject[];
-		onselectsubject?: (name: string) => void;
-		onaddsubject?: () => void;
-		ontogglesection?: (id: string) => void;
+		store: PlaygroundStore;
 	}
 
-	let {
-		sections = [
-			{ title: 'World', meta: 'seed 42', open: false, id: 'world' },
-			{ title: 'Subjects', meta: '3', open: true, id: 'subjects' },
-			{ title: 'Schemas', meta: '2', open: false, id: 'schemas' }
-		],
-		subjects = [
-			{ name: 'User', count: 6, selected: true },
-			{ name: 'Order', count: 4, badge: 'FK→User' },
-			{ name: 'Product', count: 5 }
-		],
-		onselectsubject,
-		onaddsubject,
-		ontogglesection
-	}: Props = $props();
+	let { store }: Props = $props();
+
+	// Derived lists and states
+	const subjects = $derived(store.state.subjects);
+	const schemas = $derived(store.state.schemas);
+	const world = $derived(store.state.world);
+	const activeEntityType = $derived(store.state.activeEntityType);
+	const activeSubjectId = $derived(store.state.activeSubjectId);
+	const activeSchemaId = $derived(store.state.activeSchemaId);
+
+	function getSectionMeta(id: string): string {
+		if (id === 'world') return `seed ${world.seed}`;
+		if (id === 'subjects') return String(subjects.length);
+		if (id === 'schemas') return String(schemas.length);
+		return '';
+	}
 </script>
 
 <aside class="rail">
-	{#each sections as section}
-		<Accordion
-			title={section.title}
-			meta={section.meta}
-			open={section.open}
-			ontoggle={() => ontogglesection?.(section.id)}
-		>
-			{#if section.id === 'subjects'}
-				<div class="subj-list">
-					{#each subjects as subj}
-						<SubjectItem
-							name={subj.name}
-							count={subj.count}
-							badge={subj.badge}
-							selected={subj.selected}
-							onclick={() => onselectsubject?.(subj.name)}
-						/>
-					{/each}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="add-row t-code-sm" onclick={onaddsubject}>
-						<span class="plus">+</span> add subject
-					</div>
-				</div>
-			{/if}
-		</Accordion>
-	{/each}
+	<Accordion
+		title="World"
+		meta={getSectionMeta('world')}
+		open={store.state.ui.sectionStates['world']}
+		ontoggle={() => store.toggleSection('world')}
+	>
+		<WorldConfig 
+			seed={world.seed}
+			optionalProbability={world.optionalProbability}
+			onupdateseed={(val) => store.setWorldSeed(val)}
+			onupdateprob={(val) => store.setOptionalProbability(val)}
+		/>
+	</Accordion>
+
+	<Accordion
+		title="Subjects"
+		meta={getSectionMeta('subjects')}
+		open={store.state.ui.sectionStates['subjects']}
+		ontoggle={() => store.toggleSection('subjects')}
+	>
+		<div class="list">
+			{#each subjects as subj}
+				<SubjectItem
+					name={subj.name}
+					count={subj.count}
+					selected={activeEntityType === 'subject' && activeSubjectId === subj.id}
+					onclick={() => store.setActiveSubject(subj.id)}
+				/>
+			{/each}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="add-row t-code-sm" onclick={() => store.addSubject('NewSubject')}>
+				<span class="plus">+</span> add subject
+			</div>
+		</div>
+	</Accordion>
+
+	<Accordion
+		title="Schemas"
+		meta={getSectionMeta('schemas')}
+		open={store.state.ui.sectionStates['schemas']}
+		ontoggle={() => store.toggleSection('schemas')}
+	>
+		<div class="list">
+			{#each schemas as schema}
+				<SchemaItem
+					name={schema.name}
+					selected={activeEntityType === 'schema' && activeSchemaId === schema.id}
+					onclick={() => store.setActiveSchema(schema.id)}
+				/>
+			{/each}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="add-row t-code-sm" onclick={() => store.addSchema('NewSchema')}>
+				<span class="plus">+</span> add schema
+			</div>
+		</div>
+	</Accordion>
 </aside>
 
 <style>
@@ -80,12 +97,14 @@
 		display: flex;
 		flex-direction: column;
 		user-select: none;
+		overflow-y: auto;
 	}
 
-	.subj-list {
+	.list {
 		display: flex;
 		flex-direction: column;
 		gap: 1px;
+		padding-bottom: var(--space-2);
 	}
 
 	.add-row {
@@ -93,12 +112,13 @@
 		align-items: center;
 		justify-content: center;
 		gap: var(--space-2);
-		padding: var(--space-1) var(--space-3);
-		margin-top: 2px;
+		padding: var(--space-2) var(--space-3);
+		margin: var(--space-2) var(--space-2) 0 var(--space-2);
 		border: 1px dashed var(--line-strong);
 		border-radius: var(--r-sm);
 		color: var(--ink-2);
 		cursor: pointer;
+		transition: all var(--ease-quick);
 	}
 	.add-row:hover {
 		color: var(--ink-0);

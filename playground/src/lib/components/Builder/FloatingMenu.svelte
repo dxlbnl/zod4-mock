@@ -26,7 +26,7 @@
 		filter = '';
 	});
 	
-	let searchInput = $state<HTMLInputElement>();
+	let searchInput = $state<{ focus: () => void }>();
 
 	let filteredItems = $derived(
 		items.filter(
@@ -103,6 +103,7 @@
 			bind:this={searchInput} 
 			class="search-input" 
 			placeholder="filter…" 
+			autofocus={true}
 			bind:value={filter} 
 		/>
 		<span class="scope t-code-tight">{scope}</span>
