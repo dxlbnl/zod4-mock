@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, Prng } from "../../types.js";
-import { def } from "../schema/zod-def.js";
+import { def, getLeafDef } from "../schema/zod-def.js";
 import * as data from "./index.js";
 
 // ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
 
 export function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const lk = key.toLowerCase();
-  const schemaType = def(schema).type;
+  const schemaType = getLeafDef(schema).type;
 
   const fn = DEFAULT_KEY_MAP[schemaType]?.[lk];
   if (fn !== undefined) return fn(ctx.prng, ctx);

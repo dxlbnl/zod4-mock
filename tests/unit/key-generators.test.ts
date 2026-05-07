@@ -809,6 +809,18 @@ describe("DEFAULT_KEY_PATTERNS", () => {
     const v = generateFromKey("userId", z.number(), makeCtx());
     expect(typeof v).not.toBe("string");
   });
+
+  it("heuristics work through modifiers like .default()", () => {
+    // This currently fails because generateFromKey sees the "default" type, not "number"
+    const v = generateFromKey("createdAt", z.number().default(0), makeCtx());
+    expect(typeof v).toBe("number");
+    expect((v as number) > 946684800000).toBe(true);
+  });
+
+  it("heuristics work through modifiers like .readonly()", () => {
+    const v = generateFromKey("createdAt", z.number().readonly(), makeCtx());
+    expect(typeof v).toBe("number");
+  });
 });
 
 // ---------------------------------------------------------------------------

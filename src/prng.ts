@@ -64,7 +64,8 @@ export function createPrng(seed: number): Prng {
     fork(key) {
       // Derive a child seed from the parent seed + key; does NOT consume
       // the parent's state, so the child is fully independent.
-      return createPrng(fnv1a(`${seed}:${key}`));
+      // Appends trailing colon for consistency with fieldSeed derivation.
+      return createPrng(fnv1a(`${seed}:${key}:`));
     },
   };
 

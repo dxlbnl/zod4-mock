@@ -25,6 +25,7 @@ export const PersonSubjectSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   email: z.email(),
+  createdAt: z.date(),
 });
 
 export const TextFileSubjectSchema = z.object({

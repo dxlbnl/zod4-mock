@@ -28,23 +28,23 @@ const print = (data: unknown) => console.log(JSON.stringify(data, null, 2));
 // Media Library — rawdata generated first so file subjects enter the registry
 // ---------------------------------------------------------------------------
 
-describe("Media Library", () => {
+describe.only("Media Library", () => {
   const world = createMediaLibraryWorld(42).populate(PersonSubject, 3);
   const rawdata = world.generate(z.array(RawDataSchema).min(6).max(9));
 
   it("subjects", () => print(world.subjects()));
-  it("rawdata", () => print(rawdata));
-  it("text API", () => print(world.generate(z.array(TextApiSchema))));
-  it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
-  it("bank API", () => print(world.generate(z.array(BankApiSchema))));
-  it("entity API", () => print(world.generate(z.array(EntityApiSchema))));
+  // it("rawdata", () => print(rawdata));
+  // it("text API", () => print(world.generate(z.array(TextApiSchema))));
+  // it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
+  // it("bank API", () => print(world.generate(z.array(BankApiSchema))));
+  // it("entity API", () => print(world.generate(z.array(EntityApiSchema))));
 });
 
 // ---------------------------------------------------------------------------
 // Invoicing
 // ---------------------------------------------------------------------------
 
-describe.only("Invoicing", () => {
+describe("Invoicing", () => {
   const world = createInvoicingWorld(42);
   world.populate(ProductSubject, 6);
   const invoices = world.generate(z.array(InvoiceSchema).min(4).max(6));

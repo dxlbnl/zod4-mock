@@ -45,3 +45,27 @@ export function checks(schema: ZodTypeAny): ZodCheck[] {
   const raw = def(schema).checks as Array<{ _zod: { def: ZodCheck } }> | undefined;
   return (raw ?? []).map((c) => c._zod.def);
 }
+
+/** Recursively unwraps modifiers like .optional(), .nullable(), .default(), etc. */
+export function unwrap(schema: ZodTypeAny): ZodTypeAny {
+  let current = schema;
+  let d = def(current);
+  while (
+    d.type === "optional" ||
+    d.type === "nullable" ||
+    d.type === "default" ||
+    d.type === "readonly" ||
+    d.type === "catch" ||
+    d.type === "brand"
+  ) {
+    if (!d.innerType) break;
+    current = d.innerType;
+    d = def(current);
+  }
+  return current;
+}
+
+/** Unwraps the schema and returns its core ZodDef. */
+export function getLeafDef(schema: ZodTypeAny): ZodDef {
+  return def(unwrap(schema));
+}

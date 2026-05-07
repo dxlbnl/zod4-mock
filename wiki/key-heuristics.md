@@ -66,7 +66,7 @@ Examples: `firstName`, `lastName`, `fullName`, `authorName`, `name`
 
 ### Dates
 
-Date rules fire **regardless of the Zod schema type** — they always return a `Date` object.
+Date rules are **type-aware** — they return a `Date` object, an ISO string, or a numeric timestamp depending on the Zod schema type.
 
 | Pattern                                | Generated value       |
 | -------------------------------------- | --------------------- |
@@ -171,8 +171,11 @@ See [API Reference — generators namespace](api-reference.md#generators-namespa
 ## Important notes
 
 - **Field names are matched after lowercasing** — the original field key casing is irrelevant.
-- **Date heuristics ignore the Zod type** — a field named `createdAt` returns a `Date` object even if the schema is `z.string()`. If you need a string date for a field like `createdAt`, use a matcher.
-- **Number heuristics are schema-type-gated** — `quantity`, `count`, etc. only fire for `z.number()` fields. On a `z.string()` field named `quantity`, the key heuristic is skipped and schema-based generation produces a string.
+- **Date heuristics are type-aware** — a field named `createdAt` will produce:
+  - `z.date()` (or none) → a `Date` object.
+  - `z.string()` → an ISO 8601 string.
+  - `z.number()` → a Unix timestamp (milliseconds).
+- **Other heuristics are schema-type-gated** — `quantity`, `count`, etc. only fire for `z.number()` fields. On a `z.string()` field named `quantity`, the key heuristic is skipped and schema-based generation produces a string.
 - **`name` does not match `filename`** — the `name` rule explicitly excludes keys containing `file`.
 - **Custom generators take priority** — any key registered via `WorldOptions.generators` or `.withGenerators()` overrides the built-in table.
 

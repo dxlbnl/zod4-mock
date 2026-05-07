@@ -1,6 +1,7 @@
 <script lang="ts">
 	import OutputTabs from '../Surfaces/OutputTabs.svelte';
 	import CodeView from './CodeView.svelte';
+	import MockDataView from './DataView.svelte';
 	import WorldView from './WorldView.svelte';
 	import Button from '../Primitives/Button.svelte';
 	import type { CodeLine } from '../../codegen';
@@ -60,7 +61,7 @@
 		{#if activeTab === 'code'}
 			<CodeView lines={codeLines} {selectedFieldId} title="" />
 		{:else if activeTab === 'data'}
-			<DataView lines={dataLines} {selectedFieldId} title="" />
+			<MockDataView lines={dataLines} {selectedFieldId} title="" />
 		{:else}
 			<WorldView lines={worldLines} />
 		{/if}
