@@ -1,40 +1,44 @@
 <script lang="ts">
 	import OutputTabs from '../Surfaces/OutputTabs.svelte';
 	import CodeView from './CodeView.svelte';
-	import DataView from './DataView.svelte';
+	import WorldView from './WorldView.svelte';
 	import Button from '../Primitives/Button.svelte';
 	import type { CodeLine } from '../../codegen';
 
 	interface Props {
-		activeTab: 'code' | 'data';
+		activeTab: 'code' | 'data' | 'world';
 		codeLines: CodeLine[];
 		dataLines: CodeLine[];
+		worldLines?: CodeLine[];
 		fullCode: string;
 		fullData: string;
+		fullWorld?: string;
 		selectedFieldId?: string | null;
-		onchangetab?: (tab: 'code' | 'data') => void;
+		onchangetab?: (tab: 'code' | 'data' | 'world') => void;
 	}
 
 	let { 
 		activeTab = $bindable('code'), 
 		codeLines = [], 
 		dataLines = [],
+		worldLines = [],
 		fullCode = '',
 		fullData = '',
+		fullWorld = '',
 		selectedFieldId = null,
 		onchangetab 
 	}: Props = $props();
 
 	const tabs = [
 		{ id: 'code', label: 'Zod Definition', status: 'active' as const },
-		{ id: 'data', label: 'Mock Data', status: 'active' as const }
+		{ id: 'data', label: 'Mock Data', status: 'active' as const },
+		{ id: 'world', label: 'World View', status: 'active' as const }
 	];
 
 	async function handleCopy() {
-		const text = activeTab === 'code' ? fullCode : fullData;
+		const text = activeTab === 'code' ? fullCode : activeTab === 'data' ? fullData : fullWorld;
 		try {
 			await navigator.clipboard.writeText(text);
-			// For hi-fi, we'd add a "Copied!" toast/state
 		} catch (err) {
 			console.error('Failed to copy: ', err);
 		}
@@ -45,7 +49,7 @@
 	<OutputTabs 
 		{tabs} 
 		bind:activeTab 
-		onchange={(id) => onchangetab?.(id as 'code' | 'data')}
+		onchange={(id) => onchangetab?.(id as 'code' | 'data' | 'world')}
 	>
 		{#snippet actions()}
 			<Button variant="ghost" label="Copy" onclick={handleCopy} />
@@ -55,8 +59,10 @@
 	<div class="content">
 		{#if activeTab === 'code'}
 			<CodeView lines={codeLines} {selectedFieldId} title="" />
-		{:else}
+		{:else if activeTab === 'data'}
 			<DataView lines={dataLines} {selectedFieldId} title="" />
+		{:else}
+			<WorldView data={{}} lines={worldLines} />
 		{/if}
 	</div>
 </div>

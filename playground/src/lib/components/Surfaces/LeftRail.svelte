@@ -55,6 +55,7 @@
 					count={subj.count}
 					selected={activeEntityType === 'subject' && activeSubjectId === subj.id}
 					onclick={() => store.setActiveSubject(subj.id)}
+					onupdatecount={(val) => store.setSubjectCount(subj.id, val)}
 				/>
 			{/each}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->

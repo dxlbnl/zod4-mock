@@ -193,14 +193,26 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
     const subj = state.subjects.find((s) => s.id === subjectId);
     if (!subj) return { ok: false, error: "Subject not found" };
 
+    const { world } = buildWorld(state);
     const schema = buildZodSchema(subj.fields);
-    const subjectType = defineSubjectType(subj.name, schema);
-    const world = _createWorld({ seed: state.world.seed })
-      .withSubject(subjectType)
-      .populate(subjectType, subj.count);
-
     const data = world.generate(z.array(schema)) as unknown[];
     return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export function generateWorldData(state: PlaygroundState): GenerationResult {
+  try {
+    const { world } = buildWorld(state);
+    const results: Record<string, unknown[]> = {};
+
+    for (const subj of state.subjects) {
+      const schema = buildZodSchema(subj.fields);
+      results[subj.name] = world.generate(z.array(schema)) as unknown[];
+    }
+
+    return { ok: true, data: results };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }

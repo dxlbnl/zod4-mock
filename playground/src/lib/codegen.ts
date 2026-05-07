@@ -363,6 +363,31 @@ function tokenizeZodExpr(expr: string): CodeToken[] {
   return tokens;
 }
 
+/** Tokenize a World data record (SubjectName -> Instances) */
+export function generateTokenizedWorldData(data: Record<string, unknown[]>): CodeLine[] {
+  const lines: CodeLine[] = [];
+  const json = JSON.stringify(data, null, 2);
+  const jsonLines = json.split("\n");
+
+  jsonLines.forEach((line, i) => {
+    const tokens: CodeToken[] = [];
+
+    // Basic JSON line tokenizer (same as generateTokenizedData but no fieldId matching for now)
+    const parts = line.split(/(".*?"|[:,{}[\]]|\s+)/g).filter(Boolean);
+    for (const p of parts) {
+      if (p.startsWith('"')) tokens.push(str(p));
+      else if (/^[\d.]+$/.test(p.trim())) tokens.push(num(p));
+      else if (/^(true|false|null)$/.test(p.trim())) tokens.push(kw(p));
+      else if (/^[:,{}[\]]$/.test(p.trim())) tokens.push(pt(p));
+      else tokens.push(pl(p));
+    }
+
+    lines.push({ lineNumber: i + 1, tokens });
+  });
+
+  return lines;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function lcFirst(s: string): string {

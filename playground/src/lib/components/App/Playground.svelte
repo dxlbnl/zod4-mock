@@ -11,11 +11,12 @@
 	import { 
 		generateTokenizedCode, 
 		generateTokenizedData, 
+		generateTokenizedWorldData,
 		generateSubjectCode,
 		generateFullExport,
 		exportLineCount 
 	} from '../../codegen';
-	import { generateSubjectData } from '../../schema-builder';
+	import { generateSubjectData, generateWorldData } from '../../schema-builder';
 
 	interface Props {
 		initialState?: any;
@@ -51,6 +52,12 @@
 		generationResult.ok && activeFields.length > 0 
 			? generateTokenizedData(generationResult.data, activeFields) 
 			: []
+	);
+
+	// World generation
+	const worldResult = $derived(generateWorldData(store.state));
+	const worldLines = $derived(
+		worldResult.ok ? generateTokenizedWorldData(worldResult.data as Record<string, any[]>) : []
 	);
 
 	// Export logic
@@ -113,8 +120,10 @@
 				bind:activeTab={store.state.ui.outputTab}
 				codeLines={codeLines}
 				dataLines={dataLines}
+				worldLines={worldLines}
 				fullCode={store.activeSubject ? generateSubjectCode(store.activeSubject) : ''}
 				fullData={generationResult.ok ? JSON.stringify(generationResult.data, null, 2) : ''}
+				fullWorld={worldResult.ok ? JSON.stringify(worldResult.data, null, 2) : ''}
 				{selectedFieldId}
 				onchangetab={(tab) => store.setOutputTab(tab)}
 			/>

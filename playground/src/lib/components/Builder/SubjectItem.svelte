@@ -5,9 +5,17 @@
 		badge?: string;
 		selected?: boolean;
 		onclick?: () => void;
+		onupdatecount?: (val: number) => void;
 	}
 
-	let { name, count, badge, selected = false, onclick }: Props = $props();
+	let { name, count, badge, selected = false, onclick, onupdatecount }: Props = $props();
+
+	function handleInput(e: Event) {
+		const val = parseInt((e.target as HTMLInputElement).value, 10);
+		if (!isNaN(val)) {
+			onupdatecount?.(val);
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -16,7 +24,15 @@
 	<span class="grip t-number">⋮⋮</span>
 	<span class="name t-small">{name}</span>
 	{#if count !== undefined}
-		<span class="count t-code-tight">{count}</span>
+		<input 
+			type="number" 
+			class="count-input t-code-tight" 
+			value={count} 
+			min="1"
+			max="1000"
+			oninput={handleInput}
+			onclick={(e) => e.stopPropagation()}
+		/>
 	{/if}
 	{#if badge}
 		<span class="badge t-code-tight">{badge}</span>
@@ -64,8 +80,35 @@
 		color: var(--accent-bright);
 	}
 
-	.subj .count {
+	.count-input {
+		width: 32px;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: var(--r-sm);
 		color: var(--ink-2);
+		text-align: right;
+		padding: 1px 4px;
+		transition: all var(--ease-quick);
+		appearance: textfield; /* Hide arrows by default */
+	}
+
+	.count-input::-webkit-inner-spin-button,
+	.count-input::-webkit-outer-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+
+	.subj:hover .count-input,
+	.count-input:focus {
+		background: var(--bg-3);
+		border-color: var(--line-strong);
+		color: var(--ink-0);
+	}
+
+	.count-input:focus {
+		outline: none;
+		border-color: var(--accent-edge);
+		box-shadow: 0 0 0 1px var(--accent-soft);
 	}
 
 	.subj .badge {
