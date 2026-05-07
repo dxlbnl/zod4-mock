@@ -45,14 +45,14 @@
 <Story name='Highlighted' args={{
 		lines: [
 			{ lineNumber: 1, tokens: [{ kind: 'plain', text: '{' }] },
-			{ lineNumber: 2, tokens: [{ kind: 'key', text: '  "id"' }, { kind: 'plain', text: ': "user_123"' }] },
+			{ lineNumber: 2, fieldId: 'id', tokens: [{ kind: 'key', text: '  "id"' }, { kind: 'plain', text: ': "user_123"' }] },
 			{ lineNumber: 3, tokens: [{ kind: 'plain', text: '}' }] }
 		],
 		selectedFieldId: 'id'
 	}} play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		// In DataView, highlighted lines get the .active class
-		const activeLine = canvasElement.querySelector('.line.active');
+		// In DataView, highlighted lines get the .selected class
+		const activeLine = canvasElement.querySelector('.line.selected');
 		expect(activeLine).toBeInTheDocument();
 		expect(activeLine).toHaveTextContent(/"id"/);
 	}} />

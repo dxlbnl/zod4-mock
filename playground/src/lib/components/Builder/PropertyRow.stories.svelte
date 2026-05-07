@@ -66,6 +66,13 @@ The atomic unit of the Builder. Holds one property: name, type, modifiers, and e
 		const removeBtns = canvas.getAllByLabelText('Remove');
 		await userEvent.click(removeBtns[0]);
 		await expect(args.onupdateenumvalues).toHaveBeenCalledWith(['user']);
+
+		// PR-3: Edit enum value
+		const enumVal = canvas.getByText('user');
+		await userEvent.click(enumVal);
+		await userEvent.clear(enumVal);
+		await userEvent.type(enumVal, 'guest{enter}');
+		await expect(args.onupdateenumvalues).toHaveBeenCalledWith(['admin', 'guest']);
 	}}
 />
 

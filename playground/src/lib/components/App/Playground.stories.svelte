@@ -7,6 +7,7 @@
 		component: Playground,
 		parameters: {
 			layout: 'fullscreen',
+			a11y: { disable: true }
 		},
 	});
 

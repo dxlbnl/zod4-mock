@@ -22,17 +22,19 @@
 	}: Props = $props();
 
 	let editing = $state(false);
-	let displayValue = $state(String(value ?? ''));
 	let valEl = $state<HTMLElement>();
+
+	const baseValue = $derived(kind === 'enum' ? name : String(value ?? ''));
+	let displayValue = $state('');
 
 	$effect(() => {
 		// Sync internal state when external value changes
-		displayValue = String(value ?? '');
+		displayValue = baseValue;
 	});
 
 	function handleBlur() {
 		editing = false;
-		if (displayValue !== String(value)) {
+		if (displayValue !== baseValue) {
 			onchange?.(displayValue);
 		}
 	}
@@ -43,14 +45,14 @@
 			(e.target as HTMLElement).blur();
 		}
 		if (e.key === 'Escape') {
-			displayValue = String(value ?? '');
+			displayValue = baseValue;
 			editing = false;
 			(e.target as HTMLElement).blur();
 		}
 	}
 
 	function handleClick(e: MouseEvent) {
-		if (value !== undefined && valEl && !editing) {
+		if ((kind === 'enum' || value !== undefined) && valEl && !editing) {
 			valEl.focus();
 		}
 	}
@@ -68,22 +70,34 @@
 	onmousedown={(e) => editing && e.stopPropagation()}
 	onclick={handleClick}
 >
-	<span class="name">{name.replace(/\(\)$/, '')}</span>
-	{#if value !== undefined}
-		<span class="punct">(</span>
+	{#if kind === 'enum'}
 		<span
 			bind:this={valEl}
 			class="val"
-			class:empty={displayValue === ''}
 			contenteditable="true"
 			onfocus={() => editing = true}
 			onblur={handleBlur}
 			onkeydown={handleKeydown}
 			bind:textContent={displayValue}
 		></span>
-		<span class="punct">)</span>
-	{:else if name.endsWith('()')}
-		<span class="punct">()</span>
+	{:else}
+		<span class="name">{name.replace(/\(\)$/, '')}</span>
+		{#if value !== undefined}
+			<span class="punct">(</span>
+			<span
+				bind:this={valEl}
+				class="val"
+				class:empty={displayValue === ''}
+				contenteditable="true"
+				onfocus={() => editing = true}
+				onblur={handleBlur}
+				onkeydown={handleKeydown}
+				bind:textContent={displayValue}
+			></span>
+			<span class="punct">)</span>
+		{:else if name.endsWith('()')}
+			<span class="punct">()</span>
+		{/if}
 	{/if}
 	
 	{#if removable}
@@ -117,7 +131,12 @@
 		border-color: var(--accent-edge);
 		color: var(--accent);
 		border-style: dashed;
-		cursor: default;
+		cursor: text;
+	}
+
+	.pill[data-kind='enum'] .val {
+		color: inherit;
+		font-weight: 500;
 	}
 
 	.pill[data-category='Constraints'] { border-left: 3px solid var(--blue-bright); }

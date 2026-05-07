@@ -18,12 +18,14 @@
 	let { tabs, activeTab = $bindable(), actions, onchange }: Props = $props();
 </script>
 
-<div class="output-tabs">
+<div class="output-tabs" role="tablist">
 	{#each tabs as tab}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="output-tab t-small"
+			role="tab"
+			tabindex="0"
 			aria-selected={activeTab === tab.id}
 			onclick={() => {
 				activeTab = tab.id;

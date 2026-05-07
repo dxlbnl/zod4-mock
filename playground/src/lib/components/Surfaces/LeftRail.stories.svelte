@@ -88,7 +88,7 @@
 	if (worldHeader) {
 		await userEvent.click(worldHeader as HTMLElement);
 		await tick();
-		await expect(canvas.findByText(/Seed/i)).resolves.toBeInTheDocument();
+		await expect(canvas.getByText('Seed')).toBeInTheDocument();
 	}
 }}>
 	{#snippet template()}

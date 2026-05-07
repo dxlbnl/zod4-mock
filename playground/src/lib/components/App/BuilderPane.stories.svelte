@@ -106,7 +106,7 @@
 	const minPill = pills.find(p => p.textContent.includes('.min'));
 	expect(minPill).toBeInTheDocument();
 	// Should have default value 0 for number.min
-	expect(minPill).toHaveTextContent('.min=0');
+	expect(minPill).toHaveTextContent('.min(0)');
 
 	// BP-7: Edit a modifier's value
 	if (minPill) {

@@ -63,6 +63,22 @@ A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: paramet
 
 <Story name="Removable" args={{ name: '.optional()', removable: true, onremove: fn() }} />
 
-<Story name="Enum Value" args={{ name: 'admin', kind: 'enum', removable: true, onremove: fn() }} />
+<Story name="Enum Value" args={{ name: 'admin', kind: 'enum', removable: true, onremove: fn(), onchange: fn() }} play={async ({ canvasElement, args }) => {
+	const canvas = within(canvasElement);
+	const val = canvas.getByText('admin');
+	
+	// MP-E1: Enter edit mode
+	await userEvent.click(val);
+	await tick();
+	const pill = canvas.getByTestId('modifier-pill');
+	await expect(pill).toHaveAttribute('data-editing', 'true');
+
+	// MP-E2: Commit change with Enter
+	await userEvent.clear(val);
+	await userEvent.type(val, 'superuser{enter}');
+	await tick();
+	await expect(args.onchange).toHaveBeenCalledWith('superuser');
+	await expect(pill).toHaveAttribute('data-editing', 'false');
+}} />
 
 <Story name="Regex" args={{ name: '.regex', value: '/^[0-9]{5}$/', index: 0 }} />
