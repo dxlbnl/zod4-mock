@@ -1,7 +1,7 @@
 <script lang="ts">
 	interface Props {
 		name: string;
-		value?: string | number;
+		value?: string | number | boolean;
 		warn?: boolean;
 		removable?: boolean;
 		kind?: 'modifier' | 'enum';
@@ -23,8 +23,10 @@
 
 	let editing = $state(false);
 	let displayValue = $state(String(value ?? ''));
+	let valEl = $state<HTMLElement>();
 
 	$effect(() => {
+		// Sync internal state when external value changes
 		displayValue = String(value ?? '');
 	});
 
@@ -46,9 +48,16 @@
 			(e.target as HTMLElement).blur();
 		}
 	}
+
+	function handleClick(e: MouseEvent) {
+		if (value !== undefined && valEl && !editing) {
+			valEl.focus();
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <span 
 	class="pill t-code-tight" 
 	data-warn={warn} 
@@ -57,21 +66,28 @@
 	data-editing={editing}
 	data-testid="modifier-pill"
 	onmousedown={(e) => editing && e.stopPropagation()}
+	onclick={handleClick}
 >
-	<span class="name">{name}</span>
+	<span class="name">{name.replace(/\(\)$/, '')}</span>
 	{#if value !== undefined}
-		<span class="eq">{kind === 'modifier' ? '=' : ''}</span>
+		<span class="punct">(</span>
 		<span
+			bind:this={valEl}
 			class="val"
+			class:empty={displayValue === ''}
 			contenteditable="true"
 			onfocus={() => editing = true}
 			onblur={handleBlur}
 			onkeydown={handleKeydown}
 			bind:textContent={displayValue}
 		></span>
+		<span class="punct">)</span>
+	{:else if name.endsWith('()')}
+		<span class="punct">()</span>
 	{/if}
+	
 	{#if removable}
-		<button class="x" onclick={onremove} aria-label="Remove">×</button>
+		<button class="x" onclick={(e) => { e.stopPropagation(); onremove?.(); }} aria-label="Remove">×</button>
 	{/if}
 </span>
 
@@ -79,14 +95,13 @@
 	.pill {
 		display: inline-flex;
 		align-items: center;
-		gap: 2px;
 		padding: 0 var(--space-2);
 		height: var(--h-mod);
 		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-sm);
 		background: var(--bg-2);
 		color: var(--ink-1);
-		cursor: default;
+		cursor: text;
 		white-space: nowrap;
 		transition: all var(--ease-quick);
 		user-select: none;
@@ -102,6 +117,7 @@
 		border-color: var(--accent-edge);
 		color: var(--accent);
 		border-style: dashed;
+		cursor: default;
 	}
 
 	.pill[data-category='Constraints'] { border-left: 3px solid var(--blue-bright); }
@@ -112,7 +128,7 @@
 		font-weight: 500;
 	}
 
-	.pill .eq {
+	.pill .punct {
 		color: var(--ink-3);
 		opacity: 0.7;
 	}
@@ -121,10 +137,15 @@
 		color: var(--syn-number);
 		padding: 0 2px;
 		border-radius: 2px;
-		min-width: 1ch;
+		min-width: 8px;
 		outline: none;
 		cursor: text;
 		user-select: text;
+	}
+
+	.pill .val.empty {
+		background: var(--bg-3);
+		min-width: 12px;
 	}
 
 	.pill[data-editing='true'] .val {
@@ -143,7 +164,7 @@
 		font-size: 12px;
 		line-height: 1;
 		cursor: pointer;
-		margin-left: 2px;
+		margin-left: var(--space-2);
 		border: 0;
 		padding: 0;
 		opacity: 0;

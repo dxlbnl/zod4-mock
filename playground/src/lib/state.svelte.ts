@@ -433,7 +433,23 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     if (!fields) return;
     const field = findField(fields, fieldId);
     if (field?.modifiers[modifierIndex]) {
-      field.modifiers[modifierIndex].value = value;
+      const mod = field.modifiers[modifierIndex];
+      let finalValue = value;
+
+      if (typeof value === "string") {
+        const isNumericMod = [".min", ".max", ".length", ".multipleOf"].includes(mod.name);
+        const isDefault = mod.name === ".default";
+
+        if (isNumericMod || (isDefault && field.type === "number")) {
+          const num = parseFloat(value);
+          if (!isNaN(num)) finalValue = num;
+        } else if (isDefault && field.type === "boolean") {
+          if (value.toLowerCase() === "true") finalValue = true;
+          if (value.toLowerCase() === "false") finalValue = false;
+        }
+      }
+
+      mod.value = finalValue;
     }
   }
 

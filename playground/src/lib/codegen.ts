@@ -46,8 +46,12 @@ const pl = (text: string) => t("plain", text);
 
 function modifierToCode(mod: ModifierDef): string {
   if (mod.value !== undefined) {
-    const val = typeof mod.value === "string" ? `"${mod.value}"` : String(mod.value);
-    // Strip trailing () from name if present, then add (value)
+    let val: string;
+    if (typeof mod.value === "string") {
+      val = `"${mod.value}"`;
+    } else {
+      val = String(mod.value);
+    }
     const base = mod.name.replace(/\(\)$/, "");
     return `${base}(${val})`;
   }

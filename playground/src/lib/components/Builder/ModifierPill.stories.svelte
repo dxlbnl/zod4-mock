@@ -11,7 +11,7 @@
 			docs: {
 				description: {
 					component: `
-A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: parameterless (\`.email()\`) and parameterized (\`.min=1\`).
+A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: parameterless (\`.email()\`) and parameterized (\`.min(1)\`).
 
 ### States
 - **default**: No special styling.
@@ -27,7 +27,7 @@ A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: paramet
 
 <Story name="Parameterless" args={{ name: '.email()' }} />
 
-<Story name="Parameterized" args={{ name: '.min', value: 1, onchange: fn() }} play={async ({ canvasElement, args }) => {
+<Story name="Parameterized" args={{ name: '.min', value: 1, index: 0, onchange: fn() }} play={async ({ canvasElement, args }) => {
 	const canvas = within(canvasElement);
 	const val = canvas.getByText('1');
 	
@@ -45,7 +45,7 @@ A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: paramet
 	await expect(pill).toHaveAttribute('data-editing', 'false');
 }} />
 
-<Story name="Cancel Edit" args={{ name: '.max', value: 10, onchange: fn() }} play={async ({ canvasElement, args }) => {
+<Story name="Cancel Edit" args={{ name: '.max', value: 10, index: 0, onchange: fn() }} play={async ({ canvasElement, args }) => {
 	const canvas = within(canvasElement);
 	const val = canvas.getByText('10');
 	
@@ -65,4 +65,4 @@ A Zod modifier (\`.min(1)\`, \`.email()\`, \`.optional()\`). Two shapes: paramet
 
 <Story name="Enum Value" args={{ name: 'admin', kind: 'enum', removable: true, onremove: fn() }} />
 
-<Story name="Regex" args={{ name: '.regex', value: '/^[0-9]{5}$/' }} />
+<Story name="Regex" args={{ name: '.regex', value: '/^[0-9]{5}$/', index: 0 }} />

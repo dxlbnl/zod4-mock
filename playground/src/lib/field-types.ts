@@ -30,7 +30,7 @@ export interface ModifierSpec {
   /** Whether this modifier takes a user-supplied value (e.g. ".min(18)") */
   hasValue: boolean;
   /** Default value when the modifier is first added */
-  defaultValue?: string | number;
+  defaultValue?: string | number | boolean;
 }
 
 export interface FieldTypeSpec {
@@ -222,7 +222,7 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         desc: "fallback value",
         category: "Wrappers",
         hasValue: true,
-        defaultValue: "false",
+        defaultValue: false,
       },
     ],
   },
@@ -246,6 +246,14 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         category: "Wrappers",
         hasValue: false,
       },
+      {
+        name: ".default",
+        label: "default",
+        desc: "fallback value",
+        category: "Wrappers",
+        hasValue: true,
+        defaultValue: "",
+      },
     ],
   },
 
@@ -267,6 +275,14 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         desc: "field may be null",
         category: "Wrappers",
         hasValue: false,
+      },
+      {
+        name: ".default",
+        label: "default",
+        desc: "fallback value",
+        category: "Wrappers",
+        hasValue: true,
+        defaultValue: "",
       },
     ],
   },
@@ -290,6 +306,14 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         category: "Wrappers",
         hasValue: false,
       },
+      {
+        name: ".default",
+        label: "default",
+        desc: "fallback value",
+        category: "Wrappers",
+        hasValue: true,
+        defaultValue: "",
+      },
     ],
   },
 
@@ -311,6 +335,14 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         desc: "field may be null",
         category: "Wrappers",
         hasValue: false,
+      },
+      {
+        name: ".default",
+        label: "default",
+        desc: "fallback value",
+        category: "Wrappers",
+        hasValue: true,
+        defaultValue: "",
       },
     ],
   },
