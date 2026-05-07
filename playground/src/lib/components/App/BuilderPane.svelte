@@ -19,7 +19,7 @@
 		onremovefield?: (id: string) => void;
 		onupdatefield?: (id: string, patch: Partial<FieldDef>) => void;
 		onaddmodifier?: (fieldId: string, mod: ModifierDef) => void;
-		onupdatemodifier?: (fieldId: string, index: number, value: string | number) => void;
+		onupdatemodifier?: (fieldId: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
 		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
 	}
@@ -102,7 +102,9 @@
 
 		if (menuMode === 'modifier') {
 			const spec = getModifiers(field.type).find(m => m.name === name);
-			onaddmodifier?.(menuTargetId, { name, value: spec?.defaultValue });
+			const defaultVal = spec?.defaultValue;
+			const safeDefault = typeof defaultVal === 'boolean' ? String(defaultVal) : defaultVal;
+			onaddmodifier?.(menuTargetId, { name, value: safeDefault });
 			menuOpen = false;
 			
 			// After adding a modifier, focus the +mod button again so user can add more or tab away

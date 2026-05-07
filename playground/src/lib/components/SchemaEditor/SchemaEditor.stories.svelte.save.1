@@ -1,0 +1,503 @@
+q<script module lang="ts">
+	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { userEvent, within, expect, waitFor } from '@storybook/test';
+	import SchemaEditor from './index.svelte';
+	import { createPlaygroundState, makeField } from '../../state.svelte';
+	import { tick } from 'svelte';
+
+	const { Story } = defineMeta({
+		title: 'SchemaEditor/SchemaEditor',
+		component: SchemaEditor,
+		tags: ['autodocs'],
+		parameters: {
+			layout: 'fullscreen'
+		}
+	});
+</script>
+
+<script lang="ts">
+	import type { FieldDef } from '../../state.svelte';
+
+	// Deduplicated story state map — prevents re-init on re-render
+	const storyStates = new Map<string, { store: ReturnType<typeof createPlaygroundState> }>();
+
+	function getState(name: string, initialFields?: FieldDef[]) {
+		if (!storyStates.has(name)) {
+			const store = createPlaygroundState();
+			const subject = store.state.subjects[0];
+			if (initialFields !== undefined && subject) {
+				subject.fields = initialFields;
+			}
+			storyStates.set(name, { store });
+		}
+		return storyStates.get(name)!;
+	}
+</script>
+
+{#snippet harness(name: string, fields?: FieldDef[])}
+	{@const { store } = getState(name, fields)}
+	{@const subject = store.state.subjects[0]}
+	<div style="display: grid; grid-template-columns: 1fr; height: 100vh; background: var(--bg-0)">
+		<SchemaEditor
+			title="Schema Editor"
+			fields={subject?.fields ?? []}
+			onaddfield={(pid) => (subject ? store.addField('subject', subject.id, pid) : null) ?? undefined}
+			onupdatefield={(id, p) => subject && store.updateField('subject', subject.id, id, p)}
+			onremovefield={(id) => subject && store.removeField('subject', subject.id, id)}
+			onaddmodifier={(id, m) => subject && store.addModifier('subject', subject.id, id, m)}
+			onupdatemodifier={(id, idx, val: string | number | boolean) => subject && store.updateModifierValue('subject', subject.id, id, idx, val)}
+			onremovemodifier={(fid, mid) => subject && store.removeModifier('subject', subject.id, fid, mid)}
+			onupdateenumvalues={(id, vals) => subject && store.updateField('subject', subject.id, id, { enumValues: vals })}
+		/>
+	</div>
+{/snippet}
+
+<!-- ══════════════════════════════════════════════════
+     VISUAL STATES (no interaction tests)
+══════════════════════════════════════════════════ -->
+
+<Story name="Empty State">
+	{#snippet template()}
+		{@render harness('Empty', [])}
+	{/snippet}
+</Story>
+
+<Story name="Pre-populated">
+	{#snippet template()}
+		{@render harness('PrePopulated', [
+			makeField({ key: 'id', type: 'uuid' }),
+			makeField({ key: 'username', type: 'string', modifiers: [{ name: '.min', value: 3 }, { name: '.max', value: 32 }] }),
+			makeField({ key: 'email', type: 'email' }),
+			makeField({ key: 'age', type: 'number', modifiers: [{ name: '.int()' }, { name: '.min', value: 0 }] }),
+			makeField({ key: 'role', type: 'enum', enumValues: ['admin', 'member', 'viewer'] }),
+			makeField({ key: 'active', type: 'boolean', modifiers: [{ name: '.default', value: 'true' }] }),
+			makeField({ key: 'createdAt', type: 'date' }),
+		])}
+	{/snippet}
+</Story>
+
+<Story name="With Nested Object">
+	{#snippet template()}
+		{@render harness('NestedObject', [
+			makeField({ key: 'id', type: 'uuid' }),
+			makeField({
+				key: 'address',
+				type: 'object',
+				kind: 'group',
+				indent: 0,
+				children: [
+					makeField({ key: 'street', type: 'string', indent: 1 }),
+					makeField({ key: 'city', type: 'string', indent: 1 }),
+					makeField({ key: 'zip', type: 'string', indent: 1 }),
+				]
+			}),
+		])}
+	{/snippet}
+</Story>
+
+<!-- ══════════════════════════════════════════════════
+     INTERACTION TESTS
+══════════════════════════════════════════════════ -->
+
+<!--
+  SE-1: Add a field by clicking "+ add property"
+-->
+<Story
+	name="SE-1 Add Field via Button"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		// Default state has 6 fields (User subject) → now 7
+		expect(lines.length).toBe(7);
+
+		// New line's key input should be focused
+		const newLine = lines[6];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE1')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-2: Type a field name, press ':', pick type from dropdown with keyboard
+-->
+<Story
+	name="SE-2 Keyboard Type Name To Colon To Select Type"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		// Add a field first
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const newLine = lines[lines.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// SE-2a: Type the name
+		await userEvent.type(keyInput, 'score');
+		expect(keyInput).toHaveValue('score');
+
+		// SE-2b: Press ':' → type dropdown should open
+		await userEvent.keyboard(':');
+		await tick();
+
+		const dropdown = await canvas.findByRole('listbox');
+		expect(dropdown).toBeInTheDocument();
+
+		// SE-2c: Navigate and select 'number'
+		await userEvent.keyboard('number');
+		await userEvent.keyboard('{Enter}');
+		await tick();
+
+		// Dropdown should be gone
+		await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+		// Type chip should show 'Number'
+		expect(within(newLine).getByText(/number/i)).toBeInTheDocument();
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE2')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-3: Press '.' in modifier area → modifier dropdown opens
+-->
+<Story
+	name="SE-3 Dot Opens Modifier Dropdown"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		// Add a field + set a type
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const newLine = lines[lines.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// Type name + pick type
+		await userEvent.type(keyInput, 'count');
+		await userEvent.keyboard(':');
+		await tick();
+		await userEvent.keyboard('number{Enter}');
+		await tick();
+
+		// Now press '.' to open modifier picker
+		await userEvent.keyboard('.');
+		await tick();
+
+		const dropdown = await canvas.findByRole('listbox');
+		expect(dropdown).toBeInTheDocument();
+
+		// Select '.int()'
+		await userEvent.keyboard('.int{Enter}');
+		await tick();
+
+		await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+		// .int() pill should be present in the line
+		expect(newLine.textContent).toMatch(/\.int/);
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE3')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-4: Modifier with argument — value input appears, Enter commits
+-->
+<Story
+	name="SE-4 Modifier Arg Input"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const newLine = lines[lines.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// name → type
+		await userEvent.type(keyInput, 'title');
+		await userEvent.keyboard(':');
+		await tick();
+		await userEvent.keyboard('string{Enter}');
+		await tick();
+
+		// Open modifier dropdown
+		await userEvent.keyboard('.');
+		await tick();
+
+		// Select .min (has value)
+		await userEvent.keyboard('.min{Enter}');
+		await tick();
+
+		// An inline arg input should appear with default value
+		const argInput = await canvas.findByRole('textbox', { name: /^$/i });
+		// Accept any text input that appeared after modifier selection
+		const allInputs = canvasElement.querySelectorAll('input');
+		// The arg input is the last input to appear (after key-input)
+		const argEl = Array.from(allInputs).find(
+			(el) => el !== keyInput && el.closest('[data-testid="editor-line"]') === newLine
+		);
+		expect(argEl).toBeInTheDocument();
+
+		// Clear default and type new value
+		if (argEl) {
+			await userEvent.clear(argEl);
+			await userEvent.type(argEl, '5');
+			await userEvent.keyboard('{Enter}');
+			await tick();
+		}
+
+		// .min(5) should be in the line
+		await waitFor(() => expect(newLine.textContent).toMatch(/\.min/));
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE4')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-5: Enter key on a field → new sibling line added below
+-->
+<Story
+	name="SE-5 Enter Adds Next Sibling"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const linesBefore = await canvas.findAllByTestId('editor-line');
+		const newLine = linesBefore[linesBefore.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// Type name and press Enter to create next sibling
+		await userEvent.type(keyInput, 'fieldA');
+		await userEvent.keyboard('{Enter}');
+		await tick();
+
+		const linesAfter = await canvas.findAllByTestId('editor-line');
+		expect(linesAfter.length).toBe(linesBefore.length + 1);
+
+		// New line at the end should be focused
+		const lastLine = linesAfter[linesAfter.length - 1];
+		const lastInput = within(lastLine).getByTestId('key-input');
+		await waitFor(() => expect(lastInput).toHaveFocus());
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE5')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-6: Backspace on empty name input removes the field
+-->
+<Story
+	name="SE-6 Backspace Removes Empty Field"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const linesBefore = await canvas.findAllByTestId('editor-line');
+		const newLine = linesBefore[linesBefore.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// Input is empty → Backspace should remove the field
+		await userEvent.keyboard('{Backspace}');
+		await tick();
+
+		const linesAfter = await canvas.findAllByTestId('editor-line');
+		expect(linesAfter.length).toBe(linesBefore.length - 1);
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE6')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-7: Remove field via × button
+-->
+<Story
+	name="SE-7 Remove Field via Button"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const linesBefore = await canvas.findAllByTestId('editor-line');
+		const targetLine = linesBefore[0];
+
+		// Hover to reveal remove button
+		await userEvent.hover(targetLine);
+		const removeBtn = await within(targetLine).findByLabelText(/remove field/i);
+		await userEvent.click(removeBtn);
+		await tick();
+
+		const linesAfter = await canvas.findAllByTestId('editor-line');
+		expect(linesAfter.length).toBe(linesBefore.length - 1);
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE7')}
+	{/snippet}
+</Story>
+
+<!--
+  SE-8: Remove a modifier via × on the modifier pill
+-->
+<Story
+	name="SE-8 Remove Modifier"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		// username field (index 1) has .min and .max modifiers
+		const lines = await canvas.findAllByTestId('editor-line');
+		const targetLine = lines[1]; // username: string .min(3) .max(32)
+
+		await userEvent.hover(targetLine);
+
+		const modRemoveBtns = await within(targetLine).findAllByLabelText(/remove modifier/i);
+		expect(modRemoveBtns.length).toBeGreaterThan(0);
+
+		const countBefore = modRemoveBtns.length;
+		await userEvent.click(modRemoveBtns[0]);
+		await tick();
+
+		const modRemoveBtnsAfter = within(targetLine).queryAllByLabelText(/remove modifier/i);
+		expect(modRemoveBtnsAfter.length).toBe(countBefore - 1);
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE8', [
+			makeField({ key: 'username', type: 'string', modifiers: [{ name: '.min', value: 3 }, { name: '.max', value: 32 }] }),
+		])}
+	{/snippet}
+</Story>
+
+<!--
+  SE-9: Click type chip → type dropdown opens, selecting replaces type
+-->
+<Story
+	name="SE-9 Click Type Chip to Change Type"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const targetLine = lines[0]; // id: uuid
+
+		// Click the type chip
+		const typeChip = within(targetLine).getByRole('button', { name: /change type/i });
+		await userEvent.click(typeChip);
+		await tick();
+
+		const dropdown = await canvas.findByRole('listbox');
+		expect(dropdown).toBeInTheDocument();
+
+		// Pick 'string'
+		await userEvent.keyboard('string{Enter}');
+		await tick();
+
+		await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+		expect(within(targetLine).getByText(/string/i)).toBeInTheDocument();
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE9', [
+			makeField({ key: 'id', type: 'uuid' }),
+		])}
+	{/snippet}
+</Story>
+
+<!--
+  SE-10: Enum field — adding and removing tag values
+-->
+<Story
+	name="SE-10 Enum Tag Editing"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const enumLine = lines[0]; // role: enum ['admin','member']
+
+		// The ghost input for adding enum values
+		const ghostInput = enumLine.querySelector('input.ghost-input') as HTMLInputElement;
+		expect(ghostInput).toBeInTheDocument();
+
+		// Type a new value and press Enter
+		await userEvent.click(ghostInput!);
+		await userEvent.type(ghostInput!, 'viewer');
+		await userEvent.keyboard('{Enter}');
+		await tick();
+
+		// 'viewer' tag should now appear
+		await waitFor(() => expect(enumLine.textContent).toMatch(/viewer/));
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE10', [
+			makeField({ key: 'role', type: 'enum', enumValues: ['admin', 'member'] }),
+		])}
+	{/snippet}
+</Story>
+
+<!--
+  SE-11: Escape closes an open dropdown
+-->
+<Story
+	name="SE-11 Escape Closes Dropdown"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const addBtn = await canvas.findByRole('button', { name: /add property/i });
+		await userEvent.click(addBtn);
+		await tick();
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const newLine = lines[lines.length - 1];
+		const keyInput = within(newLine).getByTestId('key-input');
+		await waitFor(() => expect(keyInput).toHaveFocus());
+
+		// Open type dropdown
+		await userEvent.keyboard(':');
+		await tick();
+		const dropdown = await canvas.findByRole('listbox');
+		expect(dropdown).toBeInTheDocument();
+
+		// Escape should close it
+		await userEvent.keyboard('{Escape}');
+		await tick();
+		await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE11')}
+	{/snippet}
+</Story>

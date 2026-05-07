@@ -45,7 +45,7 @@
 <Story name='Highlighted' args={{
 		lines: [
 			{ lineNumber: 1, tokens: [{ kind: 'plain', text: '{' }] },
-			{ lineNumber: 2, fieldId: 'id', tokens: [{ kind: 'key', text: '  "id"' }, { kind: 'plain', text: ': "user_123"' }] },
+			{ lineNumber: 2, fieldId: 'id', tokens: [{ kind: 'property', text: '  "id"' }, { kind: 'plain', text: ': "user_123"' }] },
 			{ lineNumber: 3, tokens: [{ kind: 'plain', text: '}' }] }
 		],
 		selectedFieldId: 'id'

@@ -10,7 +10,7 @@ import type { ZodFieldType } from "./field-types";
 
 export interface ModifierDef {
   name: string;
-  value?: string | number;
+  value?: string | number | boolean;
 }
 
 export interface FieldDef {
@@ -71,7 +71,7 @@ export interface WorldConfig {
 
 export interface UIState {
   exportOpen: boolean;
-  outputTab: "code" | "data";
+  outputTab: "code" | "data" | "world";
   sectionStates: Record<string, boolean>;
 }
 
@@ -427,14 +427,14 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     entityId: string,
     fieldId: string,
     modifierIndex: number,
-    value: string | number,
+    value: string | number | boolean,
   ) {
     const fields = _getFields(entityType, entityId);
     if (!fields) return;
     const field = findField(fields, fieldId);
     if (field?.modifiers[modifierIndex]) {
       const mod = field.modifiers[modifierIndex];
-      let finalValue = value;
+      let finalValue: string | number | boolean = value;
 
       if (typeof value === "string") {
         const isNumericMod = [".min", ".max", ".length", ".multipleOf"].includes(mod.name);
@@ -503,7 +503,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   // ── UI ─────────────────────────────────────────────────────────────────
 
-  function setOutputTab(tab: "code" | "data") {
+  function setOutputTab(tab: "code" | "data" | "world") {
     state.ui.outputTab = tab;
   }
 

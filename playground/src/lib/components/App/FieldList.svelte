@@ -14,7 +14,7 @@
 		onaddmod?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onchangetype?: (id: string, e: MouseEvent | FocusEvent) => void;
 		onremovefield?: (id: string) => void;
-		onupdatemodifier?: (fieldId: string, index: number, value: string | number) => void;
+		onupdatemodifier?: (fieldId: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
 		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
 		onaddprop?: () => void;

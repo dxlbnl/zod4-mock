@@ -14,13 +14,13 @@
 	});
 
 	const mockCodeLines = [
-		{ lineNumber: 1, tokens: [{ kind: 'keyword' as const, text: 'const' }, { kind: 'plain' as const, text: ' ' }, { kind: 'variable' as const, text: 'UserSchema' }] },
-		{ lineNumber: 2, tokens: [{ kind: 'plain' as const, text: '  = ' }, { kind: 'variable' as const, text: 'z' }, { kind: 'plain' as const, text: '.' }, { kind: 'function' as const, text: 'object' }, { kind: 'plain' as const, text: '({...})' }] }
+		{ lineNumber: 1, tokens: [{ kind: 'keyword' as const, text: 'const' }, { kind: 'plain' as const, text: ' ' }, { kind: 'plain' as const, text: 'UserSchema' }] },
+		{ lineNumber: 2, tokens: [{ kind: 'plain' as const, text: '  = ' }, { kind: 'plain' as const, text: 'z' }, { kind: 'punct' as const, text: '.' }, { kind: 'fn' as const, text: 'object' }, { kind: 'plain' as const, text: '({...})' }] }
 	];
 
 	const mockDataLines = [
 		{ lineNumber: 1, tokens: [{ kind: 'plain' as const, text: '{' }] },
-		{ lineNumber: 2, tokens: [{ kind: 'key' as const, text: '  "id"' }, { kind: 'plain' as const, text: ': ' }, { kind: 'string' as const, text: '"user_1"' }] },
+		{ lineNumber: 2, tokens: [{ kind: 'property' as const, text: '  "id"' }, { kind: 'plain' as const, text: ': ' }, { kind: 'string' as const, text: '"user_1"' }] },
 		{ lineNumber: 3, tokens: [{ kind: 'plain' as const, text: '}' }] }
 	];
 </script>

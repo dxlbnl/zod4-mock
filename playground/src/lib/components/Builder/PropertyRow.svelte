@@ -6,7 +6,7 @@
 
 	interface Modifier {
 		name: string;
-		value?: string | number;
+		value?: string | number | boolean;
 		warn?: boolean;
 	}
 
@@ -24,7 +24,7 @@
 		onremove?: () => void;
 		onaddprop?: () => void;
 		onupdatekey?: (val: string) => void;
-		onupdatemodifier?: (index: number, val: string | number) => void;
+		onupdatemodifier?: (index: number, val: string | number | boolean) => void;
 		onremovemodifier?: (index: number) => void;
 		onaddmod?: (e: MouseEvent | FocusEvent) => void;
 		onupdateenumvalues?: (values: string[]) => void;

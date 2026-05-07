@@ -186,7 +186,7 @@ export function buildWorld(state: PlaygroundState) {
 
 export interface GenerationResult {
   ok: boolean;
-  data?: unknown[];
+  data?: unknown[] | Record<string, unknown[]>;
   error?: string;
 }
 
@@ -198,7 +198,7 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
     const { world, subjectMap } = buildWorld(state);
     const subjectType = subjectMap.get(subj.id);
     if (!subjectType) return { ok: false, error: "Subject not registered" };
-    
+
     const data = world.generate(z.array(subjectType.schema)) as unknown[];
     return { ok: true, data };
   } catch (e) {
