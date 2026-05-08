@@ -31,6 +31,7 @@
 		onselectfield?: (id: string | null) => void;
 		/** Currently selected field ID (controlled from parent) */
 		selectedFieldId?: string | null;
+		onupdatetitle?: (val: string) => void;
 	}
 
 	let {
@@ -46,7 +47,8 @@
 		onremovemodifier,
 		onupdateenumvalues,
 		onselectfield,
-		selectedFieldId = null
+		selectedFieldId = null,
+		onupdatetitle
 	}: Props = $props();
 
 	// ── Active line tracking ───────────────────────────────────────────────

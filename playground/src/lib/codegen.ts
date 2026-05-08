@@ -42,6 +42,7 @@ const str = (text: string) => t("string", text);
 const num = (text: string) => t("number", text);
 const pt = (text: string) => t("punct", text);
 const pl = (text: string) => t("plain", text);
+const pr = (text: string) => t("property", text);
 
 // ─── Modifier codegen ─────────────────────────────────────────────────────────
 
@@ -119,17 +120,31 @@ function fieldToZodExpr(field: FieldDef, indent = 0): string {
 
 // ─── Subject → defineSubjectType code ─────────────────────────────────────────
 
-export function generateSubjectCode(subject: SubjectDef): string {
-  if (subject.fields.length === 0) {
-    return `const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({}));`;
+export function generateSubjectCode(subject: SubjectDef, relationships: RelationshipDef[] = []): string {
+  const rels = relationships.filter((r) => r.from === subject.name);
+
+  let fieldsStr = "z.object({})";
+  if (subject.fields.length > 0) {
+    const fields = subject.fields
+      .map((f) => `  ${f.key || "_"}: ${fieldToZodExpr(f, 1)},`)
+      .join("\n");
+    fieldsStr = `z.object({\n${fields}\n})`;
   }
-  const fields = subject.fields
-    .map((f) => `  ${f.key || "_"}: ${fieldToZodExpr(f, 1)},`)
+
+  if (rels.length === 0) {
+    return `const ${subject.name}Subject = defineSubjectType("${subject.name}", ${fieldsStr});`;
+  }
+
+  const relLines = rels
+    .map((r) => `    ${r.relationName}: { to: "${r.to}", cardinality: "${r.cardinality}" },`)
     .join("\n");
+
   return (
-    `const ${subject.name}Subject = defineSubjectType("${subject.name}", z.object({\n` +
-    `${fields}\n` +
-    `}));`
+    `const ${subject.name}Subject = defineSubjectType("${subject.name}", ${fieldsStr}, {\n` +
+    `  relations: {\n` +
+    `${relLines}\n` +
+    `  }\n` +
+    `});`
   );
 }
 
@@ -207,7 +222,7 @@ export function generateFullExport(state: PlaygroundState): string {
   if (state.subjects.length > 0) {
     parts.push(`// ── Subjects ─────────────────────────────────────────────────────────────`);
     for (const subj of state.subjects) {
-      parts.push(generateSubjectCode(subj));
+      parts.push(generateSubjectCode(subj, state.relationships));
     }
     parts.push("");
   }
@@ -240,13 +255,15 @@ export function generateFullExport(state: PlaygroundState): string {
 
 // ─── Tokenized code (for CodeView syntax highlighting) ───────────────────────
 
-export function generateTokenizedCode(subject: SubjectDef): CodeLine[] {
+export function generateTokenizedCode(subject: SubjectDef, relationships: RelationshipDef[] = []): CodeLine[] {
   const lines: CodeLine[] = [];
   let lineNum = 1;
 
   function pushLine(tokens: CodeToken[], fieldId?: string) {
     lines.push({ lineNumber: lineNum++, tokens, fieldId });
   }
+
+  const rels = relationships.filter((r) => r.from === subject.name);
 
   // const UserSubject = defineSubjectType("User", z.object({
   pushLine([
@@ -271,8 +288,27 @@ export function generateTokenizedCode(subject: SubjectDef): CodeLine[] {
     pushLine([pl(`  ${field.key || "_"}`), pt(": "), ...zodTokens, pt(",")], field.id);
   }
 
-  // }));
-  pushLine([pt("}));")]);
+  if (rels.length === 0) {
+    pushLine([pt("}));")]);
+  } else {
+    pushLine([pt("}), {")]);
+    pushLine([pl("  "), pr("relations"), pt(": {")]);
+    for (const r of rels) {
+      pushLine([
+        pl(`    ${r.relationName}`),
+        pt(": { "),
+        pr("to"),
+        pt(': "'),
+        str(r.to),
+        pt('", '),
+        pr("cardinality"),
+        pt(': "'),
+        str(r.cardinality),
+        pt('" },'),
+      ]);
+    }
+    pushLine([pl("  }"), pt(" });")]);
+  }
 
   return lines;
 }

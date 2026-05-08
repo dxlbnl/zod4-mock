@@ -455,14 +455,14 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   // ── Relationships ──────────────────────────────────────────────────────
 
-  function addRelationship() {
+  function addRelationship(initial: Partial<Omit<RelationshipDef, "id">> = {}) {
     const names = state.subjects.map((s) => s.name);
     state.relationships.push({
       id: uid("rel"),
-      from: names[0] ?? "",
-      cardinality: "1",
-      to: names[1] ?? names[0] ?? "",
-      relationName: "parent",
+      from: initial.from ?? names[0] ?? "",
+      cardinality: initial.cardinality ?? "1",
+      to: initial.to ?? names[1] ?? names[0] ?? "",
+      relationName: initial.relationName ?? "relation",
     });
   }
 

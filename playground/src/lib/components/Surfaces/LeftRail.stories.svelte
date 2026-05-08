@@ -99,6 +99,46 @@
 	{/snippet}
 </Story>
 
+<Story 
+	name="LR-7 Wiring Relationships" 
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		// 1. Hover over a subject to reveal the link icon
+		const userSubject = canvas.getByText('User').closest('.subj');
+		if (userSubject) {
+			await userEvent.hover(userSubject);
+		}
+
+		// 2. Click the link icon
+		const linkBtn = canvas.getByTitle(/add relationship/i);
+		await userEvent.click(linkBtn);
+		await tick();
+
+		// 3. Fill the RelationForm (overlay)
+		const nameInput = canvas.getByPlaceholderText(/e.g. author/i);
+		await userEvent.type(nameInput, 'creator');
+
+		const addBtn = canvas.getByText(/add relation/i);
+		await userEvent.click(addBtn);
+		await tick();
+
+		// 4. Form should be gone
+		await expect(canvas.queryByText(/add relation/i)).toBeNull();
+
+		// 5. Verify relationship was added to the store (indirectly by checking if overlay closed)
+		// We can't easily check store state from here without export, 
+		// but the fact that it closed means onadd was called.
+	}}
+>
+	{#snippet template()}
+		{@const store = getStoryStore('WiringRel')}
+		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+			<LeftRail {store} />
+		</div>
+	{/snippet}
+</Story>
+
 <Story name="Many Items">
 	{#snippet template()}
 		{@const store = getStoryStore('ManyItems', (s) => {

@@ -73,35 +73,42 @@ const minimalState: PlaygroundState = {
 
 describe("generateSubjectCode", () => {
   it("produces a defineSubjectType call", () => {
-    const code = generateSubjectCode(userSubject);
+    const code = generateSubjectCode(userSubject, []);
     expect(code).toContain('defineSubjectType("User"');
     expect(code).toContain("const UserSubject");
   });
 
+  it("includes relationships in the code", () => {
+    const rels = [{ id: "r1", from: "Order", to: "User", cardinality: "1" as const, relationName: "customer" }];
+    const code = generateSubjectCode(orderSubject, rels);
+    expect(code).toContain("relations: {");
+    expect(code).toContain('customer: { to: "User", cardinality: "1" }');
+  });
+
   it("includes uuid field", () => {
-    const code = generateSubjectCode(userSubject);
+    const code = generateSubjectCode(userSubject, []);
     expect(code).toContain("id: z.uuid()");
   });
 
   it("includes email field", () => {
-    const code = generateSubjectCode(userSubject);
+    const code = generateSubjectCode(userSubject, []);
     expect(code).toContain("email: z.email()");
   });
 
   it("applies number modifiers", () => {
-    const code = generateSubjectCode(userSubject);
+    const code = generateSubjectCode(userSubject, []);
     expect(code).toContain(".int()");
     expect(code).toContain(".min(18)");
   });
 
   it("generates enum with values", () => {
-    const code = generateSubjectCode(userSubject);
+    const code = generateSubjectCode(userSubject, []);
     expect(code).toContain('z.enum(["admin", "member"])');
   });
 
   it("handles empty fields", () => {
     const empty: SubjectDef = { id: "x", name: "Empty", count: 1, fields: [] };
-    const code = generateSubjectCode(empty);
+    const code = generateSubjectCode(empty, []);
     expect(code).toContain("z.object({})");
   });
 });
@@ -191,25 +198,25 @@ describe("generateFullExport", () => {
 
 describe("generateTokenizedCode", () => {
   it("returns an array of CodeLines", () => {
-    const lines = generateTokenizedCode(userSubject);
+    const lines = generateTokenizedCode(userSubject, []);
     expect(Array.isArray(lines)).toBe(true);
     expect(lines.length).toBeGreaterThan(0);
   });
 
   it("each line has a lineNumber starting at 1", () => {
-    const lines = generateTokenizedCode(userSubject);
+    const lines = generateTokenizedCode(userSubject, []);
     expect(lines[0].lineNumber).toBe(1);
     expect(lines[lines.length - 1].lineNumber).toBe(lines.length);
   });
 
   it("field lines have a fieldId", () => {
-    const lines = generateTokenizedCode(userSubject);
+    const lines = generateTokenizedCode(userSubject, []);
     const fieldLines = lines.filter((l) => l.fieldId);
     expect(fieldLines.length).toBe(userSubject.fields.length);
   });
 
   it("each line has tokens", () => {
-    const lines = generateTokenizedCode(userSubject);
+    const lines = generateTokenizedCode(userSubject, []);
     for (const line of lines) {
       expect(line.tokens.length).toBeGreaterThan(0);
     }

@@ -3,6 +3,8 @@
 	import SubjectItem from '../Builder/SubjectItem.svelte';
 	import SchemaItem from '../App/SchemaItem.svelte';
 	import WorldConfig from '../App/WorldConfig.svelte';
+	import RelationForm from '../Builder/RelationForm.svelte';
+	import RelationshipItem from '../Builder/RelationshipItem.svelte';
 	import type { PlaygroundStore } from '../../state.svelte';
 
 	interface Props {
@@ -10,6 +12,10 @@
 	}
 
 	let { store }: Props = $props();
+
+	// Local UI state
+	let linkingSubjectId = $state<string | null>(null);
+	const linkingSubject = $derived(subjects.find(s => s.id === linkingSubjectId));
 
 	// Derived lists and states
 	const subjects = $derived(store.state.subjects);
@@ -55,6 +61,7 @@
 					count={subj.count}
 					selected={activeEntityType === 'subject' && activeSubjectId === subj.id}
 					onclick={() => store.setActiveSubject(subj.id)}
+					onlink={() => linkingSubjectId = subj.id}
 					onupdatecount={(val) => store.setSubjectCount(subj.id, val)}
 				/>
 			{/each}
@@ -62,6 +69,30 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="add-row t-code-sm" onclick={() => store.addSubject('NewSubject')}>
 				<span class="plus">+</span> add subject
+			</div>
+		</div>
+	</Accordion>
+
+	<Accordion
+		title="Relationships"
+		meta={String(store.state.relationships.length)}
+		open={store.state.ui.sectionStates['relationships'] ?? false}
+		ontoggle={() => store.toggleSection('relationships')}
+	>
+		<div class="list">
+			{#each store.state.relationships as rel}
+				<RelationshipItem
+					from={rel.from}
+					to={rel.to}
+					name={rel.relationName}
+					cardinality={rel.cardinality}
+					onremove={() => store.removeRelationship(rel.id)}
+				/>
+			{/each}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="add-row t-code-sm" onclick={() => linkingSubjectId = 'global'}>
+				<span class="plus">+</span> add relationship
 			</div>
 		</div>
 	</Accordion>
@@ -89,6 +120,24 @@
 	</Accordion>
 </aside>
 
+{#if linkingSubjectId}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="overlay" onclick={() => linkingSubjectId = null}>
+		<div class="form-container" onclick={(e) => e.stopPropagation()}>
+			<RelationForm
+				subjects={subjects.map(s => s.name)}
+				initialFrom={linkingSubject?.name}
+				onadd={(rel) => {
+					store.addRelationship(rel);
+					linkingSubjectId = null;
+				}}
+				oncancel={() => linkingSubjectId = null}
+			/>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.rail {
 		width: 264px;
@@ -99,6 +148,7 @@
 		flex-direction: column;
 		user-select: none;
 		overflow-y: auto;
+		position: relative;
 	}
 
 	.list {
@@ -130,6 +180,28 @@
 		font-size: 14px;
 		line-height: 1;
 		margin-bottom: 2px;
+	}
+
+	.overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(2px);
+		z-index: 2000;
+		display: grid;
+		place-items: center;
+	}
+
+	.form-container {
+		animation: pop var(--ease-out) 0.2s;
+	}
+
+	@keyframes pop {
+		from { transform: scale(0.9) translateY(10px); opacity: 0; }
+		to { transform: scale(1) translateY(0); opacity: 1; }
 	}
 </style>
 

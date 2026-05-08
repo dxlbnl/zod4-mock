@@ -5,10 +5,11 @@
 		badge?: string;
 		selected?: boolean;
 		onclick?: () => void;
+		onlink?: () => void;
 		onupdatecount?: (val: number) => void;
 	}
 
-	let { name, count, badge, selected = false, onclick, onupdatecount }: Props = $props();
+	let { name, count, badge, selected = false, onclick, onlink, onupdatecount }: Props = $props();
 
 	function handleInput(e: Event) {
 		const val = parseInt((e.target as HTMLInputElement).value, 10);
@@ -23,6 +24,15 @@
 <div class="subj" aria-selected={selected} {onclick}>
 	<span class="grip t-number">⋮⋮</span>
 	<span class="name t-small">{name}</span>
+
+	<button 
+		class="link-btn" 
+		title="Add relationship"
+		onclick={(e) => { e.stopPropagation(); onlink?.(); }}
+	>
+		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+	</button>
+
 	{#if count !== undefined}
 		<input 
 			type="number" 
@@ -43,13 +53,14 @@
 	.subj {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-1) var(--space-3);
+		gap: var(--space-2);
+		padding: var(--space-1) var(--space-2);
+		margin: 0 var(--space-1);
 		border-radius: var(--r-sm);
 		cursor: pointer;
 		user-select: none;
 		border: 1px solid transparent;
-		transition: background var(--ease-quick);
+		transition: all var(--ease-quick);
 	}
 
 	.subj:hover {
@@ -64,6 +75,7 @@
 	.subj .grip {
 		color: var(--ink-3);
 		cursor: grab;
+		font-size: 10px;
 	}
 
 	.subj .name {
@@ -78,6 +90,25 @@
 
 	.subj[aria-selected='true'] .name {
 		color: var(--accent-bright);
+	}
+
+	.link-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: var(--r-sm);
+		border: none;
+		background: transparent;
+		color: var(--ink-3);
+		cursor: pointer;
+		transition: all var(--ease-quick);
+	}
+
+	.link-btn:hover {
+		background: var(--bg-3);
+		color: var(--ink-1);
 	}
 
 	.count-input {

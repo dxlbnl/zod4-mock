@@ -45,7 +45,7 @@
 
 	const codeLines = $derived(
 		activeEntityType === 'subject' && store.activeSubject 
-			? generateTokenizedCode(store.activeSubject) 
+			? generateTokenizedCode(store.activeSubject, store.state.relationships) 
 			: []
 	);
 
@@ -129,7 +129,7 @@
 				codeLines={codeLines}
 				dataLines={dataLines}
 				worldLines={worldLines}
-				fullCode={store.activeSubject ? generateSubjectCode(store.activeSubject) : ''}
+				fullCode={store.activeSubject ? generateSubjectCode(store.activeSubject, store.state.relationships) : ''}
 				fullData={generationResult.ok ? JSON.stringify(generationResult.data, null, 2) : ''}
 				fullWorld={worldResult.ok ? JSON.stringify(worldResult.data, null, 2) : ''}
 				{selectedFieldId}
