@@ -17,13 +17,13 @@
 	import InlineArgInput from './InlineArgInput.svelte';
 	import EnumTagInput from './EnumTagInput.svelte';
 	import type { EditorPhase } from './schema-editor.types';
-	import type { FieldDef, ModifierDef } from '../../state.svelte';
+	import type { FieldDef, ModifierDef } from '$lib/state.svelte';
 	import {
 		FIELD_TYPES,
 		SELECTABLE_FIELD_TYPES,
 		getModifiers,
 		type ZodFieldType
-	} from '../../field-types';
+	} from '$lib/field-types';
 	import { tick } from 'svelte';
 
 	interface Props {

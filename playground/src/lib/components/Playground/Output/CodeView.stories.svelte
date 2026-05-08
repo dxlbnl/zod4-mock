@@ -4,7 +4,7 @@
 	import { within, expect } from '@storybook/test';
 
 	const { Story } = defineMeta({
-		title: 'App/CodeView',
+		title: 'Playground/Output/CodeView',
 		component: CodeView,
 		tags: ['autodocs'],
 		args: {

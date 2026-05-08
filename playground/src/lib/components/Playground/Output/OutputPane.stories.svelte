@@ -5,7 +5,7 @@
 	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
-		title: 'App/OutputPane',
+		title: 'Playground/Output/OutputPane',
 		component: OutputPane,
 		tags: ['autodocs'],
 		args: {

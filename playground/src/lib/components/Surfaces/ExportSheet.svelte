@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '../Primitives/Button.svelte';
+	import Button from '$lib/components/Primitives/Button.svelte';
 
 	interface Props {
 		open?: boolean;

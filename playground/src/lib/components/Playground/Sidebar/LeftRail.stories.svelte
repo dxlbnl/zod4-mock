@@ -2,11 +2,11 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { userEvent, within, expect } from '@storybook/test';
 	import LeftRail from './LeftRail.svelte';
-	import { createPlaygroundState } from '../../state.svelte';
+	import { createPlaygroundState } from '$lib/state.svelte';
 	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
-		title: 'Surfaces/LeftRail',
+		title: 'Playground/Sidebar/LeftRail',
 		component: LeftRail,
 		parameters: {
 			docs: {
@@ -111,7 +111,7 @@
 		}
 
 		// 2. Click the link icon
-		const linkBtn = canvas.getByTitle(/add relationship/i);
+		const linkBtn = within(userSubject as HTMLElement).getByTitle(/add relationship/i);
 		await userEvent.click(linkBtn);
 		await tick();
 
@@ -119,12 +119,12 @@
 		const nameInput = canvas.getByPlaceholderText(/e.g. author/i);
 		await userEvent.type(nameInput, 'creator');
 
-		const addBtn = canvas.getByText(/add relation/i);
+		const addBtn = canvas.getByRole('button', { name: /^add relation$/i });
 		await userEvent.click(addBtn);
 		await tick();
 
 		// 4. Form should be gone
-		await expect(canvas.queryByText(/add relation/i)).toBeNull();
+		await expect(canvas.queryByRole('button', { name: /^add relation$/i })).toBeNull();
 
 		// 5. Verify relationship was added to the store (indirectly by checking if overlay closed)
 		// We can't easily check store state from here without export, 

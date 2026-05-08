@@ -1,21 +1,17 @@
 <script lang="ts">
-	import Accordion from '../Primitives/Accordion.svelte';
-	import SubjectItem from '../Builder/SubjectItem.svelte';
-	import SchemaItem from '../App/SchemaItem.svelte';
-	import WorldConfig from '../App/WorldConfig.svelte';
-	import RelationForm from '../Builder/RelationForm.svelte';
-	import RelationshipItem from '../Builder/RelationshipItem.svelte';
-	import type { PlaygroundStore } from '../../state.svelte';
+	import Accordion from '$lib/components/Primitives/Accordion.svelte';
+	import SubjectItem from './SubjectItem.svelte';
+	import SchemaItem from './SchemaItem.svelte';
+	import WorldConfig from './WorldConfig.svelte';
+	import RelationForm from './RelationForm.svelte';
+	import RelationshipItem from './RelationshipItem.svelte';
+	import type { PlaygroundStore } from '$lib/state.svelte';
 
 	interface Props {
 		store: PlaygroundStore;
 	}
 
 	let { store }: Props = $props();
-
-	// Local UI state
-	let linkingSubjectId = $state<string | null>(null);
-	const linkingSubject = $derived(subjects.find(s => s.id === linkingSubjectId));
 
 	// Derived lists and states
 	const subjects = $derived(store.state.subjects);
@@ -31,6 +27,10 @@
 		if (id === 'schemas') return String(schemas.length);
 		return '';
 	}
+
+	// Local UI state
+	let linkingSubjectId = $state<string | null>(null);
+	const linkingSubject = $derived(subjects.find(s => s.id === linkingSubjectId));
 </script>
 
 <aside class="rail">

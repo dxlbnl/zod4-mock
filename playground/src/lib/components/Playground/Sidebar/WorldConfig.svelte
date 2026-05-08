@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Input from '../Primitives/Input.svelte';
+	import Input from '$lib/components/Primitives/Input.svelte';
 
 	interface Props {
 		seed: number;

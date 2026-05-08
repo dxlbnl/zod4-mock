@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, Prng } from "../../types.js";
-import { def, getLeafDef } from "../schema/zod-def.js";
+import { getLeafDef } from "../schema/zod-def.js";
 import * as data from "./index.js";
 
 // ---------------------------------------------------------------------------

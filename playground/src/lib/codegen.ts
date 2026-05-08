@@ -120,7 +120,10 @@ function fieldToZodExpr(field: FieldDef, indent = 0): string {
 
 // ─── Subject → defineSubjectType code ─────────────────────────────────────────
 
-export function generateSubjectCode(subject: SubjectDef, relationships: RelationshipDef[] = []): string {
+export function generateSubjectCode(
+  subject: SubjectDef,
+  relationships: RelationshipDef[] = [],
+): string {
   const rels = relationships.filter((r) => r.from === subject.name);
 
   let fieldsStr = "z.object({})";
@@ -255,7 +258,10 @@ export function generateFullExport(state: PlaygroundState): string {
 
 // ─── Tokenized code (for CodeView syntax highlighting) ───────────────────────
 
-export function generateTokenizedCode(subject: SubjectDef, relationships: RelationshipDef[] = []): CodeLine[] {
+export function generateTokenizedCode(
+  subject: SubjectDef,
+  relationships: RelationshipDef[] = [],
+): CodeLine[] {
   const lines: CodeLine[] = [];
   let lineNum = 1;
 

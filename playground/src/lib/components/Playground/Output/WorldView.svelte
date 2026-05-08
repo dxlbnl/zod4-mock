@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Pane from '../Surfaces/Pane.svelte';
+	import Pane from '$lib/components/Surfaces/Pane.svelte';
 	import SourceView from './SourceView.svelte';
-	import type { CodeLine } from '../../codegen';
+	import type { CodeLine } from '$lib/codegen';
 
 	interface Props {
 		title?: string;

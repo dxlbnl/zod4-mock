@@ -7,11 +7,11 @@
 	 * manages cross-line navigation and field creation/removal.
 	 */
 
-	import Pane from '../Surfaces/Pane.svelte';
+	import Pane from '$lib/components/Surfaces/Pane.svelte';
 	import SchemaEditorLine from './SchemaEditorLine.svelte';
-	import type { FieldDef, ModifierDef } from '../../state.svelte';
-	import { makeField } from '../../state.svelte';
-	import { FIELD_TYPES, type ZodFieldType } from '../../field-types';
+	import type { FieldDef, ModifierDef } from '$lib/state.svelte';
+	import { makeField } from '$lib/state.svelte';
+	import { FIELD_TYPES, type ZodFieldType } from '$lib/field-types';
 	import { tick } from 'svelte';
 
 	interface Props {

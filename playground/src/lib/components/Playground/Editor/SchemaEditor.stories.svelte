@@ -2,11 +2,11 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { userEvent, within, expect, waitFor } from '@storybook/test';
 	import SchemaEditor from './index.svelte';
-	import { createPlaygroundState, makeField } from '../../state.svelte';
+	import { createPlaygroundState, makeField } from '$lib/state.svelte';
 	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
-		title: 'SchemaEditor/SchemaEditor',
+		title: 'Playground/Editor/SchemaEditor',
 		component: SchemaEditor,
 		tags: ['autodocs'],
 		parameters: {
@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-	import type { FieldDef } from '../../state.svelte';
+	import type { FieldDef } from '$lib/state.svelte';
 
 	// Deduplicated story state map — prevents re-init on re-render
 	const storyStates = new Map<string, { store: ReturnType<typeof createPlaygroundState> }>();

@@ -51,4 +51,15 @@ describe("state.svelte", () => {
     store.removeModifier("subject", subj.id, field.id, 0);
     expect(field.modifiers.length).toBe(0);
   });
+
+  it("can rename a subject and update relationships", () => {
+    const store = createPlaygroundState();
+    const user = store.state.subjects.find((s) => s.name === "User")!;
+    const rel = store.state.relationships[0];
+
+    expect(rel.to).toBe("User");
+    store.renameSubject(user.id, "Account");
+    expect(user.name).toBe("Account");
+    expect(rel.to).toBe("Account");
+  });
 });

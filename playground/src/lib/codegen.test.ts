@@ -79,7 +79,9 @@ describe("generateSubjectCode", () => {
   });
 
   it("includes relationships in the code", () => {
-    const rels = [{ id: "r1", from: "Order", to: "User", cardinality: "1" as const, relationName: "customer" }];
+    const rels = [
+      { id: "r1", from: "Order", to: "User", cardinality: "1" as const, relationName: "customer" },
+    ];
     const code = generateSubjectCode(orderSubject, rels);
     expect(code).toContain("relations: {");
     expect(code).toContain('customer: { to: "User", cardinality: "1" }');

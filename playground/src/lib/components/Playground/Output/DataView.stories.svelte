@@ -12,7 +12,7 @@
 	}
 
 	const { Story } = defineMeta({
-		title: 'App/DataView',
+		title: 'Playground/Output/DataView',
 		component: DataView,
 		tags: ['autodocs']
 	});

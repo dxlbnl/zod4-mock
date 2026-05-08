@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Button from '../Primitives/Button.svelte';
+	import Button from '$lib/components/Primitives/Button.svelte';
 
 	interface Props {
 		title: string;

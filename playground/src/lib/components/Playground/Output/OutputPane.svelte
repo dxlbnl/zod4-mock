@@ -1,10 +1,10 @@
 <script lang="ts">
-	import OutputTabs from '../Surfaces/OutputTabs.svelte';
+	import OutputTabs from '$lib/components/Surfaces/OutputTabs.svelte';
 	import CodeView from './CodeView.svelte';
 	import MockDataView from './DataView.svelte';
 	import WorldView from './WorldView.svelte';
-	import Button from '../Primitives/Button.svelte';
-	import type { CodeLine } from '../../codegen';
+	import Button from '$lib/components/Primitives/Button.svelte';
+	import type { CodeLine } from '$lib/codegen';
 
 	interface Props {
 		activeTab: 'code' | 'data' | 'world';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CodeLine } from '../../codegen';
+	import type { CodeLine } from '$lib/codegen';
 
 	interface Props {
 		lines: CodeLine[];

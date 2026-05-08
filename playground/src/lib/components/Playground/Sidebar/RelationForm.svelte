@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Button from '../Primitives/Button.svelte';
-	import Input from '../Primitives/Input.svelte';
-	import SegmentedControl from '../Primitives/SegmentedControl.svelte';
-	import type { RelationshipDef } from '../../state.svelte';
+	import Button from '$lib/components/Primitives/Button.svelte';
+	import Input from '$lib/components/Primitives/Input.svelte';
+	import SegmentedControl from '$lib/components/Primitives/SegmentedControl.svelte';
+	import { type RelationshipDef } from '$lib/state.svelte';
 
 	interface Props {
 		subjects: string[];
@@ -87,7 +87,7 @@
 	</div>
 
 	<footer class="footer">
-		<Button variant="secondary" onclick={oncancel}>Cancel</Button>
+		<Button variant="default" onclick={oncancel}>Cancel</Button>
 		<Button variant="primary" onclick={handleSubmit} disabled={!relationName}>Add Relation</Button>
 	</footer>
 </div>
@@ -108,9 +108,6 @@
 	.header h4 {
 		margin: 0;
 		color: var(--ink-2);
-	}
-	.header strong {
-		color: var(--ink-0);
 	}
 
 	.fields {

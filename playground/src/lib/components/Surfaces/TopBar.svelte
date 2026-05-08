@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Button from '../Primitives/Button.svelte';
-	import SegmentedControl from '../Primitives/SegmentedControl.svelte';
-	import Kbd from '../Primitives/Kbd.svelte';
+	import Button from '$lib/components/Primitives/Button.svelte';
+	import SegmentedControl from '$lib/components/Primitives/SegmentedControl.svelte';
+	import Kbd from '$lib/components/Primitives/Kbd.svelte';
 
 	interface Props {
 		version: string;

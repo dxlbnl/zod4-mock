@@ -1,13 +1,13 @@
 <script lang="ts">
-	import TopBar from '../Surfaces/TopBar.svelte';
-	import LeftRail from '../Surfaces/LeftRail.svelte';
-	import SchemaEditor from '../SchemaEditor/index.svelte';
-	import OutputPane from './OutputPane.svelte';
-	import ExportSheet from '../Surfaces/ExportSheet.svelte';
-	import ExportContent from './ExportContent.svelte';
+	import TopBar from '$lib/components/Surfaces/TopBar.svelte';
+	import LeftRail from './Sidebar/LeftRail.svelte';
+	import SchemaEditor from './Editor/index.svelte';
+	import OutputPane from './Output/OutputPane.svelte';
+	import ExportSheet from '$lib/components/Surfaces/ExportSheet.svelte';
+	import ExportContent from './Output/ExportContent.svelte';
 	
 	import { untrack } from 'svelte';
-	import { createPlaygroundState } from '../../state.svelte';
+	import { createPlaygroundState } from '$lib/state.svelte';
 	import { 
 		generateTokenizedCode, 
 		generateTokenizedData, 
@@ -15,8 +15,8 @@
 		generateSubjectCode,
 		generateFullExport,
 		exportLineCount 
-	} from '../../codegen';
-	import { generateSubjectData, generateWorldData } from '../../schema-builder';
+	} from '$lib/codegen';
+	import { generateSubjectData, generateWorldData } from '$lib/schema-builder';
 
 	interface Props {
 		initialState?: any;

@@ -33,11 +33,11 @@ describe.only("Media Library", () => {
   const rawdata = world.generate(z.array(RawDataSchema).min(6).max(9));
 
   it("subjects", () => print(world.subjects()));
-  // it("rawdata", () => print(rawdata));
-  // it("text API", () => print(world.generate(z.array(TextApiSchema))));
-  // it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
-  // it("bank API", () => print(world.generate(z.array(BankApiSchema))));
-  // it("entity API", () => print(world.generate(z.array(EntityApiSchema))));
+  it("rawdata", () => print(rawdata));
+  it("text API", () => print(world.generate(z.array(TextApiSchema))));
+  it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
+  it("bank API", () => print(world.generate(z.array(BankApiSchema))));
+  it("entity API", () => print(world.generate(z.array(EntityApiSchema))));
 });
 
 // ---------------------------------------------------------------------------
