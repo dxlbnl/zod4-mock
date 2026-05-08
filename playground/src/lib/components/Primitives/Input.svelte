@@ -1,5 +1,6 @@
 <script lang="ts">
 	interface Props {
+		id?: string;
 		label?: string;
 		value?: string | number;
 		placeholder?: string;
@@ -14,6 +15,7 @@
 	}
 
 	let {
+		id,
 		label,
 		value = $bindable(),
 		placeholder = '',
@@ -43,6 +45,7 @@
 		<span class="field-label t-code-tight">{label}</span>
 		<input
 			bind:this={input}
+			{id}
 			{type}
 			{placeholder}
 			{disabled}
@@ -57,6 +60,7 @@
 {:else}
 	<input
 		bind:this={input}
+		{id}
 		{type}
 		{placeholder}
 		{disabled}

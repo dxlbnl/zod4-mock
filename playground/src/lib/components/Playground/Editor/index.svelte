@@ -9,6 +9,7 @@
 
 	import Pane from '$lib/components/Surfaces/Pane.svelte';
 	import SchemaEditorLine from './SchemaEditorLine.svelte';
+	import InlineDropdown from './InlineDropdown.svelte';
 	import type { FieldDef, ModifierDef } from '$lib/state.svelte';
 	import { makeField } from '$lib/state.svelte';
 	import { FIELD_TYPES, type ZodFieldType } from '$lib/field-types';
@@ -32,6 +33,14 @@
 		/** Currently selected field ID (controlled from parent) */
 		selectedFieldId?: string | null;
 		onupdatetitle?: (val: string) => void;
+
+		/** Binding related (Story 3) */
+		activeEntityType?: 'subject' | 'schema';
+		subjects?: import('$lib/state.svelte').SubjectDef[];
+		activeBinding?: import('$lib/state.svelte').SchemaBinding | null;
+		onbindschema?: (subjectId: string | null) => void;
+		onsetmapping?: (fieldKey: string, subjectKey: string) => void;
+		onremovemapping?: (fieldKey: string) => void;
 	}
 
 	let {
@@ -48,8 +57,37 @@
 		onupdateenumvalues,
 		onselectfield,
 		selectedFieldId = null,
-		onupdatetitle
+		onupdatetitle,
+		activeEntityType,
+		subjects = [],
+		activeBinding = null,
+		onbindschema,
+		onsetmapping,
+		onremovemapping
 	}: Props = $props();
+
+	// ── Subject Picker State ───────────────────────────────────────────────
+	let activeAnchorEl = $state<HTMLElement | null>(null);
+	let subjectDropdownOpen = $state(false);
+	const boundSubject = $derived(subjects.find((s) => s.id === activeBinding?.subjectId) ?? null);
+	const subjectMenuItems = $derived([
+		...subjects.map((s) => ({
+			name: s.name,
+			desc: '',
+			category: 'Subjects'
+		})),
+		{ name: 'None', desc: 'Clear binding', category: 'Action' }
+	]);
+
+	function handleBindSchema(subjectName: string) {
+		if (subjectName === 'None') {
+			onbindschema?.(null);
+		} else {
+			const subj = subjects.find((s) => s.name === subjectName);
+			if (subj) onbindschema?.(subj.id);
+		}
+		subjectDropdownOpen = false;
+	}
 
 	// ── Active line tracking ───────────────────────────────────────────────
 	let activeLineId = $derived(selectedFieldId);
@@ -171,6 +209,50 @@
 			<span><kbd>⌫</kbd> delete</span>
 		</div>
 
+		<!-- Subject Picker (Story 3) -->
+		{#if activeEntityType === 'schema'}
+			<div class="binding-bar t-code-tight">
+				<span class="label">Identity Source:</span>
+				<div class="picker-container" style="position: relative;">
+					<button
+						type="button"
+						class="picker-btn"
+						class:is-bound={!!boundSubject}
+						onclick={(e) => {
+							if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
+							activeAnchorEl = e.currentTarget as HTMLElement;
+							activeAnchorEl.style.setProperty('anchor-name', '--subject-picker-anchor');
+							subjectDropdownOpen = true;
+						}}
+					>
+						{#if boundSubject}
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="link-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+							<span class="subject-name">{boundSubject.name}</span>
+						{:else}
+							<span class="unbound-label">Not bound</span>
+						{/if}
+						<span class="chevron">▾</span>
+					</button>
+
+					{#if subjectDropdownOpen}
+						<InlineDropdown
+							items={subjectMenuItems}
+							value={activeBinding?.subjectId}
+							scope="subject"
+							anchorName="--subject-picker-anchor"
+							onselect={handleBindSchema}
+							onclose={() => (subjectDropdownOpen = false)}
+						/>
+					{/if}
+				</div>
+				{#if boundSubject}
+					<span class="hint">Fields can now map to {boundSubject.name} data.</span>
+				{:else}
+					<span class="hint">Bind to a subject to enable stable identity.</span>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Field lines -->
 		<div class="lines" role="list" aria-label="Schema fields">
 			{@render lineList(fields, undefined)}
@@ -196,13 +278,17 @@
 				{field}
 				isActive={activeLineId === field.id}
 				autofocus={lastAddedId === field.id}
+				availableSourceKeys={boundSubject?.fields.map((f) => f.key) ?? []}
+				mappedSourceKey={activeBinding?.fieldMap[field.key] ?? null}
 				onupdatekey={(id, key) => onupdatefield?.(id, { key })}
 				onupdatetype={handleUpdateType}
 				onupdateelementtype={handleUpdateElementType}
 				onaddmodifier={(id, mod) => onaddmodifier?.(id, mod)}
-				onupdatemodifier={(id, idx, val: string | number | boolean) => onupdatemodifier?.(id, idx, val)}
+				onupdatemodifier={(id, idx, val) => onupdatemodifier?.(id, idx, val)}
 				onremovemodifier={(id, idx) => onremovemodifier?.(id, idx)}
 				onupdateenumvalues={(id, vals) => onupdateenumvalues?.(id, vals)}
+				onsetmapping={(id, schemaKey, subjKey) => onsetmapping?.(schemaKey, subjKey)}
+				onremovemapping={(id, schemaKey) => onremovemapping?.(schemaKey)}
 				onremove={handleRemoveField}
 				onnextsibling={handleNextSibling}
 				onexitnesting={handleExitNesting}
@@ -255,6 +341,62 @@
 		font-size: 0.85em;
 		font-family: inherit;
 		line-height: 1.5;
+	}
+
+	/* Binding bar */
+	.binding-bar {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-4);
+		background: var(--bg-1);
+		border-bottom: 1px solid var(--line-strong);
+		color: var(--ink-2);
+	}
+
+	.binding-bar .label {
+		color: var(--ink-3);
+		font-weight: 500;
+	}
+
+	.picker-btn {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: 2px 8px;
+		background: var(--bg-2);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+		color: var(--ink-1);
+		cursor: pointer;
+		transition: all var(--ease-quick);
+	}
+
+	.picker-btn:hover {
+		background: var(--bg-3);
+		border-color: var(--ink-3);
+	}
+
+	.picker-btn.is-bound {
+		color: var(--accent-bright);
+		background: var(--accent-soft);
+		border-color: var(--accent-edge);
+	}
+
+	.picker-btn .link-icon {
+		opacity: 0.8;
+	}
+
+	.picker-btn .chevron {
+		font-size: 0.8em;
+		opacity: 0.5;
+	}
+
+	.binding-bar .hint {
+		font-size: 0.9em;
+		color: var(--ink-3);
+		opacity: 0.7;
+		font-style: italic;
 	}
 
 	/* Lines */

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Button from '$lib/components/Primitives/Button.svelte';
 	import Input from '$lib/components/Primitives/Input.svelte';
 	import SegmentedControl from '$lib/components/Primitives/SegmentedControl.svelte';
@@ -13,9 +14,9 @@
 
 	let { subjects, initialFrom, onadd, oncancel }: Props = $props();
 
-	let from = $state(initialFrom || subjects[0] || '');
+	let from = $state(untrack(() => initialFrom || subjects[0] || ''));
 	let relationName = $state('');
-	let to = $state(subjects.find(s => s !== from) || subjects[0] || '');
+	let to = $state(untrack(() => subjects.find(s => s !== from) || subjects[0] || ''));
 	let cardinality = $state<RelationshipDef['cardinality']>('1');
 
 	// Smart UX: Auto-populate relation name based on target subject
@@ -46,8 +47,8 @@
 
 	<div class="fields">
 		<div class="field-row">
-			<label class="t-code-sm">From Subject</label>
-			<select class="select t-code-tight" bind:value={from}>
+			<label class="t-code-sm" for="rel-from">From Subject</label>
+			<select id="rel-from" class="select t-code-tight" bind:value={from}>
 				{#each subjects as s}
 					<option value={s}>{s}</option>
 				{/each}
@@ -55,8 +56,9 @@
 		</div>
 
 		<div class="field-row">
-			<label class="t-code-sm">Relation Name</label>
+			<label class="t-code-sm" for="rel-name">Relation Name</label>
 			<Input 
+				id="rel-name"
 				placeholder="e.g. author, parent, items" 
 				bind:value={relationName}
 				autofocus
@@ -64,8 +66,8 @@
 		</div>
 
 		<div class="field-row">
-			<label class="t-code-sm">Target Subject</label>
-			<select class="select t-code-tight" bind:value={to}>
+			<label class="t-code-sm" for="rel-to">Target Subject</label>
+			<select id="rel-to" class="select t-code-tight" bind:value={to}>
 				{#each subjects as s}
 					<option value={s}>{s}</option>
 				{/each}
@@ -73,7 +75,7 @@
 		</div>
 
 		<div class="field-row">
-			<label class="t-code-sm">Cardinality</label>
+			<span class="label-text t-code-sm">Cardinality</span>
 			<SegmentedControl
 				options={[
 					{ label: '1', value: '1' },

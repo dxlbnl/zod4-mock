@@ -48,6 +48,12 @@
 		onexitnesting: (id: string) => void;
 		/** Notify parent that this line became focused */
 		onfocus?: (id: string) => void;
+
+		/** Binding related (Story 3) */
+		availableSourceKeys?: string[];
+		mappedSourceKey?: string | null;
+		onsetmapping?: (id: string, schemaFieldKey: string, subjectFieldKey: string) => void;
+		onremovemapping?: (id: string, schemaFieldKey: string) => void;
 	}
 
 	let {
@@ -64,12 +70,16 @@
 		onremove,
 		onnextsibling,
 		onexitnesting,
-		onfocus
+		onfocus,
+		availableSourceKeys = [],
+		mappedSourceKey = null,
+		onsetmapping,
+		onremovemapping
 	}: Props = $props();
 
 	// ── Phase / dropdown state ─────────────────────────────────────────────
-	let phase = $state<EditorPhase>('name');
-	let dropdownOpen = $state<'type' | 'elementType' | 'modifier' | null>(null);
+	let phase = $state<EditorPhase | 'mapping'>('name');
+	let dropdownOpen = $state<'type' | 'elementType' | 'modifier' | 'mapping' | null>(null);
 	/** Index of the modifier whose arg is currently being edited */
 	let editingModifierIndex = $state<number | null>(null);
 	/** Index of the modifier whose name is being replaced via dropdown */
@@ -113,6 +123,40 @@
 				category: m.category
 			}))
 	);
+
+	const mappingMenuItems = $derived([
+		...availableSourceKeys.map((k) => ({
+			name: k,
+			desc: `Map to ${k}`,
+			category: 'Subject Fields'
+		})),
+		{ name: 'None', desc: 'Clear mapping', category: 'Action' }
+	]);
+
+	// ── Mapping ────────────────────────────────────────────────────────────
+	function openMappingDropdown(el?: HTMLElement) {
+		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
+		activeAnchorEl = el ?? keyInputEl;
+		if (activeAnchorEl) activeAnchorEl.style.setProperty('anchor-name', '--editor-anchor');
+		phase = 'mapping';
+		dropdownOpen = 'mapping';
+	}
+
+	function handleMappingSelect(subjectFieldKey: string) {
+		dropdownOpen = null;
+		if (subjectFieldKey === 'None') {
+			onremovemapping?.(field.id, field.key);
+		} else {
+			onsetmapping?.(field.id, field.key, subjectFieldKey);
+		}
+		phase = 'modifiers';
+		tick().then(() => modAreaEl?.focus());
+	}
+
+	function handleRemoveMapping() {
+		onremovemapping?.(field.id, field.key);
+		dropdownOpen = null;
+	}
 
 	// ── Auto-focus on mount ────────────────────────────────────────────────
 	$effect(() => {
@@ -298,7 +342,7 @@
 		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		dropdownOpen = null;
 		replacingModifierIndex = null;
-		if (phase === 'type' || phase === 'elementType' || phase === 'modifierPicker') {
+		if (phase === 'type' || phase === 'elementType' || phase === 'modifierPicker' || phase === 'mapping') {
 			phase = 'modifiers';
 		}
 		tick().then(() => modAreaEl?.focus());
@@ -307,7 +351,7 @@
 	// ── Click on the line (outside interactive elements) ──────────────────
 	function handleLineClick(e: MouseEvent) {
 		const t = e.target as HTMLElement;
-		if (t.closest('.key-input, .type-chip, .mod-pill, .enum-tags, .dot-btn, .remove-btn, .inline-dropdown')) return;
+		if (t.closest('.key-input, .type-chip, .mod-pill, .enum-tags, .dot-btn, .remove-btn, .inline-dropdown, .mapping-area')) return;
 		keyInputEl?.focus();
 	}
 
@@ -339,17 +383,48 @@
 	<!-- Indent gutter -->
 	<span class="indent-gutter" aria-hidden="true"></span>
 
-	<!-- Key (name) input -->
-	<input
-		bind:this={keyInputEl}
-		class="key-input t-code"
-		value={field.key}
-		placeholder="name"
-		oninput={(e) => onupdatekey(field.id, (e.target as HTMLInputElement).value)}
-		onkeydown={handleKeyInputKeydown}
-		onfocus={() => { phase = 'name'; onfocus?.(field.id); }}
-		data-testid="key-input"
-	/>
+	<!-- Key (name) cell -->
+	<div class="key-cell">
+		<input
+			bind:this={keyInputEl}
+			class="key-input t-code"
+			style="width: {Math.max(field.key.length, 4)}ch"
+			value={field.key}
+			placeholder="name"
+			oninput={(e) => onupdatekey(field.id, (e.target as HTMLInputElement).value)}
+			onkeydown={handleKeyInputKeydown}
+			onfocus={() => { phase = 'name'; onfocus?.(field.id); }}
+			data-testid="key-input"
+		/>
+
+		<!-- Mapping (Story 3) - Inline with text -->
+		{#if availableSourceKeys.length > 0}
+			<div class="mapping-anchor-inline">
+				<button
+					type="button"
+					class="mapping-btn"
+					class:is-mapped={!!mappedSourceKey}
+					title={mappedSourceKey ? `Mapped to ${mappedSourceKey}` : 'Map to subject field'}
+					onclick={(e) => openMappingDropdown(e.currentTarget as HTMLElement)}
+				>
+					<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+					{#if mappedSourceKey}
+						<span class="mapped-label t-code-tight">{mappedSourceKey}</span>
+					{/if}
+				</button>
+
+				{#if dropdownOpen === 'mapping'}
+					<InlineDropdown
+						items={mappingMenuItems}
+						value={mappedSourceKey ?? undefined}
+						scope="mapping"
+						onselect={handleMappingSelect}
+						onclose={closeDropdown}
+					/>
+				{/if}
+			</div>
+		{/if}
+	</div>
 
 	<!-- Separator -->
 	<span class="sep t-code" aria-hidden="true">:</span>
@@ -431,7 +506,7 @@
 	{/if}
 
 	<!-- Modifier pills -->
-	<span class="mods-area">
+	<span class="mods-area" bind:this={modAreaEl}>
 		{#each field.modifiers as mod, i}
 			<span class="mod-pill t-code-sm" data-category={availableMods.find(m => m.name === mod.name)?.category}>
 				<!-- Modifier name — click to replace -->
@@ -491,7 +566,6 @@
 		<!-- Modifier add area — receives focus for keyboard navigation -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<span
-			bind:this={modAreaEl}
 			class="mod-add-area"
 			tabindex={phase === 'modifiers' || field.type ? 0 : -1}
 			role="presentation"
@@ -521,7 +595,7 @@
 			{/if}
 		</span>
 	</span>
-
+	
 	<!-- Remove button -->
 	<button
 		class="remove-btn"
@@ -535,7 +609,7 @@
 	.editor-line {
 		display: flex;
 		align-items: center;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: var(--space-1);
 		min-height: var(--h-row);
 		padding: var(--space-1) var(--space-4) var(--space-1) var(--indent, var(--space-4));
@@ -563,26 +637,36 @@
 		display: none; /* purely consumed by --indent CSS var */
 	}
 
-	/* Key input */
+	/* Key cell and input */
+	.key-cell {
+		display: flex;
+		align-items: center;
+		flex-wrap: nowrap;
+		min-width: 140px;
+		flex-shrink: 0;
+	}
+
 	.key-input {
 		background: transparent;
 		border: none;
 		color: var(--syn-key);
-		width: 120px;
-		padding: 2px 4px;
+		padding: 2px 2px 2px 4px;
 		border-radius: var(--radius-sm);
 		font: inherit;
+		flex-shrink: 1;
+		min-width: 0;
+	}
+
+	.mapping-anchor-inline {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
 	}
 
 	.key-input:focus {
 		outline: none;
 		background: var(--bg-3);
 		box-shadow: 0 0 0 1px var(--accent-edge);
-	}
-
-	/* Separator */
-	.sep {
-		color: var(--ink-3);
 	}
 
 	/* Type chip — Aligned with Builder/TypeChip.svelte */
@@ -618,6 +702,52 @@
 		font-style: italic;
 	}
 
+	/* Mapping (Story 3) */
+	.mapping-btn {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: 1px 3px;
+		border-radius: var(--r-sm);
+		color: var(--ink-3);
+		background: transparent;
+		border: 1px solid transparent;
+		cursor: pointer;
+		transition: all var(--ease-quick);
+		opacity: 0.4;
+	}
+
+	.mapping-btn:hover {
+		opacity: 1;
+		background: var(--bg-1);
+		color: var(--ink-1);
+		border-color: var(--line);
+	}
+
+	.mapping-btn.is-mapped {
+		opacity: 0.8;
+		color: var(--accent);
+		background: var(--accent-soft);
+	}
+	.mapping-btn.is-mapped:hover {
+		opacity: 1;
+		background: var(--accent-soft-hover, var(--accent-soft));
+	}
+
+	.mapped-label {
+		font-size: 10px;
+		font-weight: 600;
+		max-width: 80px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Separator */
+	.sep {
+		color: var(--ink-3);
+	}
+
 	/* Array element type */
 	.array-element-area {
 		display: inline-flex;
@@ -639,7 +769,7 @@
 	.mods-area {
 		display: inline-flex;
 		align-items: center;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: var(--space-1);
 	}
 

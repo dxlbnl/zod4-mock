@@ -481,11 +481,16 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   // ── Bindings ───────────────────────────────────────────────────────────
 
-  function bindSchemaToSubject(schemaId: string, subjectId: string) {
-    const existing = state.bindings.find((b) => b.schemaId === schemaId);
-    if (existing) {
-      existing.subjectId = subjectId;
-      existing.fieldMap = {};
+  function bindSchemaToSubject(schemaId: string, subjectId: string | null) {
+    const idx = state.bindings.findIndex((b) => b.schemaId === schemaId);
+    if (subjectId === null) {
+      if (idx !== -1) state.bindings.splice(idx, 1);
+      return;
+    }
+
+    if (idx !== -1) {
+      state.bindings[idx].subjectId = subjectId;
+      state.bindings[idx].fieldMap = {};
     } else {
       state.bindings.push({ schemaId, subjectId, fieldMap: {} });
     }

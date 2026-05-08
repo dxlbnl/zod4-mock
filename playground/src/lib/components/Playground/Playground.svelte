@@ -7,6 +7,7 @@
 	import ExportContent from './Output/ExportContent.svelte';
 	
 	import { untrack } from 'svelte';
+	import { z } from 'zod';
 	import { createPlaygroundState } from '$lib/state.svelte';
 	import { 
 		generateTokenizedCode, 
@@ -16,7 +17,7 @@
 		generateFullExport,
 		exportLineCount 
 	} from '$lib/codegen';
-	import { generateSubjectData, generateWorldData } from '$lib/schema-builder';
+	import { generateSubjectData, generateWorldData, buildWorld, buildZodSchema } from '$lib/schema-builder';
 
 	interface Props {
 		initialState?: any;
@@ -43,18 +44,36 @@
 		activeEntityType === 'subject' ? store.activeSubject?.id : store.activeSchema?.id
 	);
 
-	const codeLines = $derived(
-		activeEntityType === 'subject' && store.activeSubject 
-			? generateTokenizedCode(store.activeSubject, store.state.relationships) 
-			: []
-	);
+	const codeLines = $derived.by(() => {
+		if (activeEntityType === 'subject' && store.activeSubject) {
+			return generateTokenizedCode(store.activeSubject, store.state.relationships);
+		}
+		if (activeEntityType === 'schema' && store.activeSchema) {
+			return generateTokenizedCode({
+				...store.activeSchema,
+				count: 0
+			} as any, []);
+		}
+		return [];
+	});
 
 	// Mock data generation
-	const generationResult = $derived(
-		activeEntityType === 'subject' && store.activeSubject 
-			? generateSubjectData(store.state, store.activeSubject.id) 
-			: { ok: false }
-	);
+	const generationResult = $derived.by(() => {
+		if (activeEntityType === 'subject' && store.activeSubject) {
+			return generateSubjectData(store.state, store.activeSubject.id);
+		}
+		if (activeEntityType === 'schema' && store.activeSchema) {
+			try {
+				const { world } = buildWorld(store.state);
+				const apiSchema = buildZodSchema(store.activeSchema.fields);
+				const data = world.generate(z.array(apiSchema).length(3)) as unknown[];
+				return { ok: true, data };
+			} catch (e) {
+				return { ok: false, error: String(e) };
+			}
+		}
+		return { ok: false };
+	});
 
 	const dataLines = $derived(
 		generationResult.ok && activeFields.length > 0 
@@ -112,6 +131,12 @@
 				title={builderTitle}
 				fields={activeFields}
 				{selectedFieldId}
+				{activeEntityType}
+				subjects={store.state.subjects}
+				activeBinding={store.activeBinding}
+				onbindschema={(sid) => store.bindSchemaToSubject(store.state.activeSchemaId!, sid)}
+				onsetmapping={(fk, sk) => store.setFieldMapping(store.state.activeSchemaId!, fk, sk)}
+				onremovemapping={(fk) => store.removeFieldMapping(store.state.activeSchemaId!, fk)}
 				onselectfield={(id) => (selectedFieldId = id)}
 				onaddfield={(pid) => (entityId ? store.addField(activeEntityType, entityId, pid) : null) ?? undefined}
 				onupdatefield={(id, p) => entityId && store.updateField(activeEntityType, entityId, id, p)}

@@ -15,6 +15,8 @@
 		filter?: string;
 		/** Label shown in the search box pill, e.g. "type" or "modifier" */
 		scope?: string;
+		/** The CSS anchor name to attach to (default: --editor-anchor) */
+		anchorName?: string;
 		onselect?: (name: string) => void;
 		onclose?: () => void;
 	}
@@ -24,6 +26,7 @@
 		value,
 		filter = $bindable(''),
 		scope = '',
+		anchorName = '--editor-anchor',
 		onselect,
 		onclose
 	}: Props = $props();
@@ -124,6 +127,7 @@
 <div
 	bind:this={containerEl}
 	class="inline-dropdown"
+	style="position-anchor: {anchorName}"
 	role="listbox"
 	tabindex="-1"
 	aria-label={scope ? `Select ${scope}` : 'Select option'}
@@ -178,7 +182,6 @@
 <style>
 	.inline-dropdown {
 		position: fixed;
-		position-anchor: --editor-anchor;
 		top: anchor(bottom);
 		left: anchor(left);
 		margin-top: 4px;
