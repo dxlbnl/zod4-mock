@@ -36,6 +36,9 @@ function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAn
           if ("multipleOf" in s && typeof (s as any).multipleOf === "function")
             s = (s as any).multipleOf(Number(val));
           break;
+        case ".array":
+          s = s.array();
+          break;
         case ".optional":
           s = s.optional();
           break;
@@ -114,9 +117,6 @@ export function buildZodField(z: any, field: FieldDef): ZodTypeAny {
         }
         base = z.object(shape);
       }
-      break;
-    case "array":
-      base = z.array(z.unknown());
       break;
     default:
       base = z.unknown();

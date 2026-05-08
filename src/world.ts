@@ -239,14 +239,37 @@ export class WorldImpl implements World {
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
   ): input<TSchema> {
-    const d = def(schema);
+    // Supports schema.array().optional() chains — both reach the subject-aware generateArray.
+    let current: ZodTypeAny = schema;
+    let d = def(current);
+    const outerWrappers: Array<"optional" | "nullable"> = [];
+
+    while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
+      outerWrappers.push(d.type);
+      current = d.innerType;
+      d = def(current);
+    }
+
     if (d.type === "array") {
+      if (outerWrappers.length > 0) {
+        // Peek at the counter generateArray will use so both paths stay in sync:
+        // wrapper fires → we increment (consuming the same slot), optional doesn't → generateArray increments.
+        const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
+        const optProb = this.options.optionalProbability ?? 0.2;
+        for (const wrapper of outerWrappers) {
+          if (prng.random() < optProb) {
+            this.generationCounter++;
+            return (wrapper === "optional" ? undefined : null) as input<TSchema>;
+          }
+        }
+      }
       return this.generateArray(
         d.element!,
-        schema,
+        current,
         options as GenerateOptions<unknown[]> | undefined,
       ) as input<TSchema>;
     }
+
     return this.generateSingleItem(
       schema,
       options as GenerateOptions<unknown> | undefined,

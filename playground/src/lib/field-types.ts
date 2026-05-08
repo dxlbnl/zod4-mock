@@ -14,7 +14,6 @@ export type ZodFieldType =
   | "url"
   | "enum"
   | "object"
-  | "array"
   | "optional"
   | "nullable";
 
@@ -112,6 +111,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         hasValue: false,
       },
       {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
+      {
         name: ".optional()",
         label: "optional",
         desc: "field may be undefined",
@@ -173,6 +179,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
         defaultValue: 1,
       },
       {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
+      {
         name: ".optional()",
         label: "optional",
         desc: "field may be undefined",
@@ -202,6 +215,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     zodExpr: "z.boolean()",
     color: "purple",
     modifiers: [
+      {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
       {
         name: ".optional()",
         label: "optional",
@@ -233,6 +253,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     color: "amber",
     modifiers: [
       {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
+      {
         name: ".optional()",
         label: "optional",
         desc: "field may be undefined",
@@ -262,6 +289,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     zodExpr: "z.uuid()",
     color: "slate",
     modifiers: [
+      {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
       {
         name: ".optional()",
         label: "optional",
@@ -293,6 +327,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     color: "teal",
     modifiers: [
       {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
+      {
         name: ".optional()",
         label: "optional",
         desc: "field may be undefined",
@@ -322,6 +363,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     zodExpr: "z.url()",
     color: "teal",
     modifiers: [
+      {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
       {
         name: ".optional()",
         label: "optional",
@@ -353,6 +401,13 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     color: "rose",
     modifiers: [
       {
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
+        category: "Wrappers",
+        hasValue: false,
+      },
+      {
         name: ".optional()",
         label: "optional",
         desc: "field may be undefined",
@@ -383,50 +438,11 @@ export const FIELD_TYPES: Record<ZodFieldType, FieldTypeSpec> = {
     color: "indigo",
     modifiers: [
       {
-        name: ".optional()",
-        label: "optional",
-        desc: "field may be undefined",
+        name: ".array()",
+        label: "array",
+        desc: "wrap in an array of this type",
         category: "Wrappers",
         hasValue: false,
-      },
-      {
-        name: ".nullable()",
-        label: "nullable",
-        desc: "field may be null",
-        category: "Wrappers",
-        hasValue: false,
-      },
-    ],
-  },
-
-  array: {
-    label: "Array",
-    zodExpr: "z.array(...)",
-    color: "indigo",
-    modifiers: [
-      {
-        name: ".min",
-        label: "min items",
-        desc: "minimum array length",
-        category: "Constraints",
-        hasValue: true,
-        defaultValue: 1,
-      },
-      {
-        name: ".max",
-        label: "max items",
-        desc: "maximum array length",
-        category: "Constraints",
-        hasValue: true,
-        defaultValue: 5,
-      },
-      {
-        name: ".length",
-        label: "exact length",
-        desc: "exact array length",
-        category: "Constraints",
-        hasValue: true,
-        defaultValue: 3,
       },
       {
         name: ".optional()",
@@ -471,7 +487,6 @@ export const SELECTABLE_FIELD_TYPES: ZodFieldType[] = [
   "url",
   "enum",
   "object",
-  "array",
 ];
 
 /** Returns the modifier specs available for a given field type */

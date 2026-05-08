@@ -7,7 +7,13 @@ describe("field-types", () => {
     expect(FIELD_TYPES.number).toBeDefined();
     expect(FIELD_TYPES.boolean).toBeDefined();
     expect(FIELD_TYPES.object).toBeDefined();
-    expect(FIELD_TYPES.array).toBeDefined();
+  });
+
+  it("every selectable type has .array() as a modifier", () => {
+    for (const type of SELECTABLE_FIELD_TYPES) {
+      const mods = getModifiers(type);
+      expect(mods.some((m) => m.name === ".array()"), `${type} missing .array() modifier`).toBe(true);
+    }
   });
 
   it("returns modifiers for a type", () => {

@@ -164,7 +164,7 @@
 	}
 
 	function handleUpdateType(id: string, type: ZodFieldType) {
-		const isGroup = type === 'object' || type === 'array';
+		const isGroup = type === 'object';
 		onupdatefield?.(id, { type, kind: isGroup ? 'group' : 'field' });
 
 		// Auto-spawn a child for object types
@@ -173,33 +173,7 @@
 		}
 	}
 
-	function handleUpdateElementType(id: string, type: ZodFieldType) {
-		// Store element type in the first child's type field
-		// If no child exists, create one
-		const field = findFieldInList(fields, id);
-		if (!field) return;
 
-		if (field.children?.length > 0) {
-			onupdatefield?.(field.children[0].id, { type });
-		} else {
-			// Add a child with the given type, then update it
-			const newId = onaddfield?.(id);
-			if (typeof newId === 'string') {
-				tick().then(() => onupdatefield?.(newId, { type }));
-			}
-		}
-	}
-
-	function findFieldInList(list: FieldDef[], id: string): FieldDef | null {
-		for (const f of list) {
-			if (f.id === id) return f;
-			if (f.children?.length) {
-				const found = findFieldInList(f.children, id);
-				if (found) return found;
-			}
-		}
-		return null;
-	}
 </script>
 
 <Pane {title} {accentTitle} {subtitle} {onupdatetitle}>
@@ -307,7 +281,6 @@
 				mappedSourceKey={activeBinding?.fieldMap[field.key] ?? null}
 				onupdatekey={(id, key) => onupdatefield?.(id, { key })}
 				onupdatetype={handleUpdateType}
-				onupdateelementtype={handleUpdateElementType}
 				onaddmodifier={(id, mod) => onaddmodifier?.(id, mod)}
 				onupdatemodifier={(id, idx, val) => onupdatemodifier?.(id, idx, val)}
 				onremovemodifier={(id, idx) => onremovemodifier?.(id, idx)}

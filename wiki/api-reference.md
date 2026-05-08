@@ -173,8 +173,17 @@ generate<TSchema extends ZodTypeAny>(
 
 Generates a value matching the schema. The return type is fully inferred.
 
-- If `schema` is a `z.array(...)`: returns an array. Length is derived from Zod constraints (`.min()`, `.max()`, `.length()`), falling back to `defaultArrayLength`.
+- If `schema` resolves to an array (after peeling any outer `optional`/`nullable` modifiers): returns an array. Length is derived from Zod constraints (`.min()`, `.max()`, `.length()`), falling back to `defaultArrayLength`. The preferred form is the modifier chain — `schema.array()` — but `z.array(schema)` is equivalent.
 - Otherwise: returns a single object.
+
+**Array modifier chaining** — `optional`/`nullable` wrappers around an array are handled at the `generate()` level, so chaining is fully supported:
+
+```ts
+world.generate(PersonSchema.array())              // array
+world.generate(PersonSchema.array().optional())   // array | undefined
+world.generate(PersonSchema.array().nullable())   // array | null
+world.generate(PersonSchema.optional().array().optional()) // array of optional items, or undefined
+```
 
 When the schema is bound to one or more subject types, the world cycles through existing subjects deterministically. When the schema is not bound (ad-hoc), generation is purely schema-based.
 

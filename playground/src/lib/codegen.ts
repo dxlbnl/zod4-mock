@@ -114,9 +114,6 @@ function fieldToZodExpr(field: FieldDef, indent = 0): string {
         base = `z.object({\n${childLines}\n${pad}  })`;
       }
       break;
-    case "array":
-      base = "z.array(z.unknown())"; // placeholder — array item type TBD
-      break;
     default:
       base = "z.unknown()";
   }

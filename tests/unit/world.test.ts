@@ -251,6 +251,75 @@ describe("world.generate — z.array()", () => {
 });
 
 // ---------------------------------------------------------------------------
+// world.generate — array modifier chaining
+// ---------------------------------------------------------------------------
+
+describe("world.generate — array as modifier chain", () => {
+  function setup() {
+    return createWorld({ seed: 42 })
+      .withSubject(PersonSubject)
+      .withSchema(PersonSchema, PersonSubject);
+  }
+
+  it("schema.array() works like z.array(schema)", () => {
+    const result = setup().generate(PersonSchema.array());
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("schema.array().optional() returns an array or undefined", () => {
+    const results = Array.from({ length: 30 }, (_, i) =>
+      createWorld({ seed: i })
+        .withSubject(PersonSubject)
+        .withSchema(PersonSchema, PersonSubject)
+        .generate(PersonSchema.array().optional()),
+    );
+    expect(results.some((r) => Array.isArray(r))).toBe(true);
+    expect(results.some((r) => r === undefined)).toBe(true);
+  });
+
+  it("schema.array().nullable() returns an array or null", () => {
+    const results = Array.from({ length: 30 }, (_, i) =>
+      createWorld({ seed: i })
+        .withSubject(PersonSubject)
+        .withSchema(PersonSchema, PersonSubject)
+        .generate(PersonSchema.array().nullable()),
+    );
+    expect(results.some((r) => Array.isArray(r))).toBe(true);
+    expect(results.some((r) => r === null)).toBe(true);
+  });
+
+  it("uses subject-aware generation through modifier chain", () => {
+    const world = createWorld({ seed: 42 })
+      .withSubject(PersonSubject)
+      .withSchema(PersonSchema, PersonSubject, {
+        firstName: (s) => s.firstName,
+      });
+    const result = world.generate(PersonSchema.array().optional());
+    if (result !== undefined) {
+      for (const item of result) {
+        expect(typeof item.firstName).toBe("string");
+      }
+    }
+  });
+
+  it("respects .min()/.max() constraints on the array", () => {
+    const result = setup().generate(PersonSchema.array().min(4).max(6));
+    expect(result.length).toBeGreaterThanOrEqual(4);
+    expect(result.length).toBeLessThanOrEqual(6);
+  });
+
+  it("z.object({}).optional().array().optional() resolves correctly", () => {
+    const schema = z.object({ id: z.string() }).optional().array().optional();
+    const results = Array.from({ length: 20 }, (_, i) =>
+      createWorld({ seed: i }).generate(schema),
+    );
+    expect(results.some((r) => Array.isArray(r))).toBe(true);
+    expect(results.some((r) => r === undefined)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // world.generate — optional and nullable fields
 // ---------------------------------------------------------------------------
 

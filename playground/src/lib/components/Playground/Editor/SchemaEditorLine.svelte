@@ -38,7 +38,6 @@
 		// ── Callbacks ──────────────────────────────────────────────────────
 		onupdatekey: (id: string, key: string) => void;
 		onupdatetype: (id: string, type: ZodFieldType) => void;
-		onupdateelementtype?: (id: string, type: ZodFieldType) => void;
 		onaddmodifier: (id: string, mod: ModifierDef) => void;
 		onupdatemodifier: (id: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier: (id: string, index: number) => void;
@@ -67,7 +66,6 @@
 		autofocus = false,
 		onupdatekey,
 		onupdatetype,
-		onupdateelementtype,
 		onaddmodifier,
 		onupdatemodifier,
 		onremovemodifier,
@@ -98,25 +96,16 @@
 	// ── DOM refs ───────────────────────────────────────────────────────────
 	let keyInputEl = $state<HTMLInputElement | null>(null);
 	let typeChipEl = $state<HTMLElement | null>(null);
-	let elementTypeChipEl = $state<HTMLElement | null>(null);
 	let modAreaEl = $state<HTMLElement | null>(null);
 	let lineEl = $state<HTMLElement | null>(null);
 
 	// ── Derived ───────────────────────────────────────────────────────────
 	const spec = $derived(FIELD_TYPES[field.type] ?? null);
-	const isGroup = $derived(field.type === 'object' || field.type === 'array');
-	const isArray = $derived(field.type === 'array');
+	const isGroup = $derived(field.type === 'object');
 	const isEnum = $derived(field.type === 'enum');
 	const availableMods = $derived(getModifiers(field.type));
 
 	const typeMenuItems = SELECTABLE_FIELD_TYPES.map((t) => ({
-		name: t,
-		desc: FIELD_TYPES[t].zodExpr,
-		category: 'Zod Types'
-	}));
-
-	/** Element-type menu — same set but excludes 'array' for simplicity */
-	const elementTypeMenuItems = SELECTABLE_FIELD_TYPES.filter((t) => t !== 'array').map((t) => ({
 		name: t,
 		desc: FIELD_TYPES[t].zodExpr,
 		category: 'Zod Types'
@@ -244,15 +233,7 @@
 		dropdownOpen = null;
 		onupdatetype(field.id, newType);
 
-		if (newType === 'array') {
-			// Open element type picker next
-			tick().then(() => {
-				activeAnchorEl = elementTypeChipEl;
-				if (activeAnchorEl) activeAnchorEl.style.setProperty('anchor-name', '--editor-anchor');
-				phase = 'elementType';
-				dropdownOpen = 'elementType';
-			});
-		} else if (newType === 'enum') {
+		if (newType === 'enum') {
 			phase = 'enumTags';
 			dropdownOpen = null;
 		} else {
@@ -262,17 +243,6 @@
 				(btn || modAreaEl)?.focus();
 			});
 		}
-	}
-
-	function handleElementTypeSelect(name: string) {
-		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
-		dropdownOpen = null;
-		phase = 'modifiers';
-		onupdateelementtype?.(field.id, name as ZodFieldType);
-		tick().then(() => {
-			const btn = modAreaEl?.querySelector('.dot-btn') as HTMLElement | null;
-			(btn || modAreaEl)?.focus();
-		});
 	}
 
 	// ── Modifier flows ─────────────────────────────────────────────────────
@@ -407,15 +377,7 @@
 
 	const indentPx = $derived(12 + field.indent * 20);
 
-	// ── FIELD_TYPES elementType (stored in field.children[0]?.type for arrays) ──
-	// We store the array element type as a special field on the FieldDef.
-	// For now, we read it from a custom prop and pass it through.
-	// The parent SchemaEditor will store elementType in the field via a metadata approach.
-	// Simple approach: store it as the first child's type IF it's an array.
-	const elementType = $derived<ZodFieldType | null>(
-		isArray && field.children?.[0]?.type ? field.children[0].type : null
-	);
-	const elementTypeSpec = $derived(elementType ? FIELD_TYPES[elementType] : null);
+
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -510,42 +472,6 @@
 			/>
 		{/if}
 	</span>
-
-	<!-- Array element type (inline secondary type chip) -->
-	{#if isArray}
-		<span class="array-element-area" style="position: relative">
-			<span class="array-chevron t-code" aria-hidden="true">&lt;</span>
-			<!-- svelte-ignore a11y_interactive_supports_focus -->
-			<span
-				bind:this={elementTypeChipEl}
-				class="type-chip element-chip t-code-sm"
-				class:has-type={!!elementType}
-				data-type={elementType ?? ''}
-				role="button"
-				aria-label="Change element type"
-				onclick={(e) => { 
-					if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
-					activeAnchorEl = e.currentTarget as HTMLElement;
-					if (activeAnchorEl) activeAnchorEl.style.setProperty('anchor-name', '--editor-anchor');
-					phase = 'elementType'; 
-					dropdownOpen = 'elementType'; 
-				}}
-			>
-				{elementTypeSpec?.label ?? 'element?'}
-			</span>
-			<span class="array-chevron t-code" aria-hidden="true">&gt;</span>
-
-			{#if dropdownOpen === 'elementType'}
-				<InlineDropdown
-					items={elementTypeMenuItems}
-					value={elementType ?? ''}
-					scope="element"
-					onselect={handleElementTypeSelect}
-					onclose={closeDropdown}
-				/>
-			{/if}
-		</span>
-	{/if}
 
 	<!-- Enum tags -->
 	{#if isEnum}
@@ -804,23 +730,6 @@
 	/* Separator */
 	.sep {
 		color: var(--ink-3);
-	}
-
-	/* Array element type */
-	.array-element-area {
-		display: inline-flex;
-		align-items: center;
-		gap: 1px;
-	}
-
-	.element-chip {
-		height: 18px;
-		font-size: 0.85em;
-	}
-
-	.array-chevron {
-		color: var(--ink-3);
-		font-size: 0.85em;
 	}
 
 	/* Modifier pills */
