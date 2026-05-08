@@ -120,6 +120,13 @@
 				onupdatemodifier={(id, idx, val) => entityId && store.updateModifierValue(activeEntityType, entityId, id, idx, val)}
 				onremovemodifier={(fid, mid) => entityId && store.removeModifier(activeEntityType, entityId, fid, mid)}
 				onupdateenumvalues={(id, vals) => entityId && store.updateField(activeEntityType, entityId, id, { enumValues: vals })}
+				onupdatetitle={(val) => {
+					if (activeEntityType === 'subject' && store.activeSubject) {
+						store.renameSubject(store.activeSubject.id, val);
+					} else if (activeEntityType === 'schema' && store.activeSchema) {
+						store.renameSchema(store.activeSchema.id, val);
+					}
+				}}
 			/>
 		</div>
 		

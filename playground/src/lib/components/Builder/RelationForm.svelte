@@ -18,6 +18,16 @@
 	let to = $state(subjects.find(s => s !== from) || subjects[0] || '');
 	let cardinality = $state<RelationshipDef['cardinality']>('1');
 
+	// Smart UX: Auto-populate relation name based on target subject
+	let lastAutoName = '';
+	$effect(() => {
+		if (to && (relationName === '' || relationName === lastAutoName)) {
+			const auto = to.charAt(0).toLowerCase() + to.slice(1);
+			relationName = auto;
+			lastAutoName = auto;
+		}
+	});
+
 	function handleSubmit() {
 		if (!relationName || !to || !from) return;
 		onadd({

@@ -45,6 +45,10 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "fix": "pnpm lint:fix && pnpm fmt",
+    "test:all": "pnpm -r --include-workspace-root test",
+    "lint:all": "pnpm -r --include-workspace-root lint",
+    "fmt:all": "pnpm -r --include-workspace-root fmt",
+    "fix:all": "pnpm -r --include-workspace-root fix",
     "play": "vitest run --config vitest.playground.config.ts --reporter=verbose",
     "play:watch": "vitest --config vitest.playground.config.ts --reporter=verbose"
   },

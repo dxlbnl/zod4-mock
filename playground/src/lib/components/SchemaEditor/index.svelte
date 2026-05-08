@@ -160,7 +160,7 @@
 	}
 </script>
 
-<Pane {title} {accentTitle} {subtitle}>
+<Pane {title} {accentTitle} {subtitle} {onupdatetitle}>
 	<div class="schema-editor">
 		<!-- Header hint bar -->
 		<div class="hint-bar t-code-tight" aria-label="Keyboard shortcuts">
