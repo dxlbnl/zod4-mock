@@ -21,11 +21,11 @@ The MVP is successful if a user can:
 - **Basic Relation Form**: A simplified version of the Relationship Manager. Just a "Link" icon in the rail that opens a form: `[Relation Name] [Target Subject] [Cardinality]`.
 - **Registry Table**: A single "World View" tab that shows a flat list of all generated objects, sorted by type.
 
-### 2. Schema-to-Subject Binding (Pillar 2)
+### 2. Relational Identity Sync (Pillar 2)
 
-- **Subject Picker for Schemas**: A dropdown in the Schema header to select which Subject it represents.
-- **Key Mapping Dropdown**: In the Builder, a simple dropdown for each schema field to select a key from the bound subject (e.g., `authorId` -> `s.id`).
-- **Raw Logic Input**: Instead of a full Monaco editor, use a simple `textarea` for writing custom matcher/derivation strings.
+- **Core-Driven Sinking**: Leverage the `zod4-mock` core library's "Relational Sinking" to auto-align foreign keys (e.g., `userId` matched to `User` relation).
+- **Relational Binding UI**: In the Builder, a simple 🔗 **Link icon** next to fields. Clicking it allows explicitly picking a relationship (e.g., `userId` -> `customer` relation).
+- **Zero-Code Identity**: Eliminate the need for manual `.derive()` textareas for standard ID alignment. The library handles the logic; the UI just configures the link.
 
 ### 3. Unified Export (Pillar 4)
 

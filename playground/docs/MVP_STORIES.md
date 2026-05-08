@@ -24,14 +24,14 @@ This document translates the [MVP Plan](./MVP_PLAN.md) into actionable user stor
   - [ ] I can specify a name (e.g., "author"), a target subject, and cardinality.
   - [ ] The `defineSubjectType` code preview updates with the `relations: { ... }` block.
 
-### Story 3: Binding Schemas to Subjects
+### Story 3: Binding & Identity (The "Link" UI)
 
-> **As a user**, I want to map my API schema fields to subject data so I can see how stable identity translates into specific API shapes.
+> **As a user**, I want to map my schema fields to subject data and relationships so that identity and foreign keys are consistent across my world.
 
 - **Success Criteria**:
-  - [ ] I can select a "Base Subject" for any Schema in the Builder Pane.
-  - [ ] Schema fields show a "Source" dropdown containing all keys from the bound subject.
-  - [ ] The generated data for the schema correctly pulls values from the associated subject instance.
+  - [ ] **Relational Flow**: A field like `userId` in `Order` shows a green 🔗 icon when it matches the `User` relation.
+  - [ ] **Schema Binding**: I can select a "Base Subject" for any Schema and map its fields to subject keys.
+  - [ ] **Zero-Code**: Standard ID alignment is handled by the core library; the UI just shows the "linked" status.
 
 ### Story 4: Inspecting the World
 
@@ -52,14 +52,14 @@ We will use Storybook's `play` functions to verify each story's UI logic in isol
 
 - **SubjectItem Story**: Test that clicking the count input and entering a number triggers the `onupdatecount` callback.
 - **RelationForm Story**: Test that filling the form and clicking "Add" emits the correct relationship definition.
-- **MappingDropdown Story**: Test that picking a subject key correctly updates the field's binding state.
+- **MappingIcon Story**: Test that clicking the 🔗 icon opens a menu to select the mapping source (Subject Field or Relationship).
 
 ### 2. State Integration Tests (Vitest)
 
-Unit tests for `state.svelte.ts` to ensure the reactive logic handles complex graphs.
+Unit tests for `state.svelte.ts` and `schema-builder.ts` to ensure the core lib features are leveraged correctly.
 
-- **Test Case**: Adding a relationship between Subject A and B should correctly update the `relationships` array in the store and trigger a re-generation of the world code.
-- **Test Case**: Deleting a subject should automatically clean up any relationships and schema bindings referencing it.
+- **Test Case**: Verify that `buildWorld` produces a `zod4-mock` world where `userId` is automatically populated from the `author` relation.
+- **Test Case**: Verify that the generated TypeScript code reflects the new simplified relationship syntax.
 
 ### 3. "The Relational Loop" Integration Test
 
@@ -68,10 +68,15 @@ A comprehensive Storybook interaction test (in `Playground.stories.svelte`) that
 1.  **Add Subject** "User" with 2 fields.
 2.  **Add Subject** "Post" with a `userId` field.
 3.  **Define Relation** on "Post" named "author" pointing to "User".
-4.  **Scale** "User" to 3 instances and "Post" to 5 instances.
-5.  **Switch to World View** and assert that the generated table contains 8 rows total and that the `userId` values in the Post rows are valid User IDs.
+4.  **Verify Sinking**: Assert that the 🔗 icon appears automatically on `userId`.
+5.  **Scale** "User" to 3 instances and "Post" to 5 instances.
+6.  **Switch to World View** and assert that the generated table contains 8 rows total and that the `userId` values in the Post rows are valid User IDs.
 
-### 4. Manual UX Validation
+### Story 5: Visualizing Relational Flow
 
-- Verify that "teleporting" (clicking an ID link) feels smooth and doesn't lose context.
-- Verify that the "World View" table remains performant with up to 50 items.
+> **As a user**, I want to see visual indicators for auto-aligned relational fields so that I can understand and verify the world's referential integrity.
+
+- **Success Criteria**:
+  - [ ] Fields auto-aligned via heuristics show a 🔗 **Link Icon** in the builder.
+  - [ ] Hovering the icon shows a tooltip: *"Auto-mapped to 'customer' relationship."*
+  - [ ] Clicking the icon opens a dropdown to manually select a different relationship or "Random".

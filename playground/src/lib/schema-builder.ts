@@ -136,6 +136,7 @@ export function buildZodSchema(z: any, fields: FieldDef[]): ReturnType<typeof z.
 
 export function buildWorld(state: PlaygroundState) {
   const subjectMap = new Map<string, ReturnType<typeof defineSubjectType>>();
+  const schemaMap = new Map<string, ZodTypeAny>();
 
   let world = _createWorld({
     seed: state.world.seed,
@@ -146,8 +147,44 @@ export function buildWorld(state: PlaygroundState) {
   // Register subjects
   for (const subj of state.subjects) {
     const schema = buildZodSchema(state.z, subj.fields);
-    const subjectType = defineSubjectType(subj.name, schema);
+
+    // Find relations for this subject
+    const subjectRelations = state.relationships.filter((r) => r.from === subj.name);
+    const relations: Record<string, any> = {};
+    const derive: Record<string, any> = {};
+
+    for (const rel of subjectRelations) {
+      relations[rel.relationName] = { type: rel.to, cardinality: rel.cardinality };
+
+      // Auto-derive foreign key fields if they exist in the schema
+      // Pattern: relationName + "Id" (e.g., customerId) or "userId" if relation is "customer" and target is "User"
+      const targetSubj = state.subjects.find((s) => s.name === rel.to);
+      const possibleKeys = [
+        rel.relationName,
+        rel.relationName + "Id",
+        rel.relationName + "_id",
+        (targetSubj?.name || "") + "Id",
+        (targetSubj?.name || "") + "_id",
+      ].map((k) => k.toLowerCase());
+
+      for (const field of subj.fields) {
+        if (field.key && possibleKeys.includes(field.key.toLowerCase())) {
+          derive[field.key] = (s: any, ctx: any) => {
+            const related = ctx.related(rel.relationName);
+            if (Array.isArray(related)) {
+              // Return array of IDs for 0..n or 1..n
+              return related.map((r: any) => r.id);
+            }
+            // Return single ID for 1 or 0..1
+            return related?.id;
+          };
+        }
+      }
+    }
+
+    const subjectType = defineSubjectType(subj.name, schema, { relations, derive });
     subjectMap.set(subj.id, subjectType);
+    schemaMap.set(subj.id, schema);
     world = world.withSubject(subjectType) as typeof world;
     // Register the subject's own schema so world.generate(z.array(schema)) pulls from the registry
     world = world.withSchema(schema, subjectType) as typeof world;
@@ -155,15 +192,19 @@ export function buildWorld(state: PlaygroundState) {
 
   // Register schemas with bindings
   for (const schemaDef of state.schemas) {
+    const apiSchema = buildZodSchema(state.z, schemaDef.fields);
+    schemaMap.set(schemaDef.id, apiSchema);
+
     const binding = state.bindings.find((b) => b.schemaId === schemaDef.id);
-    if (!binding) continue;
+    if (!binding) {
+      // Even if no binding, register the schema so world.generate(apiSchema) works ad-hoc
+      continue;
+    }
     const subjectType = subjectMap.get(binding.subjectId);
     if (!subjectType) continue;
 
-    const apiSchema = buildZodSchema(state.z, schemaDef.fields);
-
     // Build matchers from fieldMap
-    const matchers: Record<string, (s: Record<string, unknown>) => unknown> = {};
+    const matchers: Record<string, (s: Record<string, unknown>, ctx: any) => unknown> = {};
     for (const [schemaKey, subjectKey] of Object.entries(binding.fieldMap)) {
       matchers[schemaKey] = (s) => s[subjectKey];
     }
@@ -179,7 +220,7 @@ export function buildWorld(state: PlaygroundState) {
     }
   }
 
-  return { world, subjectMap };
+  return { world, subjectMap, schemaMap };
 }
 
 // ─── Generate preview data for a subject ─────────────────────────────────────
@@ -195,13 +236,11 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
     const subj = state.subjects.find((s) => s.id === subjectId);
     if (!subj) return { ok: false, error: "Subject not found" };
 
-    const worldData = buildWorld(state);
-    const world = worldData.world;
-    const subjectMap = worldData.subjectMap;
-    const subjectType = subjectMap.get(subj.id);
-    if (!subjectType) return { ok: false, error: "Subject not registered" };
+    const { world, schemaMap } = buildWorld(state);
+    const schema = schemaMap.get(subjectId);
+    if (!schema) return { ok: false, error: "Subject schema not found" };
 
-    const data = world.generate(state.z.array(subjectType.schema)) as unknown[];
+    const data = world.generate(state.z.array(schema)) as unknown[];
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -210,16 +249,22 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
 
 export function generateWorldData(state: PlaygroundState): GenerationResult {
   try {
-    const worldData = buildWorld(state);
-    const world = worldData.world;
-    const subjectMap = worldData.subjectMap;
+    const { world, schemaMap } = buildWorld(state);
     const results: Record<string, unknown[]> = {};
 
+    // Generate for all subjects
     for (const subj of state.subjects) {
-      const subjectType = subjectMap.get(subj.id);
-      if (subjectType) {
-        // Use the EXACT schema instance that was registered
-        results[subj.name] = world.generate(state.z.array(subjectType.schema)) as unknown[];
+      const schema = schemaMap.get(subj.id);
+      if (schema) {
+        results[subj.name] = world.generate(state.z.array(schema)) as unknown[];
+      }
+    }
+
+    // Generate for all schemas
+    for (const schemaDef of state.schemas) {
+      const schema = schemaMap.get(schemaDef.id);
+      if (schema) {
+        results[schemaDef.name] = world.generate(state.z.array(schema).length(3)) as unknown[];
       }
     }
 
@@ -228,3 +273,4 @@ export function generateWorldData(state: PlaygroundState): GenerationResult {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+

@@ -24,6 +24,8 @@ export interface FieldDef {
   enumValues: string[];
   /** For object/group fields — nested children */
   children: FieldDef[];
+  /** Manual mapping to a relationship ID (overrides heuristics) */
+  relationMapping?: string;
 }
 
 export interface SubjectDef {

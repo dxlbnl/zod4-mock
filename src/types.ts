@@ -28,6 +28,11 @@ export interface RelationDef {
   readonly type: string;
   /** How many targets exist for this relation. */
   readonly cardinality: Cardinality;
+  /**
+   * The name of the field in the schema that acts as the foreign key for this relation.
+   * If omitted, the library will attempt to auto-detect a matching field.
+   */
+  readonly key?: string;
 }
 
 /** A map of relation names to their definitions, as declared on a `SubjectType`. */

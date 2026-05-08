@@ -317,8 +317,7 @@ export class WorldImpl implements World {
         this.resolveReverseRelation<T>(instance, targetType, relName),
     };
 
-    // Apply key-based generators for subject fields so semantic field names
-    // (firstName, lastName, email, etc.) produce meaningful values.
+    // Pass 1: base field generation
     const subjectShape = getZodDef(subjectType.schema).shape!;
     for (const [key, fieldSchema] of Object.entries(subjectShape)) {
       const fieldCtx: GeneratorContext = {
@@ -340,7 +339,28 @@ export class WorldImpl implements World {
         }
       }
     }
-    // Pass 2: derived fields — overwrite base values using sibling field data.
+
+    // Pass 2: Relational Sinking (Auto-derive foreign keys from relations)
+    // This takes priority over Pass 1 (key-based heuristics) but is overridden by Pass 3 (explicit derive).
+    for (const [relName, relDef] of Object.entries(subjectType.relations)) {
+      // Find the field that should hold the relation's ID(s)
+      const targetKey = relDef.key || this.findHeuristicKey(relName, relDef.type, subjectShape);
+
+      if (targetKey && targetKey in subjectShape) {
+        // If a custom world generator is already handling this key, don't sink the relation into it.
+        if (this.customKeyGenerators.has(targetKey.toLowerCase())) continue;
+
+        // Lazy-resolve the relation and sink its ID(s) into the field
+        const related = ctx.related(relName);
+        if (Array.isArray(related)) {
+          rawData[targetKey] = related.map((r: any) => r.id);
+        } else if (related) {
+          rawData[targetKey] = (related as any).id;
+        }
+      }
+    }
+
+    // Pass 3: derived fields — overwrite base values using sibling field data.
     // World-level custom generators take priority and are not overridden.
     for (const [key, fn] of Object.entries(subjectType.derive ?? {})) {
       if (!this.customKeyGenerators.has(key.toLowerCase())) {
@@ -433,6 +453,27 @@ export class WorldImpl implements World {
     }
 
     return results.map((r) => r.data) as unknown as T[];
+  }
+
+  /**
+   * Helper to find a field key that matches a relation by naming convention.
+   * Patterns: relName, relName + "Id", relName + "_id", targetType + "Id", targetType + "_id".
+   */
+  private findHeuristicKey(
+    relName: string,
+    targetType: string,
+    shape: Record<string, ZodTypeAny>,
+  ): string | undefined {
+    const possible = [
+      relName,
+      relName + "Id",
+      relName + "_id",
+      targetType + "Id",
+      targetType + "_id",
+    ].map((k) => k.toLowerCase());
+
+    const keys = Object.keys(shape);
+    return keys.find((k) => possible.includes(k.toLowerCase()));
   }
 
   private getInstancesOfType(typeName: string): AnySubjectInstance[] {

@@ -7,7 +7,6 @@
 	import ExportContent from "./Output/ExportContent.svelte";
 
 	import { untrack, onMount } from "svelte";
-	import { z } from "zod";
 	import { createPlaygroundState } from "$lib/state.svelte";
 	import {
 		generateTokenizedCode,
@@ -21,8 +20,8 @@
 		generateSubjectData,
 		generateWorldData,
 		buildWorld,
-		buildZodSchema,
 	} from "$lib/schema-builder";
+
 
 	interface Props {
 		initialState?: any;
@@ -78,18 +77,21 @@
 		}
 		if (activeEntityType === "schema" && store.activeSchema) {
 			try {
-				const { world } = buildWorld(store.state);
-				const apiSchema = buildZodSchema(z, store.activeSchema.fields);
+				const { world, schemaMap } = buildWorld(store.state);
+				const apiSchema = schemaMap.get(store.activeSchema.id);
+				if (!apiSchema) return { ok: false, error: "Schema not found in world map" };
+
 				const data = world.generate(
-					z.array(apiSchema).length(3),
+					store.state.z.array(apiSchema).length(3),
 				) as unknown[];
 				return { ok: true, data };
 			} catch (e) {
-				return { ok: false, error: String(e) };
+				return { ok: false, error: e instanceof Error ? e.message : String(e) };
 			}
 		}
 		return { ok: false };
 	});
+
 
 	const dataLines = $derived(
 		generationResult.ok && activeFields.length > 0
