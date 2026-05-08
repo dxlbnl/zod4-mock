@@ -213,7 +213,10 @@
 			dropdownOpen = null;
 		} else {
 			phase = 'modifiers';
-			tick().then(() => modAreaEl?.focus());
+			tick().then(() => {
+				const btn = modAreaEl?.querySelector('.dot-btn') as HTMLElement | null;
+				(btn || modAreaEl)?.focus();
+			});
 		}
 	}
 
@@ -222,7 +225,10 @@
 		dropdownOpen = null;
 		phase = 'modifiers';
 		onupdateelementtype?.(field.id, name as ZodFieldType);
-		tick().then(() => modAreaEl?.focus());
+		tick().then(() => {
+			const btn = modAreaEl?.querySelector('.dot-btn') as HTMLElement | null;
+			(btn || modAreaEl)?.focus();
+		});
 	}
 
 	// ── Modifier flows ─────────────────────────────────────────────────────
@@ -506,7 +512,7 @@
 	{/if}
 
 	<!-- Modifier pills -->
-	<span class="mods-area" bind:this={modAreaEl}>
+	<span class="mods-area">
 		{#each field.modifiers as mod, i}
 			<span class="mod-pill t-code-sm" data-category={availableMods.find(m => m.name === mod.name)?.category}>
 				<!-- Modifier name — click to replace -->
@@ -566,6 +572,7 @@
 		<!-- Modifier add area — receives focus for keyboard navigation -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<span
+			bind:this={modAreaEl}
 			class="mod-add-area"
 			tabindex={phase === 'modifiers' || field.type ? 0 : -1}
 			role="presentation"

@@ -6,7 +6,7 @@
 	import { tick } from 'svelte';
 
 	const { Story } = defineMeta({
-		title: 'Playground/Editor/SchemaEditor',
+		title: 'Playground/Editor',
 		component: SchemaEditor,
 		tags: ['autodocs'],
 		parameters: {

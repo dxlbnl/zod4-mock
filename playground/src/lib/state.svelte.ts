@@ -125,7 +125,7 @@ export function findField(fields: FieldDef[], id: string): FieldDef | null {
 
 // ─── Default scenario (mirrors hi-fi mockup) ──────────────────────────────────
 
-function makeDefaultState(): PlaygroundState {
+export function makeDefaultState(): PlaygroundState {
   const userSubject: SubjectDef = {
     id: uid("subj"),
     name: "User",
@@ -218,13 +218,7 @@ function makeDefaultState(): PlaygroundState {
         relationName: "customer",
       },
     ],
-    bindings: [
-      {
-        schemaId: userApiSchema.id,
-        subjectId: userSubject.id,
-        fieldMap: { userId: "id", email: "email", role: "role" },
-      },
-    ],
+    bindings: [],
     ui: {
       exportOpen: false,
       outputTab: "code",

@@ -49,6 +49,8 @@
     "lint:all": "pnpm -r --include-workspace-root lint",
     "fmt:all": "pnpm -r --include-workspace-root fmt",
     "fix:all": "pnpm -r --include-workspace-root fix",
+    "check:all": "pnpm typecheck && pnpm -r check",
+    "validate": "pnpm check:all && pnpm test:all && pnpm lint:all && pnpm fmt:check",
     "play": "vitest run --config vitest.playground.config.ts --reporter=verbose",
     "play:watch": "vitest --config vitest.playground.config.ts --reporter=verbose"
   },
