@@ -55,6 +55,7 @@ import { SubjectRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
+import { def, checks } from "./generators/schema/zod-def.js";
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -69,22 +70,6 @@ interface SchemaReg {
 interface SubjectRegPair {
   instance: AnySubjectInstance;
   reg: SchemaReg;
-}
-
-// ---------------------------------------------------------------------------
-// Zod v4 def helpers
-// ---------------------------------------------------------------------------
-
-interface ZodDefShape {
-  type: string;
-  element?: ZodTypeAny;
-  innerType?: ZodTypeAny;
-  shape?: Record<string, ZodTypeAny>;
-  checks?: Array<{ check: string; minimum?: number; maximum?: number; length?: number }>;
-}
-
-function getZodDef(schema: ZodTypeAny): ZodDefShape {
-  return (schema as unknown as { _zod: { def: ZodDefShape } })._zod.def;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,25 +100,9 @@ function deepMerge(target: unknown, source: unknown): unknown {
 // Minimum array-length resolver (reads only min/length_equals constraints)
 // ---------------------------------------------------------------------------
 
-interface CheckDef {
-  check: string;
-  minimum?: number;
-  maximum?: number;
-  length?: number;
-  value?: number;
-  inclusive?: boolean;
-  format?: string;
-}
-
-/** Extract inner `_zod.def` objects from a schema's checks array. */
-function getCheckDefs(schema: ZodTypeAny): CheckDef[] {
-  const raw = (getZodDef(schema).checks ?? []) as unknown as Array<{ _zod: { def: CheckDef } }>;
-  return raw.map((c) => c._zod.def);
-}
-
 function resolveMinRequired(schema: ZodTypeAny, defaultMin: number): number {
   let min = defaultMin;
-  for (const c of getCheckDefs(schema)) {
+  for (const c of checks(schema)) {
     if (c.check === "length_equals") return c.length!;
     if (c.check === "min_length" && c.minimum !== undefined) {
       min = Math.max(min, c.minimum);
@@ -270,7 +239,7 @@ export class WorldImpl implements World {
     schema: TSchema,
     options?: GenerateOptions<input<TSchema>>,
   ): input<TSchema> {
-    const d = getZodDef(schema);
+    const d = def(schema);
     if (d.type === "array") {
       return this.generateArray(
         d.element!,
@@ -318,7 +287,7 @@ export class WorldImpl implements World {
     };
 
     // Pass 1: base field generation
-    const subjectShape = getZodDef(subjectType.schema).shape!;
+    const subjectShape = def(subjectType.schema).shape!;
     for (const [key, fieldSchema] of Object.entries(subjectShape)) {
       const fieldCtx: GeneratorContext = {
         ...ctx,
@@ -360,7 +329,7 @@ export class WorldImpl implements World {
 
               // Find the identity field of the target subject (e.g. 'personId', 'id')
               const targetShape = targetSubjectType
-                ? getZodDef(targetSubjectType.schema).shape!
+                ? def(targetSubjectType.schema).shape!
                 : {};
               const targetIdKey = targetSubjectType
                 ? this.findHeuristicKey("", targetSubjectType.name, targetShape) || "id"
@@ -499,7 +468,7 @@ export class WorldImpl implements World {
    * Finds which relation (if any) should sink its identity into the given field key.
    */
   private findActiveRelation(fieldKey: string, subjectType: AnySubjectType): string | undefined {
-    const subjectShape = getZodDef(subjectType.schema).shape!;
+    const subjectShape = def(subjectType.schema).shape!;
     for (const [relName, relDef] of Object.entries(subjectType.relations)) {
       // Find the key for this relation: either explicit or heuristic
       const targetKey = relDef.key || this.findHeuristicKey(relName, relDef.type, subjectShape);
@@ -637,7 +606,7 @@ export class WorldImpl implements World {
     matchers: Record<string, MatcherFn<unknown, unknown>>,
     ctx: GeneratorContext,
   ): Record<string, unknown> {
-    const d = getZodDef(schema);
+    const d = def(schema);
 
     // Non-object schema (shouldn't happen for registered schemas, but handle anyway)
     if (d.type !== "object") {
@@ -678,7 +647,7 @@ export class WorldImpl implements World {
 
               // Find the identity field of the target subject (e.g. 'personId', 'id')
               const targetShape = targetSubjectType
-                ? getZodDef(targetSubjectType.schema).shape!
+                ? def(targetSubjectType.schema).shape!
                 : {};
               const targetIdKey = targetSubjectType
                 ? this.findHeuristicKey("", targetSubjectType.name, targetShape) || "id"
@@ -701,7 +670,7 @@ export class WorldImpl implements World {
       // and handle the absent-value probability here rather than deep inside
       // generateFromSchema where the field key is no longer available.
       let innerSchema = fieldSchema;
-      let fd = getZodDef(innerSchema);
+      let fd = def(innerSchema);
       let skip = false;
 
       while (fd.type === "optional" || fd.type === "nullable") {
@@ -712,7 +681,7 @@ export class WorldImpl implements World {
         }
         if (!fd.innerType) break;
         innerSchema = fd.innerType;
-        fd = getZodDef(innerSchema);
+        fd = def(innerSchema);
       }
 
       if (skip) continue;
@@ -758,7 +727,7 @@ export class WorldImpl implements World {
     if (regs.length === 0) {
       let N = defMin;
       let max = defMax;
-      for (const c of getCheckDefs(arraySchema)) {
+      for (const c of checks(arraySchema)) {
         if (c.check === "length_equals") {
           N = c.length!;
           max = N;
@@ -852,7 +821,7 @@ export class WorldImpl implements World {
       // generateObjectFields so the keyMap (and key-based heuristics) fire.
       const keyMap = this.schemaKeyMaps.get(schema);
       let result: unknown;
-      if (keyMap !== undefined && getZodDef(schema).type === "object") {
+      if (keyMap !== undefined && def(schema).type === "object") {
         result = this.generateObjectFields(
           schema,
           undefined as unknown as SubjectMatcherArg<unknown>,
