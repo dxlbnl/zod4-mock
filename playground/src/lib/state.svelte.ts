@@ -51,6 +51,8 @@ export interface RelationshipDef {
   to: string;
   /** Relation name used in defineSubjectType options, e.g. "owner" */
   relationName: string;
+  /** The field on the 'from' subject that holds the 'to' identity */
+  key?: string;
 }
 
 /**
@@ -440,6 +442,18 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
   }
 
+  function setRelationMapping(
+    entityType: "subject" | "schema",
+    entityId: string,
+    fieldId: string,
+    relationMapping?: string,
+  ) {
+    const fields = _getFields(entityType, entityId);
+    if (!fields) return;
+    const field = findField(fields, fieldId);
+    if (field) field.relationMapping = relationMapping;
+  }
+
   function addModifier(
     entityType: "subject" | "schema",
     entityId: string,
@@ -505,12 +519,13 @@ export function createPlaygroundState(initial?: PlaygroundState) {
       cardinality: initial.cardinality ?? "1",
       to: initial.to ?? names[1] ?? names[0] ?? "",
       relationName: initial.relationName ?? "relation",
+      key: initial.key,
     });
   }
 
   function updateRelationship(
     id: string,
-    patch: Partial<Pick<RelationshipDef, "from" | "to" | "cardinality" | "relationName">>,
+    patch: Partial<Pick<RelationshipDef, "from" | "to" | "cardinality" | "relationName" | "key">>,
   ) {
     const rel = state.relationships.find((r) => r.id === id);
     if (rel) Object.assign(rel, patch);
@@ -644,6 +659,8 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     addRelationship,
     updateRelationship,
     removeRelationship,
+
+    setRelationMapping,
 
     bindSchemaToSubject,
     setFieldMapping,

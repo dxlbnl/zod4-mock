@@ -31,7 +31,7 @@ export const DocumentSubject = defineSubjectType(
   z.object({
     documentId: z.uuid(),
   }),
-  { relations: { author: { type: "author", cardinality: "1" } } },
+  { relations: { author: { type: "author", cardinality: "1", key: "authorId" } } },
 );
 
 export const SentenceSubject = defineSubjectType(
@@ -39,7 +39,7 @@ export const SentenceSubject = defineSubjectType(
   z.object({
     sentenceId: z.uuid(),
   }),
-  { relations: { document: { type: "document", cardinality: "1" } } },
+  { relations: { document: { type: "document", cardinality: "1", key: "documentId" } } },
 );
 
 export function createDocumentCorpusWorld(seed = 42) {

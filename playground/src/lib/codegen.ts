@@ -141,19 +141,29 @@ export function generateSubjectCode(
     fieldsStr = `z.object({\n${fields}\n})`;
   }
 
+  // No more deriveLines for simple relational sinking!
+
   if (rels.length === 0) {
     return `const ${subject.name}Subject = defineSubjectType("${subject.name}", ${fieldsStr});`;
   }
 
-  const relLines = rels
-    .map((r) => `    ${r.relationName}: { to: "${r.to}", cardinality: "${r.cardinality}" },`)
-    .join("\n");
+  const relBlock =
+    rels.length > 0
+      ? `  relations: {\n${rels
+          .map((r) => {
+            const fieldMapping = subject.fields.find((f) => f.relationMapping === r.relationName);
+            const effectiveKey = r.key || fieldMapping?.key;
+            const keyAttr = effectiveKey ? `, key: "${effectiveKey}"` : "";
+            return `    ${r.relationName}: { type: "${r.to}", cardinality: "${r.cardinality}"${keyAttr} },`;
+          })
+          .join("\n")}\n  }`
+      : "";
+
+  const options = [relBlock].filter(Boolean).join(",\n");
 
   return (
     `const ${subject.name}Subject = defineSubjectType("${subject.name}", ${fieldsStr}, {\n` +
-    `  relations: {\n` +
-    `${relLines}\n` +
-    `  }\n` +
+    `${options}\n` +
     `});`
   );
 }
@@ -278,6 +288,8 @@ export function generateTokenizedCode(
 
   const rels = relationships.filter((r) => r.from === subject.name);
 
+  // No derivedFields needed for simple relational sinking
+
   // const UserSubject = defineSubjectType("User", z.object({
   pushLine([
     kw("const "),
@@ -305,22 +317,40 @@ export function generateTokenizedCode(
     pushLine([pt("}));")]);
   } else {
     pushLine([pt("}), {")]);
-    pushLine([pl("  "), pr("relations"), pt(": {")]);
-    for (const r of rels) {
-      pushLine([
-        pl(`    ${r.relationName}`),
-        pt(": { "),
-        pr("to"),
-        pt(': "'),
-        str(r.to),
-        pt('", '),
-        pr("cardinality"),
-        pt(': "'),
-        str(r.cardinality),
-        pt('" },'),
-      ]);
+
+    if (rels.length > 0) {
+      pushLine([pl("  "), pr("relations"), pt(": {")]);
+      for (const r of rels) {
+        const fieldMapping = subject.fields.find((f) => f.relationMapping === r.relationName);
+        const effectiveKey = r.key || fieldMapping?.key;
+
+        const relTokens = [
+          pl(`    ${r.relationName}`),
+          pt(": { "),
+          pr("type"),
+          pt(': "'),
+          str(r.to),
+          pt('", '),
+          pr("cardinality"),
+          pt(': "'),
+          str(r.cardinality),
+          pt('"'),
+        ];
+
+        if (effectiveKey) {
+          relTokens.push(pt(", "));
+          relTokens.push(pr("key"));
+          relTokens.push(pt(': "'));
+          relTokens.push(str(effectiveKey));
+          relTokens.push(pt('"'));
+        }
+
+        relTokens.push(pt(" },"));
+        pushLine(relTokens);
+      }
+      pushLine([pl("  }")]);
     }
-    pushLine([pl("  }"), pt(" });")]);
+    pushLine([pt(" });")]);
   }
 
   return lines;

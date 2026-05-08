@@ -31,15 +31,12 @@ export const PersonSubject = defineSubjectType("person", PersonSubjectSchema, {
 });
 export const TextFileSubject = defineSubjectType("text-file", TextFileSubjectSchema, {
   relations: { owner: { type: "person", cardinality: "1" } },
-  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
 });
 export const AudioFileSubject = defineSubjectType("audio-file", AudioFileSubjectSchema, {
   relations: { owner: { type: "person", cardinality: "1" } },
-  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
 });
 export const BankFileSubject = defineSubjectType("bank-file", BankFileSubjectSchema, {
   relations: { owner: { type: "person", cardinality: "1" } },
-  derive: { ownerId: (_, ctx) => ctx.related<{ personId: string }>("owner").personId },
 });
 
 export function createMediaLibraryWorld(seed = 42) {

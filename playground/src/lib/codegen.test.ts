@@ -93,7 +93,7 @@ describe("generateSubjectCode", () => {
     ];
     const code = generateSubjectCode(orderSubject, rels);
     expect(code).toContain("relations: {");
-    expect(code).toContain('customer: { to: "User", cardinality: "1" }');
+    expect(code).toContain('customer: { type: "User", cardinality: "1" }');
   });
 
   it("includes uuid field", () => {

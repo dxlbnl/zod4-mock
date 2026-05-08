@@ -12,20 +12,37 @@
 			oncancel: fn()
 		}
 	});
+
+	const mockSubjects = [
+		{ id: '1', name: 'User', fields: [{ id: 'f1', key: 'id', type: 'uuid' }], count: 1 },
+		{ 
+			id: '2', 
+			name: 'Post', 
+			fields: [
+				{ id: 'f2', key: 'id', type: 'uuid' },
+				{ id: 'f3', key: 'userId', type: 'string' }
+			], 
+			count: 1 
+		},
+		{ id: '3', name: 'Comment', fields: [{ id: 'f4', key: 'postId', type: 'string' }], count: 1 }
+	] as any[];
 </script>
 
 <Story 
 	name="Default" 
 	args={{ 
-		subjects: ['User', 'Post', 'Comment', 'Profile'],
+		subjects: mockSubjects,
 		initialFrom: 'Post'
 	}} 
 />
 
 <Story 
-	name="Single Subject" 
+	name="No Matching Fields" 
 	args={{ 
-		subjects: ['User'],
-		initialFrom: 'User'
+		subjects: [
+			{ id: '1', name: 'User', fields: [], count: 1 },
+			{ id: '2', name: 'Empty', fields: [], count: 1 }
+		] as any[],
+		initialFrom: 'Empty'
 	}} 
 />

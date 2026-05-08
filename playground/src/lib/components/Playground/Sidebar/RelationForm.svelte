@@ -6,53 +6,82 @@
 	import { type RelationshipDef } from '$lib/state.svelte';
 
 	interface Props {
-		subjects: string[];
+		subjects: import('$lib/state.svelte').SubjectDef[];
 		initialFrom?: string;
+		initialData?: Partial<RelationshipDef>;
 		onadd: (rel: Omit<RelationshipDef, 'id'>) => void;
 		oncancel: () => void;
 	}
 
-	let { subjects, initialFrom, onadd, oncancel }: Props = $props();
+	let { subjects, initialFrom, initialData, onadd, oncancel }: Props = $props();
 
-	let from = $state(untrack(() => initialFrom || subjects[0] || ''));
-	let relationName = $state('');
-	let to = $state(untrack(() => subjects.find(s => s !== from) || subjects[0] || ''));
-	let cardinality = $state<RelationshipDef['cardinality']>('1');
+	let from = $state(untrack(() => (initialData?.from ?? subjects.find(s => s.name !== initialFrom)?.name) || subjects[0]?.name || ''));
+	let relationName = $state(untrack(() => initialData?.relationName ?? ''));
+	let to = $state(untrack(() => (initialData?.to ?? initialFrom) || subjects[0]?.name || ''));
+	let cardinality = $state<RelationshipDef['cardinality']>(untrack(() => initialData?.cardinality ?? '1'));
+	let key = $state(untrack(() => initialData?.key ?? ''));
 
-	// Smart UX: Auto-populate relation name based on target subject
+	let isUserDirty = $state(false);
 	let lastAutoName = '';
 	$effect(() => {
-		if (to && (relationName === '' || relationName === lastAutoName)) {
-			const auto = to.charAt(0).toLowerCase() + to.slice(1);
+		if (from && !isUserDirty && (relationName === '' || relationName === lastAutoName)) {
+			const auto = from.charAt(0).toLowerCase() + from.slice(1);
 			relationName = auto;
 			lastAutoName = auto;
 		}
 	});
 
+	function handleNameInput(val: string) {
+		relationName = val;
+		isUserDirty = true;
+	}
+
+	// The 'to' subject is the RECEIVER (the one with the relations block)
+	// The foreign key lives on the RECEIVER.
+	const receiverSubject = $derived(subjects.find((s) => s.name === to));
+	const availableFields = $derived(receiverSubject?.fields.filter((f) => f.key) ?? []);
+
+	let lastAutoKey = '';
+	$effect(() => {
+		if (relationName && (key === '' || key === lastAutoKey)) {
+			const possible = [relationName, relationName + 'Id', relationName + '_id'].map((k) =>
+				k.toLowerCase()
+			);
+			const match = availableFields.find((f) => possible.includes(f.key.toLowerCase()));
+			if (match) {
+				key = match.key;
+				lastAutoKey = match.key;
+			}
+		}
+	});
+
 	function handleSubmit() {
 		if (!relationName || !to || !from) return;
+		// In zod4-mock: defineSubjectType(TO, ..., { relations: { name: { type: FROM } } })
 		onadd({
-			from,
-			to,
+			from: to,    // The owner
+			to: from,    // The identity source
 			relationName,
-			cardinality
+			cardinality,
+			key: key === '' ? undefined : key
 		});
 	}
 </script>
 
 <div class="relation-form">
 	<header class="header">
-		<h4 class="t-small">Add Relationship</h4>
+		<h4 class="t-small">{initialData ? 'Edit' : 'Add'} Relationship</h4>
 	</header>
 
 	<div class="fields">
 		<div class="field-row">
-			<label class="t-code-sm" for="rel-from">From Subject</label>
+			<label class="t-code-sm" for="rel-from">Identity Source (Parent)</label>
 			<select id="rel-from" class="select t-code-tight" bind:value={from}>
 				{#each subjects as s}
-					<option value={s}>{s}</option>
+					<option value={s.name}>{s.name}</option>
 				{/each}
 			</select>
+			<p class="hint t-code-tight">The subject that provides the IDs.</p>
 		</div>
 
 		<div class="field-row">
@@ -62,16 +91,32 @@
 				placeholder="e.g. author, parent, items" 
 				bind:value={relationName}
 				autofocus
+				selectOnFocus
+				oninput={() => isUserDirty = true}
 			/>
 		</div>
 
 		<div class="field-row">
-			<label class="t-code-sm" for="rel-to">Target Subject</label>
+			<label class="t-code-sm" for="rel-to">ID Receiver (Child)</label>
 			<select id="rel-to" class="select t-code-tight" bind:value={to}>
 				{#each subjects as s}
-					<option value={s}>{s}</option>
+					<option value={s.name}>{s.name}</option>
 				{/each}
 			</select>
+			<p class="hint t-code-tight">The subject that holds the foreign key.</p>
+		</div>
+		
+		<div class="field-row">
+			<label class="t-code-sm" for="rel-key">Foreign Key Field (on {to})</label>
+			<select id="rel-key" class="select t-code-tight" bind:value={key}>
+				<option value="">None (Random ID)</option>
+				{#each availableFields as f}
+					<option value={f.key}>{f.key}</option>
+				{/each}
+			</select>
+			{#if key === ''}
+				<p class="hint t-code-tight">Engine will guess or use random values.</p>
+			{/if}
 		</div>
 
 		<div class="field-row">
@@ -90,7 +135,7 @@
 
 	<footer class="footer">
 		<Button variant="default" onclick={oncancel}>Cancel</Button>
-		<Button variant="primary" onclick={handleSubmit} disabled={!relationName}>Add Relation</Button>
+		<Button variant="primary" onclick={handleSubmit} disabled={!relationName}>{initialData ? 'Update' : 'Add'} Relation</Button>
 	</footer>
 </div>
 
@@ -144,6 +189,13 @@
 	.select:focus {
 		border-color: var(--accent-edge);
 		background: var(--bg-1);
+	}
+
+	.hint {
+		font-size: 10px;
+		color: var(--ink-3);
+		margin-top: 2px;
+		font-style: italic;
 	}
 
 	.footer {

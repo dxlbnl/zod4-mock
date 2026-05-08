@@ -724,6 +724,45 @@ Recursively makes all properties optional. Used for the `overrides` option.
 
 ---
 
+## `RelationDef`
+
+Defines a relationship from one subject type to another.
+
+```ts
+interface RelationDef {
+  type: string; // The target subject type name
+  cardinality: Cardinality; // '1', '0..1', '0..n', or '1..n'
+  key?: string; // Optional: Explicit foreign key field name
+}
+```
+
+**`type`** — the unique name of the target subject type (e.g., `'person'`).
+
+**`cardinality`** — how many related instances exist. See [`Cardinality`](#cardinality) below.
+
+**`key`** — the name of the field in the subject (or app schema) that should hold the identity of the related subject(s).
+
+- If specified, the library automatically sinks the related ID(s) into this field.
+- If omitted, the library attempts to find a matching field name using **Identity Field Detection** heuristics.
+- If no field is found and no `key` is provided, you must manually resolve the relation using `ctx.related()`.
+
+---
+
+## `Cardinality`
+
+```ts
+type Cardinality = "0..1" | "1" | "0..n" | "1..n";
+```
+
+| Value    | Meaning                |
+| -------- | ---------------------- |
+| `'0..1'` | Optional, at most one  |
+| `'1'`    | Exactly one (required) |
+| `'0..n'` | Optional, any number   |
+| `'1..n'` | At least one           |
+
+---
+
 ## Lower-level exports
 
 These are exported for advanced use cases such as writing your own generation orchestration. In normal use, call `world.generate()` instead.

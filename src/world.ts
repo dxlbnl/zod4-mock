@@ -343,20 +343,39 @@ export class WorldImpl implements World {
     // Pass 2: Relational Sinking (Auto-derive foreign keys from relations)
     // This takes priority over Pass 1 (key-based heuristics) but is overridden by Pass 3 (explicit derive).
     for (const [relName, relDef] of Object.entries(subjectType.relations)) {
-      // Find the field that should hold the relation's ID(s)
-      const targetKey = relDef.key || this.findHeuristicKey(relName, relDef.type, subjectShape);
-
-      if (targetKey && targetKey in subjectShape) {
+      const key = relDef.key || this.findHeuristicKey(relName, relDef.type, subjectShape);
+      if (key) {
         // If a custom world generator is already handling this key, don't sink the relation into it.
-        if (this.customKeyGenerators.has(targetKey.toLowerCase())) continue;
+        if (this.customKeyGenerators.has(key.toLowerCase())) continue;
 
-        // Lazy-resolve the relation and sink its ID(s) into the field
-        const related = ctx.related(relName);
-        if (Array.isArray(related)) {
-          rawData[targetKey] = related.map((r: any) => r.id);
-        } else if (related) {
-          rawData[targetKey] = (related as any).id;
-        }
+        // Lazy-resolve the relation and sink its ID(s) into the field via a stable getter.
+        let cachedValue: any;
+        let isResolved = false;
+
+        Object.defineProperty(rawData, key, {
+          get: () => {
+            if (!isResolved) {
+              const related = ctx.related(relName);
+              const targetSubjectType = this.subjectTypes.get(relDef.type);
+
+              // Find the identity field of the target subject (e.g. 'personId', 'id')
+              const targetShape = targetSubjectType
+                ? getZodDef(targetSubjectType.schema).shape!
+                : {};
+              const targetIdKey = targetSubjectType
+                ? this.findHeuristicKey("", targetSubjectType.name, targetShape) || "id"
+                : "id";
+
+              cachedValue = Array.isArray(related)
+                ? related.map((r: any) => r[targetIdKey])
+                : (related as any)?.[targetIdKey];
+              isResolved = true;
+            }
+            return cachedValue;
+          },
+          enumerable: true,
+          configurable: true,
+        });
       }
     }
 
@@ -474,6 +493,19 @@ export class WorldImpl implements World {
 
     const keys = Object.keys(shape);
     return keys.find((k) => possible.includes(k.toLowerCase()));
+  }
+
+  /**
+   * Finds which relation (if any) should sink its identity into the given field key.
+   */
+  private findActiveRelation(fieldKey: string, subjectType: AnySubjectType): string | undefined {
+    const subjectShape = getZodDef(subjectType.schema).shape!;
+    for (const [relName, relDef] of Object.entries(subjectType.relations)) {
+      // Find the key for this relation: either explicit or heuristic
+      const targetKey = relDef.key || this.findHeuristicKey(relName, relDef.type, subjectShape);
+      if (targetKey === fieldKey) return relName;
+    }
+    return undefined;
   }
 
   private getInstancesOfType(typeName: string): AnySubjectInstance[] {
@@ -626,6 +658,43 @@ export class WorldImpl implements World {
       if (matcher) {
         result[key] = matcher(subjectArg, fieldCtx);
         continue;
+      }
+
+      // Pass 1.5: Relational Sinking (for schema generation)
+      // If the field is a foreign key for a relationship on the bound subject, use it.
+      if (ctx.subject) {
+        const subjectType = this.subjectTypes.get(ctx.subject._type);
+        if (subjectType) {
+          const relName = this.findActiveRelation(key, subjectType);
+          if (relName) {
+            // 1. Try reading from the subject data (this might trigger a lazy getter)
+            let val = (ctx.subject.data as any)[key];
+
+            // 2. Fallback: If the subject doesn't have this field, resolve the relation directly
+            if (val === undefined) {
+              const related = ctx.related(relName);
+              const relDef = subjectType.relations[relName];
+              const targetSubjectType = relDef ? this.subjectTypes.get(relDef.type) : undefined;
+
+              // Find the identity field of the target subject (e.g. 'personId', 'id')
+              const targetShape = targetSubjectType
+                ? getZodDef(targetSubjectType.schema).shape!
+                : {};
+              const targetIdKey = targetSubjectType
+                ? this.findHeuristicKey("", targetSubjectType.name, targetShape) || "id"
+                : "id";
+
+              val = Array.isArray(related)
+                ? related.map((r: any) => r[targetIdKey])
+                : (related as any)?.[targetIdKey];
+            }
+
+            if (val !== undefined) {
+              result[key] = val;
+              continue;
+            }
+          }
+        }
       }
 
       // Unwrap optional/nullable so key-based generators see the inner schema,

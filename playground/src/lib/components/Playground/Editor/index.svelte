@@ -38,9 +38,11 @@
 		activeEntityType?: 'subject' | 'schema';
 		subjects?: import('$lib/state.svelte').SubjectDef[];
 		activeBinding?: import('$lib/state.svelte').SchemaBinding | null;
+		relationships?: import('$lib/state.svelte').RelationshipDef[];
 		onbindschema?: (subjectId: string | null) => void;
 		onsetmapping?: (fieldKey: string, subjectKey: string) => void;
 		onremovemapping?: (fieldKey: string) => void;
+		onupdaterelationmapping?: (fieldId: string, relationName: string | undefined) => void;
 	}
 
 	let {
@@ -60,10 +62,12 @@
 		onupdatetitle,
 		activeEntityType,
 		subjects = [],
+		relationships = [],
 		activeBinding = null,
 		onbindschema,
 		onsetmapping,
-		onremovemapping
+		onremovemapping,
+		onupdaterelationmapping
 	}: Props = $props();
 
 	// ── Subject Picker State ───────────────────────────────────────────────
@@ -209,6 +213,25 @@
 			<span><kbd>⌫</kbd> delete</span>
 		</div>
 
+		<!-- Subject Relations (Story 5) -->
+		{#if activeEntityType === 'subject'}
+			{@const subjRels = relationships.filter(r => r.from === title)}
+			{#if subjRels.length > 0}
+				<div class="relations-bar t-code-tight">
+					<span class="label">Relations:</span>
+					<div class="rel-tags">
+						{#each subjRels as rel}
+							<div class="rel-tag" title="{rel.relationName} -> {rel.to} ({rel.cardinality}){rel.key ? ` via ${rel.key}` : ''}">
+								<span class="rel-name">{rel.relationName}</span>
+								<span class="rel-arrow">→</span>
+								<span class="rel-to">{rel.to}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		{/if}
+
 		<!-- Subject Picker (Story 3) -->
 		{#if activeEntityType === 'schema'}
 			<div class="binding-bar t-code-tight">
@@ -276,6 +299,8 @@
 		<div role="listitem">
 			<SchemaEditorLine
 				{field}
+				subjects={subjects}
+				{relationships}
 				isActive={activeLineId === field.id}
 				autofocus={lastAddedId === field.id}
 				availableSourceKeys={boundSubject?.fields.map((f) => f.key) ?? []}
@@ -289,6 +314,7 @@
 				onupdateenumvalues={(id, vals) => onupdateenumvalues?.(id, vals)}
 				onsetmapping={(id, schemaKey, subjKey) => onsetmapping?.(schemaKey, subjKey)}
 				onremovemapping={(id, schemaKey) => onremovemapping?.(schemaKey)}
+				onupdaterelationmapping={(id, rid) => onupdaterelationmapping?.(id, rid)}
 				onremove={handleRemoveField}
 				onnextsibling={handleNextSibling}
 				onexitnesting={handleExitNesting}
@@ -397,6 +423,60 @@
 		color: var(--ink-3);
 		opacity: 0.7;
 		font-style: italic;
+	}
+
+	/* Relations Bar (Story 5) */
+	.relations-bar {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-4);
+		background: var(--bg-1);
+		border-bottom: 1px solid var(--line-strong);
+		color: var(--ink-2);
+	}
+
+	.relations-bar .label {
+		color: var(--ink-3);
+		font-weight: 500;
+	}
+
+	.rel-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.rel-tag {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 2px 8px;
+		background: var(--bg-2);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		cursor: help;
+		transition: all var(--ease-quick);
+	}
+
+	.rel-tag:hover {
+		border-color: var(--accent-edge);
+		background: var(--accent-soft);
+	}
+
+	.rel-name {
+		color: var(--accent-bright);
+		font-weight: 600;
+	}
+
+	.rel-arrow {
+		color: var(--ink-3);
+		font-size: 10px;
+	}
+
+	.rel-to {
+		color: var(--ink-1);
+		font-weight: 500;
 	}
 
 	/* Lines */

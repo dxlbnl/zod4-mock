@@ -5,12 +5,16 @@
 		name: string;
 		cardinality: string;
 		onremove?: () => void;
+		onclick?: () => void;
+		key?: string;
 	}
 
-	let { from, to, name, cardinality, onremove }: Props = $props();
+	let { from, to, name, cardinality, onremove, onclick, key }: Props = $props();
 </script>
 
-<div class="rel-item">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="rel-item" onclick={onclick}>
 	<div class="info">
 		<div class="main t-code-sm">
 			<span class="subj-name">{from}</span>
@@ -19,7 +23,12 @@
 			<span class="arrow">→</span>
 			<span class="subj-name">{to}</span>
 		</div>
-		<div class="meta t-code-tight">{cardinality}</div>
+		<div class="meta t-code-tight">
+			{cardinality}
+			{#if key}
+				<span class="key-tag">via {key}</span>
+			{/if}
+		</div>
 	</div>
 	
 	<button class="remove-btn" title="Remove relationship" onclick={onremove}>
@@ -76,6 +85,15 @@
 
 	.meta {
 		color: var(--ink-3);
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.key-tag {
+		color: var(--accent);
+		opacity: 0.8;
+		font-weight: 500;
 	}
 
 	.remove-btn {

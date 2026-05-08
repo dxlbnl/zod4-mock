@@ -16,6 +16,22 @@ Some rules are **schema-type-gated**: date rules fire regardless of the Zod type
 
 ---
 
+## Identity Field Detection (Magic)
+
+When resolving relationships or performing **Relational Sinking**, the library uses a specialized heuristic to identify the primary identity field of a target subject. This ensures that foreign keys are aligned with the correct "anchor" field.
+
+For a subject named **`person`**, the following fields are prioritised as identity anchors:
+
+1. Exactly `personId`
+2. Exactly `person_id`
+3. Exactly `personUuid`
+4. Exactly `person_uuid`
+5. Exactly `id` (Fallback)
+
+This logic is used whenever a relationship needs to extract an ID from a subject instance.
+
+---
+
 ## Complete heuristics table
 
 ### Identity

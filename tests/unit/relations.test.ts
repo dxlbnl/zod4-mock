@@ -129,4 +129,77 @@ describe("Relations", () => {
 
     expect(personIndex).toBeLessThan(fileIndex);
   });
+
+  it("automatically sinks relation IDs into matching field names (Heuristic)", () => {
+    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(FileSubject);
+
+    const file = world.subject("file");
+    // Access ownerId first to trigger lazy provisioning
+    const ownerId = file.data.ownerId;
+    const person = world.subjects("person")[0]!;
+
+    expect(ownerId).toBe(person.data.id);
+  });
+
+  it("prioritizes explicit 'key' in RelationDef over heuristics", () => {
+    const CustomFileSchema = z.object({
+      id: z.string(),
+      // This field would heuristically match 'owner', but we want to use 'authorId' instead
+      ownerId: z.string(),
+      authorId: z.string(),
+    });
+
+    const CustomFileSubject = defineSubjectType("file", CustomFileSchema, {
+      relations: {
+        owner: { type: "person", cardinality: "1", key: "authorId" },
+      },
+    });
+
+    const world = createWorld({ seed: 42 })
+      .withSubject(PersonSubject)
+      .withSubject(CustomFileSubject);
+    const file = world.subject("file");
+
+    // Access authorId to trigger provisioning
+    const authorId = file.data.authorId;
+    const person = world.subjects("person")[0]!;
+
+    // Explicit key 'authorId' wins
+    expect(authorId).toBe(person.data.id);
+    // ownerId should be a random string (no sinking)
+    expect(file.data.ownerId).not.toBe(person.data.id);
+  });
+
+  it("correctly extracts custom identity fields (e.g. personId) during sinking", () => {
+    const CustomPersonSchema = z.object({ personId: z.string().uuid() });
+    const CustomPersonSubject = defineSubjectType("person", CustomPersonSchema);
+
+    const world = createWorld({ seed: 1 })
+      .withSubject(CustomPersonSubject)
+      .withSubject(FileSubject);
+
+    const file = world.subject("file");
+
+    // Access ownerId to trigger provisioning
+    const ownerId = file.data.ownerId;
+    const person = world.subjects("person")[0]!;
+
+    // Should have sunk the personId, not the synthetic _id or 'id'
+    expect(ownerId).toBe(person.data.personId);
+  });
+
+  it("remains lazy until the sunk field is actually accessed", () => {
+    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(FileSubject);
+
+    const file = world.subject("file");
+
+    // Pass 1 and Pass 2 setup the getter, but shouldn't trigger it yet
+    expect(world.subjects("person").length).toBe(0);
+
+    // Accessing the field triggers the getter and provisioning
+    const id = file.data.ownerId;
+    expect(id).toBeDefined();
+    expect(world.subjects("person").length).toBe(1);
+    expect(world.subjects("person")[0]!.data.id).toBe(id);
+  });
 });

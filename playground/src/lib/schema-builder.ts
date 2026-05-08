@@ -8,6 +8,8 @@ import type { ZodTypeAny } from "zod";
 import type { FieldDef, ModifierDef, PlaygroundState } from "./state.svelte";
 import { defineSubjectType, createWorld as _createWorld } from "zod4-mock";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 // ─── Field → Zod schema ───────────────────────────────────────────────────────
 
 function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAny {
@@ -148,41 +150,28 @@ export function buildWorld(state: PlaygroundState) {
   for (const subj of state.subjects) {
     const schema = buildZodSchema(state.z, subj.fields);
 
-    // Find relations for this subject
-    const subjectRelations = state.relationships.filter((r) => r.from === subj.name);
+    // Map relations to core lib format
     const relations: Record<string, any> = {};
-    const derive: Record<string, any> = {};
+    const rels = state.relationships.filter((r) => r.from === subj.name);
+    for (const r of rels) {
+      // We only pass the key if it's EXPLICITLY set.
+      // Otherwise, we let the core library use its internal heuristics (The Magic).
+      let key = r.key;
 
-    for (const rel of subjectRelations) {
-      relations[rel.relationName] = { type: rel.to, cardinality: rel.cardinality };
-
-      // Auto-derive foreign key fields if they exist in the schema
-      // Pattern: relationName + "Id" (e.g., customerId) or "userId" if relation is "customer" and target is "User"
-      const targetSubj = state.subjects.find((s) => s.name === rel.to);
-      const possibleKeys = [
-        rel.relationName,
-        rel.relationName + "Id",
-        rel.relationName + "_id",
-        (targetSubj?.name || "") + "Id",
-        (targetSubj?.name || "") + "_id",
-      ].map((k) => k.toLowerCase());
-
-      for (const field of subj.fields) {
-        if (field.key && possibleKeys.includes(field.key.toLowerCase())) {
-          derive[field.key] = (s: any, ctx: any) => {
-            const related = ctx.related(rel.relationName);
-            if (Array.isArray(related)) {
-              // Return array of IDs for 0..n or 1..n
-              return related.map((r: any) => r.id);
-            }
-            // Return single ID for 1 or 0..1
-            return related?.id;
-          };
-        }
+      // Check if any field explicitly maps to this relation via 🔗 icon
+      if (!key) {
+        const fieldMapping = subj.fields.find((f) => f.relationMapping === r.relationName);
+        if (fieldMapping) key = fieldMapping.key;
       }
+
+      relations[r.relationName] = {
+        type: r.to,
+        cardinality: r.cardinality,
+        ...(key ? { key } : {}),
+      };
     }
 
-    const subjectType = defineSubjectType(subj.name, schema, { relations, derive });
+    const subjectType = defineSubjectType(subj.name, schema, { relations });
     subjectMap.set(subj.id, subjectType);
     schemaMap.set(subj.id, schema);
     world = world.withSubject(subjectType) as typeof world;
@@ -273,4 +262,3 @@ export function generateWorldData(state: PlaygroundState): GenerationResult {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
-

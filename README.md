@@ -49,6 +49,7 @@ const people = world.generate(z.array(PersonApiSchema).min(3).max(10));
 
 ## Features
 
+- **Native Relational Identity** — automated foreign key alignment (e.g. `userId`, `author_id`) based on relationship definitions
 - **Deterministic** — same seed + same world setup → byte-identical output on every run and every machine
 - **Schema-driven** — respects `.email()`, `.uuid()`, `.url()`, `.min()`, `.max()`, `.int()`, `z.enum()`, `z.literal()`, `z.union()`, `z.optional()`, `z.nullable()`
 - **Field-name heuristics** — fields named `email`, `firstName`, `userId`, `createdAt`, `street`, `postalCode` auto-generate realistic values without any matchers

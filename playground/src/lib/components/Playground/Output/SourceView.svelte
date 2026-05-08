@@ -25,7 +25,7 @@
 	});
 </script>
 
-<div class="source-view" bind:this={container}>
+<div class="source-view" data-testid="source-view" bind:this={container}>
 	<pre class="t-code-sm"><code>{#each lines as line}<div 
 	class="line" 
 	class:selected={selectedFieldId === line.fieldId}

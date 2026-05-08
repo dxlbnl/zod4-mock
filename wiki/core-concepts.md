@@ -137,8 +137,32 @@ const DocumentSubject = defineSubjectType("document", DocumentSchema, {
 
 Relations are resolved lazily using the world's population:
 
-- **`ctx.related(name)`** — Access a declared relation. Returns a single object or an array depending on cardinality.
+- **`ctx.related(name)`** — Access a declared relation from within a matcher or derive block. Returns a single object or an array depending on cardinality.
 - **`ctx.relatedTo(type, name)`** — Find all instances of `type` that point to this subject via relationship `name`.
+
+---
+
+## Native Relational Identity (Sinking)
+
+The library can automatically "sink" the identity of a related subject into a foreign key field. This eliminates the need for manual `derive` boilerplate for simple ID wiring.
+
+### 1. Naming Heuristics (Magic)
+
+If a relationship is named `author` and your subject schema has a field named `authorId`, the library will automatically link them. It will also intelligently identify the primary key of the target (e.g., finding `personId` instead of `id`).
+
+### 2. Explicit Mapping (`key`)
+
+You can explicitly define which field acts as the foreign key using the `key` property in the relation definition:
+
+```ts
+relations: {
+  owner: { type: "person", cardinality: "1", key: "creatorId" }
+}
+```
+
+### 3. Stability & Laziness
+
+Identity sinking is implemented using **Lazy Getters**. The relationship is only resolved when the foreign key field is actually accessed (by you or during schema generation). This ensures that "Magic" links never break the library's performance or lazy provisioning guarantees.
 
 ---
 

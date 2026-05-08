@@ -30,7 +30,10 @@
 
 	// Local UI state
 	let linkingSubjectId = $state<string | null>(null);
+	let editingRelId = $state<string | null>(null);
+
 	const linkingSubject = $derived(subjects.find(s => s.id === linkingSubjectId));
+	const editingRel = $derived(store.state.relationships.find(r => r.id === editingRelId));
 </script>
 
 <aside class="rail">
@@ -86,6 +89,8 @@
 					to={rel.to}
 					name={rel.relationName}
 					cardinality={rel.cardinality}
+					key={rel.key}
+					onclick={() => editingRelId = rel.id}
 					onremove={() => store.removeRelationship(rel.id)}
 				/>
 			{/each}
@@ -120,19 +125,25 @@
 	</Accordion>
 </aside>
 
-{#if linkingSubjectId}
+{#if linkingSubjectId || editingRelId}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="overlay" onclick={() => linkingSubjectId = null}>
+	<div class="overlay" onclick={() => { linkingSubjectId = null; editingRelId = null; }}>
 		<div class="form-container" onclick={(e) => e.stopPropagation()}>
 			<RelationForm
-				subjects={subjects.map(s => s.name)}
+				{subjects}
 				initialFrom={linkingSubject?.name}
+				initialData={editingRel}
 				onadd={(rel) => {
-					store.addRelationship(rel);
-					linkingSubjectId = null;
+					if (editingRelId) {
+						store.updateRelationship(editingRelId, rel);
+						editingRelId = null;
+					} else {
+						store.addRelationship(rel);
+						linkingSubjectId = null;
+					}
 				}}
-				oncancel={() => linkingSubjectId = null}
+				oncancel={() => { linkingSubjectId = null; editingRelId = null; }}
 			/>
 		</div>
 	</div>

@@ -25,6 +25,8 @@
 		type ZodFieldType
 	} from '$lib/field-types';
 	import { tick } from 'svelte';
+	import { findMatchingRelation } from '$lib/utils/relations';
+	import type { RelationshipDef, SubjectDef } from '$lib/state.svelte';
 
 	interface Props {
 		field: FieldDef;
@@ -54,6 +56,9 @@
 		mappedSourceKey?: string | null;
 		onsetmapping?: (id: string, schemaFieldKey: string, subjectFieldKey: string) => void;
 		onremovemapping?: (id: string, schemaFieldKey: string) => void;
+		onupdaterelationmapping?: (id: string, relationName: string | undefined) => void;
+		relationships?: RelationshipDef[];
+		subjects?: SubjectDef[];
 	}
 
 	let {
@@ -74,7 +79,10 @@
 		availableSourceKeys = [],
 		mappedSourceKey = null,
 		onsetmapping,
-		onremovemapping
+		onremovemapping,
+		onupdaterelationmapping,
+		relationships = [],
+		subjects = []
 	}: Props = $props();
 
 	// ── Phase / dropdown state ─────────────────────────────────────────────
@@ -130,8 +138,35 @@
 			desc: `Map to ${k}`,
 			category: 'Subject Fields'
 		})),
+		...relationships.map((r) => ({
+			name: r.relationName,
+			desc: `Link to ${r.to}`,
+			category: 'Relationships'
+		})),
 		{ name: 'None', desc: 'Clear mapping', category: 'Action' }
 	]);
+
+	// Calculate heuristic status
+	const claimingRel = $derived(relationships.find((r) => r.key === field.key));
+
+	const heuristicMatch = $derived(
+		(!claimingRel && !field.relationMapping && !mappedSourceKey)
+			? findMatchingRelation(field.key, relationships, subjects)
+			: undefined
+	);
+
+	const activeMappingLabel = $derived(
+		claimingRel?.relationName ||
+			field.relationMapping ||
+			mappedSourceKey ||
+			heuristicMatch?.relationName ||
+			null
+	);
+
+	const isExplicitlyMapped = $derived(
+		!!claimingRel || !!field.relationMapping || !!mappedSourceKey
+	);
+	const isHeuristicallyMapped = $derived(!!heuristicMatch);
 
 	// ── Mapping ────────────────────────────────────────────────────────────
 	function openMappingDropdown(el?: HTMLElement) {
@@ -142,12 +177,21 @@
 		dropdownOpen = 'mapping';
 	}
 
-	function handleMappingSelect(subjectFieldKey: string) {
+	function handleMappingSelect(name: string) {
 		dropdownOpen = null;
-		if (subjectFieldKey === 'None') {
+		if (name === 'None') {
 			onremovemapping?.(field.id, field.key);
+			onupdaterelationmapping?.(field.id, 'none');
 		} else {
-			onsetmapping?.(field.id, field.key, subjectFieldKey);
+			// Check if it's a relationship or a field
+			const rel = relationships.find((r) => r.relationName === name);
+			if (rel) {
+				onremovemapping?.(field.id, field.key); // clear field mapping
+				onupdaterelationmapping?.(field.id, name);
+			} else {
+				onupdaterelationmapping?.(field.id, undefined); // clear rel mapping
+				onsetmapping?.(field.id, field.key, name);
+			}
 		}
 		phase = 'modifiers';
 		tick().then(() => modAreaEl?.focus());
@@ -403,26 +447,27 @@
 			data-testid="key-input"
 		/>
 
-		<!-- Mapping (Story 3) - Inline with text -->
-		{#if availableSourceKeys.length > 0}
+		<!-- Mapping (Story 3/5) - Inline with text -->
+		{#if availableSourceKeys.length > 0 || relationships.length > 0}
 			<div class="mapping-anchor-inline">
 				<button
 					type="button"
 					class="mapping-btn"
-					class:is-mapped={!!mappedSourceKey}
-					title={mappedSourceKey ? `Mapped to ${mappedSourceKey}` : 'Map to subject field'}
+					class:is-mapped={isExplicitlyMapped}
+					class:is-magic={isHeuristicallyMapped}
+					title={activeMappingLabel ? `Mapped to ${activeMappingLabel}` : 'Map to subject field'}
 					onclick={(e) => openMappingDropdown(e.currentTarget as HTMLElement)}
 				>
 					<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-					{#if mappedSourceKey}
-						<span class="mapped-label t-code-tight">{mappedSourceKey}</span>
+					{#if activeMappingLabel}
+						<span class="mapped-label t-code-tight">{activeMappingLabel}</span>
 					{/if}
 				</button>
 
 				{#if dropdownOpen === 'mapping'}
 					<InlineDropdown
 						items={mappingMenuItems}
-						value={mappedSourceKey ?? undefined}
+						value={field.relationMapping || mappedSourceKey || undefined}
 						scope="mapping"
 						onselect={handleMappingSelect}
 						onclose={closeDropdown}
@@ -736,7 +781,13 @@
 		color: var(--accent);
 		background: var(--accent-soft);
 	}
-	.mapping-btn.is-mapped:hover {
+	.mapping-btn.is-magic {
+		opacity: 0.6;
+		color: var(--ink-3);
+		background: var(--bg-1);
+		border-color: var(--line-strong);
+	}
+	.mapping-btn.is-mapped:hover, .mapping-btn.is-magic:hover {
 		opacity: 1;
 		background: var(--accent-soft-hover, var(--accent-soft));
 	}

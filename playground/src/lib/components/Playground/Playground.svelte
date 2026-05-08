@@ -159,6 +159,7 @@
 				{selectedFieldId}
 				{activeEntityType}
 				subjects={store.state.subjects}
+				relationships={store.state.relationships}
 				activeBinding={store.activeBinding}
 				onbindschema={(sid) =>
 					store.bindSchemaToSubject(store.state.activeSchemaId!, sid)}
@@ -166,6 +167,9 @@
 					store.setFieldMapping(store.state.activeSchemaId!, fk, sk)}
 				onremovemapping={(fk) =>
 					store.removeFieldMapping(store.state.activeSchemaId!, fk)}
+				onupdaterelationmapping={(fid, rid) =>
+					entityId &&
+					store.setRelationMapping(activeEntityType, entityId, fid, rid)}
 				onselectfield={(id) => (selectedFieldId = id)}
 				onaddfield={(pid) =>
 					(entityId

@@ -78,5 +78,5 @@ A comprehensive Storybook interaction test (in `Playground.stories.svelte`) that
 
 - **Success Criteria**:
   - [ ] Fields auto-aligned via heuristics show a 🔗 **Link Icon** in the builder.
-  - [ ] Hovering the icon shows a tooltip: *"Auto-mapped to 'customer' relationship."*
+  - [ ] Hovering the icon shows a tooltip: _"Auto-mapped to 'customer' relationship."_
   - [ ] Clicking the icon opens a dropdown to manually select a different relationship or "Random".

@@ -12,6 +12,8 @@
 		max?: number | string;
 		step?: number | string;
 		oninput?: (e: Event & { currentTarget: HTMLInputElement }) => void;
+		onfocus?: (e: FocusEvent & { currentTarget: HTMLInputElement }) => void;
+		selectOnFocus?: boolean;
 	}
 
 	let {
@@ -27,12 +29,21 @@
 		max,
 		step,
 		oninput,
+		onfocus,
+		selectOnFocus = false,
 	}: Props = $props();
 
 	let input = $state<HTMLInputElement>();
 
 	export function focus() {
 		input?.focus();
+	}
+
+	function handleFocus(e: FocusEvent & { currentTarget: HTMLInputElement }) {
+		if (selectOnFocus) {
+			e.currentTarget.select();
+		}
+		onfocus?.(e);
 	}
 
 	$effect(() => {
@@ -54,6 +65,7 @@
 			{step}
 			bind:value
 			{oninput}
+			onfocus={handleFocus}
 			class="input t-code-sm"
 		/>
 	</div>
@@ -69,6 +81,7 @@
 		{step}
 		bind:value
 		{oninput}
+		onfocus={handleFocus}
 		class="input t-code-sm {className}"
 	/>
 {/if}
