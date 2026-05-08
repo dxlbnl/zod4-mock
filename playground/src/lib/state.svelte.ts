@@ -255,7 +255,7 @@ export function makeDefaultState(): PlaygroundState {
     bindings: [],
     ui: {
       exportOpen: false,
-      outputTab: "code",
+      outputTab: "data",
       sectionStates: { world: false, subjects: true, schemas: false },
     },
     z: null, // Will be set on init
