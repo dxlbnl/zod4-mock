@@ -62,7 +62,7 @@
 		bind:value={localValue}
 		{placeholder}
 		onkeydown={handleKeydown}
-		onblur={commit}
+		onblur={() => commit()}
 		size={Math.max(1, localValue.length || placeholder.length)}
 		aria-label="Modifier value"
 	/>

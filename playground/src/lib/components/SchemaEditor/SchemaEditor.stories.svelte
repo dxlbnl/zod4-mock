@@ -492,3 +492,44 @@
 		{@render harness('SE11')}
 	{/snippet}
 </Story>
+
+<!--
+  SE-12: Context-aware modifier filtering — already applied modifiers are hidden
+-->
+<Story
+	name="SE-12 Context-Aware Modifier Filtering"
+	play={async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		const lines = await canvas.findAllByTestId('editor-line');
+		const targetLine = lines[0]; // username: string .min(3)
+
+		// Focus the modifier area (dot button)
+		const dotBtn = within(targetLine).getByLabelText(/add modifier/i);
+		await userEvent.click(dotBtn);
+		await tick();
+
+		const dropdown = await canvas.findByRole('listbox');
+		expect(dropdown).toBeInTheDocument();
+
+		// '.min' should NOT be in the dropdown because it's already on the field
+		// We use a regex to match the text content exactly
+		const items = canvas.queryAllByRole('option');
+		const minExists = items.some(item => item.textContent?.includes('.min'));
+		expect(minExists).toBe(false);
+
+		// '.max' SHOULD be there
+		const maxExists = items.some(item => item.textContent?.includes('.max'));
+		expect(maxExists).toBe(true);
+
+		// Escape to close
+		await userEvent.keyboard('{Escape}');
+		await tick();
+	}}
+>
+	{#snippet template()}
+		{@render harness('SE12', [
+			makeField({ key: 'username', type: 'string', modifiers: [{ name: '.min', value: 3 }] }),
+		])}
+	{/snippet}
+</Story>

@@ -105,11 +105,13 @@
 	}));
 
 	const modifierMenuItems = $derived(
-		availableMods.map((m) => ({
-			name: m.name,
-			desc: m.desc,
-			category: m.category
-		}))
+		availableMods
+			.filter((m) => !field.modifiers.some((fm) => fm.name === m.name))
+			.map((m) => ({
+				name: m.name,
+				desc: m.desc,
+				category: m.category
+			}))
 	);
 
 	// ── Auto-focus on mount ────────────────────────────────────────────────
