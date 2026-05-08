@@ -1,23 +1,28 @@
 <script lang="ts">
-	import TopBar from '$lib/components/Surfaces/TopBar.svelte';
-	import LeftRail from './Sidebar/LeftRail.svelte';
-	import SchemaEditor from './Editor/index.svelte';
-	import OutputPane from './Output/OutputPane.svelte';
-	import ExportSheet from '$lib/components/Surfaces/ExportSheet.svelte';
-	import ExportContent from './Output/ExportContent.svelte';
-	
-	import { untrack } from 'svelte';
-	import { z } from 'zod';
-	import { createPlaygroundState } from '$lib/state.svelte';
-	import { 
-		generateTokenizedCode, 
-		generateTokenizedData, 
+	import TopBar from "$lib/components/Surfaces/TopBar.svelte";
+	import LeftRail from "./Sidebar/LeftRail.svelte";
+	import SchemaEditor from "./Editor/index.svelte";
+	import OutputPane from "./Output/OutputPane.svelte";
+	import ExportSheet from "$lib/components/Surfaces/ExportSheet.svelte";
+	import ExportContent from "./Output/ExportContent.svelte";
+
+	import { untrack, onMount } from "svelte";
+	import { z } from "zod";
+	import { createPlaygroundState } from "$lib/state.svelte";
+	import {
+		generateTokenizedCode,
+		generateTokenizedData,
 		generateTokenizedWorldData,
 		generateSubjectCode,
 		generateFullExport,
-		exportLineCount 
-	} from '$lib/codegen';
-	import { generateSubjectData, generateWorldData, buildWorld, buildZodSchema } from '$lib/schema-builder';
+		exportLineCount,
+	} from "$lib/codegen";
+	import {
+		generateSubjectData,
+		generateWorldData,
+		buildWorld,
+		buildZodSchema,
+	} from "$lib/schema-builder";
 
 	interface Props {
 		initialState?: any;
@@ -27,12 +32,13 @@
 
 	// Initialize store
 	const store = createPlaygroundState(untrack(() => initialState));
-	
+
+	onMount(() => {
+		store.fetchAvailableZodVersions();
+	});
+
 	// Track selection
 	let selectedFieldId = $state<string | null>(null);
-
-	// Active entity helper — used in builder callbacks
-	// (Moved below)
 
 	// Derived values
 	const activeEntityType = $derived(store.state.activeEntityType);
@@ -41,32 +47,42 @@
 
 	// Active entity helper — used in builder callbacks
 	const entityId = $derived(
-		activeEntityType === 'subject' ? store.activeSubject?.id : store.activeSchema?.id
+		activeEntityType === "subject"
+			? store.activeSubject?.id
+			: store.activeSchema?.id,
 	);
 
 	const codeLines = $derived.by(() => {
-		if (activeEntityType === 'subject' && store.activeSubject) {
-			return generateTokenizedCode(store.activeSubject, store.state.relationships);
+		if (activeEntityType === "subject" && store.activeSubject) {
+			return generateTokenizedCode(
+				store.activeSubject,
+				store.state.relationships,
+			);
 		}
-		if (activeEntityType === 'schema' && store.activeSchema) {
-			return generateTokenizedCode({
-				...store.activeSchema,
-				count: 0
-			} as any, []);
+		if (activeEntityType === "schema" && store.activeSchema) {
+			return generateTokenizedCode(
+				{
+					...store.activeSchema,
+					count: 0,
+				} as any,
+				[],
+			);
 		}
 		return [];
 	});
 
 	// Mock data generation
 	const generationResult = $derived.by(() => {
-		if (activeEntityType === 'subject' && store.activeSubject) {
+		if (activeEntityType === "subject" && store.activeSubject) {
 			return generateSubjectData(store.state, store.activeSubject.id);
 		}
-		if (activeEntityType === 'schema' && store.activeSchema) {
+		if (activeEntityType === "schema" && store.activeSchema) {
 			try {
 				const { world } = buildWorld(store.state);
-				const apiSchema = buildZodSchema(store.activeSchema.fields);
-				const data = world.generate(z.array(apiSchema).length(3)) as unknown[];
+				const apiSchema = buildZodSchema(z, store.activeSchema.fields);
+				const data = world.generate(
+					z.array(apiSchema).length(3),
+				) as unknown[];
 				return { ok: true, data };
 			} catch (e) {
 				return { ok: false, error: String(e) };
@@ -76,15 +92,19 @@
 	});
 
 	const dataLines = $derived(
-		generationResult.ok && activeFields.length > 0 
-			? generateTokenizedData(generationResult.data, activeFields) 
-			: []
+		generationResult.ok && activeFields.length > 0
+			? generateTokenizedData(generationResult.data, activeFields)
+			: [],
 	);
 
 	// World generation
 	const worldResult = $derived(generateWorldData(store.state));
 	const worldLines = $derived(
-		worldResult.ok ? generateTokenizedWorldData(worldResult.data as Record<string, any[]>) : []
+		worldResult.ok
+			? generateTokenizedWorldData(
+					worldResult.data as Record<string, any[]>,
+				)
+			: [],
 	);
 
 	// Export logic
@@ -92,9 +112,9 @@
 	const exportLines = $derived.by(() => {
 		// We'd need a full tokenized version of the export
 		// For now, let's just show the raw lines with basic highlighting
-		return fullExportCode.split('\n').map((text, i) => ({
+		return fullExportCode.split("\n").map((text, i) => ({
 			lineNumber: i + 1,
-			tokens: [{ kind: 'plain' as const, text }]
+			tokens: [{ kind: "plain" as const, text }],
 		}));
 	});
 
@@ -103,21 +123,25 @@
 	}
 
 	function handleDownload() {
-		const blob = new Blob([fullExportCode], { type: 'text/typescript' });
+		const blob = new Blob([fullExportCode], { type: "text/typescript" });
 		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
+		const a = document.createElement("a");
 		a.href = url;
-		a.download = 'world.ts';
+		a.download = "world.ts";
 		a.click();
 		URL.revokeObjectURL(url);
 	}
 </script>
 
 <div class="app-shell">
-	<TopBar 
-		version="v0.4.2"
+	<TopBar
+		version={__PKG_VERSION__}
 		workspace="dxlbnl"
 		project="zod4-mock"
+		zodVersion={store.state.world.zodVersion}
+		availableZodVersions={store.state.availableZodVersions}
+		isZodLoading={store.state.isZodLoading}
+		onchangezod={(v) => store.setZodVersion(v)}
 		onexport={() => store.setExportOpen(true)}
 	/>
 
@@ -134,43 +158,81 @@
 				{activeEntityType}
 				subjects={store.state.subjects}
 				activeBinding={store.activeBinding}
-				onbindschema={(sid) => store.bindSchemaToSubject(store.state.activeSchemaId!, sid)}
-				onsetmapping={(fk, sk) => store.setFieldMapping(store.state.activeSchemaId!, fk, sk)}
-				onremovemapping={(fk) => store.removeFieldMapping(store.state.activeSchemaId!, fk)}
+				onbindschema={(sid) =>
+					store.bindSchemaToSubject(store.state.activeSchemaId!, sid)}
+				onsetmapping={(fk, sk) =>
+					store.setFieldMapping(store.state.activeSchemaId!, fk, sk)}
+				onremovemapping={(fk) =>
+					store.removeFieldMapping(store.state.activeSchemaId!, fk)}
 				onselectfield={(id) => (selectedFieldId = id)}
-				onaddfield={(pid) => (entityId ? store.addField(activeEntityType, entityId, pid) : null) ?? undefined}
-				onupdatefield={(id, p) => entityId && store.updateField(activeEntityType, entityId, id, p)}
-				onremovefield={(id) => entityId && store.removeField(activeEntityType, entityId, id)}
-				onaddmodifier={(id, m) => entityId && store.addModifier(activeEntityType, entityId, id, m)}
-				onupdatemodifier={(id, idx, val) => entityId && store.updateModifierValue(activeEntityType, entityId, id, idx, val)}
-				onremovemodifier={(fid, mid) => entityId && store.removeModifier(activeEntityType, entityId, fid, mid)}
-				onupdateenumvalues={(id, vals) => entityId && store.updateField(activeEntityType, entityId, id, { enumValues: vals })}
+				onaddfield={(pid) =>
+					(entityId
+						? store.addField(activeEntityType, entityId, pid)
+						: null) ?? undefined}
+				onupdatefield={(id, p) =>
+					entityId &&
+					store.updateField(activeEntityType, entityId, id, p)}
+				onremovefield={(id) =>
+					entityId &&
+					store.removeField(activeEntityType, entityId, id)}
+				onaddmodifier={(id, m) =>
+					entityId &&
+					store.addModifier(activeEntityType, entityId, id, m)}
+				onupdatemodifier={(id, idx, val) =>
+					entityId &&
+					store.updateModifierValue(
+						activeEntityType,
+						entityId,
+						id,
+						idx,
+						val,
+					)}
+				onremovemodifier={(fid, mid) =>
+					entityId &&
+					store.removeModifier(activeEntityType, entityId, fid, mid)}
+				onupdateenumvalues={(id, vals) =>
+					entityId &&
+					store.updateField(activeEntityType, entityId, id, {
+						enumValues: vals,
+					})}
 				onupdatetitle={(val) => {
-					if (activeEntityType === 'subject' && store.activeSubject) {
+					if (activeEntityType === "subject" && store.activeSubject) {
 						store.renameSubject(store.activeSubject.id, val);
-					} else if (activeEntityType === 'schema' && store.activeSchema) {
+					} else if (
+						activeEntityType === "schema" &&
+						store.activeSchema
+					) {
 						store.renameSchema(store.activeSchema.id, val);
 					}
 				}}
 			/>
 		</div>
-		
+
 		<div class="output-column">
-			<OutputPane 
+			<OutputPane
 				bind:activeTab={store.state.ui.outputTab}
-				codeLines={codeLines}
-				dataLines={dataLines}
-				worldLines={worldLines}
-				fullCode={store.activeSubject ? generateSubjectCode(store.activeSubject, store.state.relationships) : ''}
-				fullData={generationResult.ok ? JSON.stringify(generationResult.data, null, 2) : ''}
-				fullWorld={worldResult.ok ? JSON.stringify(worldResult.data, null, 2) : ''}
+				{codeLines}
+				{dataLines}
+				{worldLines}
+				fullCode={store.activeSubject
+					? generateSubjectCode(
+							store.activeSubject,
+							store.state.relationships,
+						)
+					: ""}
+				fullData={generationResult.ok
+					? JSON.stringify(generationResult.data, null, 2)
+					: ""}
+				fullWorld={worldResult.ok
+					? JSON.stringify(worldResult.data, null, 2)
+					: ""}
 				{selectedFieldId}
 				onchangetab={(tab) => store.setOutputTab(tab)}
 			/>
 		</div>
 	</div>
 
-	<ExportSheet 
+	<ExportSheet
 		open={store.state.ui.exportOpen}
 		onclose={() => store.setExportOpen(false)}
 		oncopy={handleCopyExport}

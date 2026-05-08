@@ -67,6 +67,7 @@ export interface WorldConfig {
   optionalProbability: number;
   defaultArrayLengthMin: number;
   defaultArrayLengthMax: number;
+  zodVersion: string;
 }
 
 export interface UIState {
@@ -86,6 +87,10 @@ export interface PlaygroundState {
   relationships: RelationshipDef[];
   bindings: SchemaBinding[];
   ui: UIState;
+  /** The dynamic Zod instance */
+  z: any;
+  availableZodVersions: string[];
+  isZodLoading: boolean;
 }
 
 // ─── ID generation ────────────────────────────────────────────────────────────
@@ -203,6 +208,7 @@ export function makeDefaultState(): PlaygroundState {
       optionalProbability: 0.2,
       defaultArrayLengthMin: 1,
       defaultArrayLengthMax: 5,
+      zodVersion: "4.4.3",
     },
     subjects: [userSubject, orderSubject, productSubject],
     activeSubjectId: userSubject.id,
@@ -224,8 +230,13 @@ export function makeDefaultState(): PlaygroundState {
       outputTab: "code",
       sectionStates: { world: false, subjects: true, schemas: false },
     },
+    z: null, // Will be set on init
+    availableZodVersions: [],
+    isZodLoading: false,
   };
 }
+
+import { z as staticZod } from "zod";
 
 // ─── State factory ────────────────────────────────────────────────────────────
 
@@ -243,6 +254,41 @@ export function createPlaygroundState(initial?: PlaygroundState) {
   function setDefaultArrayLength(min: number, max: number) {
     state.world.defaultArrayLengthMin = Math.max(0, min);
     state.world.defaultArrayLengthMax = Math.max(min, max);
+  }
+
+  async function fetchAvailableZodVersions() {
+    try {
+      const res = await fetch("https://registry.npmjs.org/zod");
+      const data = await res.json();
+      const versions = Object.keys(data.versions)
+        .filter((v) => v.startsWith("4."))
+        .reverse();
+      state.availableZodVersions = versions;
+    } catch (e) {
+      console.error("Failed to fetch zod versions", e);
+      state.availableZodVersions = ["4.4.3", "4.4.2", "4.4.1", "4.4.0", "4.0.0"];
+    }
+  }
+
+  async function setZodVersion(version: string) {
+    if (state.world.zodVersion === version && state.z) return;
+    state.world.zodVersion = version;
+    state.isZodLoading = true;
+    try {
+      const module = await import(/* @vite-ignore */ `https://esm.sh/zod@${version}`);
+      state.z = module.z || module.default || module;
+    } catch (e) {
+      console.error(`Failed to load zod@${version}, falling back to bundled`, e);
+      state.z = staticZod;
+    } finally {
+      state.isZodLoading = false;
+    }
+  }
+
+  // Initialize with static zod if not already set
+  if (!state.z) {
+    state.z = staticZod;
+    if (!state.world.zodVersion) state.world.zodVersion = "4.4.3";
   }
 
   // ── Subjects ───────────────────────────────────────────────────────────
@@ -572,6 +618,8 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     setWorldSeed,
     setOptionalProbability,
     setDefaultArrayLength,
+    fetchAvailableZodVersions,
+    setZodVersion,
 
     addSubject,
     removeSubject,

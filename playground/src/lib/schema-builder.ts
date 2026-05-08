@@ -4,7 +4,7 @@
  * Used for the DataView live preview.
  */
 
-import { z, type ZodTypeAny } from "zod";
+import type { ZodTypeAny } from "zod";
 import type { FieldDef, ModifierDef, PlaygroundState } from "./state.svelte";
 import { defineSubjectType, createWorld as _createWorld } from "zod4-mock";
 
@@ -70,7 +70,7 @@ function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAn
   return s;
 }
 
-export function buildZodField(field: FieldDef): ZodTypeAny {
+export function buildZodField(z: any, field: FieldDef): ZodTypeAny {
   let base: ZodTypeAny;
 
   switch (field.type) {
@@ -108,7 +108,7 @@ export function buildZodField(field: FieldDef): ZodTypeAny {
       } else {
         const shape: Record<string, ZodTypeAny> = {};
         for (const child of field.children) {
-          if (child.key) shape[child.key] = buildZodField(child);
+          if (child.key) shape[child.key] = buildZodField(z, child);
         }
         base = z.object(shape);
       }
@@ -123,11 +123,11 @@ export function buildZodField(field: FieldDef): ZodTypeAny {
   return applyModifiers(base, field.modifiers);
 }
 
-export function buildZodSchema(fields: FieldDef[]): ReturnType<typeof z.object> {
+export function buildZodSchema(z: any, fields: FieldDef[]): ReturnType<typeof z.object> {
   const shape: Record<string, ZodTypeAny> = {};
   for (const field of fields) {
     if (!field.key) continue;
-    shape[field.key] = buildZodField(field);
+    shape[field.key] = buildZodField(z, field);
   }
   return z.object(shape);
 }
@@ -145,7 +145,7 @@ export function buildWorld(state: PlaygroundState) {
 
   // Register subjects
   for (const subj of state.subjects) {
-    const schema = buildZodSchema(subj.fields);
+    const schema = buildZodSchema(state.z, subj.fields);
     const subjectType = defineSubjectType(subj.name, schema);
     subjectMap.set(subj.id, subjectType);
     world = world.withSubject(subjectType) as typeof world;
@@ -160,7 +160,7 @@ export function buildWorld(state: PlaygroundState) {
     const subjectType = subjectMap.get(binding.subjectId);
     if (!subjectType) continue;
 
-    const apiSchema = buildZodSchema(schemaDef.fields);
+    const apiSchema = buildZodSchema(state.z, schemaDef.fields);
 
     // Build matchers from fieldMap
     const matchers: Record<string, (s: Record<string, unknown>) => unknown> = {};
@@ -195,11 +195,13 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
     const subj = state.subjects.find((s) => s.id === subjectId);
     if (!subj) return { ok: false, error: "Subject not found" };
 
-    const { world, subjectMap } = buildWorld(state);
+    const worldData = buildWorld(state);
+    const world = worldData.world;
+    const subjectMap = worldData.subjectMap;
     const subjectType = subjectMap.get(subj.id);
     if (!subjectType) return { ok: false, error: "Subject not registered" };
 
-    const data = world.generate(z.array(subjectType.schema)) as unknown[];
+    const data = world.generate(state.z.array(subjectType.schema)) as unknown[];
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -208,14 +210,16 @@ export function generateSubjectData(state: PlaygroundState, subjectId: string): 
 
 export function generateWorldData(state: PlaygroundState): GenerationResult {
   try {
-    const { world, subjectMap } = buildWorld(state);
+    const worldData = buildWorld(state);
+    const world = worldData.world;
+    const subjectMap = worldData.subjectMap;
     const results: Record<string, unknown[]> = {};
 
     for (const subj of state.subjects) {
       const subjectType = subjectMap.get(subj.id);
       if (subjectType) {
         // Use the EXACT schema instance that was registered
-        results[subj.name] = world.generate(z.array(subjectType.schema)) as unknown[];
+        results[subj.name] = world.generate(state.z.array(subjectType.schema)) as unknown[];
       }
     }
 

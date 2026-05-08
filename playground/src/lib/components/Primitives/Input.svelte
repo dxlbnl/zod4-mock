@@ -18,19 +18,19 @@
 		id,
 		label,
 		value = $bindable(),
-		placeholder = '',
-		type = 'text',
-		class: className = '',
+		placeholder = "",
+		type = "text",
+		class: className = "",
 		autofocus = false,
 		disabled = false,
 		min,
 		max,
 		step,
-		oninput
+		oninput,
 	}: Props = $props();
 
 	let input = $state<HTMLInputElement>();
-	
+
 	export function focus() {
 		input?.focus();
 	}

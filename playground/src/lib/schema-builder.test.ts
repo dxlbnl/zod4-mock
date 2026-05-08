@@ -8,7 +8,7 @@ describe("schema-builder", () => {
   describe("buildZodField", () => {
     it("builds a basic string field", () => {
       const field = makeField({ key: "name", type: "string" });
-      const schema = buildZodField(field);
+      const schema = buildZodField(z, field);
       expect(schema).toBeInstanceOf(z.ZodString);
     });
 
@@ -21,7 +21,7 @@ describe("schema-builder", () => {
           { name: ".max", value: 10 },
         ],
       });
-      const schema = buildZodField(field) as z.ZodString;
+      const schema = buildZodField(z, field) as z.ZodString;
       expect(schema.minLength).toBe(5);
       expect(schema.maxLength).toBe(10);
     });
@@ -32,7 +32,7 @@ describe("schema-builder", () => {
         type: "number",
         modifiers: [{ name: ".int()" }],
       });
-      const schema = buildZodField(field);
+      const schema = buildZodField(z, field);
       expect(schema).toBeInstanceOf(z.ZodNumber);
       // ZodNumber doesn't easily expose "isInt", but we can check if it parses floats
       expect(schema.safeParse(1.5).success).toBe(false);
@@ -44,7 +44,7 @@ describe("schema-builder", () => {
         type: "enum",
         enumValues: ["admin", "user"],
       });
-      const schema = buildZodField(field);
+      const schema = buildZodField(z, field);
       expect(schema).toBeInstanceOf(z.ZodEnum);
       expect(schema.safeParse("admin").success).toBe(true);
       expect(schema.safeParse("guest").success).toBe(false);
@@ -59,7 +59,7 @@ describe("schema-builder", () => {
           makeField({ key: "zip", type: "number" }),
         ],
       });
-      const schema = buildZodField(field);
+      const schema = buildZodField(z, field);
       expect(schema).toBeInstanceOf(z.ZodObject);
       const shape = (schema as z.ZodObject<any>).shape;
       expect(shape.city).toBeInstanceOf(z.ZodString);
@@ -73,7 +73,7 @@ describe("schema-builder", () => {
         makeField({ key: "id", type: "uuid" }),
         makeField({ key: "email", type: "email" }),
       ];
-      const schema = buildZodSchema(fields);
+      const schema = buildZodSchema(z, fields);
       expect(schema).toBeInstanceOf(z.ZodObject);
       // Verify they are at least string-compatible
       expect(schema.shape.id.safeParse("not-a-uuid").success).toBe(false);
@@ -89,6 +89,7 @@ describe("schema-builder", () => {
           optionalProbability: 0.1,
           defaultArrayLengthMin: 2,
           defaultArrayLengthMax: 4,
+          zodVersion: "4.4.3",
         },
         subjects: [
           {
@@ -105,6 +106,9 @@ describe("schema-builder", () => {
         relationships: [],
         bindings: [],
         ui: { exportOpen: false, outputTab: "code", sectionStates: {} },
+        z: z,
+        availableZodVersions: ["4.4.3"],
+        isZodLoading: false,
       };
 
       const { world, subjectMap } = buildWorld(state);

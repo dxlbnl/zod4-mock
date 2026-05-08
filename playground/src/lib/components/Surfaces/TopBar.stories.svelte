@@ -15,10 +15,11 @@
 		},
 		tags: ['autodocs'],
 		args: {
-			version: 'v0.4.2',
+			version: '0.1.2',
 			workspace: 'dxlbnl',
 			project: 'zod4-mock',
-			onrun: fn(),
+			zodVersion: '4.4.3',
+			availableZodVersions: ['4.4.3', '4.4.2'],
 			onexport: fn()
 		}
 	});
@@ -31,9 +32,4 @@
 	const exportBtn = canvas.getByRole('button', { name: /^⬇ Export$/ });
 	await userEvent.click(exportBtn);
 	expect(args.onexport).toHaveBeenCalled();
-
-	// TB-3: Run button
-	const runBtn = canvas.getByRole('button', { name: /^▶ Run$/ });
-	await userEvent.click(runBtn);
-	expect(args.onrun).toHaveBeenCalled();
 }} />
