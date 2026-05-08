@@ -56,7 +56,13 @@ const userApiSchema: SchemaDef = {
 };
 
 const minimalState: PlaygroundState = {
-  world: { seed: 42, optionalProbability: 0.2, defaultArrayLengthMin: 1, defaultArrayLengthMax: 5 },
+  world: {
+    seed: 42,
+    optionalProbability: 0.2,
+    defaultArrayLengthMin: 1,
+    defaultArrayLengthMax: 5,
+    zodVersion: "4.4.3",
+  },
   subjects: [userSubject, orderSubject],
   activeSubjectId: "subj-1",
   schemas: [userApiSchema],
@@ -67,6 +73,9 @@ const minimalState: PlaygroundState = {
     { schemaId: "schema-1", subjectId: "subj-1", fieldMap: { userId: "id", email: "email" } },
   ],
   ui: { exportOpen: false, outputTab: "code", sectionStates: {} },
+  z: null,
+  availableZodVersions: ["4.4.3"],
+  isZodLoading: false,
 };
 
 // ─── generateSubjectCode ──────────────────────────────────────────────────────

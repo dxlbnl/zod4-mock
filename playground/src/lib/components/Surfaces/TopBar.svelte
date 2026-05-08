@@ -1,24 +1,38 @@
 <script lang="ts">
 	import Button from '$lib/components/Primitives/Button.svelte';
-	import SegmentedControl from '$lib/components/Primitives/SegmentedControl.svelte';
+	import Select from '$lib/components/Primitives/Select.svelte';
 	import Kbd from '$lib/components/Primitives/Kbd.svelte';
 
 	interface Props {
 		version: string;
 		workspace: string;
 		project: string;
-		onrun?: () => void;
+		zodVersion: string;
+		availableZodVersions: string[];
+		isZodLoading?: boolean;
+		onchangezod?: (v: string) => void;
 		onexport?: () => void;
 	}
 
-	let { version, workspace, project, onrun, onexport }: Props = $props();
+	let { 
+		version, 
+		workspace, 
+		project, 
+		zodVersion, 
+		availableZodVersions, 
+		isZodLoading = false,
+		onchangezod, 
+		onexport 
+	}: Props = $props();
+
+	const zodOptions = $derived(availableZodVersions.map(v => ({ label: `zod@${v}`, value: v })));
 </script>
 
 <div class="topbar">
 	<div class="brand">
 		<div class="brand-logo t-code">z</div>
 		<div class="brand-name t-title">zod4-mock</div>
-		<div class="brand-sub t-code-sm">{version}</div>
+		<div class="brand-sub t-code-sm">v{version}</div>
 	</div>
 
 	<div class="workspace-name t-code">
@@ -28,14 +42,13 @@
 	</div>
 
 	<div class="top-actions">
-		<SegmentedControl
-			options={[
-				{ label: 'auto-run', value: 'auto' },
-				{ label: 'manual', value: 'manual' }
-			]}
-			value="auto"
-		/>
-		<Button onclick={onrun}>▶ Run</Button>
+		<div class="zod-selector" class:loading={isZodLoading}>
+			<Select 
+				options={zodOptions} 
+				value={zodVersion} 
+				onchange={onchangezod} 
+			/>
+		</div>
 		<Button variant="primary" onclick={onexport}>⬇ Export</Button>
 		<Kbd keys="⌘ K" />
 	</div>
@@ -92,5 +105,14 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-4);
+	}
+
+	.zod-selector {
+		transition: opacity 0.2s ease;
+	}
+
+	.zod-selector.loading {
+		opacity: 0.5;
+		pointer-events: none;
 	}
 </style>

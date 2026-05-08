@@ -6,7 +6,7 @@
 	import ExportSheet from '$lib/components/Surfaces/ExportSheet.svelte';
 	import ExportContent from './Output/ExportContent.svelte';
 	
-	import { untrack } from 'svelte';
+	import { untrack, onMount } from 'svelte';
 	import { createPlaygroundState } from '$lib/state.svelte';
 	import { 
 		generateTokenizedCode, 
@@ -26,12 +26,13 @@
 
 	// Initialize store
 	const store = createPlaygroundState(untrack(() => initialState));
+
+	onMount(() => {
+		store.fetchAvailableZodVersions();
+	});
 	
 	// Track selection
 	let selectedFieldId = $state<string | null>(null);
-
-	// Active entity helper — used in builder callbacks
-	// (Moved below)
 
 	// Derived values
 	const activeEntityType = $derived(store.state.activeEntityType);
@@ -96,9 +97,13 @@
 
 <div class="app-shell">
 	<TopBar 
-		version="v0.4.2"
+		version={__PKG_VERSION__}
 		workspace="dxlbnl"
 		project="zod4-mock"
+		zodVersion={store.state.world.zodVersion}
+		availableZodVersions={store.state.availableZodVersions}
+		isZodLoading={store.state.isZodLoading}
+		onchangezod={(v) => store.setZodVersion(v)}
 		onexport={() => store.setExportOpen(true)}
 	/>
 

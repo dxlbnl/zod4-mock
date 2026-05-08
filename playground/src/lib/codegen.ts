@@ -4,7 +4,7 @@
  * Walks PlaygroundState and produces TypeScript source strings.
  */
 
-import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef, SubjectDef } from "./state.svelte";
+import type { FieldDef, ModifierDef, PlaygroundState, RelationshipDef, SchemaDef, SubjectDef } from "./state.svelte";
 
 // ─── Token types for syntax highlighting ─────────────────────────────────────
 

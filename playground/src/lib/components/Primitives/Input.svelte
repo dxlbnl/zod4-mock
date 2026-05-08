@@ -10,6 +10,7 @@
 		min?: number | string;
 		max?: number | string;
 		step?: number | string;
+		id?: string;
 		oninput?: (e: Event & { currentTarget: HTMLInputElement }) => void;
 	}
 
@@ -24,6 +25,7 @@
 		min,
 		max,
 		step,
+		id,
 		oninput
 	}: Props = $props();
 
@@ -63,6 +65,7 @@
 		{min}
 		{max}
 		{step}
+		{id}
 		bind:value
 		{oninput}
 		class="input t-code-sm {className}"

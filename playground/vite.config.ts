@@ -7,8 +7,15 @@ import { fileURLToPath } from "node:url";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
+import { readFileSync } from "node:fs";
+
+const pkg = JSON.parse(readFileSync(path.join(dirname, "../package.json"), "utf-8"));
+
 export default defineConfig({
   plugins: [sveltekit()],
+  define: {
+    __PKG_VERSION__: JSON.stringify(pkg.version),
+  },
   optimizeDeps: {
     exclude: ["vitest"],
     include: [
