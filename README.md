@@ -1,130 +1,148 @@
 # zod4-mock
 
-Deterministic, schema-driven mock data for Zod v4. One seed. Cross-API consistent.
+Deterministic, schema-driven mock data for Zod v4.
 
-`zod4-mock` solves two problems that `faker` cannot: every value is **fully deterministic** (same seed → same data, forever, on every machine), and multiple API schemas that share underlying entities stay **referentially consistent** — the same file ID appears in the data API, the text API, and the entity API without any glue code.
-
-The core model is **World + Subject**: a _Subject_ is a domain entity (person, invoice, file) with a stable identity; a _World_ is a seeded session that generates any number of API-shaped views on top of those identities.
+Same seed → same data, always. Field names like `email`, `firstName`, and `createdAt` automatically produce realistic values. Schemas can declare relations so IDs stay consistent across multiple API shapes — without any manual wiring.
 
 ## Quick start
 
 ```ts
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "zod4-mock";
+import { generate } from "zod4-mock";
 
-// 1. Define a subject type — the source of truth for entity identity
-const PersonSubject = defineSubjectType(
-  "person",
+const user = generate(
   z.object({
+    id:        z.uuid(),
     firstName: z.string(),
-    lastName: z.string(),
-    email: z.email(),
+    email:     z.email(),
+    role:      z.enum(["admin", "user"]),
+    createdAt: z.date(),
   }),
 );
-
-// 2. Define your API schema
-const PersonApiSchema = z.object({
-  id: z.uuid(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.email(),
-  age: z.number().int().min(18).max(90),
-  active: z.boolean(),
-});
-
-// 3. Create a seeded world and bind the schema to the subject
-const world = createWorld({ seed: 42 })
-  .withSubject(PersonSubject)
-  .withSchema(PersonApiSchema, PersonSubject, {
-    firstName: (s) => s.firstName,
-    lastName: (s) => s.lastName,
-    email: (s) => s.email,
-    // unlisted fields (id, age, active) are auto-generated from schema + field name
-  });
-
-// 4. Generate — same seed always produces identical output
-const people = world.generate(z.array(PersonApiSchema).min(3).max(10));
-// → [{ id: '...', firstName: 'Jan', lastName: 'Bakker', email: '...', age: 34, active: true }, ...]
+// → { id: "3f2d…", firstName: "Jan", email: "j.bakker@…", role: "user", createdAt: Date }
 ```
 
-## Features
-
-- **Native Relational Identity** — automated foreign key alignment (e.g. `userId`, `author_id`) based on relationship definitions
-- **Deterministic** — same seed + same world setup → byte-identical output on every run and every machine
-- **Schema-driven** — respects `.email()`, `.uuid()`, `.url()`, `.min()`, `.max()`, `.int()`, `z.enum()`, `z.literal()`, `z.union()`, `z.optional()`, `z.nullable()`
-- **Field-name heuristics** — fields named `email`, `firstName`, `userId`, `createdAt`, `street`, `postalCode` auto-generate realistic values without any matchers
-- **Cross-API consistency** — bind multiple schemas to the same subject type; IDs stay coherent across all of them automatically
-- **Overrides + transform** — pin specific fields after generation without losing the rest
-- **Zod v4 native** — built against `zod@^4`, not a v3 port
-- **TypeScript-first** — matcher functions are fully typed when you pass a `SubjectType` object
+No setup, no seed, no configuration. Field names drive the values — `firstName` gets a first name, `email` gets a valid email address, `id` gets a UUID.
 
 ## Installation
 
 ```bash
-npm install zod4-mock
-# zod v4 is a required peer dependency
-npm install zod@^4
+npm install zod4-mock zod@^4
 ```
 
-## Cross-API consistency
+## Seeded worlds
 
-The defining feature: multiple schemas share the same underlying subject data, so IDs are coherent across APIs without any manual wiring.
+For tests, pin a seed so every run produces identical data:
 
 ```ts
-import { z } from "zod";
-import { createWorld, defineSubjectType } from "zod4-mock";
+import { createWorld } from "zod4-mock";
 
-const TextFile = defineSubjectType(
-  "text-file",
-  z.object({
-    fileId: z.uuid(),
-    ownerId: z.uuid(),
-  }),
-);
+const world = createWorld({ seed: 42 });
 
-// Two completely different API response shapes...
-const RawDataSchema = z.object({
-  id: z.uuid(),
-  type: z.literal("text"),
-  sizeBytes: z.number().int().min(1),
-});
-
-const TextApiSchema = z.object({
-  fileId: z.uuid(),
-  uploadedBy: z.uuid(),
-  wordCount: z.number().int().min(1),
-});
-
-const world = createWorld({ seed: 42 })
-  .withSubject(TextFile)
-  // ...both anchored to the same subject
-  .withSchema(RawDataSchema, TextFile, {
-    id: (s) => s.fileId,
-    type: () => "text" as const,
-  })
-  .withSchema(TextApiSchema, TextFile, {
-    fileId: (s) => s.fileId,
-    uploadedBy: (s) => s.ownerId,
-  });
-
-const rawdata = world.generate(z.array(RawDataSchema).length(3));
-const textApi = world.generate(z.array(TextApiSchema));
-
-// IDs are identical — guaranteed, not a coincidence
-console.log(rawdata[0]!.id === textApi[0]!.fileId); // true
+const users = world.generate(z.array(UserSchema).min(5).max(20));
+// Byte-identical output every run, every machine
 ```
 
-For a full multi-schema, multi-subject-type example see the [media library recipe](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/recipes.md#recipe-multi-api-media-library).
+## Custom field values
+
+Register matchers to control specific fields. `ctx.gen` gives you the full generator library with the PRNG already applied — no need to pass `prng` anywhere:
+
+```ts
+const world = createWorld({ seed: 42 })
+  .withSchema(ProductSchema, {
+    matchers: {
+      name:  (ctx) => ctx.gen.commerce.productName(),
+      sku:   (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
+      price: (ctx) => ctx.prng.int(100, 50_000), // cents, custom range
+    },
+  });
+
+const products = world.generate(z.array(ProductSchema).min(10));
+```
+
+Any field without a matcher falls through automatically: key-name heuristics first, then Zod type introspection.
+
+## Related schemas
+
+Declare relations between schemas to keep foreign keys coherent across different API shapes:
+
+```ts
+const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .withSchema(DocumentSchema, {
+    relations: { author: PersonSchema },
+    matchers: {
+      authorId: (ctx) => ctx.related("author").personId,
+      title:    (ctx) => ctx.gen.word.sentence(),
+    },
+  });
+
+const people    = world.generate(z.array(PersonSchema).min(3));
+const documents = world.generate(z.array(DocumentSchema).min(10));
+
+// documents[*].authorId ∈ people[*].personId — guaranteed
+```
+
+## Derived schemas
+
+When two API shapes represent the same underlying entity, bind the second to the first with `from`. The source entity's data is available as `ctx.source`:
+
+```ts
+const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .withSchema(PersonSummarySchema, {
+    from: PersonSchema,
+    matchers: {
+      id:          (ctx) => ctx.source.personId,
+      displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
+      initials:    (ctx) => `${ctx.source.firstName[0]}${ctx.source.lastName[0]}`,
+    },
+  });
+
+const people    = world.generate(z.array(PersonSchema).min(5));
+const summaries = world.generate(z.array(PersonSummarySchema));
+
+// people[0].personId === summaries[0].id — always
+```
+
+## Nested schemas compose
+
+Register matchers for a schema once — they apply automatically wherever that schema appears, including nested inside other schemas:
+
+```ts
+const world = createWorld({ seed: 42 })
+  .withSchema(AddressSchema, {
+    matchers: {
+      street:  (ctx) => ctx.gen.location.street(),
+      city:    (ctx) => ctx.gen.location.city(),
+      country: (ctx) => ctx.gen.location.countryCode(),
+    },
+  })
+  .withSchema(PersonSchema); // has address: AddressSchema
+
+// PersonSchema's address field uses AddressSchema's matchers automatically
+const person = world.generate(PersonSchema);
+```
+
+## Features
+
+- **Zero-config** — `generate(schema)` works with no setup, no imports beyond the schema
+- **Deterministic** — same seed → identical output on every run and every machine
+- **Field-name heuristics** — `email`, `firstName`, `createdAt`, `userId`, `street`, `iban`, `vin`, and [150+ more](wiki/key-heuristics.md) auto-generate realistic values
+- **Schema-driven** — respects `.min()`, `.max()`, `.email()`, `.uuid()`, `z.enum()`, `z.union()`, `z.optional()`, `z.discriminatedUnion()`, and more
+- **Composable** — nested schemas automatically use their registered matchers
+- **Relational** — cross-schema ID consistency without any manual wiring
+- **`ctx.gen`** — full generator library (person, internet, location, finance, commerce, …) pre-wired to the PRNG inside matchers
+- **Per-field seeding** — adding or removing schema fields never disturbs values of other fields
+- **Zod v4 native** — built against `zod@^4`
 
 ## Documentation
 
-- **[Full Documentation Index](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/index.md)**
-- [Getting Started](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/getting-started.md) — 5-minute tutorial
-- [Core Concepts](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/core-concepts.md) — World, Subject, generation pipeline, Registry
-- [API Reference](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/api-reference.md) — complete API reference
-- [Key-Based Field Heuristics](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/key-heuristics.md) — auto-generated field values by field name
-- [Recipes](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/recipes.md) — copy-pasteable patterns for common scenarios
-- [Advanced Topics](https://github.com/dxlbnl/zod4-mock/blob/main/wiki/advanced.md) — PRNG internals, custom generators, TypeScript strictness
+- [Getting Started](wiki/getting-started.md) — step-by-step tutorial
+- [Concepts](wiki/concepts.md) — world, schemas, relations, registry, determinism
+- [API Reference](wiki/api-reference.md) — complete reference for all exports
+- [Key-Based Field Heuristics](wiki/key-heuristics.md) — auto-generated values by field name
+- [Recipes](wiki/recipes.md) — copy-pasteable patterns for common scenarios
 
 ## License
 

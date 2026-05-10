@@ -1,151 +1,166 @@
 # Getting Started
 
-This guide walks you through your first `zod4-mock` world in five steps. By the end you will have a seeded, deterministic set of mock objects that validates against your Zod schemas.
+Get realistic, deterministic mock data from your Zod schemas in minutes.
 
 ## Prerequisites
 
-- Node 18+
-- TypeScript 5.4+
-- `zod@^4` (Zod v4, **not** v3)
+- Node 18+, TypeScript 5.4+
+- `zod@^4` (Zod v4 — not v3)
 
 ```bash
 npm install zod4-mock zod@^4
 ```
 
-> **ESM note.** If your project uses `"moduleResolution": "Node16"` or `"Bundler"`, add `"type": "module"` to `package.json` and use `import` syntax. The library ships as ESM.
-
 ---
 
-## Step 1 — Define a subject type
+## Step 1 — Generate without any setup
 
-A **subject type** is a named domain entity — the source of truth for its identity fields. Think of it as the "master record" for a person, company, file, or any other entity your API surfaces.
+The simplest possible use: pass a schema, get data back.
 
 ```ts
 import { z } from "zod";
-import { defineSubjectType } from "zod4-mock";
+import { generate } from "zod4-mock";
 
-const PersonSubject = defineSubjectType(
-  "person",
+const user = generate(
   z.object({
+    id:        z.uuid(),
     firstName: z.string(),
-    lastName: z.string(),
-    email: z.email(),
+    lastName:  z.string(),
+    email:     z.email(),
+    role:      z.enum(["admin", "user", "viewer"]),
+    createdAt: z.date(),
   }),
 );
 ```
 
-The schema you pass here does **not** need to match your API response shapes. It only needs to contain the fields you want to derive from (names, IDs, etc.). The library generates this subject data first, then you map it to your API shapes in Step 3.
+Field names drive the output automatically. `firstName` → a first name, `email` → a valid email, `id` → a UUID, `createdAt` → a realistic date. See [Key-Based Field Heuristics](key-heuristics.md) for the full list.
+
+For arrays, wrap in `z.array()`:
+
+```ts
+const users = generate(z.array(UserSchema).min(3).max(10));
+```
 
 ---
 
-## Step 2 — Create a world
+## Step 2 — Pin a seed for reproducible data
 
-A **world** is a seeded generation session. Pass a `seed` number; the same seed always produces the same data.
+Wrap in a **world** to fix the seed. Same seed → byte-identical output on every run and every machine:
 
 ```ts
 import { createWorld } from "zod4-mock";
 
-const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
+const world = createWorld({ seed: 42 });
+const users = world.generate(z.array(UserSchema).min(5));
 ```
 
-`.withSubject()` registers the subject type so the world knows how to create instances of it. Returns `this` for fluent chaining.
+A world is just a seeded generation session. Build one per test file and reuse it — the same builder chain, same seed, same data.
 
 ---
 
-## Step 3 — Bind an app schema
+## Step 3 — Control fields with matchers
 
-Your app schema is what your API actually returns. Bind it to the subject type with `.withSchema()` and provide **matcher functions** for the fields you want to derive from the subject.
+Register matchers to override how specific fields are generated. Use `ctx.gen` to access the full generator library — the PRNG is already applied, so you never pass it manually:
 
 ```ts
-const PersonApiSchema = z.object({
-  id: z.uuid(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.email(),
-  age: z.number().int().min(18).max(90),
-  active: z.boolean(),
-  role: z.enum(["admin", "user", "viewer"]),
-});
+import { createWorld } from "zod4-mock";
 
 const world = createWorld({ seed: 42 })
-  .withSubject(PersonSubject)
-  .withSchema(PersonApiSchema, PersonSubject, {
-    // Derive these fields from the subject instance
-    firstName: (s) => s.firstName,
-    lastName: (s) => s.lastName,
-    email: (s) => s.email,
-    // id, age, active, role — not listed → auto-generated from field name / schema type
+  .withSchema(ProductSchema, {
+    matchers: {
+      name:     (ctx) => ctx.gen.commerce.productName(),
+      sku:      (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
+      priceCents: (ctx) => ctx.prng.int(100, 50_000),
+    },
   });
+
+const products = world.generate(z.array(ProductSchema).min(10));
 ```
 
-Matcher functions receive `(subject, ctx)`:
+Any field without a matcher falls through automatically: key-name heuristics first, then Zod type introspection. You only need to specify what you want to control.
 
-- `subject` — the active subject instance's data fields plus `_type` and `_id`
-- `ctx` — `{ prng, registry, fieldPath }` for advanced use
-
-Any field **not** covered by a matcher falls through the generation pipeline:
-
-1. Key-based heuristics (field named `id`? → UUID. `age`? → schema-based number.)
-2. Schema-based generator (reads Zod type: `z.enum(...)` → random member, etc.)
+For custom ranges and raw PRNG access, use `ctx.prng.int(min, max)` or `ctx.prng.pick([...items])`.
 
 ---
 
-## Step 4 — Generate data
+## Step 4 — Relate schemas to each other
+
+Declare relations between schemas to keep foreign keys consistent across your generated dataset:
 
 ```ts
-// Array — length from Zod constraints
-const people = world.generate(z.array(PersonApiSchema).min(3).max(10));
-// → typed as { id: string; firstName: string; ... }[]
+const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .withSchema(DocumentSchema, {
+    relations: { author: PersonSchema },
+    matchers: {
+      authorId: (ctx) => ctx.related("author").personId,
+      title:    (ctx) => ctx.gen.word.sentence(),
+    },
+  });
 
-// Single object
-const person = world.generate(PersonApiSchema);
+const people    = world.generate(z.array(PersonSchema).min(3));
+const documents = world.generate(z.array(DocumentSchema).min(10));
+
+// Every document.authorId is guaranteed to be a real person's personId
 ```
 
-The return type is fully inferred from the schema — no casting needed.
+`ctx.related("author")` resolves the related schema instance based on the declared relation.
 
-**Determinism:** call `createWorld({ seed: 42 })` with the same builder chain anywhere and you get byte-identical output.
+---
+
+## Step 5 — Derive one schema from another
+
+When two API shapes represent the same entity, bind one to the other with `from`. The source entity's data is available as `ctx.source`:
 
 ```ts
-// test-a.ts
-const worldA = createWorld({ seed: 42 }).withSubject(PersonSubject).withSchema(...)
-const a = worldA.generate(z.array(PersonApiSchema).min(3))
+const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .withSchema(PersonSummarySchema, {
+    from: PersonSchema,
+    matchers: {
+      id:          (ctx) => ctx.source.personId,
+      displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
+    },
+  });
 
-// test-b.ts  (separate file, separate process)
-const worldB = createWorld({ seed: 42 }).withSubject(PersonSubject).withSchema(...)
-const b = worldB.generate(z.array(PersonApiSchema).min(3))
+const people    = world.generate(z.array(PersonSchema).min(5));
+const summaries = world.generate(z.array(PersonSummarySchema));
 
-// a and b are identical
+// people[0].personId === summaries[0].id — always
 ```
 
 ---
 
-## Step 5 — Overrides and transform
+## Step 6 — Override and transform
 
-After generation, you can pin specific fields without re-doing the whole setup.
+After generation you can pin specific fields without redoing the setup.
 
-**Overrides** — deep-merged into the result. Nested objects merge; arrays are replaced entirely.
-
-```ts
-const failedPerson = world.generate(PersonApiSchema, {
-  overrides: { active: false, role: "viewer" },
-});
-// → same person data but active=false, role='viewer'
-```
-
-**Transform** — a function applied after overrides. Use it for array-index edits or derived fields that depend on the full object.
+**Overrides** — deep-merged into the result. Nested objects merge; arrays are replaced entirely:
 
 ```ts
-const uppercased = world.generate(PersonApiSchema, {
-  transform: (p) => ({ ...p, firstName: p.firstName.toUpperCase() }),
+const lockedUser = world.generate(UserSchema, {
+  overrides: { role: "admin", active: true },
 });
 ```
 
-Both can be combined: overrides are applied first, then the transform receives the merged result.
+**Transform** — a function applied after overrides. Use it for array-index edits or anything that needs the full generated object:
+
+```ts
+const invoice = world.generate(InvoiceSchema, {
+  transform: (data) => ({
+    ...data,
+    lines: data.lines.map((line, i) =>
+      i === 0 ? { ...line, quantity: 99 } : line,
+    ),
+  }),
+});
+```
 
 ---
 
 ## Where to go next
 
-- **[Core Concepts](core-concepts.md)** — understand the two-layer model, how the registry works, and what makes generation deterministic
-- **[API Reference](api-reference.md)** — complete reference for every exported function, method, and type
-- **[Recipes](recipes.md)** — copy-pasteable solutions for invoicing, document hierarchies, cross-API consistency, and more
+- **[Concepts](concepts.md)** — how the world, registry, and generation pipeline work
+- **[API Reference](api-reference.md)** — every exported function and type
+- **[Key-Based Field Heuristics](key-heuristics.md)** — complete list of auto-generated field names
+- **[Recipes](recipes.md)** — copy-pasteable patterns for invoicing, document corpora, multi-API consistency

@@ -1,33 +1,21 @@
-# Documentation Index
-
-Welcome to the `zod4-mock` documentation. This index provides an overview of all available guides and references.
+# zod4-mock Documentation
 
 ---
 
 ### [Getting Started](getting-started.md)
+Step-by-step from zero setup (`generate(schema)`) through worlds, matchers, relations, and overrides.
 
-A 5-minute tutorial to get you up and running with your first seeded world and schema-driven mock data.
-
-### [Core Concepts](core-concepts.md)
-
-Understand the mental model of `zod4-mock`, including the **World + Subject** architecture, the generation pipeline, and the registry.
+### [Concepts](concepts.md)
+The mental model: world, schema registration modes, `ctx`, the generation pipeline, registry, and determinism.
 
 ### [API Reference](api-reference.md)
-
-The complete technical reference for all public functions, classes, and types, including `createWorld`, `defineSubjectType`, and the `generators` namespace.
+Complete reference for every exported function, method, and type.
 
 ### [Key-Based Field Heuristics](key-heuristics.md)
-
-Detailed list of all automatic field-name matchers (e.g., `email` → realistic email) and how to override them.
+The full table of field names that auto-generate realistic values (`email`, `firstName`, `iban`, `vin`, …) and how to override them.
 
 ### [Recipes](recipes.md)
-
-Copy-pasteable patterns for common scenarios like invoicing domains, document corpora, and multi-API media libraries.
+Copy-pasteable solutions: ad-hoc generation, invoicing domain, document corpus, multi-API file library, overrides, and more.
 
 ### [Zod v4 Schema Coverage](zod4-schema-coverage.md)
-
-An audit of all Zod v4 schema types and validators, showing which are natively supported for mock data generation.
-
-### [Advanced Topics](advanced.md)
-
-Deep dives into the PRNG internals, per-field seeding, custom generator orchestration, and TypeScript strictness.
+Which Zod v4 schema types and validators are supported for mock data generation.
