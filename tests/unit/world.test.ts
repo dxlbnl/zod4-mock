@@ -626,3 +626,72 @@ describe("determinism", () => {
     expect(a.email).toBe(b.email);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ctx.parent propagation
+//
+// When generating object fields, each field's context includes a `parent`
+// containing all sibling fields generated so far. This enables gender-aware
+// name generation: if the schema emits `gender` before `firstName`, the name
+// generator can pick from the correct pool.
+//
+// Before the fix, world.ts never passed `parent` to makeFieldCtx, so
+// ctx.parent was always undefined — gender detection silently fell back to
+// "neutral" and names were picked from the full (mixed) pool.
+// ---------------------------------------------------------------------------
+
+describe("ctx.parent propagation", () => {
+  it("first field sees an empty parent object", () => {
+    let capturedParent: Record<string, unknown> | undefined;
+    const S = z.object({ a: z.string(), b: z.string() });
+    createWorld({ seed: 42 }).withSchema(S, {
+      matchers: {
+        a: (ctx) => {
+          capturedParent = { ...ctx.parent }; // snapshot — live ref fills up after
+          return "first";
+        },
+      },
+    }).generate(S);
+    expect(capturedParent).toBeDefined();
+    expect(Object.keys(capturedParent!)).toHaveLength(0);
+  });
+
+  it("later fields see previously generated siblings in parent", () => {
+    let capturedParent: Record<string, unknown> | undefined;
+    const S = z.object({ a: z.string(), b: z.string() });
+    createWorld({ seed: 42 }).withSchema(S, {
+      matchers: {
+        b: (ctx) => {
+          capturedParent = { ...ctx.parent }; // snapshot
+          return "second";
+        },
+      },
+    }).generate(S);
+    expect(capturedParent).toBeDefined();
+    expect(typeof capturedParent!["a"]).toBe("string");
+  });
+
+  it("key-based firstName picks only female names when gender sibling is 'female'", () => {
+    const FEMALE_NAMES = [
+      "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
+      "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+    ];
+    const S = z.object({ gender: z.literal("female"), firstName: z.string() });
+    for (let seed = 0; seed < 20; seed++) {
+      const { firstName } = createWorld({ seed }).generate(S);
+      expect(FEMALE_NAMES).toContain(firstName);
+    }
+  });
+
+  it("key-based firstName picks only male names when gender sibling is 'male'", () => {
+    const MALE_NAMES = [
+      "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
+      "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+    ];
+    const S = z.object({ gender: z.literal("male"), firstName: z.string() });
+    for (let seed = 0; seed < 20; seed++) {
+      const { firstName } = createWorld({ seed }).generate(S);
+      expect(MALE_NAMES).toContain(firstName);
+    }
+  });
+});
