@@ -681,4 +681,46 @@ describe("generateFromSchema — other types", () => {
     const v = generateFromSchema(z.never(), makeCtx());
     expect(v).toBeUndefined();
   });
+
+  it("generates null for z.null()", () => {
+    expect(generateFromSchema(z.null(), makeCtx())).toBeNull();
+  });
+
+  it("generates undefined for z.undefined()", () => {
+    expect(generateFromSchema(z.undefined(), makeCtx())).toBeUndefined();
+  });
+
+  it("generates undefined for z.void()", () => {
+    expect(generateFromSchema(z.void(), makeCtx())).toBeUndefined();
+  });
+
+  it("generates a string for z.any()", () => {
+    expect(typeof generateFromSchema(z.any(), makeCtx())).toBe("string");
+  });
+
+  it("generates a string for z.unknown()", () => {
+    expect(typeof generateFromSchema(z.unknown(), makeCtx())).toBe("string");
+  });
+
+  it("generates one of the union options for z.union()", () => {
+    const schema = z.union([z.string(), z.number()]);
+    for (let i = 0; i < 20; i++) {
+      const v = generateFromSchema(schema, makeCtx(i));
+      expect(typeof v === "string" || typeof v === "number").toBe(true);
+    }
+  });
+
+  it("generates undefined for z.promise()", () => {
+    expect(generateFromSchema(z.promise(z.string()), makeCtx())).toBeUndefined();
+  });
+
+  it("generates from the input side of z.pipe()", () => {
+    const schema = z.string().pipe(z.string());
+    expect(typeof generateFromSchema(schema, makeCtx())).toBe("string");
+  });
+
+  it("generates a value for z.default()", () => {
+    const schema = z.string().default("fallback");
+    expect(typeof generateFromSchema(schema, makeCtx())).toBe("string");
+  });
 });

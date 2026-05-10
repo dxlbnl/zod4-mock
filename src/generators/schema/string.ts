@@ -2,6 +2,7 @@ import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../../types.js";
 import { def, checks } from "./zod-def.js";
 import { generateFromSchema } from "./router.js";
+import { toBase64 } from "../../utils/encoding.js";
 
 const WORDS = [
   "alpha",
@@ -51,8 +52,6 @@ const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev"] 
 const LOWERCASE_ALPHANUM = "abcdefghijklmnopqrstuvwxyz0123456789";
 const URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 const CROCKFORD_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const EMOJIS = ["😀", "😁", "😂", "🎉", "🔥", "✨", "🌟", "🎯", "🚀", "💡"] as const;
 
 function pad2(n: number): string {
@@ -112,33 +111,13 @@ function generateNanoid(prng: GeneratorContext["prng"]): string {
 }
 
 function generateBase64(prng: GeneratorContext["prng"]): string {
-  const groups = prng.int(2, 5);
-  let result = "";
-  for (let i = 0; i < groups; i++) {
-    const a = prng.int(0, 255);
-    const b = prng.int(0, 255);
-    const c = prng.int(0, 255);
-    result += BASE64_CHARS[(a >> 2) & 63]!;
-    result += BASE64_CHARS[((a & 3) << 4) | ((b >> 4) & 15)]!;
-    result += BASE64_CHARS[((b & 15) << 2) | ((c >> 6) & 3)]!;
-    result += BASE64_CHARS[c & 63]!;
-  }
-  return result;
+  const wordCount = prng.int(2, 5);
+  const words = Array.from({ length: wordCount }, () => WORDS[prng.int(0, WORDS.length - 1)]!);
+  return toBase64(words.join(" "));
 }
 
 function generateBase64url(prng: GeneratorContext["prng"]): string {
-  const groups = prng.int(2, 5);
-  let result = "";
-  for (let i = 0; i < groups; i++) {
-    const a = prng.int(0, 255);
-    const b = prng.int(0, 255);
-    const c = prng.int(0, 255);
-    result += BASE64URL_CHARS[(a >> 2) & 63]!;
-    result += BASE64URL_CHARS[((a & 3) << 4) | ((b >> 4) & 15)]!;
-    result += BASE64URL_CHARS[((b & 15) << 2) | ((c >> 6) & 3)]!;
-    result += BASE64URL_CHARS[c & 63]!;
-  }
-  return result;
+  return generateBase64(prng).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 function generateJwt(prng: GeneratorContext["prng"]): string {
