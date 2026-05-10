@@ -642,33 +642,33 @@ describe("determinism", () => {
 
 describe("ctx.current propagation", () => {
   it("first field sees an empty current object", () => {
-    let capturedParent: Record<string, unknown> | undefined;
+    let capturedCurrent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
     createWorld({ seed: 42 }).withSchema(S, {
       matchers: {
         a: (ctx) => {
-          capturedParent = { ...ctx.current }; // snapshot — live ref fills up after
+          capturedCurrent = { ...ctx.current }; // snapshot — live ref fills up after
           return "first";
         },
       },
     }).generate(S);
-    expect(capturedParent).toBeDefined();
-    expect(Object.keys(capturedParent!)).toHaveLength(0);
+    expect(capturedCurrent).toBeDefined();
+    expect(Object.keys(capturedCurrent!)).toHaveLength(0);
   });
 
   it("later fields see previously generated siblings in current", () => {
-    let capturedParent: Record<string, unknown> | undefined;
+    let capturedCurrent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
     createWorld({ seed: 42 }).withSchema(S, {
       matchers: {
         b: (ctx) => {
-          capturedParent = { ...ctx.current }; // snapshot
+          capturedCurrent = { ...ctx.current }; // snapshot
           return "second";
         },
       },
     }).generate(S);
-    expect(capturedParent).toBeDefined();
-    expect(typeof capturedParent!["a"]).toBe("string");
+    expect(capturedCurrent).toBeDefined();
+    expect(typeof capturedCurrent!["a"]).toBe("string");
   });
 
   it("key-based firstName picks only female names when gender sibling is 'female'", () => {

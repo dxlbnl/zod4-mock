@@ -311,10 +311,11 @@ Returns the number of stored items. Returns `0` if none.
 ## `GeneratorContext`
 
 ```ts
-interface GeneratorContext {
+interface GeneratorContext<T = any> {
   readonly prng: Prng;
   readonly gen: BoundGenerators;
   readonly source: unknown;
+  readonly current: Partial<T>;
   readonly registry: Registry;
   readonly fieldPath: string;
   readonly optionalProbability?: number;
@@ -367,6 +368,20 @@ matchers: {
   language: (ctx) => ctx.related("author").language,  // same author as authorId
 }
 ```
+
+**`current`** — holds the partial sibling-field values accumulated so far for the current object. This is useful for cross-field consistency (e.g., matching a first name's gender to a sibling `gender` field).
+
+```ts
+matchers: {
+  gender:    (ctx) => ctx.prng.pick(["male", "female"]),
+  firstName: (ctx) => {
+    // Access previously generated sibling values
+    const gender = ctx.current.gender;
+    return ctx.gen.person.firstName({ gender });
+  }
+}
+```
+
 
 ---
 
