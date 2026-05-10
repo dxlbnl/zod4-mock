@@ -131,9 +131,6 @@ const person = ctx.registry.pick(PersonSchema);
 // Pick all instances
 const people = ctx.registry.all(PersonSchema);
 
-// Pick one matching a predicate
-const admin = ctx.registry.pickBy(PersonSchema, (p) => p.role === "admin");
-
 // Filter all matching a predicate
 const active = ctx.registry.filter(PersonSchema, (p) => p.active);
 ```

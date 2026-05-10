@@ -40,5 +40,3 @@ export class SchemaRegistry implements Registry {
   }
 }
 
-/** @deprecated Use SchemaRegistry. Kept for backward compatibility with test fixtures. */
-export const SubjectRegistry = SchemaRegistry;

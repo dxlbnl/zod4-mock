@@ -2,7 +2,6 @@
  * zod-mock — generate realistic, deterministic mock data from Zod schemas.
  */
 
-export { defineSubjectType } from "./subject.js";
 export { createWorld } from "./world.js";
 export { createPrng, fieldSeed } from "./prng.js";
 export { generateFromSchema, generateFromKey, data } from "./generators/index.js";
@@ -68,27 +67,11 @@ export type {
   WorldOptions,
   Registry,
 
-  // Subject types (legacy, kept for backward compat)
-  AnySubjectType,
-  AnySubjectInstance,
-  SubjectType,
-  SubjectData,
-  SubjectInstance,
-  SubjectTypeOptions,
-
-  // Relations (legacy)
-  RelationDef,
-  RelationMap,
-  Cardinality,
-
   // Generation
   GeneratorContext,
   BoundGenerators,
   Prng,
   KeyGenerator,
-  Matchers,
-  MatcherFn,
-  SubjectMatcherArg,
 
   // Schema registration
   PrimarySchemaOpts,
@@ -100,5 +83,4 @@ export type {
 
   // Key maps
   SchemaKeyMap,
-  SubjectKeyMap,
 } from "./types.js";

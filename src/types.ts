@@ -3,70 +3,7 @@
  * Core TypeScript interfaces and types for the zod-mock library.
  */
 
-import type { ZodTypeAny, ZodObject, ZodRawShape, input } from "zod";
-
-// ---------------------------------------------------------------------------
-// Cardinality & Relations (kept for internal use)
-// ---------------------------------------------------------------------------
-
-export type Cardinality = "0..1" | "1" | "0..n" | "1..n";
-
-export interface RelationDef {
-  readonly type: string;
-  readonly cardinality: Cardinality;
-  readonly key?: string;
-}
-
-export type RelationMap = Record<string, RelationDef>;
-
-// ---------------------------------------------------------------------------
-// Legacy subject types (kept for internal compatibility)
-// ---------------------------------------------------------------------------
-
-export type SubjectKeyMap<TData> = {
-  [K in keyof TData]?: (prng: Prng) => TData[K];
-};
-
-export interface SubjectTypeOptions<TRelations extends RelationMap = RelationMap, TData = unknown> {
-  readonly relations?: TRelations;
-  readonly derive?: {
-    [K in keyof TData]?: (partial: Partial<TData>, ctx: GeneratorContext) => TData[K];
-  };
-  readonly keyMap?: SubjectKeyMap<TData>;
-}
-
-export interface SubjectType<
-  TSchema extends ZodObject<ZodRawShape>,
-  TRelations extends RelationMap = RelationMap,
-> {
-  readonly _tag: "SubjectType";
-  readonly name: string;
-  readonly schema: TSchema;
-  readonly relations: TRelations;
-  readonly derive?: Record<
-    string,
-    (partial: Record<string, unknown>, ctx: GeneratorContext) => unknown
-  >;
-  readonly keyMap?: Record<string, (prng: Prng) => unknown>;
-}
-
-export type AnySubjectType = SubjectType<ZodObject<ZodRawShape>, RelationMap>;
-
-export type SubjectData<T extends AnySubjectType> = input<T["schema"]>;
-
-export interface SubjectInstance<T extends AnySubjectType = AnySubjectType> {
-  readonly _type: string;
-  readonly _id: string;
-  readonly data: SubjectData<T>;
-  readonly _relations: Record<string, AnySubjectInstance | AnySubjectInstance[] | null>;
-}
-
-export type AnySubjectInstance = SubjectInstance<AnySubjectType>;
-
-export type SubjectMatcherArg<TData> = TData & {
-  readonly _type: string;
-  readonly _id: string;
-};
+import type { ZodTypeAny, input } from "zod";
 
 // ---------------------------------------------------------------------------
 // PRNG
@@ -151,22 +88,6 @@ export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorConte
 
 export type SchemaKeyMap<TSchema extends ZodTypeAny> = {
   [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
-};
-
-// ---------------------------------------------------------------------------
-// Matchers: field-level generators for withSchema
-//
-// New signature: (ctx: GeneratorContext) => value
-// For derived schemas with from:, ctx.source is typed as input<TSource>.
-// ---------------------------------------------------------------------------
-
-export type MatcherFn<TSubjectData, TValue> = (
-  subject: SubjectMatcherArg<TSubjectData>,
-  ctx: GeneratorContext,
-) => TValue;
-
-export type Matchers<TSchema extends ZodTypeAny, TSubjectData = unknown> = {
-  [K in keyof input<TSchema>]?: MatcherFn<TSubjectData, input<TSchema>[K]>;
 };
 
 // ---------------------------------------------------------------------------
@@ -291,19 +212,4 @@ export interface World {
 
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;
-
-  // Legacy API — kept for backward compat but prefer schema-based alternatives
-  withSubject(subjectType: AnySubjectType): this;
-  subject(type: string): AnySubjectInstance;
-  subjects(type?: string): AnySubjectInstance[];
-}
-
-// ---------------------------------------------------------------------------
-// Legacy schema registration (kept for backward compat)
-// ---------------------------------------------------------------------------
-
-export interface SchemaRegistration<TSchema extends ZodTypeAny, TSubjectData> {
-  readonly schema: TSchema;
-  readonly subjectTypes: string[];
-  readonly matchers: Matchers<TSchema, TSubjectData>;
 }

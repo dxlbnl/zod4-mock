@@ -25,8 +25,6 @@ import type { ZodTypeAny, input } from "zod";
 import type {
   World,
   WorldOptions,
-  AnySubjectType,
-  AnySubjectInstance,
   GenerateOptions,
   Registry,
   GeneratorContext,
@@ -229,22 +227,6 @@ export class WorldImpl implements World {
   }
 
   // -------------------------------------------------------------------------
-  // Legacy subject API (stubs — not used by new tests)
-  // -------------------------------------------------------------------------
-
-  withSubject(_subjectType: AnySubjectType): this {
-    return this;
-  }
-
-  subject(_type: string): AnySubjectInstance {
-    throw new Error("subject() is not supported in the new API. Use generate() with a registered schema.");
-  }
-
-  subjects(_type?: string): AnySubjectInstance[] {
-    return [];
-  }
-
-  // -------------------------------------------------------------------------
   // Private: registration lookups
   // -------------------------------------------------------------------------
 
@@ -295,8 +277,9 @@ export class WorldImpl implements World {
     recordPrng: ReturnType<typeof createPrng>,
     fieldPrng: ReturnType<typeof createPrng>,
     fieldPath: string,
+    parent?: Record<string, unknown>,
   ): GeneratorContext {
-    return {
+    const base: GeneratorContext = {
       prng: fieldPrng,
       gen: this.bindGenerators(fieldPrng),
       source,
@@ -305,6 +288,7 @@ export class WorldImpl implements World {
       optionalProbability: this.options.optionalProbability ?? 0.2,
       related: <T>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, relName),
     };
+    return parent !== undefined ? { ...base, parent } : base;
   }
 
   // -------------------------------------------------------------------------
@@ -390,7 +374,7 @@ export class WorldImpl implements World {
     for (const [key, fieldSchema] of Object.entries(shape)) {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
-      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath);
+      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, result);
 
       // 1. Matcher
       const matcher = reg.matchers[key];
