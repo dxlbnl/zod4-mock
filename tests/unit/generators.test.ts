@@ -2,9 +2,7 @@
  * Unit tests for the low-level generator functions.
  *
  * These test `generateFromSchema` and `generateFromKey` in isolation, without
- * a full world.  A minimal `GeneratorContext` is constructed inline.
- *
- * All tests will fail with "not implemented" until fase 3.
+ * a full world. A minimal `GeneratorContext` is constructed inline.
  */
 
 import { describe, it, expect } from "vitest";
@@ -35,12 +33,12 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
   const prng = createPrng(seed);
   return {
     prng,
-    subject: undefined,
+    gen:     {} as any,
+    source:  undefined,
     registry: stubRegistry,
     fieldPath,
     optionalProbability: 0.2,
     related: <T>(_: string) => ({}) as T,
-    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 

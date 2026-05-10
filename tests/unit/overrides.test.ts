@@ -5,46 +5,36 @@
  * `options.transform` (post-merge function) work correctly — both
  * individually and in combination.
  *
- * All tests will fail with "not implemented" until fase 3.
+ * Overrides are applied after generation; transform runs after overrides.
+ * Neither requires a subject or a registered schema.
  */
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "../../src/index.js";
+import { createWorld } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
 const StepSchema = z.object({
-  name: z.string(),
+  name:   z.string(),
   status: z.enum(["pending", "running", "done", "failed"]),
 });
 
 const FileSchema = z.object({
-  id: z.uuid(),
+  id:     z.uuid(),
   status: z.enum(["pending", "processing", "done", "failed"]),
   metadata: z.object({
     uploadedBy: z.string(),
-    sizeBytes: z.number().int().min(0),
-    tags: z.array(z.string()),
+    sizeBytes:  z.number().int().min(0),
+    tags:       z.array(z.string()),
   }),
   steps: z.array(StepSchema).length(4),
 });
 
-const FileSubject = defineSubjectType(
-  "file",
-  z.object({
-    fileId: z.uuid(),
-  }),
-);
-
 function makeWorld() {
-  return createWorld({ seed: 42 })
-    .withSubject(FileSubject)
-    .withSchema(FileSchema, FileSubject, {
-      id: (s) => s.fileId,
-    });
+  return createWorld({ seed: 42 }).withSchema(FileSchema);
 }
 
 // ---------------------------------------------------------------------------

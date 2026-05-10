@@ -1,120 +1,266 @@
 /**
- * World setup for the media-library integration test.
+ * Media-library integration — schemas and world setup.
  *
- * This is the full implementation of the cross-API example from Design Doc 10.
- * Three file subject types (text, audio, bank) are each bound to the rawdata
- * schema (with type-specific matchers) and to their own API schemas.
+ * Domain: a file-ingestion platform. Persons upload files. Files come in three
+ * types (text, audio, bank statement) and are exposed through five API schemas.
  *
- * The entity API aggregates file IDs per person using `registry.filter`.
+ * The defining requirement: the same fileId must appear consistently across
+ * every API for the same file — without any manual ID tracking.
+ *
+ * Cross-API consistency chain:
+ *   TextFileSchema.fileId
+ *     === RawDataSchema.id         (where type === "text")
+ *     === TextApiSchema.fileId
+ *     ∈  EntityApiSchema.fileIds   (for the owning person)
+ *
+ * The world achieves this by binding output schemas to their source file
+ * schema via `from:`. Both matchers reference ctx.source.fileId, so they
+ * always produce the same value.
+ *
+ * EntityApiSchema uses registry.filter() to aggregate file IDs across all
+ * three file types per person — no relatedTo() boilerplate needed.
  */
 
-import { createWorld, defineSubjectType, generators } from "../../../src/index.js";
-import {
-  PersonSubjectSchema,
-  TextFileSubjectSchema,
-  AudioFileSubjectSchema,
-  BankFileSubjectSchema,
-  RawDataSchema,
-  TextApiSchema,
-  AudioApiSchema,
-  BankApiSchema,
-  EntityApiSchema,
-} from "./schemas.js";
+import { z } from "zod";
+import { createWorld } from "../../../src/index.js";
 
-export const PersonSubject = defineSubjectType("person", PersonSubjectSchema, {
-  derive: {
-    email: ({ firstName, lastName }, ctx) => {
-      const ln = lastName!.replace(/[\s']/g, "");
-      return `${firstName![0]}.${ln}${ctx.prng.int(10, 99)}@${generators.internet.domain(ctx.prng)}`.toLowerCase();
-    },
-  },
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
+
+// A person who owns files.
+export const PersonSchema = z.object({
+  personId:  z.uuid(),
+  firstName: z.string(),
+  lastName:  z.string(),
+  email:     z.email(),
 });
-export const TextFileSubject = defineSubjectType("text-file", TextFileSubjectSchema, {
-  relations: { owner: { type: "person", cardinality: "1" } },
+
+// The three file types — each has a fileId, an ownerId, and type-specific fields.
+
+export const TextFileSchema = z.object({
+  fileId:    z.uuid(),
+  ownerId:   z.uuid(), // → PersonSchema.personId
+  language:  z.enum(["nl", "en", "de"]),
+  sizeBytes: z.number().int().min(1).max(50_000_000),
 });
-export const AudioFileSubject = defineSubjectType("audio-file", AudioFileSubjectSchema, {
-  relations: { owner: { type: "person", cardinality: "1" } },
+
+export const AudioFileSchema = z.object({
+  fileId:    z.uuid(),
+  ownerId:   z.uuid(), // → PersonSchema.personId
+  durationS: z.number().int().min(30).max(7200),
+  sizeBytes: z.number().int().min(1).max(500_000_000),
 });
-export const BankFileSubject = defineSubjectType("bank-file", BankFileSubjectSchema, {
-  relations: { owner: { type: "person", cardinality: "1" } },
+
+export const BankFileSchema = z.object({
+  fileId:    z.uuid(),
+  ownerId:   z.uuid(), // → PersonSchema.personId
+  bank:      z.enum(["ING", "ABN", "RABO", "SNS"]),
+  sizeBytes: z.number().int().min(1).max(5_000_000),
 });
+
+// API schemas — projections of the file schemas above.
+
+/** One record per file across all types. */
+export const RawDataSchema = z.object({
+  id:         z.uuid(),              // must equal the source file's fileId
+  type:       z.enum(["text", "audio", "bank"]),
+  sizeBytes:  z.number().int().min(1),
+  uploadedAt: z.date(),
+  status:     z.enum(["queued", "processing", "done", "failed"]),
+});
+
+/** Text-specific transcript data. */
+export const TextApiSchema = z.object({
+  fileId:     z.uuid(), // must equal TextFileSchema.fileId
+  uploadedBy: z.uuid(), // must equal TextFileSchema.ownerId
+  language:   z.enum(["nl", "en", "de"]),
+  transcript: z.string().min(1),
+  wordCount:  z.number().int().min(1),
+});
+
+/** Audio-specific metadata. */
+export const AudioApiSchema = z.object({
+  fileId:     z.uuid(), // must equal AudioFileSchema.fileId
+  uploadedBy: z.uuid(), // must equal AudioFileSchema.ownerId
+  durationS:  z.number().int().min(1),
+  sampleRate: z.union([
+    z.literal(8000),
+    z.literal(16000),
+    z.literal(44100),
+    z.literal(48000),
+  ]),
+});
+
+/** Bank statement metadata. */
+export const BankApiSchema = z.object({
+  fileId:      z.uuid(), // must equal BankFileSchema.fileId
+  uploadedBy:  z.uuid(), // must equal BankFileSchema.ownerId
+  bank:        z.enum(["ING", "ABN", "RABO", "SNS"]),
+  periodStart: z.date(),
+  periodEnd:   z.date(),
+});
+
+/** A person with all their file IDs aggregated. */
+export const EntityApiSchema = z.object({
+  personId:  z.uuid(),        // must equal PersonSchema.personId
+  firstName: z.string(),
+  lastName:  z.string(),
+  fileIds:   z.array(z.uuid()), // union of all file IDs owned by this person
+  fileCount: z.number().int().min(0), // must equal fileIds.length
+});
+
+// ---------------------------------------------------------------------------
+// World
+// ---------------------------------------------------------------------------
 
 export function createMediaLibraryWorld(seed = 42) {
   return (
-    createWorld({
-      seed,
-      generators: {
-        // Audio durations between 30 seconds and 1 hour
-        durationS: (_schema, ctx) => ctx.prng.int(30, 3600),
-      },
-    })
-      .withSubject(PersonSubject)
-      .withSubject(TextFileSubject)
-      .withSubject(AudioFileSubject)
-      .withSubject(BankFileSubject)
+    createWorld({ seed })
 
-      // ---------------------------------------------------------------------------
-      // Rawdata API — one record per file subject, regardless of type
-      // ---------------------------------------------------------------------------
+      // PersonSchema — root entity. Field-name heuristics cover all fields.
+      .withSchema(PersonSchema)
 
-      .withSchema(RawDataSchema, TextFileSubject, {
-        id: (s) => s.fileId,
-        type: () => "text" as const,
-        sizeBytes: (s) => s.sizeBytes,
-      })
-      .withSchema(RawDataSchema, AudioFileSubject, {
-        id: (s) => s.fileId,
-        type: () => "audio" as const,
-        sizeBytes: (s) => s.sizeBytes,
-      })
-      .withSchema(RawDataSchema, BankFileSubject, {
-        id: (s) => s.fileId,
-        type: () => "bank" as const,
-        sizeBytes: (s) => s.sizeBytes,
-      })
-
-      // ---------------------------------------------------------------------------
-      // Type-specific APIs
-      // ---------------------------------------------------------------------------
-
-      .withSchema(TextApiSchema, TextFileSubject, {
-        fileId: (s) => s.fileId,
-        uploadedBy: (s) => s.ownerId,
-        language: (s) => s.language,
-      })
-
-      .withSchema(AudioApiSchema, AudioFileSubject, {
-        fileId: (s) => s.fileId,
-        uploadedBy: (s) => s.ownerId,
-        durationS: (s) => s.durationS,
-      })
-
-      .withSchema(BankApiSchema, BankFileSubject, {
-        fileId: (s) => s.fileId,
-        uploadedBy: (s) => s.ownerId,
-        bank: (s) => s.bank,
-      })
-
-      // ---------------------------------------------------------------------------
-      // Entity API — aggregates file IDs per person from registry
-      // ---------------------------------------------------------------------------
-
-      .withSchema(EntityApiSchema, PersonSubject, {
-        personId: (s) => s.personId,
-        firstName: (s) => s.firstName,
-        lastName: (s) => s.lastName,
-        fileIds: (s, ctx) => {
-          const textFiles = ctx.relatedTo<{ fileId: string }>("text-file", "owner");
-          const audioFiles = ctx.relatedTo<{ fileId: string }>("audio-file", "owner");
-          const bankFiles = ctx.relatedTo<{ fileId: string }>("bank-file", "owner");
-          return [...textFiles, ...audioFiles, ...bankFiles].map((f) => f.fileId);
+      // File schemas — each declares a relation to PersonSchema so ownerId
+      // is derived from a real person rather than generated randomly.
+      .withSchema(TextFileSchema, {
+        relations: { owner: PersonSchema },
+        matchers: {
+          ownerId: (ctx) => ctx.related("owner").personId,
         },
-        fileCount: (s, ctx) => {
-          const textFiles = ctx.relatedTo<{ fileId: string }>("text-file", "owner");
-          const audioFiles = ctx.relatedTo<{ fileId: string }>("audio-file", "owner");
-          const bankFiles = ctx.relatedTo<{ fileId: string }>("bank-file", "owner");
-          return textFiles.length + audioFiles.length + bankFiles.length;
+      })
+
+      .withSchema(AudioFileSchema, {
+        relations: { owner: PersonSchema },
+        matchers: {
+          ownerId:   (ctx) => ctx.related("owner").personId,
+          durationS: (ctx) => ctx.prng.int(30, 3600),
+        },
+      })
+
+      .withSchema(BankFileSchema, {
+        relations: { owner: PersonSchema },
+        matchers: {
+          ownerId: (ctx) => ctx.related("owner").personId,
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // RawData API — one record per file, all types combined.
+      //
+      // Binding RawDataSchema to each file schema via `from:` means calling
+      // world.generate(z.array(RawDataSchema)) cycles through all three file
+      // types. The `type` discriminator tells them apart; `id` is taken from
+      // ctx.source.fileId so rawdata.id === file.fileId.
+      // ---------------------------------------------------------------------------
+
+      .withSchema(RawDataSchema, {
+        from: TextFileSchema,
+        matchers: {
+          id:        (ctx) => ctx.source.fileId,
+          type:      () => "text" as const,
+          sizeBytes: (ctx) => ctx.source.sizeBytes,
+        },
+      })
+      .withSchema(RawDataSchema, {
+        from: AudioFileSchema,
+        matchers: {
+          id:        (ctx) => ctx.source.fileId,
+          type:      () => "audio" as const,
+          sizeBytes: (ctx) => ctx.source.sizeBytes,
+        },
+      })
+      .withSchema(RawDataSchema, {
+        from: BankFileSchema,
+        matchers: {
+          id:        (ctx) => ctx.source.fileId,
+          type:      () => "bank" as const,
+          sizeBytes: (ctx) => ctx.source.sizeBytes,
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Type-specific APIs — projections of the file schemas.
+      //
+      // `from:` pulls fileId and ownerId from the source file instance so
+      // TextApiSchema.fileId === TextFileSchema.fileId for every pair.
+      // ---------------------------------------------------------------------------
+
+      .withSchema(TextApiSchema, {
+        from: TextFileSchema,
+        matchers: {
+          fileId:     (ctx) => ctx.source.fileId,
+          uploadedBy: (ctx) => ctx.source.ownerId,
+          language:   (ctx) => ctx.source.language,
+          transcript: (ctx) => ctx.gen.word.paragraph(),
+          wordCount:  (ctx) => ctx.prng.int(50, 5000),
+        },
+      })
+
+      .withSchema(AudioApiSchema, {
+        from: AudioFileSchema,
+        matchers: {
+          fileId:     (ctx) => ctx.source.fileId,
+          uploadedBy: (ctx) => ctx.source.ownerId,
+          durationS:  (ctx) => ctx.source.durationS,
+        },
+      })
+
+      .withSchema(BankApiSchema, {
+        from: BankFileSchema,
+        matchers: {
+          fileId:     (ctx) => ctx.source.fileId,
+          uploadedBy: (ctx) => ctx.source.ownerId,
+          bank:       (ctx) => ctx.source.bank,
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Entity API — aggregates all file IDs per person.
+      //
+      // `from: PersonSchema` ties each entity record to a specific person.
+      // The fileIds matcher filters all three file registries by ownerId so
+      // it collects only the files belonging to ctx.source.personId.
+      // ---------------------------------------------------------------------------
+
+      .withSchema(EntityApiSchema, {
+        from: PersonSchema,
+        matchers: {
+          personId:  (ctx) => ctx.source.personId,
+          firstName: (ctx) => ctx.source.firstName,
+          lastName:  (ctx) => ctx.source.lastName,
+          fileIds: (ctx) => {
+            const ownedBy = (s: typeof TextFileSchema | typeof AudioFileSchema | typeof BankFileSchema) =>
+              ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
+            return [
+              ...ownedBy(TextFileSchema),
+              ...ownedBy(AudioFileSchema),
+              ...ownedBy(BankFileSchema),
+            ].map((f) => f.fileId);
+          },
+          fileCount: (ctx) => {
+            const ownedBy = (s: typeof TextFileSchema | typeof AudioFileSchema | typeof BankFileSchema) =>
+              ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
+            return (
+              ownedBy(TextFileSchema).length +
+              ownedBy(AudioFileSchema).length +
+              ownedBy(BankFileSchema).length
+            );
+          },
         },
       })
   );
+}
+
+// Convenience builder for cross-API consistency tests.
+// Generate rawdata first so all three file registries are populated before
+// the type-specific APIs and entity API run their registry lookups.
+export function buildMediaLibrary(seed = 42) {
+  const world    = createMediaLibraryWorld(seed).populate(PersonSchema, 3);
+  const rawdata  = world.generate(z.array(RawDataSchema).min(9).max(15));
+  const texts    = world.generate(z.array(TextApiSchema));
+  const audios   = world.generate(z.array(AudioApiSchema));
+  const banks    = world.generate(z.array(BankApiSchema));
+  const entities = world.generate(z.array(EntityApiSchema));
+  return { world, rawdata, texts, audios, banks, entities };
 }

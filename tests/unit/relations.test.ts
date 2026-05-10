@@ -1,205 +1,226 @@
+/**
+ * Unit tests for the schema-based relation system.
+ *
+ * Relations are declared in the `relations` option of withSchema():
+ *
+ *   .withSchema(FileSchema, {
+ *     relations: { owner: PersonSchema },
+ *     matchers: { ownerId: (ctx) => ctx.related("owner").personId },
+ *   })
+ *
+ * ctx.related("name") resolves the named relation for the current record:
+ * - Auto-provisions a new related instance if the registry is empty.
+ * - Picks from existing registry records when some are already present.
+ * - Always returns the same instance for the same record (deterministic).
+ */
+
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "../../src/index.js";
+import { createWorld } from "../../src/index.js";
+
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
 
 const PersonSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+  personId: z.uuid(),
+  name:     z.string(),
 });
 
 const FileSchema = z.object({
-  fileId: z.string(),
-  ownerId: z.string(),
+  fileId:  z.uuid(),
+  ownerId: z.uuid(), // → PersonSchema.personId
 });
 
-const PersonSubject = defineSubjectType("person", PersonSchema);
+function setup() {
+  return createWorld({ seed: 1 })
+    .withSchema(PersonSchema)
+    .withSchema(FileSchema, {
+      relations: { owner: PersonSchema },
+      matchers: { ownerId: (ctx) => ctx.related("owner").personId },
+    });
+}
 
-const FileSubject = defineSubjectType("file", FileSchema, {
-  relations: {
-    owner: { type: "person", cardinality: "1" },
-    collaborators: { type: "person", cardinality: "0..n" },
-  },
-});
+// ---------------------------------------------------------------------------
+// Auto-provisioning
+//
+// When no related instance exists, the world creates one automatically
+// and stores it in the registry. The file's ownerId is then taken from
+// that new person's personId.
+// ---------------------------------------------------------------------------
 
-describe("Relations", () => {
-  it("lazy provisions a missing relationship", () => {
-    const world = createWorld({ seed: 1 }).withSubject(PersonSubject).withSubject(FileSubject);
-
-    // Eagerly generate just a file. Since it's lazy, it won't generate an owner yet.
-    const file = world.subject("file");
-    expect(world.subjects("person").length).toBe(0);
-
-    // Now resolve the relation using the underlying method
-    const worldImpl = world as any;
-    const ownerData = worldImpl.resolveRelation(file, "owner");
-
-    // Auto-provision should have created exactly 1 person
-    expect(ownerData).toBeDefined();
-    expect(world.subjects("person").length).toBe(1);
-
-    const person = world.subjects("person")[0]!;
-    expect(ownerData.id).toBe(person.data.id);
+describe("auto-provisioning", () => {
+  it("provisions a related instance when none exist in the registry", () => {
+    const world = setup();
+    expect(world.registry.all(PersonSchema)).toHaveLength(0);
+    world.generate(FileSchema);
+    expect(world.registry.all(PersonSchema).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("probabilistically picks existing relationships", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(FileSubject)
-      .populate("person", 5);
-
-    const file = world.subject("file");
-    expect(world.subjects("person").length).toBe(5);
-
-    const worldImpl = world as any;
-    const ownerData = worldImpl.resolveRelation(file, "owner");
-
-    // No new person should be created since 5 already exist
-    expect(world.subjects("person").length).toBe(5);
-
-    // The owner should be one of the existing 5 persons
-    const persons = world.subjects("person").map((p) => p.data.id);
-    expect(persons).toContain(ownerData.id);
-  });
-
-  it("handles 0..n cardinality correctly", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(FileSubject)
-      .populate("person", 5);
-
-    const file = world.subject("file");
-    const worldImpl = world as any;
-    const collaborators = worldImpl.resolveRelation(file, "collaborators") as any[];
-
-    expect(Array.isArray(collaborators)).toBe(true);
-    // 0..n resolves to 0..3 randomly
-    expect(collaborators.length).toBeGreaterThanOrEqual(0);
-    expect(collaborators.length).toBeLessThanOrEqual(3);
-  });
-
-  it("supports reverse relation lookup", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(FileSubject)
-      .populate("person", 1)
-      .populate("file", 3);
-
-    const person = world.subjects("person")[0]!;
-
-    const worldImpl = world as any;
-    // files point to owner (person).
-    // Let's force resolve the forward relations first so the links exist
-    const files = world.subjects("file");
-    for (const file of files) {
-      worldImpl.resolveRelation(file, "owner");
+  it("provisioned instance validates against its schema", () => {
+    const world = setup();
+    world.generate(FileSchema);
+    for (const p of world.registry.all(PersonSchema)) {
+      expect(PersonSchema.safeParse(p).success).toBe(true);
     }
-
-    const linkedFiles = worldImpl.resolveReverseRelation(person, "file", "owner") as any[];
-
-    // Since there's only 1 person, all 3 files must have picked this person as owner
-    expect(linkedFiles.length).toBe(3);
-    expect(linkedFiles.map((f) => f.fileId).sort()).toEqual(files.map((f) => f.data.fileId).sort());
   });
 
-  it("caches resolved relations for deterministic reads", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(FileSubject);
+  it("file.ownerId matches the provisioned person.personId", () => {
+    const world  = setup();
+    const file   = world.generate(FileSchema);
+    const person = world.registry.all(PersonSchema)[0]!;
+    expect(file.ownerId).toBe(person.personId);
+  });
+});
 
-    const file = world.subject("file");
-    const worldImpl = world as any;
+// ---------------------------------------------------------------------------
+// Reuse of existing instances
+//
+// When the registry already has records for the related schema, the world
+// picks from them instead of creating new ones. This guarantees that
+// foreign keys always reference real, pre-existing entities.
+// ---------------------------------------------------------------------------
 
-    const owner1 = worldImpl.resolveRelation(file, "owner");
-    const owner2 = worldImpl.resolveRelation(file, "owner");
-
-    // Should be the exact same object reference due to caching
-    expect(owner1).toBe(owner2);
+describe("reuse of existing instances", () => {
+  it("does not create new instances when the registry already has records", () => {
+    const world = setup().populate(PersonSchema, 5);
+    world.generate(z.array(FileSchema).length(10));
+    expect(world.registry.all(PersonSchema)).toHaveLength(5);
   });
 
-  it("uses topological sort for ensuring subject existence order", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(FileSubject) // registered first, but depends on person
-      .withSubject(PersonSubject);
+  it("file.ownerId matches one of the pre-populated persons", () => {
+    const world   = setup().populate(PersonSchema, 3);
+    const files   = world.generate(z.array(FileSchema).length(5));
+    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    for (const file of files) {
+      expect(personIds.has(file.ownerId)).toBe(true);
+    }
+  });
+});
 
-    // Call internal method to check sort order
-    const worldImpl = world as any;
-    const order = worldImpl.getTopologicallySortedTypes();
+// ---------------------------------------------------------------------------
+// Determinism
+// ---------------------------------------------------------------------------
 
-    // person must be before file
-    const personIndex = order.indexOf("person");
-    const fileIndex = order.indexOf("file");
-
-    expect(personIndex).toBeLessThan(fileIndex);
+describe("determinism of relations", () => {
+  it("same seed → same ownerId", () => {
+    const r1 = setup().generate(FileSchema);
+    const r2 = setup().generate(FileSchema);
+    expect(r1.ownerId).toBe(r2.ownerId);
   });
 
-  it("automatically sinks relation IDs into matching field names (Heuristic)", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(FileSubject);
+  it("ownerIds are always valid across multiple generated files", () => {
+    const world   = setup().populate(PersonSchema, 3);
+    const files   = world.generate(z.array(FileSchema).length(5));
+    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    for (const file of files) {
+      expect(personIds.has(file.ownerId)).toBe(true);
+    }
+  });
+});
 
-    const file = world.subject("file");
-    // Access ownerId first to trigger lazy provisioning
-    const ownerId = file.data.ownerId;
-    const person = world.subjects("person")[0]!;
+// ---------------------------------------------------------------------------
+// Deep relation chains
+//
+// Relations can chain: each schema declares its own relations. ctx.related()
+// at each level resolves one hop and the next schema's matcher resolves
+// the next hop.
+// ---------------------------------------------------------------------------
 
-    expect(ownerId).toBe(person.data.id);
+describe("deep relation chains", () => {
+  const AuthorSchema   = z.object({ authorId: z.uuid() });
+  const DocumentSchema = z.object({ docId: z.uuid(), authorId: z.uuid() });
+  const SentenceSchema = z.object({ sentId: z.uuid(), docId:    z.uuid() });
+
+  function deepSetup() {
+    return createWorld({ seed: 42 })
+      .withSchema(AuthorSchema)
+      .withSchema(DocumentSchema, {
+        relations: { author: AuthorSchema },
+        matchers: { authorId: (ctx) => ctx.related("author").authorId },
+      })
+      .withSchema(SentenceSchema, {
+        relations: { document: DocumentSchema },
+        matchers: { docId: (ctx) => ctx.related("document").docId },
+      });
+  }
+
+  it("sentence.docId refers to a generated document", () => {
+    const world   = deepSetup();
+    const docs    = world.generate(z.array(DocumentSchema).length(3));
+    const sentences = world.generate(z.array(SentenceSchema).length(6));
+    const docIds  = new Set(docs.map((d) => d.docId));
+    for (const s of sentences) {
+      expect(docIds.has(s.docId)).toBe(true);
+    }
   });
 
-  it("prioritizes explicit 'key' in RelationDef over heuristics", () => {
-    const CustomFileSchema = z.object({
-      id: z.string(),
-      // This field would heuristically match 'owner', but we want to use 'authorId' instead
-      ownerId: z.string(),
-      authorId: z.string(),
-    });
-
-    const CustomFileSubject = defineSubjectType("file", CustomFileSchema, {
-      relations: {
-        owner: { type: "person", cardinality: "1", key: "authorId" },
-      },
-    });
-
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(CustomFileSubject);
-    const file = world.subject("file");
-
-    // Access authorId to trigger provisioning
-    const authorId = file.data.authorId;
-    const person = world.subjects("person")[0]!;
-
-    // Explicit key 'authorId' wins
-    expect(authorId).toBe(person.data.id);
-    // ownerId should be a random string (no sinking)
-    expect(file.data.ownerId).not.toBe(person.data.id);
+  it("document.authorId refers to a generated author", () => {
+    const world   = deepSetup();
+    world.generate(z.array(AuthorSchema).length(2));
+    world.generate(z.array(SentenceSchema).length(4));
+    const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
+    for (const doc of world.registry.all(DocumentSchema)) {
+      expect(authorIds.has(doc.authorId)).toBe(true);
+    }
   });
 
-  it("correctly extracts custom identity fields (e.g. personId) during sinking", () => {
-    const CustomPersonSchema = z.object({ personId: z.string().uuid() });
-    const CustomPersonSubject = defineSubjectType("person", CustomPersonSchema);
+  it("the full three-level chain is valid", () => {
+    const world   = deepSetup();
+    world.generate(z.array(AuthorSchema).length(2));
+    world.generate(z.array(DocumentSchema).length(4));
+    const sentences = world.generate(z.array(SentenceSchema).length(8));
+    const docIds  = new Set(world.registry.all(DocumentSchema).map((d) => d.docId));
+    for (const s of sentences) {
+      expect(docIds.has(s.docId)).toBe(true);
+    }
+  });
+});
 
-    const world = createWorld({ seed: 1 })
-      .withSubject(CustomPersonSubject)
-      .withSubject(FileSubject);
+// ---------------------------------------------------------------------------
+// Multiple relations on the same schema
+//
+// A schema can declare multiple relations. Each is resolved independently
+// via ctx.related("name").
+// ---------------------------------------------------------------------------
 
-    const file = world.subject("file");
-
-    // Access ownerId to trigger provisioning
-    const ownerId = file.data.ownerId;
-    const person = world.subjects("person")[0]!;
-
-    // Should have sunk the personId, not the synthetic _id or 'id'
-    expect(ownerId).toBe(person.data.personId);
+describe("multiple relations on the same schema", () => {
+  const AuthorSchema    = z.object({ authorId: z.uuid() });
+  const ReviewerSchema  = z.object({ reviewerId: z.uuid() });
+  const ArticleSchema   = z.object({
+    articleId:  z.uuid(),
+    authorId:   z.uuid(), // → AuthorSchema.authorId
+    reviewerId: z.uuid(), // → ReviewerSchema.reviewerId
   });
 
-  it("remains lazy until the sunk field is actually accessed", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(FileSubject);
+  function multiSetup() {
+    return createWorld({ seed: 42 })
+      .withSchema(AuthorSchema)
+      .withSchema(ReviewerSchema)
+      .withSchema(ArticleSchema, {
+        relations: { author: AuthorSchema, reviewer: ReviewerSchema },
+        matchers: {
+          authorId:   (ctx) => ctx.related("author").authorId,
+          reviewerId: (ctx) => ctx.related("reviewer").reviewerId,
+        },
+      });
+  }
 
-    const file = world.subject("file");
+  it("article.authorId refers to a generated author", () => {
+    const world    = multiSetup();
+    const articles = world.generate(z.array(ArticleSchema).length(3));
+    const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
+    for (const a of articles) {
+      expect(authorIds.has(a.authorId)).toBe(true);
+    }
+  });
 
-    // Pass 1 and Pass 2 setup the getter, but shouldn't trigger it yet
-    expect(world.subjects("person").length).toBe(0);
-
-    // Accessing the field triggers the getter and provisioning
-    const id = file.data.ownerId;
-    expect(id).toBeDefined();
-    expect(world.subjects("person").length).toBe(1);
-    expect(world.subjects("person")[0]!.data.id).toBe(id);
+  it("article.reviewerId refers to a generated reviewer", () => {
+    const world      = multiSetup();
+    const articles   = world.generate(z.array(ArticleSchema).length(3));
+    const reviewerIds = new Set(world.registry.all(ReviewerSchema).map((r) => r.reviewerId));
+    for (const a of articles) {
+      expect(reviewerIds.has(a.reviewerId)).toBe(true);
+    }
   });
 });

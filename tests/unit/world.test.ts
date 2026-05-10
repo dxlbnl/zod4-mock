@@ -1,50 +1,74 @@
 /**
- * Unit tests for `createWorld` and the `World` interface.
+ * Unit tests for `createWorld`, `generate`, and the World interface.
  *
- * Most tests will fail with "not implemented" until fase 3.  They document
- * the expected contract and serve as the acceptance criteria for the
- * implementation.
+ * Schemas are the primary anchor — no subjects, no defineSubjectType.
+ * Each section demonstrates one feature of the API with a brief explanation
+ * of what it tests and why.
  */
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, defineSubjectType, generators } from "../../src/index.js";
+import { createWorld, generate } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
 const PersonSchema = z.object({
+  personId:  z.uuid(),
   firstName: z.string(),
-  lastName: z.string(),
-  email: z.email(),
-  age: z.number().int().min(18).max(90),
+  lastName:  z.string(),
+  email:     z.email(),
+  age:       z.number().int().min(18).max(90),
 });
 
-const PersonSubject = defineSubjectType(
-  "person",
-  z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.email(),
-  }),
-);
-
-const CompanySubject = defineSubjectType(
-  "company",
-  z.object({
-    name: z.string(),
-    sector: z.enum(["tech", "finance", "retail"]),
-  }),
-  {
-    relations: {
-      employees: { type: "person", cardinality: "0..n" },
-    },
-  },
-);
+const OrderSchema = z.object({
+  orderId:    z.uuid(),
+  customerId: z.uuid(), // → PersonSchema.personId
+  status:     z.enum(["pending", "processing", "done", "cancelled"]),
+  totalCents: z.number().int().min(100),
+});
 
 // ---------------------------------------------------------------------------
-// createWorld
+// generate() — zero-config entry point
+//
+// The simplest usage: pass a schema, get data back. No world setup, no seed,
+// no registration. Internally creates a temporary world and discards it.
+// ---------------------------------------------------------------------------
+
+describe("generate — zero-config entry point", () => {
+  it("generates an object from a schema without any setup", () => {
+    const user = generate(PersonSchema);
+    expect(PersonSchema.safeParse(user).success).toBe(true);
+  });
+
+  it("generates a primitive schema without any setup", () => {
+    expect(typeof generate(z.string())).toBe("string");
+  });
+
+  it("accepts overrides to force specific field values", () => {
+    const user = generate(PersonSchema, { overrides: { firstName: "Alice" } });
+    expect(user.firstName).toBe("Alice");
+  });
+
+  it("accepts a seed for deterministic output", () => {
+    const a = generate(PersonSchema, { seed: 1 });
+    const b = generate(PersonSchema, { seed: 1 });
+    expect(a).toEqual(b);
+  });
+
+  it("different seeds produce different output", () => {
+    const a = generate(PersonSchema, { seed: 1 });
+    const b = generate(PersonSchema, { seed: 2 });
+    expect(a).not.toEqual(b);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createWorld — the seeded generation session
+//
+// All schema registrations, registry lookups, and cross-schema consistency
+// happen within one world. Multiple worlds are independent.
 // ---------------------------------------------------------------------------
 
 describe("createWorld", () => {
@@ -53,115 +77,53 @@ describe("createWorld", () => {
   });
 
   it("exposes a registry property", () => {
-    const world = createWorld({ seed: 42 });
-    expect(world.registry).toBeDefined();
-  });
-
-  it("withSubject returns the world (fluent API)", () => {
-    const world = createWorld({ seed: 42 });
-    expect(world.withSubject(PersonSubject)).toBe(world);
+    expect(createWorld({ seed: 42 }).registry).toBeDefined();
   });
 
   it("withSchema returns the world (fluent API)", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    expect(world.withSchema(PersonSchema, PersonSubject)).toBe(world);
-  });
-
-  it("withSchema accepts string names (weakly typed)", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject).withSubject(CompanySubject);
-    expect(() =>
-      world.withSchema(z.object({ id: z.string() }), ["person", "company"]),
-    ).not.toThrow();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// world.subject
-// ---------------------------------------------------------------------------
-
-describe("world.subject", () => {
-  it("returns an object with _type matching the requested type", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const person = world.subject("person");
-    expect(person._type).toBe("person");
-  });
-
-  it("returns an object with a string _id", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const person = world.subject("person");
-    expect(typeof person._id).toBe("string");
-    expect(person._id.length).toBeGreaterThan(0);
-  });
-
-  it("returns a data object", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const person = world.subject("person");
-    expect(person.data).toBeDefined();
-    expect(typeof person.data).toBe("object");
-  });
-
-  it("is deterministic: same seed + same call order → same result", () => {
-    const makeWorld = () => createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const p1 = makeWorld().subject("person");
-    const p2 = makeWorld().subject("person");
-    expect(p1._id).toBe(p2._id);
-    expect(p1.data).toEqual(p2.data);
-  });
-
-  it("successive calls return different subjects", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const p1 = world.subject("person");
-    const p2 = world.subject("person");
-    expect(p1._id).not.toBe(p2._id);
-  });
-
-  it("subject data validates against the registered schema", () => {
-    const world = createWorld({ seed: 42 }).withSubject(PersonSubject);
-    const person = world.subject("person");
-    const result = PersonSubject.schema.safeParse(person.data);
-    expect(result.success).toBe(true);
-  });
-
-  it("throws for an unregistered subject type", () => {
     const world = createWorld({ seed: 42 });
-    expect(() => world.subject("nonexistent")).toThrow();
+    expect(world.withSchema(PersonSchema)).toBe(world);
+  });
+
+  it("withGenerators returns the world (fluent API)", () => {
+    const world = createWorld({ seed: 42 });
+    expect(world.withGenerators({})).toBe(world);
   });
 });
 
 // ---------------------------------------------------------------------------
-// world.generate — basic schema types
+// world.generate — primitive and ad-hoc schemas
+//
+// Any Zod schema can be generated without prior registration — the world
+// falls back to schema-based and key-based heuristics automatically.
 // ---------------------------------------------------------------------------
 
-describe("world.generate — primitives (ad-hoc, no subject binding)", () => {
+describe("world.generate — primitives (ad-hoc, no registration)", () => {
+  const world = createWorld({ seed: 42 });
+
   it("generates a string for z.string()", () => {
-    const world = createWorld({ seed: 42 });
     expect(typeof world.generate(z.string())).toBe("string");
   });
 
   it("generates a number for z.number()", () => {
-    const world = createWorld({ seed: 42 });
     expect(typeof world.generate(z.number())).toBe("number");
   });
 
   it("generates a boolean for z.boolean()", () => {
-    const world = createWorld({ seed: 42 });
     expect(typeof world.generate(z.boolean())).toBe("boolean");
   });
 
   it("generates a Date for z.date()", () => {
-    const world = createWorld({ seed: 42 });
     expect(world.generate(z.date())).toBeInstanceOf(Date);
   });
 
   it("generates a member of a z.enum()", () => {
-    const world = createWorld({ seed: 42 });
     const schema = z.enum(["a", "b", "c"]);
     const results = Array.from({ length: 30 }, () => world.generate(schema));
     expect(results.every((r) => ["a", "b", "c"].includes(r))).toBe(true);
   });
 
   it("generates all fields of a z.object()", () => {
-    const world = createWorld({ seed: 42 });
     const schema = z.object({ name: z.string(), age: z.number() });
     const result = world.generate(schema);
     expect(typeof result.name).toBe("string");
@@ -170,56 +132,144 @@ describe("world.generate — primitives (ad-hoc, no subject binding)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// world.generate — registered schema with subject matchers
+// world.generate — registered schema with matchers
+//
+// withSchema(schema, { matchers }) lets you override individual field
+// generation. Matchers receive a GeneratorContext (ctx) giving access to
+// the PRNG, generators, registry, and relation resolvers.
 // ---------------------------------------------------------------------------
 
-describe("world.generate — registered schema", () => {
+describe("world.generate — registered schema with matchers", () => {
   function setup() {
     return createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSchema(PersonSchema, PersonSubject, {
-        firstName: (s) => s.firstName,
-        lastName: (s) => s.lastName,
-        email: (s) => `${s.firstName[0]}.${s.lastName}@example.nl`.toLowerCase(),
+      .withSchema(PersonSchema, {
+        matchers: {
+          email: (ctx) =>
+            `${ctx.gen.person.firstName()}.${ctx.gen.person.lastName()}@example.nl`.toLowerCase(),
+        },
       });
   }
 
   it("generates an object that validates against the schema", () => {
-    const result = setup().generate(PersonSchema);
-    expect(PersonSchema.safeParse(result).success).toBe(true);
+    expect(PersonSchema.safeParse(setup().generate(PersonSchema)).success).toBe(true);
   });
 
-  it("applies matcher: email is derived from firstName and lastName", () => {
-    const result = setup().generate(PersonSchema);
-    expect(result.email).toMatch(/@example\.nl$/);
+  it("applies matcher: email is derived using ctx.gen", () => {
+    expect(setup().generate(PersonSchema).email).toMatch(/@example\.nl$/);
   });
 
   it("is deterministic: same seed → same output", () => {
-    const r1 = setup().generate(PersonSchema);
-    const r2 = setup().generate(PersonSchema);
-    expect(r1).toEqual(r2);
+    expect(setup().generate(PersonSchema)).toEqual(setup().generate(PersonSchema));
+  });
+
+  it("unmatched fields fall through to heuristics", () => {
+    const result = setup().generate(PersonSchema);
+    // personId is a UUID field — the *id key pattern should fire
+    expect(z.uuid().safeParse(result.personId).success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ctx.gen — generators with PRNG pre-bound
+//
+// ctx.gen.* provides the full generators namespace with the field-seeded
+// PRNG already applied. Call ctx.gen.person.firstName() instead of
+// generators.person.firstName(ctx.prng). Arguments (count, min, max)
+// still pass through.
+// ---------------------------------------------------------------------------
+
+describe("ctx.gen — bound generators in matchers", () => {
+  it("ctx.gen.person.firstName() returns a non-empty string", () => {
+    let captured: string | undefined;
+    const S = z.object({ name: z.string() });
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          name: (ctx) => {
+            captured = ctx.gen.person.firstName();
+            return captured;
+          },
+        },
+      })
+      .generate(S);
+    expect(typeof captured).toBe("string");
+    expect(captured!.length).toBeGreaterThan(0);
+  });
+
+  it("ctx.gen.word.sentence() returns a sentence string", () => {
+    let captured: string | undefined;
+    const S = z.object({ title: z.string() });
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          title: (ctx) => {
+            captured = ctx.gen.word.sentence();
+            return captured;
+          },
+        },
+      })
+      .generate(S);
+    expect(typeof captured).toBe("string");
+    expect(captured!.length).toBeGreaterThan(0);
+  });
+
+  it("ctx.gen.string.alphanumeric(n) respects the length argument", () => {
+    let captured: string | undefined;
+    const S = z.object({ code: z.string() });
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          code: (ctx) => {
+            captured = ctx.gen.string.alphanumeric(12);
+            return captured;
+          },
+        },
+      })
+      .generate(S);
+    expect(captured).toHaveLength(12);
+  });
+
+  it("ctx.gen produces deterministic values (same seed → same result)", () => {
+    const S = z.object({ title: z.string() });
+    const makeWorld = () =>
+      createWorld({ seed: 42 })
+        .withSchema(S, { matchers: { title: (ctx) => ctx.gen.word.sentence() } });
+    expect(makeWorld().generate(S)).toEqual(makeWorld().generate(S));
+  });
+
+  it("different fields receive different PRNGs (per-field seeding)", () => {
+    const captured: string[] = [];
+    const S = z.object({ a: z.string(), b: z.string() });
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          a: (ctx) => { captured.push(ctx.gen.person.firstName()); return captured[0]!; },
+          b: (ctx) => { captured.push(ctx.gen.person.firstName()); return captured[1]!; },
+        },
+      })
+      .generate(S);
+    expect(captured[0]).not.toBe(captured[1]);
   });
 });
 
 // ---------------------------------------------------------------------------
 // world.generate — arrays
+//
+// Arrays of registered schemas use the same matcher pipeline per element.
+// Constraints (min, max, length) are respected exactly.
 // ---------------------------------------------------------------------------
 
 describe("world.generate — z.array()", () => {
   function setup() {
-    return createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSchema(PersonSchema, PersonSubject);
+    return createWorld({ seed: 42 }).withSchema(PersonSchema);
   }
 
   it("generates an array", () => {
-    const result = setup().generate(z.array(PersonSchema));
-    expect(Array.isArray(result)).toBe(true);
+    expect(Array.isArray(setup().generate(z.array(PersonSchema)))).toBe(true);
   });
 
   it("all elements validate against the schema", () => {
-    const result = setup().generate(z.array(PersonSchema).min(3).max(10));
-    for (const item of result) {
+    for (const item of setup().generate(z.array(PersonSchema).min(3).max(10))) {
       expect(PersonSchema.safeParse(item).success).toBe(true);
     }
   });
@@ -231,8 +281,7 @@ describe("world.generate — z.array()", () => {
   });
 
   it("respects .length(n) for exact length", () => {
-    const result = setup().generate(z.array(PersonSchema).length(7));
-    expect(result).toHaveLength(7);
+    expect(setup().generate(z.array(PersonSchema).length(7))).toHaveLength(7);
   });
 
   it("is deterministic: same seed → same array", () => {
@@ -241,12 +290,9 @@ describe("world.generate — z.array()", () => {
     expect(r1).toEqual(r2);
   });
 
-  it("uses world defaultArrayLength when no constraints are present", () => {
-    const world = createWorld({ seed: 42, defaultArrayLength: [3, 3] })
-      .withSubject(PersonSubject)
-      .withSchema(PersonSchema, PersonSubject);
-    const result = world.generate(z.array(PersonSchema));
-    expect(result).toHaveLength(3);
+  it("uses defaultArrayLength when no constraints are present", () => {
+    const world = createWorld({ seed: 42, defaultArrayLength: [3, 3] }).withSchema(PersonSchema);
+    expect(world.generate(z.array(PersonSchema))).toHaveLength(3);
   });
 });
 
@@ -256,9 +302,7 @@ describe("world.generate — z.array()", () => {
 
 describe("world.generate — array as modifier chain", () => {
   function setup() {
-    return createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSchema(PersonSchema, PersonSubject);
+    return createWorld({ seed: 42 }).withSchema(PersonSchema);
   }
 
   it("schema.array() works like z.array(schema)", () => {
@@ -269,10 +313,7 @@ describe("world.generate — array as modifier chain", () => {
 
   it("schema.array().optional() returns an array or undefined", () => {
     const results = Array.from({ length: 30 }, (_, i) =>
-      createWorld({ seed: i })
-        .withSubject(PersonSubject)
-        .withSchema(PersonSchema, PersonSubject)
-        .generate(PersonSchema.array().optional()),
+      createWorld({ seed: i }).withSchema(PersonSchema).generate(PersonSchema.array().optional()),
     );
     expect(results.some((r) => Array.isArray(r))).toBe(true);
     expect(results.some((r) => r === undefined)).toBe(true);
@@ -280,27 +321,10 @@ describe("world.generate — array as modifier chain", () => {
 
   it("schema.array().nullable() returns an array or null", () => {
     const results = Array.from({ length: 30 }, (_, i) =>
-      createWorld({ seed: i })
-        .withSubject(PersonSubject)
-        .withSchema(PersonSchema, PersonSubject)
-        .generate(PersonSchema.array().nullable()),
+      createWorld({ seed: i }).withSchema(PersonSchema).generate(PersonSchema.array().nullable()),
     );
     expect(results.some((r) => Array.isArray(r))).toBe(true);
     expect(results.some((r) => r === null)).toBe(true);
-  });
-
-  it("uses subject-aware generation through modifier chain", () => {
-    const world = createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSchema(PersonSchema, PersonSubject, {
-        firstName: (s) => s.firstName,
-      });
-    const result = world.generate(PersonSchema.array().optional());
-    if (result !== undefined) {
-      for (const item of result) {
-        expect(typeof item.firstName).toBe("string");
-      }
-    }
   });
 
   it("respects .min()/.max() constraints on the array", () => {
@@ -311,9 +335,7 @@ describe("world.generate — array as modifier chain", () => {
 
   it("z.object({}).optional().array().optional() resolves correctly", () => {
     const schema = z.object({ id: z.string() }).optional().array().optional();
-    const results = Array.from({ length: 20 }, (_, i) =>
-      createWorld({ seed: i }).generate(schema),
-    );
+    const results = Array.from({ length: 20 }, (_, i) => createWorld({ seed: i }).generate(schema));
     expect(results.some((r) => Array.isArray(r))).toBe(true);
     expect(results.some((r) => r === undefined)).toBe(true);
   });
@@ -321,14 +343,17 @@ describe("world.generate — array as modifier chain", () => {
 
 // ---------------------------------------------------------------------------
 // world.generate — optional and nullable fields
+//
+// Optional fields may be omitted; nullable fields may be null. The default
+// probability of omission is controlled by `optionalProbability`.
 // ---------------------------------------------------------------------------
 
 describe("world.generate — optional and nullable fields in objects", () => {
   const SchemaWithOptionals = z.object({
-    name: z.string(),
-    bio: z.string().optional(),
+    name:  z.string(),
+    bio:   z.string().optional(),
     score: z.number().optional(),
-    tag: z.string().nullable(),
+    tag:   z.string().nullable(),
   });
 
   it("sometimes produces undefined for optional fields (across seeds)", () => {
@@ -347,15 +372,14 @@ describe("world.generate — optional and nullable fields in objects", () => {
     expect(results.some((r) => r.tag !== null)).toBe(true);
   });
 
-  it("respects optionalProbability: 1.0 always omits optional fields", () => {
-    const world = createWorld({ seed: 42, optionalProbability: 1.0 });
-    const result = world.generate(SchemaWithOptionals);
+  it("optionalProbability: 1.0 always omits optional fields", () => {
+    const result = createWorld({ seed: 42, optionalProbability: 1.0 }).generate(SchemaWithOptionals);
     expect(result.bio).toBeUndefined();
     expect(result.score).toBeUndefined();
     expect(result.tag).toBeNull();
   });
 
-  it("respects optionalProbability: 0 never omits optional fields", () => {
+  it("optionalProbability: 0 never omits optional fields", () => {
     const results = Array.from({ length: 20 }, (_, i) =>
       createWorld({ seed: i, optionalProbability: 0 }).generate(SchemaWithOptionals),
     );
@@ -363,178 +387,242 @@ describe("world.generate — optional and nullable fields in objects", () => {
     expect(results.every((r) => r.tag !== null)).toBe(true);
   });
 
-  it("derive: overwrites base-generated field with derived value", () => {
-    const Subject = defineSubjectType(
-      "person",
-      z.object({ firstName: z.string(), lastName: z.string(), email: z.email() }),
-      {
-        derive: {
-          email: ({ firstName, lastName }) => `${firstName![0]}.${lastName}@test.com`.toLowerCase(),
-        },
-      },
-    );
-    const world = createWorld({ seed: 42 }).withSubject(Subject);
-    const inst = world.subject("person");
-    const data = inst.data as { firstName: string; lastName: string; email: string };
-    expect(data.email).toBe(`${data.firstName[0]}.${data.lastName}@test.com`.toLowerCase());
-  });
-
-  it("derive: partial receives all base-generated sibling fields", () => {
-    const Subject = defineSubjectType("tagged", z.object({ name: z.string(), tag: z.string() }), {
-      derive: {
-        tag: ({ name }) => `tag-${name}`,
-      },
-    });
-    const world = createWorld({ seed: 1 }).withSubject(Subject);
-    const data = world.subject("tagged").data as { name: string; tag: string };
-    expect(data.tag).toBe(`tag-${data.name}`);
-  });
-
-  it("derive: declaration order enables chaining (B sees A's derived value)", () => {
-    const Subject = defineSubjectType(
-      "chained",
-      z.object({ base: z.string(), mid: z.string(), top: z.string() }),
-      {
-        derive: {
-          mid: ({ base }) => `mid-${base}`,
-          top: ({ mid }) => `top-${mid}`,
-        },
-      },
-    );
-    const world = createWorld({ seed: 1 }).withSubject(Subject);
-    const data = world.subject("chained").data as { base: string; mid: string; top: string };
-    expect(data.mid).toBe(`mid-${data.base}`);
-    expect(data.top).toBe(`top-${data.mid}`);
-  });
-
-  it("derive: world-level generator overrides derive for the same key", () => {
-    const Subject = defineSubjectType(
-      "person",
-      z.object({ firstName: z.string(), email: z.email() }),
-      {
-        derive: {
-          email: ({ firstName }) => `derive-${firstName}@test.com`,
-        },
-      },
-    );
-    const world = createWorld({
-      seed: 42,
-      generators: { email: () => "world@override.com" },
-    }).withSubject(Subject);
-    const data = world.subject("person").data as { email: string };
-    expect(data.email).toBe("world@override.com");
-  });
-
-  it("key-based generator fires for optional fields in a registered (subject-bound) schema", () => {
-    // 'email' wrapped in .optional() should still produce an email-formatted string,
-    // not a generic word string. Without the fix, isStringSchema() returns false for
-    // the optional wrapper, so the key-based email generator never fires and the
-    // field gets a generic word string instead.
-    const UserSubject = defineSubjectType("user", z.object({ userId: z.uuid() }));
+  it("key-based generator fires for optional fields", () => {
+    // 'email' wrapped in .optional() should still produce an email-formatted
+    // string, not a generic word. The optional wrapper must not suppress
+    // the key-based heuristic.
     const ProfileSchema = z.object({
       userId: z.string(),
-      email: z.string().optional(), // key-based: 'email' → email-formatted
+      email:  z.string().optional(),
     });
-    const results = Array.from({ length: 20 }, (_, i) => {
-      const world = createWorld({ seed: i, optionalProbability: 0 })
-        .withSubject(UserSubject)
-        .withSchema(ProfileSchema, UserSubject);
-      return world.generate(ProfileSchema);
-    });
-    // Every present email should be email-formatted (key-based generator fired)
+    const results = Array.from({ length: 20 }, (_, i) =>
+      createWorld({ seed: i, optionalProbability: 0 }).generate(ProfileSchema),
+    );
     expect(results.every((r) => typeof r.email === "string" && r.email.includes("@"))).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Subject-type keyMap
+// Relations — ctx.related()
+//
+// Declaring `relations: { name: OtherSchema }` on a schema lets matchers
+// call ctx.related("name") to get the related schema instance. If none
+// exist in the registry yet, the world auto-provisions one.
 // ---------------------------------------------------------------------------
 
-describe("subject-type keyMap", () => {
-  const ProductSchema = z.object({
-    name: z.string(),
-    sku: z.string(),
-    quantity: z.number().int(),
-  });
-
-  const ProductSubject = defineSubjectType("product", ProductSchema, {
-    keyMap: {
-      name: (prng) => `Product ${prng.int(100, 999)}`,
-    },
-  });
-
-  it("subject keyMap overrides the default key heuristic for that field", () => {
-    const world = createWorld({ seed: 42 }).withSubject(ProductSubject);
-    const inst = world.subject("product");
-    const data = inst.data as { name: string };
-    // Default would produce a person full name; keyMap should produce "Product NNN"
-    expect(data.name).toMatch(/^Product \d{3}$/);
-  });
-
-  it("other fields still use the default heuristics when not in keyMap", () => {
-    const world = createWorld({ seed: 42 }).withSubject(ProductSubject);
-    const inst = world.subject("product");
-    const data = inst.data as { sku: string; quantity: number };
-    // 'sku' is in DEFAULT_KEY_MAP — should be code-like, e.g. 'AB-1234'
-    expect(typeof data.sku).toBe("string");
-    expect(data.sku).toMatch(/^[A-Z]{2}-\d{4}$/);
-    // 'quantity' is in DEFAULT_KEY_MAP.number
-    expect(Number.isInteger(data.quantity)).toBe(true);
-  });
-
-  it("world-level withGenerators overrides subject keyMap for the same field", () => {
-    const world = createWorld({
-      seed: 42,
-      generators: { name: () => "world-override" },
-    }).withSubject(ProductSubject);
-
-    const data = world.subject("product").data as { name: string };
-    expect(data.name).toBe("world-override");
-  });
-
-  it("subject keyMap is deterministic across worlds with the same seed", () => {
-    const make = () =>
-      createWorld({ seed: 42 }).withSubject(ProductSubject).subject("product").data as {
-        name: string;
-      };
-
-    expect(make().name).toBe(make().name);
-  });
-
-  it("subject keyMap receives a Prng that produces deterministic values", () => {
-    const calls: number[] = [];
-    const Subject = defineSubjectType("tracked", z.object({ val: z.number() }), {
-      keyMap: {
-        val: (prng) => {
-          const v = prng.int(1, 1000);
-          calls.push(v);
-          return v;
+describe("relations — ctx.related()", () => {
+  function setup() {
+    return createWorld({ seed: 42 })
+      .withSchema(PersonSchema)
+      .withSchema(OrderSchema, {
+        relations: { customer: PersonSchema },
+        matchers: {
+          customerId: (ctx) => ctx.related("customer").personId,
         },
-      },
-    });
-    const world = createWorld({ seed: 7 }).withSubject(Subject);
-    world.subject("tracked");
-    world.subject("tracked");
-    // Both subjects should have produced values
-    expect(calls.length).toBe(2);
-    // Different subjects should get different seeded values
-    expect(calls[0]).not.toBe(calls[1]);
+      });
+  }
+
+  it("order.customerId matches a generated person.personId", () => {
+    const world  = setup();
+    const order  = world.generate(OrderSchema);
+    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    expect(personIds.has(order.customerId)).toBe(true);
   });
 
-  it("subject keyMap generator can use generators.* functions directly", () => {
-    const Subject = defineSubjectType(
-      "article",
-      z.object({ title: z.string(), name: z.string() }),
-      {
-        keyMap: {
-          // Direct reference to a generators.* function (prng-only signature)
-          name: generators.lorem.sentence,
+  it("auto-provisions the related schema when none exist", () => {
+    const world = setup();
+    expect(world.registry.all(PersonSchema)).toHaveLength(0);
+    world.generate(OrderSchema);
+    expect(world.registry.all(PersonSchema).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("reuses existing registry records when available", () => {
+    const world = setup().populate(PersonSchema, 3);
+    world.generate(z.array(OrderSchema).length(5));
+    expect(world.registry.all(PersonSchema)).toHaveLength(3);
+  });
+
+  it("is deterministic: same seed → same customerId", () => {
+    const r1 = setup().generate(OrderSchema);
+    const r2 = setup().generate(OrderSchema);
+    expect(r1.customerId).toBe(r2.customerId);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// world.populate — pre-seeding the registry
+//
+// `populate(Schema, n)` generates n instances and stores them without
+// returning them. Relation lookups will reuse these records.
+// ---------------------------------------------------------------------------
+
+describe("world.populate", () => {
+  it("populates n instances in the registry", () => {
+    const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 5);
+    expect(world.registry.all(PersonSchema)).toHaveLength(5);
+  });
+
+  it("returns the world for fluent chaining", () => {
+    const world = createWorld({ seed: 42 }).withSchema(PersonSchema);
+    expect(world.populate(PersonSchema, 3)).toBe(world);
+  });
+
+  it("populated records are picked by relations", () => {
+    const world = createWorld({ seed: 42 })
+      .withSchema(PersonSchema)
+      .withSchema(OrderSchema, {
+        relations: { customer: PersonSchema },
+        matchers: { customerId: (ctx) => ctx.related("customer").personId },
+      })
+      .populate(PersonSchema, 2);
+
+    const orders   = world.generate(z.array(OrderSchema).length(10));
+    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    for (const o of orders) {
+      expect(personIds.has(o.customerId)).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Derived schemas — from: and ctx.source
+//
+// `from: SourceSchema` ties each output record to a specific SourceSchema
+// instance. ctx.source gives the matcher access to that instance's fields.
+// The output schema generates exactly one record per source record.
+// ---------------------------------------------------------------------------
+
+describe("derived schemas — from: and ctx.source", () => {
+  const PersonSummarySchema = z.object({
+    id:        z.uuid(),
+    fullName:  z.string(),
+    emailHash: z.string(),
+  });
+
+  function setup() {
+    return createWorld({ seed: 42 })
+      .withSchema(PersonSchema)
+      .withSchema(PersonSummarySchema, {
+        from: PersonSchema,
+        matchers: {
+          id:        (ctx) => ctx.source.personId,
+          fullName:  (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
+          emailHash: (ctx) => ctx.source.email.split("@")[0] ?? "",
         },
-      },
-    );
-    const world = createWorld({ seed: 42 }).withSubject(Subject);
-    const data = world.subject("article").data as { name: string };
-    // lorem.sentence returns a capitalised string ending with a period
-    expect(data.name.endsWith(".")).toBe(true);
+      });
+  }
+
+  it("derived id equals the source personId", () => {
+    const world    = setup();
+    const persons  = world.generate(z.array(PersonSchema).length(3));
+    const summaries = world.generate(z.array(PersonSummarySchema));
+    const personIds = new Set(persons.map((p) => p.personId));
+    for (const s of summaries) {
+      expect(personIds.has(s.id)).toBe(true);
+    }
+  });
+
+  it("ctx.source provides the source schema data", () => {
+    const world    = setup();
+    const persons  = world.generate(z.array(PersonSchema).length(3));
+    const summaries = world.generate(z.array(PersonSummarySchema));
+    for (let i = 0; i < persons.length; i++) {
+      expect(summaries[i]!.fullName).toBe(`${persons[i]!.firstName} ${persons[i]!.lastName}`);
+    }
+  });
+
+  it("generates one derived record per source record", () => {
+    const world = setup();
+    world.generate(z.array(PersonSchema).length(4));
+    expect(world.generate(z.array(PersonSummarySchema))).toHaveLength(4);
+  });
+
+  it("is deterministic across same-seed worlds", () => {
+    const make = () => {
+      const world = setup();
+      world.generate(z.array(PersonSchema).length(3));
+      return world.generate(z.array(PersonSummarySchema));
+    };
+    expect(make()).toEqual(make());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Registry — schema-reference API
+//
+// Registry methods accept the Zod schema object directly as the key — no
+// string type names, no manual casts. The result is fully typed.
+// ---------------------------------------------------------------------------
+
+describe("registry — schema-reference API", () => {
+  function setup() {
+    return createWorld({ seed: 42 })
+      .withSchema(PersonSchema)
+      .withSchema(OrderSchema, {
+        relations: { customer: PersonSchema },
+        matchers: { customerId: (ctx) => ctx.related("customer").personId },
+      });
+  }
+
+  it("registry.all(Schema) returns all generated instances", () => {
+    const world   = setup().populate(PersonSchema, 3);
+    const persons = world.registry.all(PersonSchema);
+    expect(persons).toHaveLength(3);
+    for (const p of persons) {
+      expect(PersonSchema.safeParse(p).success).toBe(true);
+    }
+  });
+
+  it("registry.pick(Schema) returns a single valid instance", () => {
+    const world  = setup().populate(PersonSchema, 5);
+    const person = world.registry.pick(PersonSchema);
+    expect(PersonSchema.safeParse(person).success).toBe(true);
+  });
+
+  it("registry.filter(Schema, predicate) returns matching instances", () => {
+    const world  = setup().populate(PersonSchema, 5);
+    world.generate(z.array(OrderSchema).length(10));
+    const targetId = world.registry.all(PersonSchema)[0]!.personId;
+    const orders   = world.registry.filter(OrderSchema, (o) => o.customerId === targetId);
+    for (const o of orders) {
+      expect(o.customerId).toBe(targetId);
+    }
+  });
+
+  it("registry.count(Schema) returns the number of stored instances", () => {
+    expect(setup().populate(PersonSchema, 4).registry.count(PersonSchema)).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Determinism
+//
+// Same seed + same schema registration order → byte-identical output.
+// Per-field PRNG seeding means adding/removing fields doesn't disturb
+// the values of other fields.
+// ---------------------------------------------------------------------------
+
+describe("determinism", () => {
+  it("same seed produces identical output", () => {
+    const make = (seed: number) =>
+      createWorld({ seed }).withSchema(PersonSchema).generate(z.array(PersonSchema).length(3));
+    expect(make(42)).toEqual(make(42));
+  });
+
+  it("different seeds produce different output", () => {
+    const make = (seed: number) =>
+      createWorld({ seed }).withSchema(PersonSchema).generate(z.array(PersonSchema).length(3));
+    expect(make(1)).not.toEqual(make(2));
+  });
+
+  it("adding a field does not change values of existing fields", () => {
+    // Per-field PRNG seeding: each field derives its PRNG from
+    // hash(seed + fieldPath), so adding 'age' doesn't shift 'name' or 'email'.
+    const SchemaA = z.object({ name: z.string(), email: z.email() });
+    const SchemaB = z.object({ name: z.string(), age: z.number(), email: z.email() });
+    const a = createWorld({ seed: 42 }).generate(SchemaA);
+    const b = createWorld({ seed: 42 }).generate(SchemaB);
+    expect(a.name).toBe(b.name);
+    expect(a.email).toBe(b.email);
   });
 });

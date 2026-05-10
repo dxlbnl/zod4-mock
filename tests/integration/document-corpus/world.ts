@@ -1,76 +1,121 @@
 /**
- * World setup for the document-corpus integration test.
+ * Document-corpus integration — schemas and world setup.
  *
- * Demonstrates:
- * - Subject types as ID anchors (author → document → sentence → annotation)
- * - Cross-schema referential integrity via `ctx.registry`
- * - Derived fields (authorId, documentId, sentenceId) from subject data
+ * Domain: a text annotation platform. Authors write documents, documents are
+ * tokenised into sentences, and NLP annotators attach labels to character
+ * spans within those sentences.
  *
- * Three subject types are used:
- *   - AuthorSubject  — author identity data
- *   - DocumentSubject — one UUID per document
- *   - SentenceSubject — one UUID per sentence
+ * Schema hierarchy (each level references the ID of the level above):
+ *   AuthorSchema → DocumentSchema → SentenceSchema → AnnotationSchema
  *
- * All cross-schema references go through the registry so that IDs are
- * always consistent regardless of generation order.
+ * The world models this hierarchy through declared relations. ctx.related()
+ * resolves a parent instance from the registry, so every foreign key in a
+ * child schema is guaranteed to match a real parent.
+ *
+ * Generation must follow the hierarchy — generate parents before children.
  */
 
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "../../../src/index.js";
-import {
-  AuthorSubjectSchema,
-  DocumentSchema,
-  SentenceSchema,
-  AnnotationSchema,
-} from "./schemas.js";
+import { createWorld } from "../../../src/index.js";
 
-export const AuthorSubject = defineSubjectType("author", AuthorSubjectSchema);
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
 
-export const DocumentSubject = defineSubjectType(
-  "document",
-  z.object({
-    documentId: z.uuid(),
-  }),
-  { relations: { author: { type: "author", cardinality: "1", key: "authorId" } } },
-);
+// Root entity — drives the hierarchy.
+export const AuthorSchema = z.object({
+  authorId:  z.uuid(),
+  firstName: z.string(),
+  lastName:  z.string(),
+  email:     z.email(),
+  language:  z.enum(["nl", "en", "de", "fr"]),
+});
 
-export const SentenceSubject = defineSubjectType(
-  "sentence",
-  z.object({
-    sentenceId: z.uuid(),
-  }),
-  { relations: { document: { type: "document", cardinality: "1", key: "documentId" } } },
-);
+// A document written by one author.
+// authorId and language are derived from the related author so they stay
+// consistent rather than being generated independently.
+export const DocumentSchema = z.object({
+  id:        z.uuid(),
+  authorId:  z.uuid(), // → AuthorSchema.authorId
+  title:     z.string().min(5).max(80),
+  wordCount: z.number().int().min(50).max(5000),
+  createdAt: z.date(),
+  language:  z.enum(["nl", "en", "de", "fr"]), // mirrors author.language
+});
+
+// A sentence extracted from a document.
+export const SentenceSchema = z.object({
+  id:         z.uuid(),
+  documentId: z.uuid(), // → DocumentSchema.id
+  text:       z.string().min(10).max(300),
+  position:   z.number().int().min(0),
+});
+
+// An NLP annotation: a labelled character span within a sentence.
+export const AnnotationSchema = z.object({
+  id:         z.uuid(),
+  sentenceId: z.uuid(), // → SentenceSchema.id
+  authorId:   z.uuid(), // → AuthorSchema.authorId
+  label:      z.enum(["PERSON", "ORG", "LOC", "DATE", "MISC"]),
+  offset:     z.number().int().min(0).max(250),
+  length:     z.number().int().min(1).max(50),
+});
+
+// ---------------------------------------------------------------------------
+// World
+// ---------------------------------------------------------------------------
 
 export function createDocumentCorpusWorld(seed = 42) {
   return (
     createWorld({ seed })
-      .withGenerators({
-        // Annotation offsets and lengths should fit within a typical sentence
-        offset: (_schema, ctx) => ctx.prng.int(0, 250),
-      })
-      .withSubject(AuthorSubject)
-      .withSubject(DocumentSubject)
-      .withSubject(SentenceSubject)
 
-      // Documents: one per document subject
-      .withSchema(DocumentSchema, DocumentSubject, {
-        id: (s) => s.documentId,
-        authorId: (_, ctx) => ctx.related<{ authorId: string }>("author").authorId,
-        language: (_, ctx) =>
-          ctx.related<{ language: "nl" | "en" | "de" | "fr" }>("author").language,
-      })
+      // AuthorSchema is the root — no relations, no matchers needed.
+      // Field-name heuristics handle firstName, lastName, email automatically.
+      .withSchema(AuthorSchema)
 
-      // Sentences: one per sentence subject; each references an existing document
-      .withSchema(SentenceSchema, SentenceSubject, {
-        id: (s) => s.sentenceId,
-        documentId: (_, ctx) => ctx.related<{ documentId: string }>("document").documentId,
+      // DocumentSchema references AuthorSchema.
+      // authorId and language are pulled from the related author instance so
+      // a document's language always matches its author's language.
+      .withSchema(DocumentSchema, {
+        relations: { author: AuthorSchema },
+        matchers: {
+          authorId: (ctx) => ctx.related("author").authorId,
+          language: (ctx) => ctx.related("author").language,
+          title:    (ctx) => ctx.gen.word.sentence(),
+        },
       })
 
-      // Annotations: one per author subject; reference existing sentences
-      .withSchema(AnnotationSchema, AuthorSubject, {
-        sentenceId: (_, ctx) => ctx.registry.pick<{ sentenceId: string }>("sentence").sentenceId,
-        authorId: (s) => s.authorId,
+      // SentenceSchema references DocumentSchema.
+      // position is a sequential offset within the document — kept small.
+      .withSchema(SentenceSchema, {
+        relations: { document: DocumentSchema },
+        matchers: {
+          documentId: (ctx) => ctx.related("document").id,
+          text:       (ctx) => ctx.gen.word.sentence(),
+          position:   (ctx) => ctx.prng.int(0, 99),
+        },
+      })
+
+      // AnnotationSchema references both a sentence (for the span location)
+      // and an author (for attribution). offset is capped at 250 to fit
+      // within a typical sentence.
+      .withSchema(AnnotationSchema, {
+        relations: { sentence: SentenceSchema, author: AuthorSchema },
+        matchers: {
+          sentenceId: (ctx) => ctx.related("sentence").id,
+          authorId:   (ctx) => ctx.related("author").authorId,
+          offset:     (ctx) => ctx.prng.int(0, 250),
+        },
       })
   );
+}
+
+// Convenience: build a fully-populated world and return all four collections.
+export function buildCorpus(seed = 42) {
+  const world       = createDocumentCorpusWorld(seed);
+  const authors     = world.generate(z.array(AuthorSchema).min(3).max(5));
+  const documents   = world.generate(z.array(DocumentSchema).min(5).max(10));
+  const sentences   = world.generate(z.array(SentenceSchema).min(15).max(30));
+  const annotations = world.generate(z.array(AnnotationSchema).min(20).max(40));
+  return { world, authors, documents, sentences, annotations };
 }

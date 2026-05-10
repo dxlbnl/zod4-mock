@@ -1,226 +1,242 @@
 /**
  * Unit tests for cross-API ID consistency.
  *
- * Verifies that subjects act as ID anchors: when multiple schemas are bound
- * to the same subject type (or subject instances), all generated IDs refer
- * to the same underlying entities.
+ * Verifies that `from:` bindings act as ID anchors: when multiple output
+ * schemas are bound to the same source schema, all generated IDs reference
+ * the same underlying entities.
  *
- * All tests will fail with "not implemented" until fase 3.
+ * The central invariant:
+ *   TextFileSchema.fileId === RawDataSchema.id   (where type === "text")
+ *   TextFileSchema.fileId === TextApiSchema.fileId
+ *   TextFileSchema.ownerId ∈ EntityApiSchema.fileIds (for the owner person)
  */
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, defineSubjectType } from "../../src/index.js";
+import { createWorld } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Domain: file upload system with text and audio files
 // ---------------------------------------------------------------------------
 
-const TextFileSubject = defineSubjectType(
-  "text-file",
-  z.object({
-    fileId: z.uuid(),
-    ownerId: z.uuid(),
-    language: z.enum(["nl", "en", "de"]),
-  }),
-);
+const PersonSchema = z.object({ personId: z.uuid() });
 
-const AudioFileSubject = defineSubjectType(
-  "audio-file",
-  z.object({
-    fileId: z.uuid(),
-    ownerId: z.uuid(),
-    durationS: z.number().int().min(1).max(3600),
-  }),
-);
+const TextFileSchema = z.object({
+  fileId:   z.uuid(),
+  ownerId:  z.uuid(),
+  language: z.enum(["nl", "en", "de"]),
+});
 
-const PersonSubject = defineSubjectType(
-  "person",
-  z.object({
-    personId: z.uuid(),
-  }),
-);
+const AudioFileSchema = z.object({
+  fileId:    z.uuid(),
+  ownerId:   z.uuid(),
+  durationS: z.number().int().min(1).max(3600),
+});
 
-// API schemas — multiple schemas referencing the same underlying files
+// Single rawdata schema that covers both file types — registered twice.
 const RawDataSchema = z.object({
-  id: z.uuid(),
+  id:   z.uuid(),
   type: z.enum(["text", "audio"]),
 });
 
 const TextApiSchema = z.object({
-  fileId: z.uuid(),
+  fileId:     z.uuid(),
   uploadedBy: z.uuid(),
   transcript: z.string(),
 });
 
 const AudioApiSchema = z.object({
-  fileId: z.uuid(),
+  fileId:     z.uuid(),
   uploadedBy: z.uuid(),
-  durationS: z.number().int().min(1),
+  durationS:  z.number().int().min(1),
 });
 
 const EntityApiSchema = z.object({
   personId: z.uuid(),
-  fileIds: z.array(z.uuid()),
+  fileIds:  z.array(z.uuid()),
 });
 
 // ---------------------------------------------------------------------------
-// World setup factory
+// World setup
 // ---------------------------------------------------------------------------
 
 function makeWorld() {
   return (
     createWorld({ seed: 42 })
-      .withSubject(PersonSubject)
-      .withSubject(TextFileSubject)
-      .withSubject(AudioFileSubject)
+      .withSchema(PersonSchema)
 
-      // rawdata: one record per text-file subject, type = 'text'
-      .withSchema(RawDataSchema, TextFileSubject, {
-        id: (s) => s.fileId,
-        type: () => "text" as const,
+      // File schemas — each owns a fileId and refers to a person via ownerId.
+      .withSchema(TextFileSchema, {
+        relations: { owner: PersonSchema },
+        matchers: { ownerId: (ctx) => ctx.related("owner").personId },
       })
-      // rawdata: one record per audio-file subject, type = 'audio'
-      .withSchema(RawDataSchema, AudioFileSubject, {
-        id: (s) => s.fileId,
-        type: () => "audio" as const,
+      .withSchema(AudioFileSchema, {
+        relations: { owner: PersonSchema },
+        matchers: { ownerId: (ctx) => ctx.related("owner").personId },
       })
 
-      // text API — only text-file subjects
-      .withSchema(TextApiSchema, TextFileSubject, {
-        fileId: (s) => s.fileId,
-        uploadedBy: (s) => s.ownerId,
+      // RawData — one record per text file, one per audio file.
+      // Both bindings target the same output schema.
+      .withSchema(RawDataSchema, {
+        from: TextFileSchema,
+        matchers: {
+          id:   (ctx) => ctx.source.fileId,
+          type: () => "text" as const,
+        },
+      })
+      .withSchema(RawDataSchema, {
+        from: AudioFileSchema,
+        matchers: {
+          id:   (ctx) => ctx.source.fileId,
+          type: () => "audio" as const,
+        },
       })
 
-      // audio API — only audio-file subjects
-      .withSchema(AudioApiSchema, AudioFileSubject, {
-        fileId: (s) => s.fileId,
-        uploadedBy: (s) => s.ownerId,
-        durationS: (s) => s.durationS,
+      // Type-specific APIs — each bound to its matching file schema.
+      .withSchema(TextApiSchema, {
+        from: TextFileSchema,
+        matchers: {
+          fileId:     (ctx) => ctx.source.fileId,
+          uploadedBy: (ctx) => ctx.source.ownerId,
+        },
+      })
+      .withSchema(AudioApiSchema, {
+        from: AudioFileSchema,
+        matchers: {
+          fileId:     (ctx) => ctx.source.fileId,
+          uploadedBy: (ctx) => ctx.source.ownerId,
+          durationS:  (ctx) => ctx.source.durationS,
+        },
       })
 
-      // entities: one per person, lists that person's file IDs
-      .withSchema(EntityApiSchema, PersonSubject, {
-        personId: (s) => s.personId,
-        fileIds: (s, ctx) =>
-          ctx.registry
-            .filter<{
-              ownerId: string;
-              fileId: string;
-            }>(["text-file", "audio-file"], (f) => f.ownerId === s.personId)
-            .map((f) => f.fileId),
+      // Entity API — aggregates all file IDs per person using registry.filter.
+      .withSchema(EntityApiSchema, {
+        from: PersonSchema,
+        matchers: {
+          personId: (ctx) => ctx.source.personId,
+          fileIds: (ctx) => [
+            ...ctx.registry.filter(TextFileSchema,  (f) => f.ownerId === ctx.source.personId),
+            ...ctx.registry.filter(AudioFileSchema, (f) => f.ownerId === ctx.source.personId),
+          ].map((f) => f.fileId),
+        },
       })
   );
 }
 
 // ---------------------------------------------------------------------------
-// ID consistency tests
+// ID consistency
+//
+// The from: binding ensures that ctx.source.fileId is the same value in
+// both the RawData matcher and the TextApi matcher — they reference the
+// same TextFileSchema instance, so the IDs are guaranteed equal.
 // ---------------------------------------------------------------------------
 
 describe("cross-API ID consistency", () => {
-  it("text API fileIds appear in rawdata IDs", () => {
-    const world = makeWorld();
+  it("text API fileIds all appear in rawdata as id", () => {
+    const world   = makeWorld();
     const rawdata = world.generate(z.array(RawDataSchema).min(5).max(10));
-    const texts = world.generate(z.array(TextApiSchema));
+    const texts   = world.generate(z.array(TextApiSchema));
 
-    const rawdataIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r) => r.id));
     for (const text of texts) {
-      expect(rawdataIds.has(text.fileId)).toBe(true);
+      expect(rawIds.has(text.fileId)).toBe(true);
     }
   });
 
-  it("audio API fileIds appear in rawdata IDs", () => {
-    const world = makeWorld();
+  it("audio API fileIds all appear in rawdata as id", () => {
+    const world   = makeWorld();
     const rawdata = world.generate(z.array(RawDataSchema).min(5).max(10));
-    const audios = world.generate(z.array(AudioApiSchema));
+    const audios  = world.generate(z.array(AudioApiSchema));
 
-    const rawdataIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r) => r.id));
     for (const audio of audios) {
-      expect(rawdataIds.has(audio.fileId)).toBe(true);
+      expect(rawIds.has(audio.fileId)).toBe(true);
     }
   });
 
-  it("rawdata type field matches the file type", () => {
-    const world = makeWorld();
+  it("rawdata type discriminates correctly between file types", () => {
+    const world   = makeWorld();
     const rawdata = world.generate(z.array(RawDataSchema).min(5).max(10));
-    const texts = world.generate(z.array(TextApiSchema));
-    const audios = world.generate(z.array(AudioApiSchema));
+    const texts   = world.generate(z.array(TextApiSchema));
+    const audios  = world.generate(z.array(AudioApiSchema));
 
-    const textIds = new Set(texts.map((t) => t.fileId));
+    const textIds  = new Set(texts.map((t) => t.fileId));
     const audioIds = new Set(audios.map((a) => a.fileId));
-
     for (const row of rawdata) {
-      if (textIds.has(row.id)) expect(row.type).toBe("text");
+      if (textIds.has(row.id))  expect(row.type).toBe("text");
       if (audioIds.has(row.id)) expect(row.type).toBe("audio");
     }
   });
 
   it("entity fileIds are all present in rawdata", () => {
-    const world = makeWorld();
-    const rawdata = world.generate(z.array(RawDataSchema).min(10).max(20));
+    const world    = makeWorld();
+    world.generate(z.array(PersonSchema).length(3));
+    const rawdata  = world.generate(z.array(RawDataSchema).min(10).max(20));
     const entities = world.generate(z.array(EntityApiSchema));
 
-    const rawdataIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r) => r.id));
     for (const entity of entities) {
       for (const fileId of entity.fileIds) {
-        expect(rawdataIds.has(fileId)).toBe(true);
+        expect(rawIds.has(fileId)).toBe(true);
       }
     }
   });
 
   it("generation order does not affect ID consistency", () => {
-    // Generate texts before rawdata — IDs should still match
-    const world = makeWorld();
-    const texts = world.generate(z.array(TextApiSchema));
+    // Generating texts before rawdata — IDs should still match because
+    // both are driven by the same TextFileSchema instance in the registry.
+    const world   = makeWorld();
+    const texts   = world.generate(z.array(TextApiSchema));
     const rawdata = world.generate(z.array(RawDataSchema).min(5));
 
-    const rawdataIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r) => r.id));
     for (const text of texts) {
-      expect(rawdataIds.has(text.fileId)).toBe(true);
+      expect(rawIds.has(text.fileId)).toBe(true);
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// Registry helpers
+// Registry helpers — schema-reference API
+//
+// Registry methods take schema object references directly, not string names.
+// This makes them fully typed and eliminates the need for manual casts.
 // ---------------------------------------------------------------------------
 
-describe("registry.filter", () => {
-  it("returns items from multiple subject types", () => {
+describe("registry.filter — schema-reference API", () => {
+  it("filters instances by schema reference", () => {
     const world = makeWorld();
     world.generate(z.array(TextApiSchema).min(3));
     world.generate(z.array(AudioApiSchema).min(3));
 
-    const all = world.registry.filter(["text-file", "audio-file"], () => true);
-    expect(all.length).toBeGreaterThanOrEqual(6);
+    const textFiles  = world.registry.filter(TextFileSchema,  () => true);
+    const audioFiles = world.registry.filter(AudioFileSchema, () => true);
+    expect(textFiles.length).toBeGreaterThanOrEqual(3);
+    expect(audioFiles.length).toBeGreaterThanOrEqual(3);
   });
 
   it("applies the predicate correctly", () => {
-    const world = makeWorld();
-    const texts = world.generate(z.array(TextApiSchema).length(5));
-    const _ = world.generate(z.array(AudioApiSchema).length(5));
+    const world  = makeWorld();
+    const texts  = world.generate(z.array(TextApiSchema).length(5));
+    world.generate(z.array(AudioApiSchema).length(5));
 
-    const firstTextFileId = texts[0]?.fileId;
-    const matches = world.registry.filter<{ fileId: string }>(
-      "text-file",
-      (f) => f.fileId === firstTextFileId,
-    );
+    const targetId = texts[0]!.fileId;
+    const matches  = world.registry.filter(TextFileSchema, (f) => f.fileId === targetId);
     expect(matches).toHaveLength(1);
+    expect(matches[0]!.fileId).toBe(targetId);
   });
 
   it("returns empty array when nothing matches", () => {
     const world = makeWorld();
     world.generate(z.array(TextApiSchema).length(3));
-
-    const result = world.registry.filter("text-file", () => false);
-    expect(result).toEqual([]);
+    expect(world.registry.filter(TextFileSchema, () => false)).toEqual([]);
   });
 });
 
-describe("registry.count", () => {
-  it("counts stored items by type", () => {
+describe("registry.count — schema-reference API", () => {
+  it("counts stored instances by schema reference", () => {
     const world = makeWorld();
     world.generate(z.array(TextApiSchema).length(4));
-    expect(world.registry.count("text-file")).toBe(4);
+    expect(world.registry.count(TextFileSchema)).toBe(4);
   });
 });
