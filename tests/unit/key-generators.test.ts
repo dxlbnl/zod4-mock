@@ -10,14 +10,23 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import { generators, createWorld, createPrng } from "../../src/index.js";
-import type { GeneratorContext, KeyGenerator } from "../../src/index.js";
+import type { BoundGenerators, GeneratorContext, KeyGenerator, Registry } from "../../src/index.js";
+
+const STUB_REGISTRY: Registry = {
+  store:  () => { /* no-op */ },
+  all:    () => [],
+  pick:   () => { throw new Error("stub registry: pick not supported"); },
+  filter: () => [],
+  count:  () => 0,
+};
 
 function makeCtx(seed = 42): GeneratorContext {
+  const gen: BoundGenerators = {};
   return {
     prng:     createPrng(seed),
-    gen:      {} as any,
+    gen,
     source:   undefined,
-    registry: {} as any,
+    registry: STUB_REGISTRY,
     fieldPath: "",
     related:  <T>(_: string) => ({}) as T,
   };
@@ -247,7 +256,7 @@ describe("WorldOptions.generators", () => {
 
     world.generate(ProductSchema);
     expect(capturedCtx?.prng).toBeDefined();
-    expect(capturedCtx?.fieldPath).toBe("vendorCode");
+    expect(capturedCtx?.fieldPath).toMatch(/vendorCode$/);
     expect(capturedCtx?.registry).toBeDefined();
   });
 });

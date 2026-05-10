@@ -9,7 +9,29 @@ export { generateFromSchema, generateFromKey, data } from "./generators/index.js
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
 
+import type { ZodTypeAny, input } from "zod";
+import type { GenerateOptions } from "./types.js";
+import { createWorld } from "./world.js";
 import * as gen from "./generators/data/index.js";
+
+/**
+ * Zero-config entry point. Generates a value from any Zod schema without
+ * any world setup. Internally creates a temporary world and discards it.
+ *
+ * ```ts
+ * import { generate } from "zod4-mock";
+ *
+ * const user = generate(UserSchema);
+ * const admin = generate(UserSchema, { overrides: { role: "admin" }, seed: 42 });
+ * ```
+ */
+export function generate<TSchema extends ZodTypeAny>(
+  schema: TSchema,
+  options?: GenerateOptions<input<TSchema>>,
+): input<TSchema> {
+  const seed = options?.seed ?? Math.floor(Math.random() * 0xffffffff);
+  return createWorld({ seed }).generate(schema, options);
+}
 
 /**
  * Built-in generators, organised into sub-namespaces.
@@ -25,21 +47,18 @@ import * as gen from "./generators/data/index.js";
  * ```
  */
 export const generators = {
-  // -------------------------------------------------------------------------
-  // Sub-namespaces
-  // -------------------------------------------------------------------------
   ...gen,
   internet: {
     ...gen.internet,
-    domain: gen.internet.domainName, // Alias for tests
+    domain: gen.internet.domainName,
   },
   location: {
     ...gen.location,
-    postalCode: gen.location.zipCode, // Alias for tests
+    postalCode: gen.location.zipCode,
   },
   lorem: {
     ...gen.word,
-    word: gen.word.noun, // Alias for tests
+    word: gen.word.noun,
   },
 } as const;
 
@@ -49,7 +68,7 @@ export type {
   WorldOptions,
   Registry,
 
-  // Subject types
+  // Subject types (legacy, kept for backward compat)
   AnySubjectType,
   AnySubjectInstance,
   SubjectType,
@@ -57,18 +76,23 @@ export type {
   SubjectInstance,
   SubjectTypeOptions,
 
-  // Relations
+  // Relations (legacy)
   RelationDef,
   RelationMap,
   Cardinality,
 
   // Generation
   GeneratorContext,
+  BoundGenerators,
   Prng,
   KeyGenerator,
   Matchers,
   MatcherFn,
   SubjectMatcherArg,
+
+  // Schema registration
+  PrimarySchemaOpts,
+  DerivedSchemaOpts,
 
   // Override / transform
   DeepPartial,

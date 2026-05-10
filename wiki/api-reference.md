@@ -6,37 +6,53 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 
 ## Exports overview
 
-| Export                 | Kind      | Description                               |
-| ---------------------- | --------- | ----------------------------------------- |
-| `createWorld`          | function  | Create a seeded generation world          |
-| `defineSubjectType`    | function  | Define a named domain entity              |
-| `generators`           | namespace | Built-in primitive generators             |
-| `generateFromSchema`   | function  | Low-level schema-based generator          |
-| `generateFromKey`      | function  | Low-level key-based generator             |
-| `createPrng`           | function  | Create a standalone seeded PRNG           |
-| `fieldSeed`            | function  | Derive a per-field seed                   |
-| `World`                | type      | The world interface                       |
-| `WorldOptions`         | type      | Options for `createWorld`                 |
-| `SubjectType`          | type      | A subject type descriptor                 |
-| `SubjectInstance`      | type      | A generated subject instance              |
-| `SubjectData`          | type      | Inferred data type of a subject           |
-| `GeneratorContext`     | type      | Context passed to matchers and generators |
-| `Prng`                 | type      | The PRNG interface                        |
-| `Registry`             | type      | The registry interface                    |
-| `DEFAULT_KEY_MAP`      | object    | Declarative exact-match key→generator map |
-| `DEFAULT_KEY_PATTERNS` | object    | Suffix/prefix pattern rules               |
-| `KeyGenerator`         | type      | Custom field-name generator function      |
-| `PrngGen`              | type      | `(prng: Prng) => T` — map value type      |
-| `KeyPattern`           | type      | A pattern rule `{ test, generate }`       |
-| `SchemaKeyMap`         | type      | Per-schema key generator map (typed)      |
-| `SubjectKeyMap`        | type      | Per-subject-type key override map (typed) |
-| `Matchers`             | type      | Map of matcher functions for a schema     |
-| `MatcherFn`            | type      | A single matcher function                 |
-| `GenerateOptions`      | type      | Options for `world.generate()`            |
-| `DeepPartial`          | type      | Recursive optional type                   |
-| `Cardinality`          | type      | Relation cardinality string               |
-| `RelationDef`          | type      | A declared relation                       |
-| `RelationMap`          | type      | Map of relation definitions               |
+| Export                 | Kind      | Description                                      |
+| ---------------------- | --------- | ------------------------------------------------ |
+| `generate`             | function  | Zero-config entry point — no world setup needed  |
+| `createWorld`          | function  | Create a seeded generation world                 |
+| `generators`           | namespace | Built-in primitive generators                    |
+| `generateFromSchema`   | function  | Low-level schema-based generator                 |
+| `generateFromKey`      | function  | Low-level key-based generator                    |
+| `createPrng`           | function  | Create a standalone seeded PRNG                  |
+| `fieldSeed`            | function  | Derive a per-field seed                          |
+| `World`                | type      | The world interface                              |
+| `WorldOptions`         | type      | Options for `createWorld`                        |
+| `GeneratorContext`     | type      | Context passed to matchers and generators        |
+| `BoundGenerators`      | type      | Pre-PRNG-bound generators namespace              |
+| `PrimarySchemaOpts`    | type      | Options for primary/relational `withSchema` call |
+| `DerivedSchemaOpts`    | type      | Options for derived `withSchema` call            |
+| `Prng`                 | type      | The PRNG interface                               |
+| `Registry`             | type      | The registry interface                           |
+| `DEFAULT_KEY_MAP`      | object    | Declarative exact-match key→generator map        |
+| `DEFAULT_KEY_PATTERNS` | object    | Suffix/prefix pattern rules                      |
+| `KeyGenerator`         | type      | Custom field-name generator function             |
+| `PrngGen`              | type      | `(prng: Prng) => T` — map value type             |
+| `KeyPattern`           | type      | A pattern rule `{ test, generate }`              |
+| `SchemaKeyMap`         | type      | Per-schema key generator map (typed)             |
+| `GenerateOptions`      | type      | Options for `generate()` and `world.generate()`  |
+| `DeepPartial`          | type      | Recursive optional type                          |
+
+---
+
+## `generate(schema, options?)`
+
+```ts
+function generate<TSchema extends ZodTypeAny>(
+  schema: TSchema,
+  options?: GenerateOptions<input<TSchema>>,
+): input<TSchema>
+```
+
+Zero-config entry point. Creates a temporary world internally and discards it. No setup required.
+
+```ts
+import { generate } from "zod4-mock";
+
+const user = generate(UserSchema);
+const admin = generate(UserSchema, { overrides: { role: "admin" }, seed: 42 });
+```
+
+`options.seed` defaults to a random value if omitted. Pass an explicit seed for deterministic output.
 
 ---
 
@@ -52,8 +68,8 @@ Creates a new seeded world. Returns a `World` instance that supports fluent chai
 
 ```ts
 interface WorldOptions {
-  seed: number; // required
-  optionalProbability?: number; // default: 0.2
+  seed: number;                              // required
+  optionalProbability?: number;             // default: 0.2
   defaultArrayLength?: readonly [number, number]; // default: [1, 5]
   generators?: Record<string, KeyGenerator>; // default: {}
 }
@@ -73,39 +89,72 @@ interface WorldOptions {
 
 All builder methods return `this` for fluent chaining.
 
-### `.withSubject(subjectType)`
+### `.withSchema(schema, opts?)`
+
+Registers a schema with the world. Three modes:
+
+**Primary** — schema generates independently:
 
 ```ts
-withSubject(subjectType: AnySubjectType): this
-```
-
-Registers a subject type. Must be called before `withSchema` for the same type, and before `generate`.
-
-### `.withSchema(schema, subjectType, matchers?)`
-
-Binds an app schema to one or more subject types and optionally provides matcher functions.
-
-**Strongly typed overload** — pass a `SubjectType` object for full type inference on matchers:
-
-```ts
-withSchema<TSchema, TSubjectType extends AnySubjectType>(
+withSchema<TSchema extends ZodTypeAny>(
   schema: TSchema,
-  subjectType: TSubjectType,
-  matchers?: Matchers<TSchema, SubjectData<TSubjectType>>,
+  opts?: PrimarySchemaOpts<TSchema>,
 ): this
 ```
 
-**Weakly typed overload** — pass a string name or array of strings (matchers typed as `unknown`):
+```ts
+interface PrimarySchemaOpts<TSchema extends ZodTypeAny> {
+  relations?: Record<string, ZodTypeAny>;
+  matchers?: {
+    [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
+  };
+}
+```
+
+**Derived** — each output record is driven by one source record:
 
 ```ts
-withSchema<TSchema>(
+withSchema<TSchema extends ZodTypeAny, TSource extends ZodTypeAny>(
   schema: TSchema,
-  subjectTypes: string | string[],
-  matchers?: Matchers<TSchema, unknown>,
+  opts: DerivedSchemaOpts<TSchema, TSource>,
 ): this
 ```
 
-Binding one schema to multiple subject types is the multi-API consistency pattern — see the [media library recipe](recipes.md#recipe-multi-api-media-library).
+```ts
+interface DerivedSchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny> {
+  from: TSource;
+  relations?: Record<string, ZodTypeAny>;
+  matchers?: {
+    [K in keyof input<TSchema>]?: (
+      ctx: GeneratorContext & { readonly source: input<TSource> },
+    ) => input<TSchema>[K];
+  };
+}
+```
+
+The same output schema can be registered multiple times with different `from:` values to represent multiple source types — generating the output will produce one record per source across all bindings.
+
+**Examples:**
+
+```ts
+// Primary — no relations
+world.withSchema(PersonSchema)
+
+// Relational — ownerId drawn from a related person
+world.withSchema(FileSchema, {
+  relations: { owner: PersonSchema },
+  matchers: { ownerId: (ctx) => ctx.related("owner").personId },
+})
+
+// Derived — one output per text file source
+world.withSchema(RawDataSchema, {
+  from: TextFileSchema,
+  matchers: {
+    id:   (ctx) => ctx.source.fileId,
+    type: () => "text" as const,
+  },
+})
+```
 
 ### `.withGenerators(map)`
 
@@ -127,35 +176,21 @@ world.withGenerators({
 withKeyMap<T extends ZodTypeAny>(schema: T, map: SchemaKeyMap<T>): this
 ```
 
-Binds per-field generator functions to a **specific schema**. Unlike `withGenerators` (global, untyped), `withKeyMap` is schema-scoped and fully type-safe — field names and return types are inferred from the schema. Unlike `withSchema` matchers, no subject binding is required.
+Binds per-field generator functions to a **specific schema**. Unlike `withGenerators` (global, untyped), `withKeyMap` is schema-scoped and fully type-safe.
 
 **Priority order** (highest → lowest):
 
 1. `withSchema` matchers
-2. `withKeyMap` ← here
-3. subject-type `keyMap` (declared on `defineSubjectType`)
-4. `withGenerators` (global)
-5. `DEFAULT_KEY_MAP` / `DEFAULT_KEY_PATTERNS` (built-in heuristics)
-6. Schema-based fallback
-
-Calls for the same schema are **merged** — later entries overwrite earlier ones for the same field key, other keys are preserved.
-
-Works for both subject-bound schemas and ad-hoc schemas (those not registered with `withSchema`).
+2. `withKeyMap`
+3. `withGenerators` (global)
+4. `DEFAULT_KEY_MAP` / `DEFAULT_KEY_PATTERNS` (built-in heuristics)
+5. Schema-based fallback
 
 ```ts
 world.withKeyMap(ProductSchema, {
   sku: (ctx) => `SKU-${ctx.prng.int(1000, 9999)}`,
   price: (ctx) => ctx.prng.int(100, 50000),
 });
-```
-
-Use the `SchemaKeyMap<T>` type to annotate a map before passing it:
-
-```ts
-const productMap: SchemaKeyMap<typeof ProductSchema> = {
-  sku: (ctx) => `SKU-${ctx.prng.int(1000, 9999)}`,
-};
-world.withKeyMap(ProductSchema, productMap);
 ```
 
 ---
@@ -173,90 +208,45 @@ generate<TSchema extends ZodTypeAny>(
 
 Generates a value matching the schema. The return type is fully inferred.
 
-- If `schema` resolves to an array (after peeling any outer `optional`/`nullable` modifiers): returns an array. Length is derived from Zod constraints (`.min()`, `.max()`, `.length()`), falling back to `defaultArrayLength`. The preferred form is the modifier chain — `schema.array()` — but `z.array(schema)` is equivalent.
-- Otherwise: returns a single object.
+- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`.
+- If the schema has `from:` bindings (derived): generates one output per source in the registry.
+- If the schema is primary (registered or not): generates and stores a new record.
 
-**Array modifier chaining** — `optional`/`nullable` wrappers around an array are handled at the `generate()` level, so chaining is fully supported:
+**Array modifier chaining** is fully supported:
 
 ```ts
 world.generate(PersonSchema.array())              // array
 world.generate(PersonSchema.array().optional())   // array | undefined
 world.generate(PersonSchema.array().nullable())   // array | null
-world.generate(PersonSchema.optional().array().optional()) // array of optional items, or undefined
 ```
-
-When the schema is bound to one or more subject types, the world cycles through existing subjects deterministically. When the schema is not bound (ad-hoc), generation is purely schema-based.
 
 **`GenerateOptions`**
 
 ```ts
 interface GenerateOptions<T> {
-  subject?: string; // pin to a specific subject type when multi-bound
-  overrides?: DeepPartial<T>; // deep-merged after generation; arrays replaced
-  transform?: (data: T) => T; // applied after overrides
+  overrides?: DeepPartial<T>;    // deep-merged after generation; arrays replaced
+  transform?: (data: T) => T;    // applied after overrides
+  seed?: number;                  // only used by module-level generate()
 }
 ```
 
-**`subject`** — when one schema is bound to multiple subject types (e.g., `RawDataSchema` bound to both `TextFileSubject` and `AudioFileSubject`), use this to pin generation to one type.
+**`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`.
 
-**`overrides`** — deep-partial merge. Nested objects are merged recursively. Arrays are replaced entirely (not element-merged). Applied before `transform`.
+**`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
 
-**`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`. Use for array-index edits or derived fields that depend on the full generated object.
-
-### `.subject(type)`
+### `.populate(schema, count)`
 
 ```ts
-subject(type: string): AnySubjectInstance
+populate(schema: ZodTypeAny, count: number): this
 ```
 
-Returns the **next** subject instance of the given type, creating it if needed. Subjects are generated lazily and cached; the sequence is deterministic.
+Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining.
 
 ```ts
-interface AnySubjectInstance {
-  _type: string; // e.g. 'person'
-  _id: string; // e.g. 'person#1'
-  data: unknown; // typed as SubjectData<T> when using the generic form
-}
+const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .populate(PersonSchema, 3);  // 3 persons in registry before any generate()
 ```
-
-Throws if the type has not been registered via `.withSubject()`.
-
-### `.subjects(type?)`
-
-```ts
-subjects(type?: string): AnySubjectInstance[]
-```
-
-Returns all subject instances currently in the world, optionally filtered by type name. Returns instances in creation order. Useful for inspecting or asserting on the full set of generated subjects.
-
-```ts
-world.subjects(); // all subjects across all types
-world.subjects("person"); // only person instances
-```
-
-### `.populate(subjectType, count)`
-
-```ts
-populate(subjectType: AnySubjectType | string, count: number): this
-```
-
-Pre-creates `count` subject instances of the given type. Returns `this` for fluent chaining.
-
-Call this before `generate` when you need a specific number of subjects to exist upfront — for example, to ensure 3 persons are available so that file subjects' `ownerId` fields distribute across all 3 owners rather than defaulting to a single auto-created one.
-
-```ts
-// Fluent — pre-create 3 persons before generating any data
-const world = createMediaLibraryWorld(42).populate(PersonSubject, 3);
-const rawdata = world.generate(z.array(RawDataSchema).min(6));
-const entities = world.generate(z.array(EntityApiSchema));
-// → entities has 3 items, files spread across all 3 owners
-```
-
-Accepts either a `SubjectType` object (type-safe) or a plain string name (same as `.withSubject` / `.subject`).
-
----
-
-## `World` — registry
 
 ### `.registry`
 
@@ -264,125 +254,7 @@ Accepts either a `SubjectType` object (type-safe) or a plain string name (same a
 readonly registry: Registry
 ```
 
-Read-only access to the world's registry. Available after any `generate()` call. See [`Registry`](#registry) below.
-
----
-
-## `defineSubjectType(name, schema, options?)`
-
-```ts
-function defineSubjectType<TSchema, TRelations>(
-  name: string,
-  schema: TSchema,
-  options?: SubjectTypeOptions<TRelations>,
-): SubjectType<TSchema, TRelations>;
-```
-
-Creates a subject type descriptor. The `name` string is used everywhere to look up the type (case-sensitive).
-
-```ts
-interface SubjectTypeOptions<TRelations extends RelationMap, TData> {
-  readonly relations?: TRelations;
-
-  /**
-   * Derive field values from other already-generated fields of the same subject.
-   * Functions are called after all base fields (key-based/schema-based) are
-   * generated. Return value overwrites the base-generated value.
-   */
-  readonly derive?: {
-    [K in keyof TData]?: (partial: Partial<TData>, ctx: GeneratorContext) => TData[K];
-  };
-
-  /** Per-field key generators for this subject type. */
-  readonly keyMap?: SubjectKeyMap<TData>;
-}
-```
-
-**`relations`** — declares relationships to other subject types. Used for lazy resolution of cross-subject links during generation. See [Core Concepts — Relations](core-concepts.md#relations).
-
-**`keyMap`** — per-field generators for this subject type. Consulted after `withKeyMap` and before `withGenerators` in the generation pipeline. Values are `(prng: Prng) => T` — they accept only a PRNG, so `generators.*` functions can be assigned directly.
-
-```ts
-const ProductSubject = defineSubjectType("product", ProductSchema, {
-  keyMap: {
-    // Override default name → fullName with a product-appropriate word
-    name: generators.lorem.sentence,
-    // Use a custom generator
-    sku: (prng) => `PROD-${prng.int(1000, 9999)}`,
-  },
-});
-```
-
-Use `SubjectKeyMap<typeof ProductSchema>` to annotate the map before passing:
-
-```ts
-const productKeyMap: SubjectKeyMap<typeof ProductSchema> = {
-  name: generators.lorem.sentence,
-};
-```
-
-```ts
-const PersonSubject = defineSubjectType(
-  "person",
-  z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.email(),
-  }),
-  {
-    relations: {
-      employer: { type: "company", cardinality: "0..1" },
-    },
-    derive: {
-      email: ({ firstName, lastName }, prng) => {
-        const ln = lastName!.toLowerCase().replace(/[\s']/g, "");
-        return `${firstName![0]}.${ln}${prng.int(10, 99)}@example.com`.toLowerCase();
-      },
-    },
-  },
-);
-```
-
-### `derive`
-
-```ts
-derive?: {
-  [K in keyof SubjectData<T>]?: (partial: Partial<SubjectData<T>>, prng: Prng) => SubjectData<T>[K]
-}
-```
-
-Derives field values from already-generated sibling fields of the same subject. Each function receives a `partial` snapshot of the subject's data (everything generated so far in declaration order) and a PRNG forked for that field.
-
-**Execution order:**
-
-1. All fields are generated via the normal pipeline first (world generators → key-based → schema-based).
-2. Then each `derive` entry runs in declaration order, overwriting the base-generated value.
-
-This means later entries see earlier entries' derived values — declare dependencies before dependents.
-
-**World-level `generators` take priority:** if the world registers a generator for the same field key, `derive` is skipped for that key.
-
-```ts
-derive: {
-  // mid is derived from base (a base field)
-  mid: ({ base }) => `mid-${base}`,
-  // top is derived from mid (a derived field — declared after mid, so it sees mid's value)
-  top: ({ mid }) => `top-${mid}`,
-}
-```
-
-### `Cardinality`
-
-```ts
-type Cardinality = "0..1" | "1" | "0..n" | "1..n";
-```
-
-| Value    | Meaning                |
-| -------- | ---------------------- |
-| `'0..1'` | Optional, at most one  |
-| `'1'`    | Exactly one (required) |
-| `'0..n'` | Optional, any number   |
-| `'1..n'` | At least one           |
+Read-only access to the world's registry. See [`Registry`](#registry) below.
 
 ---
 
@@ -390,62 +262,111 @@ type Cardinality = "0..1" | "1" | "0..n" | "1..n";
 
 ```ts
 interface Registry {
-  all<T = unknown>(type: string): T[];
-  pick<T = unknown>(type: string): T;
-  pickBy<T = unknown>(type: string, predicate: (item: T) => boolean): T;
-  filter<T = unknown>(type: string | string[], predicate: (item: T) => boolean): T[];
-  count(type: string): number;
+  store(schema: ZodTypeAny, item: unknown): void;
+  all<T = unknown>(schema: ZodTypeAny): T[];
+  pick<T = unknown>(schema: ZodTypeAny): T;
+  filter<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T[];
+  count(schema: ZodTypeAny): number;
 }
 ```
 
-All methods are generic. Pass a type parameter to get a typed result without casting:
+Keys are Zod schema object references — the same object passed to `withSchema`. This gives typed lookup results without string casts.
+
+### `.all<T>(schema)`
+
+Returns all stored items for `schema` as `T[]`. Returns an empty array if none.
 
 ```ts
-const file = ctx.registry.pick<{ fileId: string; ownerId: string }>("text-file");
+const persons = world.registry.all(PersonSchema);
 ```
 
-### `.all<T>(type)`
+### `.pick<T>(schema)`
 
-Returns all stored items of `type` as `T[]`. Returns an empty array if none.
-
-### `.pick<T>(type)`
-
-Returns a random stored item of `type`. **Throws** if no items have been stored for this type yet.
-
-Use inside matchers to pick a random related entity:
+Returns a random stored item. **Throws** if none exist.
 
 ```ts
-const product = ctx.registry.pick<ProductData>("product");
+// Inside a matcher
+lines: (ctx) => {
+  const product = ctx.registry.pick(ProductSchema);
+  return [{ productId: product.productId, ... }];
+},
 ```
 
-### `.pickBy<T>(type, predicate)`
+### `.filter<T>(schema, predicate)`
 
-Returns a random stored item of `type` satisfying `predicate`. **Throws** if no matching items exist.
+Returns all stored items for `schema` satisfying `predicate`. Returns an empty array if none match — never throws.
 
 ```ts
-const englishDoc = ctx.registry.pickBy<DocumentData>("document", (d) => d.language === "en");
+fileIds: (ctx) => ctx.registry
+  .filter(FileSchema, (f) => f.ownerId === ctx.source.personId)
+  .map((f) => f.fileId),
 ```
 
-### `.filter<T>(type | type[], predicate)`
+### `.count(schema)`
 
-Returns **all** stored items (across one or more types) satisfying `predicate`.
+Returns the number of stored items. Returns `0` if none.
+
+---
+
+## `GeneratorContext`
 
 ```ts
-// Single type
-const paid = ctx.registry.filter<Invoice>("invoice", (i) => i.status === "paid");
-
-// Multiple types — concatenated in registration order
-const allFileRefs = ctx.registry.filter<FileRef>(
-  ["text-file", "audio-file", "bank-file"],
-  (f) => f.ownerId === s.personId,
-);
+interface GeneratorContext {
+  readonly prng: Prng;
+  readonly gen: BoundGenerators;
+  readonly source: unknown;
+  readonly registry: Registry;
+  readonly fieldPath: string;
+  readonly optionalProbability?: number;
+  related<T = unknown>(relationName: string): T;
+}
 ```
 
-Returns an empty array if none match. Does not throw.
+Passed to every matcher function and custom generator. Each field receives its own forked PRNG — per-field stability means adding a field to a schema never disturbs other fields' values.
 
-### `.count(type)`
+**`prng`** — PRNG forked for the current field. Use directly for ad-hoc randomness: `ctx.prng.int(1, 100)`.
 
-Returns the number of stored items of `type`. Returns `0` if none.
+**`gen`** — generators namespace with the field's PRNG pre-applied. Prefer this over calling `generators.*(ctx.prng)` manually:
+
+```ts
+matchers: {
+  title: (ctx) => ctx.gen.word.sentence(),
+  email: (ctx) => ctx.gen.internet.email(),
+  code:  (ctx) => ctx.gen.string.alphanumeric(12),
+}
+```
+
+Arguments still pass through: `ctx.gen.string.alphanumeric(12)` calls `alphanumeric(prng, 12)` internally.
+
+**`source`** — for derived schemas (registered with `from:`), holds the source record that is driving this output. `undefined` for primary schemas. Typed as `input<TSource>` in `DerivedSchemaOpts` matchers.
+
+```ts
+matchers: {
+  id:       (ctx) => ctx.source.personId,
+  fullName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
+}
+```
+
+**`registry`** — the world's full registry. Use `ctx.registry.pick(Schema)` or `ctx.registry.filter(Schema, pred)` for cross-schema lookups.
+
+**`fieldPath`** — dot-separated path of the current field, prefixed by a stable record identifier (e.g. `"reg0#2.address.street"`). Use as a stable key for per-record state:
+
+```ts
+// Inside a lines matcher, accumulate total for the totalCents matcher:
+lineTotals.set(ctx.fieldPath.replace(".lines", ""), total);
+
+// Inside the totalCents matcher, read it back:
+lineTotals.get(ctx.fieldPath.replace(".totalCents", ""))
+```
+
+**`related(name)`** — resolves the related schema instance declared in `relations`. Auto-provisions one if the registry is empty, then picks deterministically. All fields in the same record that call `ctx.related("owner")` receive the same owner — the pick is record-scoped, not field-scoped.
+
+```ts
+matchers: {
+  authorId: (ctx) => ctx.related("author").authorId,
+  language: (ctx) => ctx.related("author").language,  // same author as authorId
+}
+```
 
 ---
 
@@ -478,17 +399,6 @@ Derives a new, fully independent PRNG from a deterministic string key. The paren
 
 ```ts
 const childPrng = ctx.prng.fork("my-subfield");
-// childPrng is independent of ctx.prng
-```
-
-Use `fork` inside matchers when you need multiple independent random values for a single field:
-
-```ts
-lines: (s, ctx) => {
-  const linesPrng = ctx.prng.fork("lines");
-  const count = linesPrng.int(1, 4);
-  // ...
-};
 ```
 
 ---
@@ -532,13 +442,14 @@ import { generators } from "zod4-mock";
 | `latitude`      | `(prng) => number` | `52.370216`          |
 | `longitude`     | `(prng) => number` | `4.895168`           |
 
-### `generators.lorem`
+### `generators.lorem` / `generators.word`
 
-| Function    | Signature          | Output example                  |
-| ----------- | ------------------ | ------------------------------- |
-| `word`      | `(prng) => string` | `'lorem'`                       |
-| `sentence`  | `(prng) => string` | `'Lorem ipsum dolor sit amet.'` |
-| `paragraph` | `(prng) => string` | multiple sentences              |
+| Function    | Signature                        | Output example                  |
+| ----------- | -------------------------------- | ------------------------------- |
+| `word`      | `(prng) => string`               | `'lorem'`                       |
+| `sentence`  | `(prng) => string`               | `'Lorem ipsum dolor sit amet.'` |
+| `paragraph` | `(prng) => string`               | multiple sentences              |
+| `words`     | `(prng, count: number) => string`| space-separated words           |
 
 ### `generators.string`
 
@@ -549,15 +460,14 @@ import { generators } from "zod4-mock";
 | `hexadecimal`  | `(prng, length?: number) => string` | `'0x3f9a1c2b'` (default length 8) |
 | `nanoid`       | `(prng) => string`                  | 21-char URL-safe string           |
 
-**Example — using sub-namespaces in `withKeyMap`:**
+**Prefer `ctx.gen` inside matchers** — it pre-applies the PRNG:
 
 ```ts
-world.withKeyMap(ProductSchema, {
-  name: (ctx) => generators.person.fullName(ctx.prng),
-  email: (ctx) => generators.internet.email(ctx.prng),
-  notes: (ctx) => generators.lorem.paragraph(ctx.prng),
-  sku: (ctx) => generators.string.alphanumeric(ctx.prng, 6),
-});
+matchers: {
+  sku:   (ctx) => ctx.gen.string.alphanumeric(6).toUpperCase(),
+  email: (ctx) => ctx.gen.internet.email(),
+  title: (ctx) => ctx.gen.word.sentence(),
+}
 ```
 
 ---
@@ -568,54 +478,25 @@ world.withKeyMap(ProductSchema, {
 const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined>;
 ```
 
-Declarative, exact-match key→generator map, organised by Zod schema type. The top-level key is the Zod type name (`'string'`, `'number'`); the inner key is the lowercased field name.
+Exact-match key→generator map. When a field name matches a key exactly (case-insensitive), the mapped generator is used. Inspect or extend:
 
-`generateFromKey` consults this map first. You can read it, replace entries, or merge your own map on top to extend/override built-in behaviour.
-
-**Built-in string entries** include: `email`, `firstname` / `first_name`, `lastname` / `last_name` / `surname`, `fullname` / `full_name` / `name`, `phone` / `phonenumber` / `phone_number`, `city`, `country`, `street` / `streetname` / `street_name`, `postalcode` / `zipcode` / `postal_code`, `url` / `website` / `homepage`, `title`, `description` / `bio` / `notes` / `note` / `comment` / `content` / `body` / `text` / `message` / `summary` / `transcript`, `sku`, `vatnumber` / `vat_number`.
-
-**Built-in number entries** include: `wordcount` / `word_count`, `quantity`, `position`, `count`.
-
----
+```ts
+import { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "zod4-mock";
+console.log(Object.keys(DEFAULT_KEY_MAP));
+```
 
 ## `DEFAULT_KEY_PATTERNS`
 
 ```ts
-const DEFAULT_KEY_PATTERNS: { string: KeyPattern[]; any: KeyPattern[] };
+const DEFAULT_KEY_PATTERNS: KeyPattern[];
+
+interface KeyPattern {
+  test: (key: string) => boolean;
+  generate: PrngGen;
+}
 ```
 
-Suffix/prefix pattern rules applied after `DEFAULT_KEY_MAP` exact-match lookup misses. `string` rules only fire for `z.string()` fields; `any` fires regardless of schema type.
-
-**Built-in rules:**
-
-| Sub-map  | Pattern                                               | Generator                 |
-| -------- | ----------------------------------------------------- | ------------------------- |
-| `string` | key `=== 'id'` or ends with `'id'` or `'uuid'`        | `generators.string.uuid`  |
-| `any`    | ends with `'at'` or `'date'`, or starts with `'date'` | `generators.date.anytime` |
-
----
-
-## `PrngGen<T>`
-
-```ts
-type PrngGen<T = unknown> = (prng: Prng) => T;
-```
-
-The value type for entries in `DEFAULT_KEY_MAP`, `DEFAULT_KEY_PATTERNS`, and `SubjectKeyMap`. Accepts only a `Prng`, which means all `generators.*` functions can be assigned directly:
-
-```ts
-DEFAULT_KEY_MAP.string!.email = generators.internet.email; // ✓ direct reference
-```
-
----
-
-## `KeyPattern`
-
-```ts
-type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
-```
-
-A single entry in `DEFAULT_KEY_PATTERNS`. `test` receives the lowercased field name; `generate` is called when `test` returns `true`.
+Suffix/prefix pattern rules checked after `DEFAULT_KEY_MAP`. A pattern fires when `test(fieldName)` returns `true`.
 
 ---
 
@@ -625,21 +506,11 @@ A single entry in `DEFAULT_KEY_PATTERNS`. `test` receives the lowercased field n
 type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
 ```
 
-A custom field-name generator. Receives the field's Zod schema so the generator can check the schema type (e.g., only fire for `z.number()` fields).
+A function that generates a value for a field. Used in `WorldOptions.generators` and `withGenerators`. Receives the field's Zod schema and a full `GeneratorContext`.
 
-## `SubjectKeyMap<TData>`
+---
 
-```ts
-type SubjectKeyMap<TData> = {
-  [K in keyof TData]?: (prng: Prng) => TData[K];
-};
-```
-
-A typed map of field generators scoped to a specific subject type. Field names and return types are inferred from the subject schema. Functions accept only a `Prng` (matching `PrngGen`), so `generators.*` functions can be assigned directly.
-
-Used as the `keyMap` option on `defineSubjectType`. See [`defineSubjectType` — `keyMap`](#keymap).
-
-## `SchemaKeyMap<TSchema>`
+## `SchemaKeyMap`
 
 ```ts
 type SchemaKeyMap<TSchema extends ZodTypeAny> = {
@@ -647,163 +518,18 @@ type SchemaKeyMap<TSchema extends ZodTypeAny> = {
 };
 ```
 
-A typed map of field generators scoped to a specific schema. Field names and return types are inferred from the schema — TypeScript will error if a key doesn't exist or a return type is wrong.
+Per-schema, per-field generator map. Used with `withKeyMap`. Field names and return types are inferred from the schema.
 
-Used with `world.withKeyMap(schema, map)`. Unlike `KeyGenerator`, the functions here do **not** receive the field's Zod schema (use the `GeneratorContext` instead). Unlike `MatcherFn`, they do not receive subject data.
+---
 
-### `GeneratorContext`
+## `GenerateOptions`
 
 ```ts
-interface GeneratorContext {
-  prng: Prng;
-  subject: AnySubjectInstance | undefined;
-  registry: Registry;
-  fieldPath: string;
-  optionalProbability?: number;
-  parent?: Record<string, unknown>;
-
-  /** Lazily resolves and returns the data of a related subject instance. */
-  related<T = unknown>(relationName: string): T;
-
-  /** Finds all instances that have a relationship pointing to this subject. */
-  relatedTo<T = unknown>(targetType: string, relationName: string): T[];
+interface GenerateOptions<T> {
+  readonly overrides?: DeepPartial<T>;
+  readonly transform?: (data: T) => T;
+  readonly seed?: number;
 }
 ```
 
-**`prng`** — already forked for the current field path. Use directly without forking again (unless you need multiple independent values for the same field).
-
-**`subject`** — the active subject instance. `undefined` for ad-hoc generation (when the schema is not bound to a subject type).
-
-**`registry`** — the world's registry. Call `ctx.registry.pick<T>(type)` to reference other generated data.
-
-**`fieldPath`** — dot-separated path (e.g., `'address.street'`). Useful for conditional logic in generators.
-
-**`parent`** — the partially generated object containing sibling fields. Useful for cross-field inference (e.g., matching `firstName` to `gender`).
-
-**`optionalProbability`** — the world's configured probability. Pass to schema-based generation if delegating.
-
-**`related(name)`** — lazily resolves a relationship declared on the subject type. If the cardinality is `1` or `0..1`, it returns a single object; if `0..n` or `1..n`, it returns an array of objects.
-
-**`relatedTo(type, name)`** — the inverse of `related`. It finds all instances of `targetType` whose relationship `name` points back to the current subject. Always returns an array.
-
----
-
-## `MatcherFn` and `Matchers`
-
-```ts
-type MatcherFn<TSubjectData, TValue> = (
-  subject: SubjectMatcherArg<TSubjectData>,
-  ctx: GeneratorContext,
-) => TValue;
-
-type SubjectMatcherArg<TData> = TData & {
-  readonly _type: string;
-  readonly _id: string;
-};
-
-type Matchers<TSchema extends ZodTypeAny, TSubjectData> = {
-  [K in keyof input<TSchema>]?: MatcherFn<TSubjectData, input<TSchema>[K]>;
-};
-```
-
-The `subject` argument in matchers is the subject's data fields plus `_type` and `_id`. Use `_type` to branch in multi-type schemas:
-
-```ts
-.withSchema(RawDataSchema, TextFileSubject, {
-  type: (s) => 'text' as const,  // s._type === 'text-file'
-})
-.withSchema(RawDataSchema, AudioFileSubject, {
-  type: (s) => 'audio' as const, // s._type === 'audio-file'
-})
-```
-
-**Type inference:** passing a `SubjectType` object (not a string) to `withSchema` gives full inference — `s` is typed as `SubjectData<TSubjectType>`.
-
----
-
-## `DeepPartial<T>`
-
-```ts
-type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
-```
-
-Recursively makes all properties optional. Used for the `overrides` option.
-
-**Note:** arrays are not partially typed — pass a complete replacement array in overrides, or use `transform` for index-level edits.
-
----
-
-## `RelationDef`
-
-Defines a relationship from one subject type to another.
-
-```ts
-interface RelationDef {
-  type: string; // The target subject type name
-  cardinality: Cardinality; // '1', '0..1', '0..n', or '1..n'
-  key?: string; // Optional: Explicit foreign key field name
-}
-```
-
-**`type`** — the unique name of the target subject type (e.g., `'person'`).
-
-**`cardinality`** — how many related instances exist. See [`Cardinality`](#cardinality) below.
-
-**`key`** — the name of the field in the subject (or app schema) that should hold the identity of the related subject(s).
-
-- If specified, the library automatically sinks the related ID(s) into this field.
-- If omitted, the library attempts to find a matching field name using **Identity Field Detection** heuristics.
-- If no field is found and no `key` is provided, you must manually resolve the relation using `ctx.related()`.
-
----
-
-## `Cardinality`
-
-```ts
-type Cardinality = "0..1" | "1" | "0..n" | "1..n";
-```
-
-| Value    | Meaning                |
-| -------- | ---------------------- |
-| `'0..1'` | Optional, at most one  |
-| `'1'`    | Exactly one (required) |
-| `'0..n'` | Optional, any number   |
-| `'1..n'` | At least one           |
-
----
-
-## Lower-level exports
-
-These are exported for advanced use cases such as writing your own generation orchestration. In normal use, call `world.generate()` instead.
-
-### `generateFromSchema(schema, ctx)`
-
-```ts
-function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown;
-```
-
-Generates a value using Zod type introspection only. No matchers, no key heuristics.
-
-### `generateFromKey(key, schema, ctx)`
-
-```ts
-function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorContext): unknown;
-```
-
-Attempts key-based generation using `DEFAULT_KEY_MAP` (exact match) then `DEFAULT_KEY_PATTERNS` (suffix/prefix rules). Returns `undefined` if neither matches.
-
-### `createPrng(seed)`
-
-```ts
-function createPrng(seed: number): Prng;
-```
-
-Creates a standalone Mulberry32 PRNG seeded with `seed`.
-
-### `fieldSeed(worldSeed, subjectId, fieldPath)`
-
-```ts
-function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number;
-```
-
-Derives a deterministic per-field seed from the three inputs via FNV-1a hashing. Used internally by the world; exposed for advanced custom orchestration.
+`seed` is only used by the module-level `generate()` function; it is ignored by `world.generate()` (use `createWorld({ seed })` instead).

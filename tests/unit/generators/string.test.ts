@@ -2,19 +2,21 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { createPrng } from "../../../src/prng.js";
 import { generateFromSchema } from "../../../src/generators/schema/router.js";
-import { SubjectRegistry } from "../../../src/registry.js";
-import type { GeneratorContext } from "../../../src/types.js";
+import { SchemaRegistry } from "../../../src/registry.js";
+import type { BoundGenerators, GeneratorContext } from "../../../src/types.js";
+
+const EMPTY_GEN: BoundGenerators = {};
 
 function ctx(seed = 42): GeneratorContext {
   const prng = createPrng(seed);
   return {
     prng,
-    subject: undefined,
-    registry: new SubjectRegistry(prng.fork("reg")),
+    gen: EMPTY_GEN,
+    source: undefined,
+    registry: new SchemaRegistry(prng.fork("reg")),
     fieldPath: "",
     optionalProbability: 0,
     related: <T>(_: string) => ({}) as T,
-    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 

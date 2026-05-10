@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { generateFromSchema, generateFromKey, createPrng } from "../../src/index.js";
-import type { GeneratorContext, Registry } from "../../src/index.js";
+import type { BoundGenerators, GeneratorContext, Registry } from "../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Minimal stub registry for isolated generator tests
@@ -22,18 +22,16 @@ const stubRegistry: Registry = {
   pick: () => {
     throw new Error("no items in stub registry");
   },
-  pickBy: () => {
-    throw new Error("no items in stub registry");
-  },
   filter: () => [],
   count: () => 0,
 };
 
 function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
   const prng = createPrng(seed);
+  const gen: BoundGenerators = {};
   return {
     prng,
-    gen:     {} as any,
+    gen,
     source:  undefined,
     registry: stubRegistry,
     fieldPath,

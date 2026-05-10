@@ -140,13 +140,14 @@ export type Gender = "male" | "female" | "neutral" | string;
 
 function extractGender(gOrCtx?: Gender | GeneratorContext): "male" | "female" | "neutral" {
   if (!gOrCtx) return "neutral";
-  if (typeof gOrCtx === "object" && "fieldPath" in (gOrCtx as any)) {
-    const ctx = gOrCtx as GeneratorContext;
+  if (typeof gOrCtx === "object") {
+    // gOrCtx is GeneratorContext — Gender is a string, so this branch is for ctx only
+    const ctx: GeneratorContext = gOrCtx;
     if (!ctx.parent) return "neutral";
-    const g = (ctx.parent.gender ?? ctx.parent.geslacht) as string | undefined;
+    const g = (ctx.parent["gender"] ?? ctx.parent["geslacht"]) as string | undefined;
     return normalizeGender(g);
   }
-  return normalizeGender(gOrCtx as string);
+  return normalizeGender(gOrCtx);
 }
 
 function normalizeGender(g?: string): "male" | "female" | "neutral" {

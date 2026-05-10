@@ -1,23 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import type { ZodTypeAny } from "zod";
 import { createPrng } from "../../../src/prng.js";
 import {
   generateFromSchema,
   UnsupportedSchemaError,
 } from "../../../src/generators/schema/router.js";
-import { SubjectRegistry } from "../../../src/registry.js";
-import type { GeneratorContext } from "../../../src/types.js";
+import { SchemaRegistry } from "../../../src/registry.js";
+import type { BoundGenerators, GeneratorContext } from "../../../src/types.js";
+
+const EMPTY_GEN: BoundGenerators = {};
 
 function ctx(seed = 42): GeneratorContext {
   const prng = createPrng(seed);
   return {
     prng,
-    subject: undefined,
-    registry: new SubjectRegistry(prng.fork("reg")),
+    gen: EMPTY_GEN,
+    source: undefined,
+    registry: new SchemaRegistry(prng.fork("reg")),
     fieldPath: "",
     optionalProbability: 0,
     related: <T>(_: string) => ({}) as T,
-    relatedTo: <T>(_: string, __: string) => [] as T[],
   };
 }
 
@@ -38,25 +41,22 @@ describe("schema/advanced", () => {
       z.object({ type: z.literal("a"), a: z.string() }),
       z.object({ type: z.literal("b"), b: z.number() }),
     ]);
-    const val = generateFromSchema(schema, ctx()) as any;
+    const val = generateFromSchema(schema, ctx()) as { type: string; a?: string; b?: number };
     expect(["a", "b"]).toContain(val.type);
     if (val.type === "a") expect(typeof val.a).toBe("string");
     if (val.type === "b") expect(typeof val.b).toBe("number");
   });
 
   it("generates random json", () => {
-    // Actually Zod 4 json() might not be exposed as z.json() directly.
-    // It's just a test to make sure json type works if passed.
-    // Zod 4 usually uses custom for json or a lazy schema.
-    // But if our router catches 'json' type, it should return json.
-    const mockSchema = { _zod: { def: { type: "json" } } } as any;
+    // Zod 4 json type is accessed via the internal router — test that the router handles it.
+    const mockSchema = { _zod: { def: { type: "json" } } } as unknown as ZodTypeAny;
     const val = generateFromSchema(mockSchema, ctx());
     expect(val).toBeDefined();
   });
 
   it("generates from intersection", () => {
     const schema = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
-    const val = generateFromSchema(schema, ctx()) as any;
+    const val = generateFromSchema(schema, ctx()) as { a: string; b: number };
     expect(typeof val.a).toBe("string");
     expect(typeof val.b).toBe("number");
   });

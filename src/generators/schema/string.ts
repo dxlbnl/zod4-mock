@@ -295,8 +295,9 @@ export function generateZodString(schema: ZodTypeAny, ctx: GeneratorContext): st
     if (c.check === "toLowerCase") result = result.toLowerCase();
     if (c.check === "toUpperCase") result = result.toUpperCase();
     if (c.check === "trim") result = result.trim();
-    if (c.check === "overwrite" && typeof (c as any).tx === "function") {
-      result = (c as any).tx(result);
+    if (c.check === "overwrite") {
+      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
+      if (typeof tx === "function") result = tx(result);
     }
   }
 
@@ -307,14 +308,14 @@ export function generateTemplateLiteral(schema: ZodTypeAny, ctx: GeneratorContex
   // In Zod 4, z.templateLiteral is an array of types or strings?
   // It's often represented recursively, but since we don't know the exact def structure yet,
   // we'll try to guess based on schema._zod.def.items or .types
-  const d = def(schema) as any;
+  const d = def(schema) as unknown as { types?: Array<ZodTypeAny | string>; items?: Array<ZodTypeAny | string> };
   const parts = d.types ?? d.items ?? [];
   let result = "";
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (typeof part === "string") {
       result += part;
-    } else {
+    } else if (part !== undefined) {
       result += generateFromSchema(part, { ...ctx, prng: ctx.prng.fork(`tl-${i}`) });
     }
   }

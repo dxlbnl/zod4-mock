@@ -420,7 +420,7 @@ describe("string transformation checks", () => {
   ])(".%s() → 'overwrite' check with a tx function", (_method, schema) => {
     const c = checks(schema).find((x) => x.check === "overwrite");
     expect(c).toBeDefined();
-    expect(typeof (c as any).tx).toBe("function");
+    expect(typeof (c as unknown as { tx?: unknown }).tx).toBe("function");
   });
 });
 
@@ -537,9 +537,9 @@ describe("template literal def structure", () => {
   });
 
   it("parts are stored in d.parts (not d.types or d.items)", () => {
-    const d = def(z.templateLiteral([z.string(), " world"])) as any;
+    const d = def(z.templateLiteral([z.string(), " world"])) as unknown as { parts?: unknown[]; types?: unknown; items?: unknown };
     expect(Array.isArray(d.parts)).toBe(true);
-    expect(d.parts.length).toBe(2);
+    expect(d.parts!.length).toBe(2);
     expect(d.types).toBeUndefined();
     expect(d.items).toBeUndefined();
   });
