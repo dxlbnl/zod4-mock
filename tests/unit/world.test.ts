@@ -695,3 +695,75 @@ describe("ctx.current propagation", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression Tests
+// ---------------------------------------------------------------------------
+
+describe("Regression Tests", () => {
+  it("world.populate() passes ctx.source to derived schemas", () => {
+    const SourceSchema = z.object({ id: z.string(), name: z.string() });
+    const DerivedSchema = z.object({ id: z.string(), label: z.string() });
+
+    let matcherCalled = false;
+    const world = createWorld({ seed: 42 })
+      .withSchema(SourceSchema)
+      .withSchema(DerivedSchema, {
+        from: SourceSchema,
+        matchers: {
+          id: (ctx) => {
+            matcherCalled = true;
+            return ctx.source.id;
+          },
+          label: (ctx) => `Label: ${ctx.source.name}`,
+        }
+      });
+
+    world.populate(SourceSchema, 1);
+    world.populate(DerivedSchema, 1);
+
+    const sourceObject = world.registry.all(SourceSchema)[0];
+    const derivedObject = world.registry.all(DerivedSchema)[0];
+    expect(matcherCalled).toBe(true);
+    expect(sourceObject?.id).toEqual(derivedObject?.id);
+  });
+
+  it("world.generate() honors overrides for array schemas", () => {
+    const ItemSchema = z.object({ id: z.string(), val: z.number() });
+    const world = createWorld({ seed: 42 });
+
+    const result = world.generate(z.array(ItemSchema).length(3), {
+      overrides: [{ val: 999 }, { val: 999 }, { val: 999 }]
+    }) as any[];
+
+    expect(result[0].val).toBe(999);
+  });
+
+  it("deepMerge() honors explicit undefined values in overrides", () => {
+    const Schema = z.object({
+      optional: z.string().optional(),
+    });
+    const world = createWorld({ seed: 42 });
+
+    const result = world.generate(Schema, {
+      overrides: { optional: undefined }
+    });
+
+    expect(result.optional).toBeUndefined();
+  });
+
+  it("honors Zod .default() values based on optionalProbability", () => {
+    const Schema = z.object({
+      def: z.string().default("fixed-value"),
+    });
+
+    const worldAbs = createWorld({ seed: 42, optionalProbability: 1.0 });
+    const resultAbs = worldAbs.generate(Schema);
+    expect(resultAbs.def).toBe("fixed-value");
+
+    const worldPres = createWorld({ seed: 42, optionalProbability: 0.0 });
+    const resultPres = worldPres.generate(Schema);
+    expect(resultPres.def).not.toBe("fixed-value");
+    expect(typeof resultPres.def).toBe("string");
+  });
+});

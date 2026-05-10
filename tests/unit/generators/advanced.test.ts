@@ -61,4 +61,20 @@ describe("schema/advanced", () => {
     expect(typeof val.a).toBe("string");
     expect(typeof val.b).toBe("number");
   });
+
+  it("intersection generator handles primitive types gracefully", () => {
+    const schema = z.intersection(z.string(), z.string());
+    const val = generateFromSchema(schema, ctx());
+    expect(typeof val).toBe("string");
+  });
+
+  it("discriminatedUnion throws if options are missing or empty", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), a: z.string() }),
+    ]);
+    const d = (schema as any)._zod.def;
+    d.optionsMap = undefined;
+    d.options = undefined;
+    expect(() => generateFromSchema(schema, ctx())).toThrow("Unsupported schema: union missing options");
+  });
 });

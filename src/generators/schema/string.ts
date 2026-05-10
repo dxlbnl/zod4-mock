@@ -51,7 +51,7 @@ const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev"] 
 
 const LOWERCASE_ALPHANUM = "abcdefghijklmnopqrstuvwxyz0123456789";
 const URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-const CROCKFORD_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const ULID_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const EMOJIS = ["😀", "😁", "😂", "🎉", "🔥", "✨", "🌟", "🎯", "🚀", "💡"] as const;
 
 function pad2(n: number): string {
@@ -103,7 +103,7 @@ function generateCuid2(prng: GeneratorContext["prng"]): string {
 }
 
 function generateUlid(prng: GeneratorContext["prng"]): string {
-  return randomFrom(CROCKFORD_BASE32, 26, prng);
+  return randomFrom(ULID_BASE32, 26, prng);
 }
 
 function generateNanoid(prng: GeneratorContext["prng"]): string {

@@ -37,7 +37,7 @@ import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
-import { def, checks } from "./generators/schema/zod-def.js";
+import { def, checks, unwrap } from "./generators/schema/zod-def.js";
 import * as generatorsData from "./generators/data/index.js";
 
 // ---------------------------------------------------------------------------
@@ -76,10 +76,9 @@ function deepMerge(target: unknown, source: unknown): unknown {
     return source;
   }
   const result = { ...(target as Record<string, unknown>) };
-  for (const [k, sv] of Object.entries(source as Record<string, unknown>)) {
-    if (sv !== undefined) {
-      result[k] = deepMerge(result[k], sv);
-    }
+  for (const k of Object.keys(source as Record<string, unknown>)) {
+    const sv = (source as Record<string, unknown>)[k];
+    result[k] = deepMerge(result[k], sv);
   }
   return result;
 }
@@ -123,6 +122,7 @@ export class WorldImpl implements World {
 
   private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
   private readonly schemaKeyMaps: Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>> = new Map();
+  private readonly relationPools: Map<string, unknown[]> = new Map();
 
   constructor(private readonly options: WorldOptions) {
     this.prng = createPrng(options.seed);
@@ -178,9 +178,27 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   populate(schema: ZodTypeAny, count: number): this {
-    for (let i = 0; i < count; i++) {
-      const reg = this.findPrimaryRegs(schema)[0] ?? null;
-      this.generateAndStorePrimary(schema, reg);
+    const primaryRegs = this.findPrimaryRegs(schema);
+    const derivedRegs = this.findDerivedRegs(schema);
+
+    if (primaryRegs.length > 0) {
+      for (let i = 0; i < count; i++) {
+        this.generateAndStorePrimary(schema, primaryRegs[0]!);
+      }
+    } else if (derivedRegs.length > 0) {
+      const reg = derivedRegs[0]!;
+      const sources = this.registry.all(reg.from!);
+      // Use the count to limit how many we derive, or derive from all if count is large
+      const N = Math.min(count, sources.length);
+      for (let i = 0; i < N; i++) {
+        const result = this.generateDerivedRecord(schema, reg, sources[i], i);
+        this.registry.store(schema, result);
+      }
+    } else {
+      // Default to primary if not registered
+      for (let i = 0; i < count; i++) {
+        this.generateAndStorePrimary(schema, null);
+      }
     }
     return this;
   }
@@ -275,6 +293,7 @@ export class WorldImpl implements World {
     recordPrng: ReturnType<typeof createPrng>,
     fieldPrng: ReturnType<typeof createPrng>,
     fieldPath: string,
+    recordId: string,
     current?: Record<string, unknown>,
   ): GeneratorContext {
     return {
@@ -284,7 +303,7 @@ export class WorldImpl implements World {
       registry: this.registry,
       fieldPath,
       optionalProbability: this.options.optionalProbability ?? 0.2,
-      related: <T = Record<string, unknown>>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, relName),
+      related: <T = Record<string, unknown>>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, recordId, relName),
       current: (current ?? {}) as Partial<any>,
     };
   }
@@ -293,20 +312,35 @@ export class WorldImpl implements World {
   // Private: relation resolution
   // -------------------------------------------------------------------------
 
-  private resolveRelated<T = Record<string, unknown>>(reg: SchemaReg, recordPrng: ReturnType<typeof createPrng>, relName: string): T {
+  private resolveRelated<T = Record<string, unknown>>(
+    reg: SchemaReg,
+    recordPrng: ReturnType<typeof createPrng>,
+    recordId: string,
+    relName: string,
+  ): T {
     const relSchema = reg.relations[relName];
     if (!relSchema) {
-      throw new Error(`Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`);
+      throw new Error(
+        `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
+      );
     }
 
-    if (this.registry.count(relSchema) === 0) {
-      this.ensurePrimaryRecord(relSchema);
+    const cacheKey = `${recordId}:${relName}`;
+    let items = this.relationPools.get(cacheKey);
+
+    if (!items) {
+      if (this.registry.count(relSchema) === 0) {
+        this.ensurePrimaryRecord(relSchema);
+      }
+      items = [...this.registry.all(relSchema)];
+      this.relationPools.set(cacheKey, items);
     }
 
     // Derive a stable per-relation PRNG so all fields in one record pick the same related entity.
     const relPrng = recordPrng.fork(`rel:${relName}`);
-    const items = this.registry.all(relSchema);
-    return items[relPrng.int(0, items.length - 1)]! as T;
+    const pickedIdx = relPrng.int(0, items.length - 1);
+    // console.log(`[resolveRelated] key=${cacheKey} pool=${items.length} picked=${pickedIdx}`);
+    return items[pickedIdx]! as T;
   }
 
   private ensurePrimaryRecord(schema: ZodTypeAny): void {
@@ -325,7 +359,7 @@ export class WorldImpl implements World {
     const recordId = `reg${effectiveRegId}#${recordIndex}`;
     const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
     const effectiveReg = reg ?? EMPTY_REG;
-    const result = this.generateObjectFields(schema, effectiveReg, undefined, recordPrng, recordId);
+    const result = this.generateObjectFields(schema, effectiveReg, undefined, recordPrng, recordId, recordId);
     this.registry.store(schema, result);
     return result;
   }
@@ -342,7 +376,7 @@ export class WorldImpl implements World {
   ): unknown {
     const recordId = `dreg${reg.regId}#${sourceIndex}`;
     const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
-    return this.generateObjectFields(schema, reg, source, recordPrng, recordId);
+    return this.generateObjectFields(schema, reg, source, recordPrng, recordId, recordId);
   }
 
   // -------------------------------------------------------------------------
@@ -358,12 +392,13 @@ export class WorldImpl implements World {
     reg: SchemaReg,
     source: unknown,
     recordPrng: ReturnType<typeof createPrng>,
+    recordId: string,
     fieldPathPrefix: string,
   ): unknown {
     const d = def(schema);
 
     if (d.type !== "object") {
-      return generateFromSchema(schema, this.makeFieldCtx(reg, source, recordPrng, recordPrng, fieldPathPrefix));
+      return generateFromSchema(schema, this.makeFieldCtx(reg, source, recordPrng, recordPrng, fieldPathPrefix, recordId));
     }
 
     const shape = d.shape!;
@@ -372,7 +407,7 @@ export class WorldImpl implements World {
     for (const [key, fieldSchema] of Object.entries(shape)) {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
-      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, result);
+      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, recordId, result);
 
       // 1. Matcher
       const matcher = reg.matchers[key];
@@ -388,17 +423,33 @@ export class WorldImpl implements World {
         continue;
       }
 
-      // 3. Unwrap optional/nullable — roll for absence probability
+      // 3. Unwrap optional/nullable/default — roll for absence probability
       let innerSchema = fieldSchema as ZodTypeAny;
       let fd = def(innerSchema);
       let skip = false;
+      let fallbackValue: unknown | undefined = undefined;
+      let hasFallback = false;
 
-      while (fd.type === "optional" || fd.type === "nullable") {
-        if (fieldCtx.prng.random() < (this.options.optionalProbability ?? 0.2)) {
-          result[key] = fd.type === "optional" ? undefined : null;
+      while (fd.type === "optional" || fd.type === "nullable" || fd.type === "default") {
+        const isAbsent = fieldCtx.prng.random() < (this.options.optionalProbability ?? 0.2);
+        
+        if (isAbsent) {
+          if (fd.type === "default") {
+            result[key] = typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
+          } else if (fd.type === "optional") {
+            result[key] = hasFallback ? fallbackValue : undefined;
+          } else if (fd.type === "nullable") {
+            result[key] = null;
+          }
           skip = true;
           break;
         }
+
+        if (fd.type === "default") {
+          fallbackValue = typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
+          hasFallback = true;
+        }
+
         if (!fd.innerType) break;
         innerSchema = fd.innerType;
         fd = def(innerSchema);
@@ -420,7 +471,13 @@ export class WorldImpl implements World {
       }
 
       // 6. Schema-based generator
-      result[key] = generateFromSchema(innerSchema, fieldCtx);
+      // If it's an object, recurse with same recordId but new path prefix
+      const innerDef = def(unwrap(innerSchema));
+      if (innerDef.type === "object") {
+        result[key] = this.generateObjectFields(innerSchema, reg, source, fieldPrng, recordId, fieldPath);
+      } else {
+        result[key] = generateFromSchema(innerSchema, fieldCtx);
+      }
     }
 
     return result;
@@ -505,12 +562,30 @@ export class WorldImpl implements World {
       if (c.check === "min_length" && c.minimum !== undefined) N = Math.max(N, c.minimum);
       if (c.check === "max_length" && c.maximum !== undefined) maxN = Math.min(maxN, c.maximum);
     }
+    const recordId = `gen-arr-${this.generationCounter}`;
     N = genPrng.int(Math.min(N, maxN), Math.max(N, maxN));
 
-    return Array.from({ length: N }, (_, i) => {
+    let result = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);
-      return generateFromSchema(innerSchema, this.makeFieldCtx(EMPTY_REG, undefined, elemPrng, elemPrng, `[${i}]`));
+      return generateFromSchema(
+        innerSchema,
+        this.makeFieldCtx(EMPTY_REG, undefined, elemPrng, elemPrng, `[${i}]`, recordId),
+      );
     });
+
+    if (options?.overrides) {
+      const overrides = options.overrides as any[];
+      result = result.map((item, i) => {
+        const ov = overrides[i];
+        return ov !== undefined ? (deepMerge(item, ov) as any) : item;
+      });
+    }
+
+    if (options?.transform) {
+      result = result.map(options.transform as any);
+    }
+
+    return result;
   }
 
   // -------------------------------------------------------------------------

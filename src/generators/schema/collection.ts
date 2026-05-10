@@ -121,12 +121,29 @@ export function generateZodObject(
     let d = def(innerSchema);
     let skip = false;
 
-    while (d.type === "optional" || d.type === "nullable") {
-      if (childCtx.prng.random() < (ctx.optionalProbability ?? 0.2)) {
-        result[key] = d.type === "optional" ? undefined : null;
+    let fallbackValue: unknown | undefined = undefined;
+    let hasFallback = false;
+
+    while (d.type === "optional" || d.type === "nullable" || d.type === "default") {
+      const isAbsent = childCtx.prng.random() < (ctx.optionalProbability ?? 0.2);
+      
+      if (isAbsent) {
+        if (d.type === "default") {
+          result[key] = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+        } else if (d.type === "optional") {
+          result[key] = hasFallback ? fallbackValue : undefined;
+        } else if (d.type === "nullable") {
+          result[key] = null;
+        }
         skip = true;
         break;
       }
+
+      if (d.type === "default") {
+        fallbackValue = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+        hasFallback = true;
+      }
+
       if (!d.innerType) break;
       innerSchema = d.innerType;
       d = def(innerSchema);

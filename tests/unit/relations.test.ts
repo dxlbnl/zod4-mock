@@ -224,3 +224,40 @@ describe("multiple relations on the same schema", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression Tests
+// ---------------------------------------------------------------------------
+
+describe("Regression Tests", () => {
+  it("ctx.related() remains stable even if registry grows during generation", () => {
+    const AuthorSchema = z.object({ id: z.string(), name: z.string() });
+    const PostSchema = z.object({
+      id: z.string(),
+      authorId1: z.string(),
+      authorId2: z.string(),
+    });
+
+    const world = createWorld({ seed: 42 })
+      .withSchema(AuthorSchema)
+      .withSchema(PostSchema, {
+        relations: { author: AuthorSchema },
+        matchers: {
+          authorId1: (ctx) => {
+            const author = ctx.related("author");
+            // Simulate another process/matcher adding an author to the registry
+            // between the two related() calls.
+            ctx.registry.store(AuthorSchema, { id: "new-author", name: "New" });
+            return author.id;
+          },
+          authorId2: (ctx) => ctx.related("author").id,
+        }
+      });
+
+    world.populate(AuthorSchema, 1);
+    const post = world.generate(PostSchema);
+
+    // Should be the same author instance
+    expect(post.authorId1).toBe(post.authorId2);
+  });
+});

@@ -98,12 +98,15 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return generateZodArray(schema, ctx);
 
     case "intersection": {
-      const left = generateFromSchema(d.left!, ctx) as Record<string, unknown>;
+      const left = generateFromSchema(d.left!, ctx);
       const right = generateFromSchema(d.right!, {
         ...ctx,
         prng: ctx.prng.fork("right"),
-      }) as Record<string, unknown>;
-      return { ...left, ...right };
+      });
+      if (typeof left === "object" && left !== null && typeof right === "object" && right !== null) {
+        return { ...left, ...right };
+      }
+      return left;
     }
 
     case "xor": {
@@ -125,28 +128,32 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
     }
 
     case "union": {
-      const options = d.options!;
+      const options = d.options;
+      if (!options || options.length === 0) {
+        throw new Error("Unsupported schema: union missing options");
+      }
       const chosen = options[prng.int(0, options.length - 1)]!;
       return generateFromSchema(chosen, ctx);
     }
 
     case "discriminatedUnion": {
+      console.log('DU def:', d);
       // In Zod, discriminated unions have optionsMap
-      if (d.optionsMap) {
+      if (d.optionsMap && d.optionsMap.size > 0) {
         const keys = Array.from(d.optionsMap.keys());
         const randomKey = keys[prng.int(0, keys.length - 1)]!;
         const chosen = d.optionsMap.get(randomKey)!;
         return generateFromSchema(chosen, ctx);
-      } else if (d.options) {
+      } else if (d.options && d.options.length > 0) {
         // Fallback if it has standard options array
         const chosen = d.options[prng.int(0, d.options.length - 1)]!;
         return generateFromSchema(chosen, ctx);
       }
-      return generateString(prng, 3, 10);
+      throw new Error("Unsupported schema: discriminated union missing options");
     }
 
     case "default":
-      return generateFromSchema(d.innerType!, ctx);
+      return typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
     case "catch":
       return generateFromSchema(d.innerType!, ctx);
     case "readonly":

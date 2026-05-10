@@ -20,6 +20,7 @@ export interface ZodDef {
   left?: ZodTypeAny;
   right?: ZodTypeAny;
   getter?: () => ZodTypeAny;
+  defaultValue?: () => unknown;
   checks?: ZodCheck[];
 }
 
