@@ -31,8 +31,7 @@ import type {
   BoundGenerators,
   KeyGenerator,
   SchemaKeyMap,
-  PrimarySchemaOpts,
-  DerivedSchemaOpts,
+  SchemaOpts,
 } from "./types.js";
 import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
@@ -137,18 +136,17 @@ export class WorldImpl implements World {
   // withSchema
   // -------------------------------------------------------------------------
 
-  withSchema<TSchema extends ZodTypeAny>(
+  withSchema<
+    TSchema extends ZodTypeAny,
+    TSource extends ZodTypeAny | undefined = undefined,
+    TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
+  >(
     schema: TSchema,
-    opts?: PrimarySchemaOpts<TSchema>,
-  ): this;
-  withSchema<TSchema extends ZodTypeAny, TSource extends ZodTypeAny>(
-    schema: TSchema,
-    opts: DerivedSchemaOpts<TSchema, TSource>,
-  ): this;
-  withSchema(schema: ZodTypeAny, opts?: PrimarySchemaOpts<ZodTypeAny> | DerivedSchemaOpts<ZodTypeAny, ZodTypeAny>): this {
-    const from = opts && "from" in opts ? opts.from ?? null : null;
+    opts?: SchemaOpts<TSchema, TSource, TRelations>,
+  ): this {
+    const from = (opts?.from as ZodTypeAny | undefined) ?? null;
     const relations = opts?.relations ?? {};
-    const matchers = (opts?.matchers ?? {}) as Record<string, (ctx: GeneratorContext) => unknown>;
+    const matchers = (opts?.matchers ?? {}) as unknown as Record<string, (ctx: GeneratorContext) => unknown>;
     this.schemaRegs.push({
       schema,
       from,
@@ -247,7 +245,7 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   private bindGenerators(prng: ReturnType<typeof createPrng>): BoundGenerators {
-    const result: BoundGenerators = {};
+    const result = {} as BoundGenerators;
     for (const [ns, nsObj] of Object.entries(generatorsData)) {
       const boundNs: Record<string, (...args: unknown[]) => unknown> = {};
       // Cast to a uniform function type — actual signatures vary per generator but callers
@@ -277,25 +275,25 @@ export class WorldImpl implements World {
     recordPrng: ReturnType<typeof createPrng>,
     fieldPrng: ReturnType<typeof createPrng>,
     fieldPath: string,
-    parent?: Record<string, unknown>,
+    current?: Record<string, unknown>,
   ): GeneratorContext {
-    const base: GeneratorContext = {
+    return {
       prng: fieldPrng,
       gen: this.bindGenerators(fieldPrng),
       source,
       registry: this.registry,
       fieldPath,
       optionalProbability: this.options.optionalProbability ?? 0.2,
-      related: <T>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, relName),
+      related: <T = Record<string, unknown>>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, relName),
+      current: (current ?? {}) as Partial<any>,
     };
-    return parent !== undefined ? { ...base, parent } : base;
   }
 
   // -------------------------------------------------------------------------
   // Private: relation resolution
   // -------------------------------------------------------------------------
 
-  private resolveRelated<T>(reg: SchemaReg, recordPrng: ReturnType<typeof createPrng>, relName: string): T {
+  private resolveRelated<T = Record<string, unknown>>(reg: SchemaReg, recordPrng: ReturnType<typeof createPrng>, relName: string): T {
     const relSchema = reg.relations[relName];
     if (!relSchema) {
       throw new Error(`Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`);
@@ -307,8 +305,8 @@ export class WorldImpl implements World {
 
     // Derive a stable per-relation PRNG so all fields in one record pick the same related entity.
     const relPrng = recordPrng.fork(`rel:${relName}`);
-    const items = this.registry.all<T>(relSchema);
-    return items[relPrng.int(0, items.length - 1)]!;
+    const items = this.registry.all(relSchema);
+    return items[relPrng.int(0, items.length - 1)]! as T;
   }
 
   private ensurePrimaryRecord(schema: ZodTypeAny): void {

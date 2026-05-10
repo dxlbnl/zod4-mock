@@ -628,26 +628,26 @@ describe("determinism", () => {
 });
 
 // ---------------------------------------------------------------------------
-// ctx.parent propagation
+// ctx.current propagation
 //
-// When generating object fields, each field's context includes a `parent`
+// When generating object fields, each field's context includes a `current`
 // containing all sibling fields generated so far. This enables gender-aware
 // name generation: if the schema emits `gender` before `firstName`, the name
 // generator can pick from the correct pool.
 //
-// Before the fix, world.ts never passed `parent` to makeFieldCtx, so
-// ctx.parent was always undefined — gender detection silently fell back to
+// Before the fix, world.ts never passed `current` to makeFieldCtx, so
+// ctx.current was always undefined — gender detection silently fell back to
 // "neutral" and names were picked from the full (mixed) pool.
 // ---------------------------------------------------------------------------
 
-describe("ctx.parent propagation", () => {
-  it("first field sees an empty parent object", () => {
+describe("ctx.current propagation", () => {
+  it("first field sees an empty current object", () => {
     let capturedParent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
     createWorld({ seed: 42 }).withSchema(S, {
       matchers: {
         a: (ctx) => {
-          capturedParent = { ...ctx.parent }; // snapshot — live ref fills up after
+          capturedParent = { ...ctx.current }; // snapshot — live ref fills up after
           return "first";
         },
       },
@@ -656,13 +656,13 @@ describe("ctx.parent propagation", () => {
     expect(Object.keys(capturedParent!)).toHaveLength(0);
   });
 
-  it("later fields see previously generated siblings in parent", () => {
+  it("later fields see previously generated siblings in current", () => {
     let capturedParent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
     createWorld({ seed: 42 }).withSchema(S, {
       matchers: {
         b: (ctx) => {
-          capturedParent = { ...ctx.parent }; // snapshot
+          capturedParent = { ...ctx.current }; // snapshot
           return "second";
         },
       },

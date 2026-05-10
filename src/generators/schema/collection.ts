@@ -111,7 +111,7 @@ export function generateZodObject(
       ...ctx,
       prng: ctx.prng.fork(key),
       fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
-      parent: result as Record<string, unknown>,
+      current: result as Record<string, unknown>,
     };
 
     // Unwrap optional/nullable so key-based generators see the inner schema,

@@ -143,8 +143,8 @@ function extractGender(gOrCtx?: Gender | GeneratorContext): "male" | "female" | 
   if (typeof gOrCtx === "object") {
     // gOrCtx is GeneratorContext — Gender is a string, so this branch is for ctx only
     const ctx: GeneratorContext = gOrCtx;
-    if (!ctx.parent) return "neutral";
-    const g = (ctx.parent["gender"] ?? ctx.parent["geslacht"]) as string | undefined;
+    if (!ctx.current) return "neutral";
+    const g = (ctx.current["gender"] ?? ctx.current["geslacht"]) as string | undefined;
     return normalizeGender(g);
   }
   return normalizeGender(gOrCtx);

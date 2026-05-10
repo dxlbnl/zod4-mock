@@ -3,24 +3,29 @@
 import { describe, it } from "vitest";
 import { z } from "zod";
 
-import { createMediaLibraryWorld, PersonSubject } from "./tests/integration/media-library/world.js";
 import {
+  createMediaLibraryWorld,
+  PersonSchema,
   RawDataSchema,
   TextApiSchema,
   AudioApiSchema,
   BankApiSchema,
   EntityApiSchema,
-} from "./tests/integration/media-library/schemas.js";
+} from "./tests/integration/media-library/world.js";
 
-import { createInvoicingWorld, ProductSubject } from "./tests/integration/invoicing/world.js";
-import { InvoiceSchema, CustomerSummarySchema } from "./tests/integration/invoicing/schemas.js";
+import {
+  createInvoicingWorld,
+  ProductSchema,
+  InvoiceSchema,
+  CustomerSummarySchema,
+} from "./tests/integration/invoicing/world.js";
 
 import { createDocumentCorpusWorld } from "./tests/integration/document-corpus/world.js";
 import {
   DocumentSchema,
   SentenceSchema,
   AnnotationSchema,
-} from "./tests/integration/document-corpus/schemas.js";
+} from "./tests/integration/document-corpus/world.js";
 
 const print = (data: unknown) => console.log(JSON.stringify(data, null, 2));
 
@@ -29,10 +34,10 @@ const print = (data: unknown) => console.log(JSON.stringify(data, null, 2));
 // ---------------------------------------------------------------------------
 
 describe.only("Media Library", () => {
-  const world = createMediaLibraryWorld(42).populate(PersonSubject, 3);
+  const world = createMediaLibraryWorld(42).populate(PersonSchema, 3);
   const rawdata = world.generate(z.array(RawDataSchema).min(6).max(9));
 
-  it("subjects", () => print(world.subjects()));
+  it("persons", () => print(world.registry.all(PersonSchema)));
   it("rawdata", () => print(rawdata));
   it("text API", () => print(world.generate(z.array(TextApiSchema))));
   it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
@@ -46,7 +51,7 @@ describe.only("Media Library", () => {
 
 describe("Invoicing", () => {
   const world = createInvoicingWorld(42);
-  world.populate(ProductSubject, 6);
+  world.populate(ProductSchema, 6);
   const invoices = world.generate(z.array(InvoiceSchema).min(4).max(6));
 
   it("invoices", () => print(invoices));

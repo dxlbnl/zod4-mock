@@ -24,28 +24,46 @@ export interface Prng {
 // ---------------------------------------------------------------------------
 
 export interface Registry {
-  store(schema: ZodTypeAny, item: unknown): void;
-  all<T = unknown>(schema: ZodTypeAny): T[];
-  pick<T = unknown>(schema: ZodTypeAny): T;
-  filter<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T[];
+  store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
+  all<T extends ZodTypeAny>(schema: T): input<T>[];
+  pick<T extends ZodTypeAny>(schema: T): input<T>;
+  filter<T extends ZodTypeAny>(schema: T, predicate: (item: input<T>) => boolean): input<T>[];
   count(schema: ZodTypeAny): number;
 }
 
-// ---------------------------------------------------------------------------
-// Bound generators (ctx.gen)
-//
-// The same shape as the top-level `generators` namespace, but with the
-// field-seeded PRNG pre-applied. Call ctx.gen.person.firstName() instead of
-// generators.person.firstName(ctx.prng).
-// ---------------------------------------------------------------------------
+export interface CoreGenerators {
+  readonly person: {
+    firstName(): string;
+    lastName(): string;
+    fullName(): string;
+  };
+  readonly word: {
+    sentence(): string;
+    paragraph(): string;
+    word(): string;
+  };
+  readonly internet: {
+    email(): string;
+    username(): string;
+  };
+  readonly string: {
+    alphanumeric(len: number): string;
+    numeric(len: number): string;
+  };
+  readonly date: {
+    any(): Date;
+    past(): Date;
+    future(): Date;
+  };
+}
 
-export type BoundGenerators = Record<string, Record<string, (...args: unknown[]) => unknown>>;
+export type BoundGenerators = CoreGenerators & Record<string, any>;
 
 // ---------------------------------------------------------------------------
 // Generator context
 // ---------------------------------------------------------------------------
 
-export interface GeneratorContext {
+export interface GeneratorContext<T = any> {
   /**
    * A PRNG forked for the current field path. Using this PRNG ensures
    * per-field stability: adding a field doesn't disturb existing fields.
@@ -68,13 +86,31 @@ export interface GeneratorContext {
    * When generating nested object fields, holds the partial sibling-field values
    * accumulated so far. Used internally for gender-aware name generation.
    */
-  readonly parent?: Record<string, unknown>;
+  readonly current: Partial<T>;
   /**
    * Resolves a related schema instance declared in the schema's `relations`.
    * Auto-provisions one if the registry is empty.
    */
-  related<T = unknown>(relationName: string): T;
+  related<T = Record<string, unknown>>(relationName: string): T;
 }
+
+// ---------------------------------------------------------------------------
+// MatcherCtx — GeneratorContext with typed related() for schema matchers
+//
+// TRelations is inferred from the `relations` property passed to withSchema.
+// When TRelations = Record<never, never> (no relations), the typed overload is
+// unreachable and the fallback (string → Record<string, unknown>) applies.
+// ---------------------------------------------------------------------------
+
+export type MatcherCtx<
+  TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
+  TSource = undefined,
+  TOutput = any,
+> = Omit<GeneratorContext<TOutput>, "related" | "source"> & {
+  readonly source: TSource;
+  related<K extends keyof TRelations & string>(name: K): input<TRelations[K]>;
+  related(name: string): Record<string, unknown>;
+};
 
 // ---------------------------------------------------------------------------
 // KeyGenerator: custom field-name generator
@@ -122,26 +158,20 @@ export interface WorldOptions {
 // ---------------------------------------------------------------------------
 
 /**
- * Options for withSchema — primary or relational registration (no `from:`).
- * Matchers receive a GeneratorContext; ctx.source is undefined.
+ * Options for withSchema.
+ * - If `from` is provided, the schema is "derived" and matchers receive `ctx.source`.
+ * - If `from` is omitted, the schema is "primary" and `ctx.source` is undefined.
  */
-export interface PrimarySchemaOpts<TSchema extends ZodTypeAny> {
-  relations?: Record<string, ZodTypeAny>;
-  matchers?: {
-    [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
-  };
-}
-
-/**
- * Options for withSchema — derived registration (with `from:`).
- * Matchers receive a GeneratorContext where ctx.source is typed as input<TSource>.
- */
-export interface DerivedSchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny> {
-  from: TSource;
-  relations?: Record<string, ZodTypeAny>;
+export interface SchemaOpts<
+  TSchema extends ZodTypeAny,
+  TSource extends ZodTypeAny | undefined = undefined,
+  TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
+> {
+  from?: TSource;
+  relations?: TRelations;
   matchers?: {
     [K in keyof input<TSchema>]?: (
-      ctx: GeneratorContext & { readonly source: input<TSource> },
+      ctx: MatcherCtx<TRelations, TSource extends ZodTypeAny ? input<TSource> : undefined, input<TSchema>>,
     ) => input<TSchema>[K];
   };
 }
@@ -172,13 +202,13 @@ export interface World {
    * The same output schema can be registered multiple times, each with a
    * different `from:` binding, to represent multiple source types.
    */
-  withSchema<TSchema extends ZodTypeAny>(
+  withSchema<
+    TSchema extends ZodTypeAny,
+    TSource extends ZodTypeAny | undefined = undefined,
+    TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
+  >(
     schema: TSchema,
-    opts?: PrimarySchemaOpts<TSchema>,
-  ): this;
-  withSchema<TSchema extends ZodTypeAny, TSource extends ZodTypeAny>(
-    schema: TSchema,
-    opts: DerivedSchemaOpts<TSchema, TSource>,
+    opts?: SchemaOpts<TSchema, TSource, TRelations>,
   ): this;
 
   /**

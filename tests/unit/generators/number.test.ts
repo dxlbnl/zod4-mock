@@ -5,13 +5,14 @@ import { generateFromSchema } from "../../../src/generators/schema/router.js";
 import { SchemaRegistry } from "../../../src/registry.js";
 import type { BoundGenerators, GeneratorContext } from "../../../src/types.js";
 
-const EMPTY_GEN: BoundGenerators = {};
+const EMPTY_GEN = {} as BoundGenerators;
 
 function ctx(seed = 42): GeneratorContext {
   const prng = createPrng(seed);
   return {
     prng,
     gen: EMPTY_GEN,
+    current: {},
     source: undefined,
     registry: new SchemaRegistry(prng.fork("reg")),
     fieldPath: "",

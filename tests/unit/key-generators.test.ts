@@ -21,7 +21,7 @@ const STUB_REGISTRY: Registry = {
 };
 
 function makeCtx(seed = 42): GeneratorContext {
-  const gen: BoundGenerators = {};
+  const gen = {} as BoundGenerators;
   return {
     prng:     createPrng(seed),
     gen,
@@ -29,6 +29,7 @@ function makeCtx(seed = 42): GeneratorContext {
     registry: STUB_REGISTRY,
     fieldPath: "",
     related:  <T>(_: string) => ({}) as T,
+    current: {},
   };
 }
 

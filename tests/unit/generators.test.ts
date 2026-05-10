@@ -28,7 +28,7 @@ const stubRegistry: Registry = {
 
 function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
   const prng = createPrng(seed);
-  const gen: BoundGenerators = {};
+  const gen = {} as BoundGenerators;
   return {
     prng,
     gen,
@@ -37,6 +37,7 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
     fieldPath,
     optionalProbability: 0.2,
     related: <T>(_: string) => ({}) as T,
+    current: {},
   };
 }
 

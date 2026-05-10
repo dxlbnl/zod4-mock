@@ -74,8 +74,8 @@ export type {
   KeyGenerator,
 
   // Schema registration
-  PrimarySchemaOpts,
-  DerivedSchemaOpts,
+  SchemaOpts,
+  MatcherCtx,
 
   // Override / transform
   DeepPartial,
