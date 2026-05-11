@@ -38,7 +38,7 @@ import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
-import { def, checks, unwrap } from "./generators/schema/zod-def.js";
+import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def.js";
 import * as generatorsData from "./generators/data/index.js";
 
 // ---------------------------------------------------------------------------
@@ -562,15 +562,17 @@ export class WorldImpl implements World {
       // 4. Custom world-level key generator
       const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
+        const val = customGen(innerSchema, fieldCtx);
         result[key] =
-          fieldOverride !== undefined ? fieldOverride : customGen(innerSchema, fieldCtx);
+          fieldOverride !== undefined ? fieldOverride : applyModifiers(val, innerSchema);
         continue;
       }
 
       // 5. Key-based heuristic generator
       const keyResult = generateFromKey(key, innerSchema, fieldCtx);
       if (keyResult !== undefined) {
-        result[key] = fieldOverride !== undefined ? fieldOverride : keyResult;
+        result[key] =
+          fieldOverride !== undefined ? fieldOverride : applyModifiers(keyResult, innerSchema);
         continue;
       }
 
@@ -772,8 +774,7 @@ export class WorldImpl implements World {
       const recordId = `adhoc-${this.generationCounter}`;
       const adHocPrng = this.prng.fork(recordId);
       const fieldPath = options?.fieldPath ?? recordId;
-      const keyMap = this.schemaKeyMaps.get(schema);
-      if (keyMap !== undefined && def(targetSchema).type === "object") {
+      if (def(targetSchema).type === "object") {
         result = this.generateObjectFields(
           targetSchema,
           EMPTY_REG,
