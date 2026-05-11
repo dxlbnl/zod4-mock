@@ -99,6 +99,9 @@ export function noun(prng: Prng): string {
   return generatePseudoWord(prng, syllables);
 }
 
+/** Alias for noun. */
+export const word = noun;
+
 /** Generates a Dutch-sounding adjective (often ends in -e). */
 export function adjective(prng: Prng): string {
   const word = generatePseudoWord(prng, 1);

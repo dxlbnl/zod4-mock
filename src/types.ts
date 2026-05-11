@@ -32,66 +32,17 @@ export interface Registry {
   count(schema: ZodTypeAny): number;
 }
 
-export interface CoreGenerators {
-  readonly person: {
-    firstName(): string;
-    lastName(): string;
-    fullName(): string;
-  };
-  readonly word: {
-    sentence(): string;
-    paragraph(): string;
-    word(): string;
-  };
-  readonly commerce: {
-    productName(): string;
-    productDescription(): string;
-    department(): string;
-    price(): string;
-  };
-  readonly company: {
-    companyName(): string;
-    catchPhrase(): string;
-    bs(): string;
-  };
-  readonly finance: {
-    accountName(): string;
-    amount(): string;
-    currencyName(): string;
-    currencyCode(): string;
-    creditCardNumber(): string;
-  };
-  readonly internet: {
-    email(): string;
-    username(): string;
-  };
-  readonly location: {
-    street(): string;
-    city(): string;
-    country(): string;
-    zipCode(): string;
-    latitude(): number;
-    longitude(): number;
-  };
-  readonly phone: {
-    number(): string;
-  };
-  readonly vehicle: {
-    type(): string;
-    fuel(): string;
-    model(): string;
-    manufacturer(): string;
-  };
-  readonly string: {
-    alphanumeric(len: number): string;
-    numeric(len: number): string;
-  };
-  readonly date: {
-    any(): Date;
-    past(): Date;
-    future(): Date;
-  };
-}
+import type * as gen from "./generators/data/index.js";
+
+type BoundModule<T> = {
+  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
+    ? (...args: P) => R
+    : T[K];
+};
+
+export type CoreGenerators = {
+  [K in keyof typeof gen]: BoundModule<(typeof gen)[K]>;
+};
 
 export type BoundGenerators = CoreGenerators & Record<string, any>;
 

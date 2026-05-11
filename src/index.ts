@@ -9,10 +9,9 @@ export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
 
 import { z } from "zod";
-import type { ZodTypeAny } from "zod";
 import type { GenerateOptions, WorldOptions } from "./types.js";
 import { createWorld } from "./world.js";
-import * as gen from "./generators/data/index.js";
+export * as generators from "./generators/data/index.js";
 
 /**
  * Zero-config entry point. Generates a value from any Zod schema without
@@ -53,21 +52,6 @@ export function generate<TSchema extends z.ZodTypeAny>(
  * })
  * ```
  */
-export const generators = {
-  ...gen,
-  internet: {
-    ...gen.internet,
-    domain: gen.internet.domainName,
-  },
-  location: {
-    ...gen.location,
-    postalCode: gen.location.zipCode,
-  },
-  lorem: {
-    ...gen.word,
-    word: gen.word.noun,
-  },
-} as const;
 
 export type {
   // Core

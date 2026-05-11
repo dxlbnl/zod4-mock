@@ -196,7 +196,7 @@ describe("Recursion", () => {
     const world = createWorld({ seed: 123 })
       .withSchema(CategorySchema, {
         matchers: {
-          name: (ctx) => ctx.gen.word.words(),
+          name: (ctx) => ctx.gen.word.word(),
         }
       })
     print("Recursive Tree", world.generate(CategorySchema));
