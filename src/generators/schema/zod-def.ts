@@ -139,8 +139,7 @@ export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
           // or try to squeeze it in the middle. Squeezing in the middle is safer.
           const mid = Math.floor(result.length / 2);
           const start = Math.max(0, mid - Math.floor(c.includes.length / 2));
-          result =
-            result.slice(0, start) + c.includes + result.slice(start + c.includes.length);
+          result = result.slice(0, start) + c.includes + result.slice(start + c.includes.length);
         }
       }
     }
