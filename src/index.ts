@@ -10,7 +10,7 @@ export type { PrngGen, KeyPattern } from "./generators/index.js";
 
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
-import type { GenerateOptions } from "./types.js";
+import type { GenerateOptions, WorldOptions } from "./types.js";
 import { createWorld } from "./world.js";
 import * as gen from "./generators/data/index.js";
 
@@ -25,12 +25,19 @@ import * as gen from "./generators/data/index.js";
  * const admin = generate(UserSchema, { overrides: { role: "admin" }, seed: 42 });
  * ```
  */
-export function generate<TSchema extends ZodTypeAny>(
+export function generate<TSchema extends z.ZodTypeAny>(
   schema: TSchema,
   options?: GenerateOptions<z.infer<TSchema>>,
 ): z.infer<TSchema> {
-  const seed = options?.seed ?? Math.floor(Math.random() * 0xffffffff);
-  return createWorld({ seed }).generate(schema, options);
+  const worldOptions: WorldOptions = {
+    ...(options?.seed !== undefined && { seed: options.seed }),
+    ...(options?.optionalProbability !== undefined && { optionalProbability: options.optionalProbability }),
+    ...(options?.defaultArrayLength !== undefined && { defaultArrayLength: options.defaultArrayLength }),
+    ...(options?.recursionLimit !== undefined && { recursionLimit: options.recursionLimit }),
+  };
+
+  const world = createWorld(worldOptions);
+  return world.generate(schema, options);
 }
 
 /**

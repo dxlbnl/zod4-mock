@@ -24,7 +24,7 @@ const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("signup"), userId: z.string().uuid() }),
 ]);
 
-describe.only("Zero-Config & Advanced Types", () => {
+describe("Zero-Config & Advanced Types", () => {
   it("Generates realistic data and complex unions without any configuration", () => {
     print("Zero-Config User", generate(UserSchema));
     print("Zero-Config Action", generate(ActionSchema));
@@ -191,9 +191,15 @@ const CategorySchema: z.ZodType<Category> = z.lazy(() =>
   }),
 );
 
-describe.skip("Recursion", () => {
+describe("Recursion", () => {
   it("Generates deterministic tree structures", () => {
-    print("Recursive Tree", generate(CategorySchema, { seed: 123 }));
+    const world = createWorld({ seed: 123 })
+      .withSchema(CategorySchema, {
+        matchers: {
+          name: (ctx) => ctx.gen.word.words(),
+        }
+      })
+    print("Recursive Tree", world.generate(CategorySchema));
   });
 });
 

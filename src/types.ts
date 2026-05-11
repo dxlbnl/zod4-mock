@@ -184,6 +184,9 @@ export interface GenerateOptions<T> {
   readonly overrides?: DeepPartial<T>;
   readonly transform?: (data: T) => T;
   readonly seed?: number;
+  readonly optionalProbability?: number;
+  readonly defaultArrayLength?: readonly [number, number];
+  readonly recursionLimit?: number;
   readonly source?: any;
   readonly fieldPath?: string;
   readonly prng?: ReturnType<typeof createPrng>;
@@ -194,7 +197,7 @@ export interface GenerateOptions<T> {
 // ---------------------------------------------------------------------------
 
 export interface WorldOptions {
-  readonly seed: number;
+  readonly seed?: number;
   readonly optionalProbability?: number;
   readonly defaultArrayLength?: readonly [number, number];
   readonly generators?: Record<string, KeyGenerator>;

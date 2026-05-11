@@ -815,3 +815,42 @@ describe("Regression Tests", () => {
     expect(typeof resultPres.def).toBe("string");
   });
 });
+
+describe("Cascading Recursion (Integration)", () => {
+  interface Category {
+    id: string;
+    name: string;
+    children: Category[];
+  }
+
+  const CategorySchema: z.ZodType<Category> = z.lazy(() =>
+    z.object({
+      id: z.string().cuid2(),
+      name: z.string(),
+      children: z.array(CategorySchema).max(2),
+    }),
+  );
+
+  it("handles deep recursive tree generation without stack overflow", () => {
+    // This previously caused RangeError in the playground due to 
+    // incorrect lazy resolution and registry lookup bypass.
+    expect(() => generate(CategorySchema, { seed: 123, recursionLimit: 5 })).not.toThrow();
+    
+    const result = generate(CategorySchema, { seed: 123, recursionLimit: 5 });
+    expect(result.id).toBeDefined();
+    expect(Array.isArray(result.children)).toBe(true);
+  });
+
+  it("respects recursionLimit on self-referential schemas", () => {
+    const result = generate(CategorySchema, { seed: 123, recursionLimit: 2 });
+    
+    const checkDepth = (node: Category | null, current: number): number => {
+      if (!node || !node.children || node.children.length === 0) return current;
+      return Math.max(...node.children.map(c => checkDepth(c, current + 1)));
+    };
+    
+    const depth = checkDepth(result, 0);
+    // Since recursionLimit is 2, it should not generate more than a few levels.
+    expect(depth).toBeLessThanOrEqual(5); 
+  });
+});

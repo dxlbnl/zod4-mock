@@ -120,6 +120,7 @@ export class WorldImpl implements World {
 
   private readonly schemaRegs: SchemaReg[] = [];
   private generationCounter = 0;
+  private readonly rootSeed: number;
 
   private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
   private readonly schemaKeyMaps: Map<
@@ -130,7 +131,8 @@ export class WorldImpl implements World {
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
 
   constructor(private readonly options: WorldOptions) {
-    this.prng = createPrng(options.seed);
+    this.rootSeed = options.seed ?? Math.floor(Math.random() * 0xffffffff);
+    this.prng = createPrng(this.rootSeed);
     this.registry = new SchemaRegistry(this.prng.fork("registry"));
     for (const [k, fn] of Object.entries(options.generators ?? {})) {
       this.customKeyGenerators.set(k.toLowerCase(), fn);
@@ -387,7 +389,7 @@ export class WorldImpl implements World {
     const recordIndex = this.registry.count(schema);
     const effectiveRegId = reg?.regId ?? -1;
     const recordId = `reg${effectiveRegId}#${recordIndex}`;
-    const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
+    const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
     const effectiveReg = reg ?? EMPTY_REG;
     const fieldPath = options?.fieldPath ?? recordId;
     const result = this.generateObjectFields(
@@ -415,7 +417,7 @@ export class WorldImpl implements World {
     options?: GenerateOptions<unknown>,
   ): unknown {
     const recordId = `dreg${reg.regId}#${sourceIndex}`;
-    const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
+    const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
     return this.generateObjectFields(
       schema,
       reg,
@@ -666,10 +668,11 @@ export class WorldImpl implements World {
 
     let result = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);
-      return generateFromSchema(
-        innerSchema,
-        this.makeFieldCtx(EMPTY_REG, undefined, elemPrng, elemPrng, `[${i}]`, recordId),
-      );
+      const nextPath = options?.fieldPath ? `${options.fieldPath}.[${i}]` : `[${i}]`;
+      return this.generate(innerSchema, {
+        prng: elemPrng,
+        fieldPath: nextPath,
+      });
     });
 
     if (options?.overrides) {
