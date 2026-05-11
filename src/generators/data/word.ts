@@ -90,6 +90,53 @@ const INTERJECTIONS = ["hé", "oh", "ja", "nee", "wouw", "ah"] as const;
 const ADVERBS = ["snel", "vaak", "altijd", "nooit", "nu", "dan", "hier", "daar"] as const;
 
 // ---------------------------------------------------------------------------
+// English/Technical Wordlist
+// ---------------------------------------------------------------------------
+
+export const TECH_WORDS = [
+  "alpha",
+  "bravo",
+  "charlie",
+  "delta",
+  "echo",
+  "foxtrot",
+  "golf",
+  "hotel",
+  "india",
+  "juliet",
+  "kilo",
+  "lima",
+  "mike",
+  "november",
+  "oscar",
+  "papa",
+  "quebec",
+  "romeo",
+  "sierra",
+  "tango",
+  "uniform",
+  "victor",
+  "whiskey",
+  "xray",
+  "yankee",
+  "zulu",
+  "apple",
+  "banana",
+  "cherry",
+  "data",
+  "engine",
+  "frame",
+  "graph",
+  "handle",
+  "image",
+  "journey",
+  "kernel",
+  "layer",
+  "module",
+  "network",
+] as const;
+
+// ---------------------------------------------------------------------------
 // Single Word Generators
 // ---------------------------------------------------------------------------
 

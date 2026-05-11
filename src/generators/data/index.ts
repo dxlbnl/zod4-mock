@@ -15,6 +15,8 @@ export { commerce, company, date, finance, person, phone, vehicle, word, string 
 export const internet = {
   ...internetRaw,
   domain: internetRaw.domainName,
+  DOMAINS: internetRaw.DOMAINS,
+  EMOJIS: internetRaw.EMOJIS,
 };
 
 export const location = {
@@ -25,4 +27,5 @@ export const location = {
 export const lorem = {
   ...word,
   word: word.noun,
+  TECH_WORDS: word.TECH_WORDS,
 };

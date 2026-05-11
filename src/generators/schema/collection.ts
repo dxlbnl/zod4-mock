@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../../types.js";
-import { def, checks } from "./zod-def.js";
+import { def, checks, applyModifiers } from "./zod-def.js";
 
 export function resolveArrayLength(
   schema: ZodTypeAny,
@@ -173,7 +173,10 @@ export function generateZodObject(
 
     // Try key-based heuristics first
     const keyResult = generateFromKey(key, innerSchema, childCtx);
-    result[key] = keyResult !== undefined ? keyResult : childCtx.generate(innerSchema);
+    result[key] =
+      keyResult !== undefined
+        ? applyModifiers(keyResult, innerSchema)
+        : childCtx.generate(innerSchema);
   }
   return result;
 }

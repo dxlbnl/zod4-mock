@@ -70,3 +70,85 @@ export function unwrap(schema: ZodTypeAny): ZodTypeAny {
 export function getLeafDef(schema: ZodTypeAny): ZodDef {
   return def(unwrap(schema));
 }
+
+/** Applies formatting modifiers (case, trim, transform) to a value based on the schema. */
+export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
+  const unwrapped = unwrap(schema);
+  const d = def(unwrapped);
+
+  if (d.type === "string" && typeof value === "string") {
+    let result = value;
+    const allChecks = checks(unwrapped);
+    const overwrites: ZodCheck[] = [];
+    const formats: ZodCheck[] = [];
+    let min = 0;
+    let max = Infinity;
+
+    for (const c of allChecks) {
+      if (c.check === "overwrite") overwrites.push(c);
+      else if (c.check === "string_format") formats.push(c);
+      else if (c.check === "min_length") min = Math.max(min, c.minimum!);
+      else if (c.check === "max_length") max = Math.min(max, c.maximum!);
+      else if (c.check === "length_equals") {
+        min = c.length!;
+        max = c.length!;
+      }
+    }
+
+    // 1. Apply transformations that might affect content (including trim)
+    for (const c of overwrites) {
+      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
+      if (typeof tx === "function") result = tx(result);
+    }
+
+    // 2. Add required prefixes/suffixes/inclusions
+    for (const c of formats) {
+      if (c.format === "starts_with" && c.prefix) {
+        if (!result.startsWith(c.prefix)) result = c.prefix + result;
+      }
+      if (c.format === "ends_with" && c.suffix) {
+        if (!result.endsWith(c.suffix)) result = result + c.suffix;
+      }
+      if (c.format === "includes" && c.includes) {
+        if (!result.includes(c.includes)) result = result + c.includes;
+      }
+    }
+
+    // 3. Apply length bounds
+    if (result.length < min) result = result.padEnd(min, "x");
+    if (result.length > max) result = result.slice(0, max);
+
+    // 4. Re-apply transformations to ensure final string (including padding) respects case
+    for (const c of overwrites) {
+      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
+      if (typeof tx === "function") result = tx(result);
+    }
+
+    return result;
+  }
+
+  if (d.type === "number" && typeof value === "number") {
+    let result = value;
+    const allChecks = checks(unwrapped);
+    let isInt = false;
+    let multipleOf: number | undefined;
+
+    for (const c of allChecks) {
+      if (c.check === "number_format") {
+        isInt = c.format === "int" || c.format === "int32" || c.format === "safeint";
+      }
+      if (c.check === "multiple_of") {
+        multipleOf = c.value as number;
+      }
+    }
+
+    if (isInt) result = Math.floor(result);
+    if (multipleOf !== undefined) {
+      result = Math.round(result / multipleOf) * multipleOf;
+    }
+
+    return result;
+  }
+
+  return value;
+}

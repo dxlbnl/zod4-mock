@@ -10,6 +10,10 @@ const NANOID_CHARS = "ModuleSymbhasOwnPr-0123456789ABCDEFGHNRVfgctiUvz_KPLXTYJQS
   ...string[],
 ];
 
+export const LOWERCASE_ALPHANUM = "abcdefghijklmnopqrstuvwxyz0123456789";
+export const URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+export const ULID_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
 export function uuid(prng: Prng): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = prng.int(0, 15);

@@ -1,6 +1,8 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, Prng } from "../../types.js";
 import { getLeafDef } from "../schema/zod-def.js";
+import { resolveNumberBounds, generateNumberWithBounds } from "../schema/number.js";
+import { resolveStringLength } from "../schema/string.js";
 import * as data from "./index.js";
 
 // ---------------------------------------------------------------------------
@@ -8,7 +10,7 @@ import * as data from "./index.js";
 // ---------------------------------------------------------------------------
 
 /** A generator that takes a Prng and an optional full context. */
-export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext) => T;
+export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;
 
 // ---------------------------------------------------------------------------
 // DEFAULT_KEY_MAP
@@ -83,8 +85,14 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     // Finance
     iban: data.finance.iban as PrngGen,
     bic: data.finance.bic as PrngGen,
-    accountnumber: (p) => data.finance.accountNumber(p),
-    account_number: (p) => data.finance.accountNumber(p),
+    accountnumber: (p, _ctx, schema) => {
+      const { min } = resolveStringLength(schema, 10, 10);
+      return data.finance.accountNumber(p, min);
+    },
+    account_number: (p, _ctx, schema) => {
+      const { min } = resolveStringLength(schema, 10, 10);
+      return data.finance.accountNumber(p, min);
+    },
     creditcard: data.finance.creditCardNumber as PrngGen,
     credit_card: data.finance.creditCardNumber as PrngGen,
     currency: data.finance.currencyCode as PrngGen,
@@ -101,8 +109,14 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     upc: data.commerce.upc as PrngGen,
     department: data.commerce.department as PrngGen,
     material: data.commerce.productMaterial as PrngGen,
-    price: (p) => data.commerce.price(p),
-    prijs: (p) => data.commerce.price(p),
+    price: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 500);
+      return data.commerce.price(p, min, max);
+    },
+    prijs: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 500);
+      return data.commerce.price(p, min, max);
+    },
     sku: (p) => `${p.pick(LETTERS)}${p.pick(LETTERS)}-${p.int(1000, 9999)}`,
 
     // Company
@@ -150,17 +164,37 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     land: data.location.country as PrngGen,
   },
   number: {
-    amount: (p) => data.finance.amount(p, 1, 10000),
-    bedrag: (p) => data.finance.amount(p, 1, 10000),
-    price: (p) => data.finance.amount(p, 1, 500),
-    prijs: (p) => data.finance.amount(p, 1, 500),
+    amount: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 10000);
+      return data.finance.amount(p, min, max);
+    },
+    bedrag: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 10000);
+      return data.finance.amount(p, min, max);
+    },
+    price: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 500);
+      return data.finance.amount(p, min, max);
+    },
+    prijs: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 500);
+      return data.finance.amount(p, min, max);
+    },
     latitude: data.location.latitude as PrngGen,
     longitude: data.location.longitude as PrngGen,
     port: data.internet.port as PrngGen,
-    quantity: (p) => p.int(1, 100),
-    count: (p) => p.int(0, 50),
-    age: (p) => p.int(18, 90),
-    year: (p) => p.int(1970, 2030),
+    quantity: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 1, 100));
+    },
+    count: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 50));
+    },
+    age: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 18, 90));
+    },
+    year: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 1970, 2030));
+    },
   },
 };
 
@@ -223,10 +257,10 @@ export function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorC
   const schemaType = getLeafDef(schema).type;
 
   const fn = DEFAULT_KEY_MAP[schemaType]?.[lk];
-  if (fn !== undefined) return fn(ctx.prng, ctx);
+  if (fn !== undefined) return fn(ctx.prng, ctx, schema);
 
   for (const p of DEFAULT_KEY_PATTERNS[schemaType] ?? []) {
-    if (p.test(lk)) return p.generate(ctx.prng, ctx);
+    if (p.test(lk)) return p.generate(ctx.prng, ctx, schema);
   }
 
   return undefined;

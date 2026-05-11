@@ -6,10 +6,11 @@ import { noun } from "./word.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
+export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev"] as const;
 const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co"] as const;
 const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss"] as const;
 const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] as const;
-const EMOJIS = ["😀", "😂", "🚀", "🔥", "🌈", "💻", "✨", "🍕", "🍔", "🍦"] as const;
+export const EMOJIS = ["😀", "😂", "🚀", "🔥", "🌈", "💻", "✨", "🍕", "🍔", "🍦"] as const;
 
 const EXAMPLE_SUFFIXES = ["com", "net", "org", "nl"] as const;
 

@@ -3,56 +3,11 @@ import type { GeneratorContext } from "../../types.js";
 import { def, checks } from "./zod-def.js";
 import { generateFromSchema } from "./router.js";
 import { toBase64 } from "../../utils/encoding.js";
+import { TECH_WORDS } from "../data/word.js";
+import { DOMAINS, EMOJIS } from "../data/internet.js";
+import { LOWERCASE_ALPHANUM, URL_SAFE, ULID_BASE32 } from "../data/string.js";
 
-const WORDS = [
-  "alpha",
-  "bravo",
-  "charlie",
-  "delta",
-  "echo",
-  "foxtrot",
-  "golf",
-  "hotel",
-  "india",
-  "juliet",
-  "kilo",
-  "lima",
-  "mike",
-  "november",
-  "oscar",
-  "papa",
-  "quebec",
-  "romeo",
-  "sierra",
-  "tango",
-  "uniform",
-  "victor",
-  "whiskey",
-  "xray",
-  "yankee",
-  "zulu",
-  "apple",
-  "banana",
-  "cherry",
-  "data",
-  "engine",
-  "frame",
-  "graph",
-  "handle",
-  "image",
-  "journey",
-  "kernel",
-  "layer",
-  "module",
-  "network",
-] as const;
-
-const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev"] as const;
-
-const LOWERCASE_ALPHANUM = "abcdefghijklmnopqrstuvwxyz0123456789";
-const URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-const ULID_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const EMOJIS = ["😀", "😁", "😂", "🎉", "🔥", "✨", "🌟", "🎯", "🚀", "💡"] as const;
+const WORDS = TECH_WORDS;
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
@@ -203,9 +158,14 @@ function resolveStringFormat(schema: ZodTypeAny): string | undefined {
   return undefined;
 }
 
-function resolveStringLength(schema: ZodTypeAny): { min: number; max: number } {
-  let min = 3;
-  let max = 40;
+export function resolveStringLength(
+  schema: ZodTypeAny | undefined,
+  defaultMin = 3,
+  defaultMax = 40,
+): { min: number; max: number } {
+  if (!schema) return { min: defaultMin, max: defaultMax };
+  let min = defaultMin;
+  let max = defaultMax;
   for (const c of checks(schema)) {
     if (c.check === "min_length") min = Math.max(min, c.minimum!);
     if (c.check === "max_length") max = Math.min(max, c.maximum!);

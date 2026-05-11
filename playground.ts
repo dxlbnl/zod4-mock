@@ -15,8 +15,9 @@ const print = (label: string, data: unknown) => {
 const UserSchema = z.object({
   id: z.string().uuid(),
   firstName: z.string(),
-  lastName: z.string(),
-  email: z.string().email(),
+  lastName: z.string().min(20),
+  email: z.string().email().toUpperCase(),
+  age: z.number().min(80).max(1200).multipleOf(2),
 });
 
 const ActionSchema = z.discriminatedUnion("type", [
@@ -24,7 +25,7 @@ const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("signup"), userId: z.string().uuid() }),
 ]);
 
-describe("Zero-Config & Advanced Types", () => {
+describe.only("Zero-Config & Advanced Types", () => {
   it("Generates realistic data and complex unions without any configuration", () => {
     print("Zero-Config User", generate(UserSchema));
     print("Zero-Config Action", generate(ActionSchema));
