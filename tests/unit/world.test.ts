@@ -832,10 +832,10 @@ describe("Cascading Recursion (Integration)", () => {
   );
 
   it("handles deep recursive tree generation without stack overflow", () => {
-    // This previously caused RangeError in the playground due to 
+    // This previously caused RangeError in the playground due to
     // incorrect lazy resolution and registry lookup bypass.
     expect(() => generate(CategorySchema, { seed: 123, recursionLimit: 5 })).not.toThrow();
-    
+
     const result = generate(CategorySchema, { seed: 123, recursionLimit: 5 });
     expect(result.id).toBeDefined();
     expect(Array.isArray(result.children)).toBe(true);
@@ -843,14 +843,32 @@ describe("Cascading Recursion (Integration)", () => {
 
   it("respects recursionLimit on self-referential schemas", () => {
     const result = generate(CategorySchema, { seed: 123, recursionLimit: 2 });
-    
+
     const checkDepth = (node: Category | null, current: number): number => {
       if (!node || !node.children || node.children.length === 0) return current;
-      return Math.max(...node.children.map(c => checkDepth(c, current + 1)));
+      return Math.max(...node.children.map((c) => checkDepth(c, current + 1)));
     };
-    
+
     const depth = checkDepth(result, 0);
     // Since recursionLimit is 2, it should not generate more than a few levels.
-    expect(depth).toBeLessThanOrEqual(5); 
+    expect(depth).toBeLessThanOrEqual(5);
+  });
+
+  it("generates unique IDs for recursive children within the same tree", () => {
+    const world = createWorld({ seed: 123 }).withSchema(CategorySchema);
+    const result = world.generate(CategorySchema) as Category;
+
+    // Check depth 1
+    if (result.children && result.children.length > 0) {
+      const child = result.children[0]!;
+      expect(child.id).not.toBe(result.id);
+
+      // Check depth 2
+      if (child.children && child.children.length > 0) {
+        const grandchild = child.children[0]!;
+        expect(grandchild.id).not.toBe(child.id);
+        expect(grandchild.id).not.toBe(result.id);
+      }
+    }
   });
 });

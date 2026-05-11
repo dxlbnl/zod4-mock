@@ -113,9 +113,7 @@ describe("Business Logic & Registry Lookups", () => {
       matchers: {
         customerId: (ctx) => ctx.registry.pick(UserSchema).id,
         totalCents: (ctx) => {
-          return (
-            (ctx.current.quantity ?? 1) * (ctx.current.unitPriceCents ?? 1)
-          );
+          return (ctx.current.quantity ?? 1) * (ctx.current.unitPriceCents ?? 1);
         },
       },
     });
@@ -160,8 +158,7 @@ describe("Relational Graphs & Derived Schemas", () => {
         from: UserSchema,
         matchers: {
           id: (ctx) => ctx.source.id,
-          displayName: (ctx) =>
-            `${ctx.source.firstName} ${ctx.source.lastName[0]}.`,
+          displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName[0]}.`,
         },
       });
 
@@ -193,12 +190,11 @@ const CategorySchema: z.ZodType<Category> = z.lazy(() =>
 
 describe("Recursion", () => {
   it("Generates deterministic tree structures", () => {
-    const world = createWorld({ seed: 123 })
-      .withSchema(CategorySchema, {
-        matchers: {
-          name: (ctx) => ctx.gen.word.word(),
-        }
-      })
+    const world = createWorld({ seed: 123 }).withSchema(CategorySchema, {
+      matchers: {
+        name: (ctx) => ctx.gen.company.name(),
+      },
+    });
     print("Recursive Tree", world.generate(CategorySchema));
   });
 });
@@ -218,9 +214,90 @@ describe("The 'Tweak' Kit", () => {
     const world = createWorld({ seed: 42, optionalProbability: 1 });
 
     print("Sparse Task", world.generate(TaskSchema));
-    print(
-      "Overridden Task",
-      world.generate(TaskSchema, { overrides: { title: "FIXED" } }),
-    );
+    print("Overridden Task", world.generate(TaskSchema, { overrides: { title: "FIXED" } }));
+  });
+});
+
+// ---------------------------------------------------------
+// 8. Simple Benchmark
+// ---------------------------------------------------------
+
+const SimpleSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  email: z.string().email(),
+});
+
+describe("Simple Benchmark", () => {
+  it("Measures raw 'generate()' performance for a standard schema", () => {
+    const iterations = 10000;
+    const seed = 123;
+
+    console.log(`\n=== Simple Benchmark: ${iterations} iterations ===`);
+
+    const start = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      generate(SimpleSchema, { seed });
+    }
+    const end = performance.now();
+
+    const duration = end - start;
+    console.log(`Total Time: ${duration.toFixed(2)}ms`);
+    console.log(`Avg Latency: ${(duration / iterations).toFixed(4)}ms/op`);
+    console.log(`Throughput: ${(1000 / (duration / iterations)).toFixed(0)} ops/sec`);
+  });
+});
+
+// ---------------------------------------------------------
+// 9. Speed Test (Benchmark)
+// ---------------------------------------------------------
+
+const BigSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  age: z.number().int().min(0).max(120),
+  email: z.string().email(),
+  tags: z.array(z.string()).max(10),
+  nested: z.object({
+    a: z.number(),
+    b: z.string(),
+    c: z.array(z.number()),
+  }),
+});
+
+describe("Speed Test", () => {
+  it("Compares current performance with a high-volume load", () => {
+    const iterations = 10000;
+    const world = createWorld({ seed: 42 }).withSchema(BigSchema);
+
+    console.log(`\n=== Speed Test: ${iterations} iterations ===`);
+
+    const start = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      world.generate(BigSchema);
+    }
+    const end = performance.now();
+
+    const totalMs = end - start;
+    const perOp = totalMs / iterations;
+
+    console.log(`[Reused World]`);
+    console.log(`Total: ${totalMs.toFixed(2)}ms`);
+    console.log(`Avg:   ${perOp.toFixed(4)}ms/op`);
+    console.log(`Throughput: ${(1000 / perOp).toFixed(0)} ops/sec`);
+
+    // Comparison: Zero-Config (re-creating world every time)
+    const startZero = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      generate(BigSchema, { seed: 42 });
+    }
+    const endZero = performance.now();
+    const totalZero = endZero - startZero;
+    const perOpZero = totalZero / iterations;
+
+    console.log(`\n[Zero-Config (Fresh World per call)]`);
+    console.log(`Total: ${totalZero.toFixed(2)}ms`);
+    console.log(`Avg:   ${perOpZero.toFixed(4)}ms/op`);
+    console.log(`Penalty: ${((perOpZero / perOp - 1) * 100).toFixed(1)}% slower than reused world`);
   });
 });

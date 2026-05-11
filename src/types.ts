@@ -35,9 +35,7 @@ export interface Registry {
 import type * as gen from "./generators/data/index.js";
 
 type BoundModule<T> = {
-  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
-    ? (...args: P) => R
-    : T[K];
+  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R ? (...args: P) => R : T[K];
 };
 
 export type CoreGenerators = {

@@ -128,6 +128,7 @@ export class WorldImpl implements World {
     Record<string, (ctx: GeneratorContext) => unknown>
   > = new Map();
   private readonly relationPools: Map<string, unknown[]> = new Map();
+  private readonly pendingCounts: Map<ZodTypeAny, number> = new Map();
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
 
   constructor(private readonly options: WorldOptions) {
@@ -386,23 +387,31 @@ export class WorldImpl implements World {
     reg: SchemaReg | null,
     options?: GenerateOptions<unknown>,
   ): unknown {
-    const recordIndex = this.registry.count(schema);
-    const effectiveRegId = reg?.regId ?? -1;
-    const recordId = `reg${effectiveRegId}#${recordIndex}`;
-    const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
-    const effectiveReg = reg ?? EMPTY_REG;
-    const fieldPath = options?.fieldPath ?? recordId;
-    const result = this.generateObjectFields(
-      schema,
-      effectiveReg,
-      undefined,
-      recordPrng,
-      recordId,
-      fieldPath,
-      options?.overrides as Record<string, unknown>,
-    );
-    this.registry.store(schema, result);
-    return result;
+    const pending = this.pendingCounts.get(schema) ?? 0;
+    const recordIndex = this.registry.count(schema) + pending;
+    this.pendingCounts.set(schema, pending + 1);
+
+    try {
+      const effectiveRegId = reg?.regId ?? -1;
+      const recordId = `reg${effectiveRegId}#${recordIndex}`;
+      const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
+      const effectiveReg = reg ?? EMPTY_REG;
+      const fieldPath = options?.fieldPath ?? recordId;
+      const result = this.generateObjectFields(
+        schema,
+        effectiveReg,
+        undefined,
+        recordPrng,
+        recordId,
+        fieldPath,
+        options?.overrides as Record<string, unknown>,
+      );
+      this.registry.store(schema, result);
+      return result;
+    } finally {
+      const currentPending = this.pendingCounts.get(schema) ?? 1;
+      this.pendingCounts.set(schema, currentPending - 1);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -491,7 +500,9 @@ export class WorldImpl implements World {
       const fieldOverride = overrides?.[key];
       if (
         fieldOverride !== undefined &&
-        (typeof fieldOverride !== "object" || fieldOverride === null || Array.isArray(fieldOverride))
+        (typeof fieldOverride !== "object" ||
+          fieldOverride === null ||
+          Array.isArray(fieldOverride))
       ) {
         result[key] = fieldOverride;
         continue;
@@ -506,7 +517,8 @@ export class WorldImpl implements World {
       }
 
       // 2. Per-schema key map
-      const keyMapFn = (this.schemaKeyMaps.get(schema)?.[key]) ?? (this.schemaKeyMaps.get(current)?.[key]);
+      const keyMapFn =
+        this.schemaKeyMaps.get(schema)?.[key] ?? this.schemaKeyMaps.get(current)?.[key];
       if (keyMapFn !== undefined) {
         result[key] = fieldOverride !== undefined ? fieldOverride : keyMapFn(fieldCtx);
         continue;
@@ -550,7 +562,8 @@ export class WorldImpl implements World {
       // 4. Custom world-level key generator
       const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
-        result[key] = fieldOverride !== undefined ? fieldOverride : customGen(innerSchema, fieldCtx);
+        result[key] =
+          fieldOverride !== undefined ? fieldOverride : customGen(innerSchema, fieldCtx);
         continue;
       }
 
@@ -569,7 +582,8 @@ export class WorldImpl implements World {
       if (isObjectLike) {
         result[key] = fieldCtx.generate(innerSchema, { overrides: fieldOverride });
       } else {
-        result[key] = fieldOverride !== undefined ? fieldOverride : generateFromSchema(innerSchema, fieldCtx);
+        result[key] =
+          fieldOverride !== undefined ? fieldOverride : generateFromSchema(innerSchema, fieldCtx);
       }
     }
 
@@ -663,7 +677,6 @@ export class WorldImpl implements World {
       if (c.check === "min_length" && c.minimum !== undefined) N = Math.max(N, c.minimum);
       if (c.check === "max_length" && c.maximum !== undefined) maxN = Math.min(maxN, c.maximum);
     }
-    const recordId = `gen-arr-${this.generationCounter}`;
     N = genPrng.int(Math.min(N, maxN), Math.max(N, maxN));
 
     let result = Array.from({ length: N }, (_, i) => {
@@ -715,8 +728,14 @@ export class WorldImpl implements World {
     }
     const targetSchema = current;
 
-    const derivedRegs = this.findDerivedRegs(schema).length > 0 ? this.findDerivedRegs(schema) : this.findDerivedRegs(targetSchema);
-    const primaryRegs = this.findPrimaryRegs(schema).length > 0 ? this.findPrimaryRegs(schema) : this.findPrimaryRegs(targetSchema);
+    const derivedRegs =
+      this.findDerivedRegs(schema).length > 0
+        ? this.findDerivedRegs(schema)
+        : this.findDerivedRegs(targetSchema);
+    const primaryRegs =
+      this.findPrimaryRegs(schema).length > 0
+        ? this.findPrimaryRegs(schema)
+        : this.findPrimaryRegs(targetSchema);
 
     let result: unknown;
     const sourceOverride = (options as any)?.source;

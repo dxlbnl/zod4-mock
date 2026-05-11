@@ -30,8 +30,12 @@ export function generate<TSchema extends z.ZodTypeAny>(
 ): z.infer<TSchema> {
   const worldOptions: WorldOptions = {
     ...(options?.seed !== undefined && { seed: options.seed }),
-    ...(options?.optionalProbability !== undefined && { optionalProbability: options.optionalProbability }),
-    ...(options?.defaultArrayLength !== undefined && { defaultArrayLength: options.defaultArrayLength }),
+    ...(options?.optionalProbability !== undefined && {
+      optionalProbability: options.optionalProbability,
+    }),
+    ...(options?.defaultArrayLength !== undefined && {
+      defaultArrayLength: options.defaultArrayLength,
+    }),
     ...(options?.recursionLimit !== undefined && { recursionLimit: options.recursionLimit }),
   };
 
