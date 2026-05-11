@@ -1,6 +1,6 @@
 {
   "name": "zod4-mock",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Deterministic, schema-driven mock data generator for Zod v4",
   "keywords": [
     "deterministic",
