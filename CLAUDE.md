@@ -4,24 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+**Library:**
 ```bash
-pnpm test            # run all tests once
-pnpm test:watch      # run tests in watch mode
-pnpm build           # compile TypeScript to dist/
-pnpm typecheck       # type-check without emitting
+pnpm typecheck       # type-check
+pnpm lint            # lint code
+pnpm test            # run all tests
 ```
 
-Run a single test file:
-
+**Playground:**
 ```bash
-pnpm vitest run tests/unit/world.test.ts
+pnpm check           # svelte-check
+pnpm test:unit       # playground unit tests
+pnpm test:component  # playground component tests
 ```
 
-Run a single test by name pattern:
+## Rules of Engagement
 
-```bash
-pnpm vitest run --reporter=verbose -t "deterministic"
-```
+- **Scratch Files**: **NEVER** create scratch files.
+- **Technical**: **NEVER USE `any`**.
+- **Browsing**: Always use codesearch tools (e.g., `grep_search`) for browsing data.
+- **Efficiency**: Only check relevant files for the given task.
+- **Preparation**: Before starting any task, check the README and Wiki.
+- **Testing**: Always write a test or component test when necessary.
+- **Bugs**: If fixing a bug, always create a regression test.
 
 ## Architecture
 

@@ -1,10 +1,8 @@
 <script lang="ts">
 	import Accordion from '$lib/components/Primitives/Accordion.svelte';
-	import SubjectItem from './SubjectItem.svelte';
 	import SchemaItem from './SchemaItem.svelte';
 	import WorldConfig from './WorldConfig.svelte';
-	import RelationForm from './RelationForm.svelte';
-	import RelationshipItem from './RelationshipItem.svelte';
+	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
 	import type { PlaygroundStore } from '$lib/state.svelte';
 
 	interface Props {
@@ -13,153 +11,77 @@
 
 	let { store }: Props = $props();
 
-	// Derived lists and states
-	const subjects = $derived(store.state.subjects);
 	const schemas = $derived(store.state.schemas);
 	const world = $derived(store.state.world);
-	const activeEntityType = $derived(store.state.activeEntityType);
-	const activeSubjectId = $derived(store.state.activeSubjectId);
 	const activeSchemaId = $derived(store.state.activeSchemaId);
 
 	function getSectionMeta(id: string): string {
 		if (id === 'world') return `seed ${world.seed}`;
-		if (id === 'subjects') return String(subjects.length);
 		if (id === 'schemas') return String(schemas.length);
 		return '';
 	}
 
-	// Local UI state
-	let linkingSubjectId = $state<string | null>(null);
-	let editingRelId = $state<string | null>(null);
+	function handleAddSchema() {
+		store.addSchema('NewSchema');
+		store.setMobileTab('editor');
+	}
 
-	const linkingSubject = $derived(subjects.find(s => s.id === linkingSubjectId));
-	const editingRel = $derived(store.state.relationships.find(r => r.id === editingRelId));
+	function handleSelectSchema(id: string | null) {
+		store.setActiveSchema(id);
+	}
 </script>
 
 <aside class="rail">
-	<Accordion
-		title="World"
-		meta={getSectionMeta('world')}
-		open={store.state.ui.sectionStates['world']}
-		ontoggle={() => store.toggleSection('world')}
-	>
-		<WorldConfig 
-			seed={world.seed}
-			optionalProbability={world.optionalProbability}
-			onupdateseed={(val) => store.setWorldSeed(val)}
-			onupdateprob={(val) => store.setOptionalProbability(val)}
-		/>
-	</Accordion>
-
-	<Accordion
-		title="Subjects"
-		meta={getSectionMeta('subjects')}
-		open={store.state.ui.sectionStates['subjects']}
-		ontoggle={() => store.toggleSection('subjects')}
-	>
-		<div class="list">
-			{#each subjects as subj}
-				<SubjectItem
-					name={subj.name}
-					count={subj.count}
-					selected={activeEntityType === 'subject' && activeSubjectId === subj.id}
-					onclick={() => store.setActiveSubject(subj.id)}
-					onlink={() => linkingSubjectId = subj.id}
-					onupdatecount={(val) => store.setSubjectCount(subj.id, val)}
-				/>
-			{/each}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="add-row t-code-sm" onclick={() => store.addSubject('NewSubject')}>
-				<span class="plus">+</span> add subject
-			</div>
-		</div>
-	</Accordion>
-
-	<Accordion
-		title="Relationships"
-		meta={String(store.state.relationships.length)}
-		open={store.state.ui.sectionStates['relationships'] ?? false}
-		ontoggle={() => store.toggleSection('relationships')}
-	>
-		<div class="list">
-			{#each store.state.relationships as rel}
-				<RelationshipItem
-					from={rel.from}
-					to={rel.to}
-					name={rel.relationName}
-					cardinality={rel.cardinality}
-					key={rel.key}
-					onclick={() => editingRelId = rel.id}
-					onremove={() => store.removeRelationship(rel.id)}
-				/>
-			{/each}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="add-row t-code-sm" onclick={() => linkingSubjectId = 'global'}>
-				<span class="plus">+</span> add relationship
-			</div>
-		</div>
-	</Accordion>
-
-	<Accordion
-		title="Schemas"
-		meta={getSectionMeta('schemas')}
-		open={store.state.ui.sectionStates['schemas']}
-		ontoggle={() => store.toggleSection('schemas')}
-	>
-		<div class="list">
-			{#each schemas as schema}
-				<SchemaItem
-					name={schema.name}
-					selected={activeEntityType === 'schema' && activeSchemaId === schema.id}
-					onclick={() => store.setActiveSchema(schema.id)}
-				/>
-			{/each}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="add-row t-code-sm" onclick={() => store.addSchema('NewSchema')}>
-				<span class="plus">+</span> add schema
-			</div>
-		</div>
-	</Accordion>
-</aside>
-
-{#if linkingSubjectId || editingRelId}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="overlay" onclick={() => { linkingSubjectId = null; editingRelId = null; }}>
-		<div class="form-container" onclick={(e) => e.stopPropagation()}>
-			<RelationForm
-				{subjects}
-				initialFrom={linkingSubject?.name}
-				initialData={editingRel}
-				onadd={(rel) => {
-					if (editingRelId) {
-						store.updateRelationship(editingRelId, rel);
-						editingRelId = null;
-					} else {
-						store.addRelationship(rel);
-						linkingSubjectId = null;
-					}
-				}}
-				oncancel={() => { linkingSubjectId = null; editingRelId = null; }}
+	<!-- Desktop Rail Content -->
+	<div class="desktop-content" data-testid="desktop-content">
+		<Accordion
+			title="World"
+			meta={getSectionMeta('world')}
+			open={true}
+		>
+			<WorldConfig 
+				seed={world.seed}
+				optionalProbability={world.optionalProbability}
+				onupdateseed={(v) => store.setWorldSeed(v)}
+				onupdateprob={(v) => store.setOptionalProbability(v)}
+				isCompact={true}
 			/>
-		</div>
+		</Accordion>
+
+		<Accordion
+			title="Schemas"
+			meta={getSectionMeta('schemas')}
+			open={true}
+		>
+			<div class="list">
+				{#each schemas as schema}
+					<SchemaItem
+						name={schema.name}
+						selected={activeSchemaId === schema.id}
+						populateCount={schema.populateCount}
+						isDerived={!!schema.derivedFrom}
+						onclick={() => handleSelectSchema(schema.id)}
+					/>
+				{/each}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="add-row t-code-sm" onclick={handleAddSchema}>
+					<span class="plus">+</span> add schema
+				</div>
+			</div>
+		</Accordion>
 	</div>
-{/if}
+</aside>
 
 <style>
 	.rail {
-		width: 264px;
+		width: 100%;
 		height: 100%;
 		background: var(--bg-1);
-		border-right: 1px solid var(--line);
 		display: flex;
 		flex-direction: column;
 		user-select: none;
 		overflow-y: auto;
-		position: relative;
 	}
 
 	.list {
@@ -187,32 +109,13 @@
 		border-color: var(--accent-edge);
 		background: var(--accent-soft);
 	}
-	.add-row .plus {
-		font-size: 14px;
-		line-height: 1;
-		margin-bottom: 2px;
-	}
 
-	.overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100vw;
-		height: 100vh;
-		background: rgba(0, 0, 0, 0.4);
-		backdrop-filter: blur(2px);
-		z-index: 2000;
-		display: grid;
-		place-items: center;
-	}
-
-	.form-container {
-		animation: pop var(--ease-out) 0.2s;
-	}
-
-	@keyframes pop {
-		from { transform: scale(0.9) translateY(10px); opacity: 0; }
-		to { transform: scale(1) translateY(0); opacity: 1; }
+	@media (max-width: 768px) {
+		.mobile-selector {
+			display: block;
+		}
+		.desktop-content {
+			display: none;
+		}
 	}
 </style>
-

@@ -2,118 +2,84 @@ import { describe, it, expect } from "vitest";
 import { createPlaygroundState, makeField } from "./state.svelte";
 import { buildWorld } from "./schema-builder";
 
-describe("Schema Bindings", () => {
-  it("should honor schema-to-subject bindings in buildWorld", () => {
+describe("Schema Relations & Projections", () => {
+  it("should honor derived mappings in buildWorld", () => {
     const store = createPlaygroundState();
     const state = store.state;
 
-    // 1. Create a subject
-    state.subjects = [
-      {
-        id: "subj-1",
-        name: "User",
-        count: 1,
-        fields: [
-          makeField({ key: "id", type: "uuid" }),
-          makeField({ key: "name", type: "string" }),
-        ],
-      },
-    ];
+    // 1. Create a primary schema
+    const userSchema = {
+      id: "s1",
+      name: "User",
+      populateCount: 1,
+      relations: [],
+      fields: [
+        makeField({ key: "id", type: "uuid" }),
+        makeField({ key: "name", type: "string" }),
+      ],
+    };
 
-    // 2. Create an API schema
-    state.schemas = [
-      {
-        id: "schema-1",
-        name: "UserApi",
-        fields: [
-          makeField({ key: "userId", type: "uuid" }),
-          makeField({ key: "fullName", type: "string" }),
-        ],
-      },
-    ];
+    // 2. Create a derived API schema
+    const apiSchema = {
+      id: "s2",
+      name: "UserApi",
+      populateCount: 0,
+      derivedFrom: "s1",
+      relations: [],
+      fields: [
+        makeField({ key: "userId", type: "uuid", sourceMapping: "id" }),
+        makeField({ key: "fullName", type: "string", sourceMapping: "name" }),
+      ],
+    };
 
-    // 3. Bind them
-    state.bindings = [
-      {
-        schemaId: "schema-1",
-        subjectId: "subj-1",
-        fieldMap: {
-          userId: "id",
-          fullName: "name",
-        },
-      },
-    ];
+    state.schemas = [userSchema, apiSchema];
 
-    // 4. Build world
+    // 3. Build world
     const { world, schemaMap } = buildWorld(state);
-    const apiSchema = schemaMap.get("schema-1");
-    expect(apiSchema).toBeDefined();
+    const zUserApi = schemaMap.get("s2");
+    expect(zUserApi).toBeDefined();
 
-    // 5. Generate data
-    const data = world.generate(apiSchema!) as any;
+    // 4. Generate data
+    const data = world.generate(zUserApi!) as any;
 
-    // 6. Verify data matches subject
-    const user = world.subjects("User")[0].data as any;
-    expect(data.userId).toBe(user.id);
-    expect(data.fullName).toBe(user.name);
+    // 5. Verify data matches source schema in registry
+    const users = world.registry.all(schemaMap.get("s1")!) as any[];
+    expect(data.userId).toBe(users[0].id);
+    expect(data.fullName).toBe(users[0].name);
   });
 
-  it("should honor bindings when generating an array of schemas", () => {
+  it("should honor relation mappings for foreign keys", () => {
     const store = createPlaygroundState();
     const state = store.state;
 
-    // 1. Create a subject with 3 instances
-    state.subjects = [
-      {
-        id: "subj-1",
-        name: "User",
-        count: 3,
-        fields: [
-          makeField({ key: "id", type: "uuid" }),
-          makeField({ key: "name", type: "string" }),
-        ],
-      },
-    ];
+    const userSchema = {
+      id: "s1",
+      name: "User",
+      populateCount: 1,
+      relations: [],
+      fields: [makeField({ key: "id", type: "uuid" })],
+    };
 
-    // 2. Create an API schema
-    state.schemas = [
-      {
-        id: "schema-1",
-        name: "UserApi",
-        fields: [
-          makeField({ key: "userId", type: "uuid" }),
-          makeField({ key: "fullName", type: "string" }),
-        ],
-      },
-    ];
+    const orderSchema = {
+      id: "s2",
+      name: "Order",
+      populateCount: 1,
+      relations: [{ name: "customer", targetSchemaId: "s1" }],
+      fields: [
+        makeField({ 
+          key: "userId", 
+          type: "uuid", 
+          relationMapping: { relationName: "customer", targetFieldKey: "id" } 
+        }),
+      ],
+    };
 
-    // 3. Bind them
-    state.bindings = [
-      {
-        schemaId: "schema-1",
-        subjectId: "subj-1",
-        fieldMap: {
-          userId: "id",
-          fullName: "name",
-        },
-      },
-    ];
+    state.schemas = [userSchema, orderSchema];
 
-    // 4. Build world
     const { world, schemaMap } = buildWorld(state);
-    const apiSchema = schemaMap.get("schema-1");
+    const orders = world.registry.all(schemaMap.get("s2")!) as any[];
+    const users = world.registry.all(schemaMap.get("s1")!) as any[];
 
-    // 5. Generate array of 3
-    const data = world.generate(state.z.array(apiSchema!).length(3)) as any[];
-
-    // 6. Verify all 3 match subject data
-    const users = world.subjects("User").map((u) => u.data) as any[];
-    expect(data).toHaveLength(3);
-
-    // zod4-mock cycles through subjects
-    for (let i = 0; i < 3; i++) {
-      expect(data[i].userId).toBe(users[i].id);
-      expect(data[i].fullName).toBe(users[i].name);
-    }
+    expect(orders[0].userId).toBe(users[0].id);
   });
 });

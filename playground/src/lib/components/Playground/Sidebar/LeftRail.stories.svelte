@@ -1,21 +1,22 @@
 <script module lang="ts">
-	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { userEvent, within, expect } from '@storybook/test';
-	import LeftRail from './LeftRail.svelte';
-	import { createPlaygroundState } from '$lib/state.svelte';
-	import { tick } from 'svelte';
+	import { defineMeta } from "@storybook/addon-svelte-csf";
+	import { userEvent, within, expect } from "storybook/test";
+	import LeftRail from "./LeftRail.svelte";
+	import { createPlaygroundState } from "$lib/state.svelte";
+	import { tick } from "svelte";
 
 	const { Story } = defineMeta({
-		title: 'Playground/Sidebar/LeftRail',
+		title: "Playground/Sidebar/LeftRail",
 		component: LeftRail,
 		parameters: {
 			docs: {
 				description: {
-					component: '264px wide sidebar. Three accordion sections: World, Subjects, and Schemas.'
-				}
-			}
+					component:
+						"264px wide sidebar. Two accordion sections: World and Schemas.",
+				},
+			},
 		},
-		tags: ['autodocs']
+		tags: ["autodocs"],
 	});
 </script>
 
@@ -34,106 +35,52 @@
 
 <Story name="Default">
 	{#snippet template()}
-		{@const store = getStoryStore('Default')}
-		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+		{@const store = getStoryStore("Default")}
+		<div
+			style="height: 600px; border: 1px solid var(--line); width: 264px;"
+		>
 			<LeftRail {store} />
 		</div>
 	{/snippet}
 </Story>
 
-<Story name="Interactions" play={async ({ canvasElement }) => {
-	const canvas = within(canvasElement);
-	
-	// LR-1: Verify sections are present
-	await expect(canvas.getByText('World')).toBeInTheDocument();
-	await expect(canvas.getByText('Subjects')).toBeInTheDocument();
-	await expect(canvas.getByText('Schemas')).toBeInTheDocument();
-
-	// LR-2: Add a subject
-	const addSubjectBtn = canvas.getByText(/add subject/i);
-	await userEvent.click(addSubjectBtn);
-	await tick();
-	await expect(canvas.findByText('NewSubject')).resolves.toBeInTheDocument();
-
-	// LR-3: Switch active subject
-	const userSubject = canvas.getByText('User');
-	await userEvent.click(userSubject);
-	await tick();
-	const userSubjItem = userSubject.closest('.subj');
-	await expect(userSubjItem).toHaveAttribute('aria-selected', 'true');
-
-	// LR-4: Add a schema
-	// Need to open Schemas accordion first
-	const schemasHeader = canvas.getByText('Schemas').closest('.accordion-head');
-	if (schemasHeader) {
-		await userEvent.click(schemasHeader as HTMLElement);
-		await tick();
-	}
-	
-	// Use a more flexible matcher because text is split by spans
-	const addSchemaBtn = await canvas.findByText(/add schema/i);
-	await userEvent.click(addSchemaBtn);
-	await tick();
-	await expect(canvas.findByText('NewSchema')).resolves.toBeInTheDocument();
-
-	// LR-5: Switch to schema
-	const schemaItem = await canvas.findByText('UserApi');
-	await userEvent.click(schemaItem);
-	await tick();
-	const schemaItemDiv = schemaItem.closest('.schema-item'); 
-	await expect(schemaItemDiv).toHaveAttribute('data-selected', 'true');
-
-	// LR-6: Toggle Accordion
-	const worldHeader = canvas.getByText('World').closest('.accordion-head');
-	if (worldHeader) {
-		await userEvent.click(worldHeader as HTMLElement);
-		await tick();
-		await expect(canvas.getByText('Seed')).toBeInTheDocument();
-	}
-}}>
-	{#snippet template()}
-		{@const store = getStoryStore('Interactions')}
-		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
-			<LeftRail {store} />
-		</div>
-	{/snippet}
-</Story>
-
-<Story 
-	name="LR-7 Wiring Relationships" 
+<Story
+	name="Interactions"
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
+		const desktop = within(await canvas.findByTestId("desktop-content"));
 
-		// 1. Hover over a subject to reveal the link icon
-		const userSubject = canvas.getByText('User').closest('.subj');
-		if (userSubject) {
-			await userEvent.hover(userSubject);
-		}
+		// LR-1: Verify sections are present
+		await expect(desktop.getByText("World")).toBeInTheDocument();
+		await expect(desktop.getByText("Schemas")).toBeInTheDocument();
 
-		// 2. Click the link icon
-		const linkBtn = within(userSubject as HTMLElement).getByTitle(/add relationship/i);
-		await userEvent.click(linkBtn);
+		// LR-2: Switch active schema
+		const userSchema = desktop.getByText("User");
+		await userEvent.click(userSchema);
 		await tick();
+		const userSchemaItem = userSchema.closest(".schema-item");
+		await expect(userSchemaItem).toHaveClass("selected");
 
-		// 3. Fill the RelationForm (overlay)
-		const nameInput = canvas.getByPlaceholderText(/e.g. author/i);
-		await userEvent.type(nameInput, 'creator');
-
-		const addBtn = canvas.getByRole('button', { name: /^add relation$/i });
-		await userEvent.click(addBtn);
+		// LR-3: Add a schema
+		const addSchemaBtn = desktop.getByText(/add schema/i);
+		await userEvent.click(addSchemaBtn);
 		await tick();
+		await expect(
+			desktop.findByText("NewSchema"),
+		).resolves.toBeInTheDocument();
 
-		// 4. Form should be gone
-		await expect(canvas.queryByRole('button', { name: /^add relation$/i })).toBeNull();
-
-		// 5. Verify relationship was added to the store (indirectly by checking if overlay closed)
-		// We can't easily check store state from here without export, 
-		// but the fact that it closed means onadd was called.
+		// LR-4: Toggle World to see details
+		const worldItem = desktop.getByText("Global Config");
+		await userEvent.click(worldItem);
+		await tick();
+		await expect(worldItem.closest(".world-item")).toHaveClass("selected");
 	}}
 >
 	{#snippet template()}
-		{@const store = getStoryStore('WiringRel')}
-		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+		{@const store = getStoryStore("Interactions")}
+		<div
+			style="height: 600px; border: 1px solid var(--line); width: 264px;"
+		>
 			<LeftRail {store} />
 		</div>
 	{/snippet}
@@ -141,12 +88,14 @@
 
 <Story name="Many Items">
 	{#snippet template()}
-		{@const store = getStoryStore('ManyItems', (s) => {
+		{@const store = getStoryStore("ManyItems", (s) => {
 			for (let i = 0; i < 15; i++) {
-				s.addSubject(`ExtraSubj${i}`);
+				s.addSchema(`ExtraSchema${i}`);
 			}
 		})}
-		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+		<div
+			style="height: 600px; border: 1px solid var(--line); width: 264px;"
+		>
 			<LeftRail {store} />
 		</div>
 	{/snippet}

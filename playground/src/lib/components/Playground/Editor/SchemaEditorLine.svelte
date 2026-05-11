@@ -1,23 +1,13 @@
 <script lang="ts">
 	/**
 	 * SchemaEditorLine.svelte
-	 * Renders a single field as an inline "expression" line:
-	 *
-	 *   [indent] [key] [:] [TypeChip] [<ElementType>] [enum tags] [mod pills…] [. btn] [×]
-	 *
-	 * All structural keys drive the phase machine:
-	 *   ':'  → open type dropdown
-	 *   '.'  → open modifier dropdown
-	 *   'Enter' / ','  → commit field, request next sibling
-	 *   'Shift+Enter'  → exit nesting
-	 *   'Backspace'    → contextual delete (see interaction flows)
 	 */
 
 	import InlineDropdown from './InlineDropdown.svelte';
 	import InlineArgInput from './InlineArgInput.svelte';
 	import EnumTagInput from './EnumTagInput.svelte';
 	import type { EditorPhase } from './schema-editor.types';
-	import type { FieldDef, ModifierDef } from '$lib/state.svelte';
+	import type { FieldDef, ModifierDef, SchemaDef, SchemaRelation } from '$lib/state.svelte';
 	import {
 		FIELD_TYPES,
 		SELECTABLE_FIELD_TYPES,
@@ -25,79 +15,64 @@
 		type ZodFieldType
 	} from '$lib/field-types';
 	import { tick } from 'svelte';
+
 	import { findMatchingRelation } from '$lib/utils/relations';
-	import type { RelationshipDef, SubjectDef } from '$lib/state.svelte';
 
 	interface Props {
 		field: FieldDef;
-		/** Whether this line currently has editor focus */
 		isActive?: boolean;
-		/** Whether the key input should auto-focus on mount */
 		autofocus?: boolean;
 
-		// ── Callbacks ──────────────────────────────────────────────────────
+		schemas: SchemaDef[];
+		sourceSchema?: SchemaDef;
+		currentSchemaRelations: SchemaRelation[];
+
 		onupdatekey: (id: string, key: string) => void;
 		onupdatetype: (id: string, type: ZodFieldType) => void;
 		onaddmodifier: (id: string, mod: ModifierDef) => void;
 		onupdatemodifier: (id: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier: (id: string, index: number) => void;
 		onupdateenumvalues: (id: string, values: string[]) => void;
-		onremove: (id: string) => void;
-		/** User pressed Enter/comma — add next sibling */
-		onnextsibling: (id: string) => void;
-		/** User pressed Shift+Enter — exit nesting */
-		onexitnesting: (id: string) => void;
-		/** Notify parent that this line became focused */
-		onfocus?: (id: string) => void;
+		
+		onupdatemapping: (patch: Partial<FieldDef>) => void;
 
-		/** Binding related (Story 3) */
-		availableSourceKeys?: string[];
-		mappedSourceKey?: string | null;
-		onsetmapping?: (id: string, schemaFieldKey: string, subjectFieldKey: string) => void;
-		onremovemapping?: (id: string, schemaFieldKey: string) => void;
-		onupdaterelationmapping?: (id: string, relationName: string | undefined) => void;
-		relationships?: RelationshipDef[];
-		subjects?: SubjectDef[];
+		onremove: (id: string) => void;
+		onnextsibling: (id: string) => void;
+		onexitnesting: (id: string) => void;
+		onfocus?: (id: string) => void;
 	}
 
 	let {
 		field,
 		isActive = false,
 		autofocus = false,
+		schemas,
+		sourceSchema,
+		currentSchemaRelations,
 		onupdatekey,
 		onupdatetype,
 		onaddmodifier,
 		onupdatemodifier,
 		onremovemodifier,
 		onupdateenumvalues,
+		onupdatemapping,
 		onremove,
 		onnextsibling,
 		onexitnesting,
 		onfocus,
-		availableSourceKeys = [],
-		mappedSourceKey = null,
-		onsetmapping,
-		onremovemapping,
-		onupdaterelationmapping,
-		relationships = [],
-		subjects = []
 	}: Props = $props();
 
 	// ── Phase / dropdown state ─────────────────────────────────────────────
 	let phase = $state<EditorPhase | 'mapping'>('name');
-	let dropdownOpen = $state<'type' | 'elementType' | 'modifier' | 'mapping' | null>(null);
-	/** Index of the modifier whose arg is currently being edited */
+	let dropdownOpen = $state<'type' | 'modifier' | 'mapping' | null>(null);
 	let editingModifierIndex = $state<number | null>(null);
-	/** Index of the modifier whose name is being replaced via dropdown */
 	let replacingModifierIndex = $state<number | null>(null);
-
 	let activeAnchorEl = $state<HTMLElement | null>(null);
 
 	// ── DOM refs ───────────────────────────────────────────────────────────
 	let keyInputEl = $state<HTMLInputElement | null>(null);
 	let typeChipEl = $state<HTMLElement | null>(null);
 	let modAreaEl = $state<HTMLElement | null>(null);
-	let lineEl = $state<HTMLElement | null>(null);
 
 	// ── Derived ───────────────────────────────────────────────────────────
 	const spec = $derived(FIELD_TYPES[field.type] ?? null);
@@ -121,43 +96,53 @@
 			}))
 	);
 
-	const mappingMenuItems = $derived([
-		...availableSourceKeys.map((k) => ({
-			name: k,
-			desc: `Map to ${k}`,
-			category: 'Subject Fields'
-		})),
-		...relationships.map((r) => ({
-			name: r.relationName,
-			desc: `Link to ${r.to}`,
-			category: 'Relationships'
-		})),
-		{ name: 'None', desc: 'Clear mapping', category: 'Action' }
-	]);
-
-	// Calculate heuristic status
-	const claimingRel = $derived(relationships.find((r) => r.key === field.key));
-
 	const heuristicMatch = $derived(
-		(!claimingRel && !field.relationMapping && !mappedSourceKey)
-			? findMatchingRelation(field.key, relationships, subjects)
+		(!field.sourceMapping && !field.relationMapping)
+			? findMatchingRelation(field.key, currentSchemaRelations, schemas)
 			: undefined
 	);
 
-	const activeMappingLabel = $derived(
-		claimingRel?.relationName ||
-			field.relationMapping ||
-			mappedSourceKey ||
-			heuristicMatch?.relationName ||
-			null
-	);
+	const mappingMenuItems = $derived.by(() => {
+		const items: any[] = [];
+		
+		if (sourceSchema) {
+			for (const f of sourceSchema.fields) {
+				items.push({ name: `src:${f.key}`, desc: `Map to ${sourceSchema.name}.${f.key}`, category: 'Source Schema' });
+			}
+		}
 
-	const isExplicitlyMapped = $derived(
-		!!claimingRel || !!field.relationMapping || !!mappedSourceKey
-	);
-	const isHeuristicallyMapped = $derived(!!heuristicMatch);
+		for (const rel of currentSchemaRelations) {
+			const target = schemas.find(s => s.id === rel.targetSchemaId);
+			if (target) {
+				for (const tf of target.fields) {
+					items.push({ 
+						name: `rel:${rel.name}:${tf.key}`, 
+						desc: `FK for ${rel.name} (${target.name}.${tf.key})`, 
+						category: `Relation: ${rel.name}` 
+					});
+				}
+			}
+		}
 
-	// ── Mapping ────────────────────────────────────────────────────────────
+		items.push({ name: 'None', desc: 'Clear mapping', category: 'Action' });
+		return items;
+	});
+
+	const activeMappingLabel = $derived.by(() => {
+		if (field.sourceMapping) return `source.${field.sourceMapping}`;
+		if (field.relationMapping) return `${field.relationMapping.relationName}.${field.relationMapping.targetFieldKey}`;
+		return null;
+	});
+
+	// ── Auto-focus on mount ────────────────────────────────────────────────
+	$effect(() => {
+		if (autofocus && keyInputEl) {
+			keyInputEl.focus();
+		}
+	});
+
+	// ── Handlers ───────────────────────────────────────────────────────────
+
 	function openMappingDropdown(el?: HTMLElement) {
 		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		activeAnchorEl = el ?? keyInputEl;
@@ -169,47 +154,31 @@
 	function handleMappingSelect(name: string) {
 		dropdownOpen = null;
 		if (name === 'None') {
-			onremovemapping?.(field.id, field.key);
-			onupdaterelationmapping?.(field.id, 'none');
-		} else {
-			// Check if it's a relationship or a field
-			const rel = relationships.find((r) => r.relationName === name);
-			if (rel) {
-				onremovemapping?.(field.id, field.key); // clear field mapping
-				onupdaterelationmapping?.(field.id, name);
-			} else {
-				onupdaterelationmapping?.(field.id, undefined); // clear rel mapping
-				onsetmapping?.(field.id, field.key, name);
-			}
+			onupdatemapping({ sourceMapping: undefined, relationMapping: undefined });
+		} else if (name.startsWith('src:')) {
+			const key = name.slice(4);
+			onupdatemapping({ sourceMapping: key, relationMapping: undefined });
+		} else if (name.startsWith('rel:')) {
+			const parts = name.split(':');
+			const relationName = parts[1];
+			const targetFieldKey = parts[2];
+			onupdatemapping({ 
+				sourceMapping: undefined, 
+				relationMapping: { relationName, targetFieldKey } 
+			});
 		}
 		phase = 'modifiers';
 		tick().then(() => modAreaEl?.focus());
 	}
 
-	function handleRemoveMapping() {
-		onremovemapping?.(field.id, field.key);
-		dropdownOpen = null;
-	}
-
-	// ── Auto-focus on mount ────────────────────────────────────────────────
-	$effect(() => {
-		if (autofocus && keyInputEl) {
-			keyInputEl.focus();
-		}
-	});
-
-	// ── Name input key handlers ────────────────────────────────────────────
 	function handleKeyInputKeydown(e: KeyboardEvent) {
 		if (e.key === ':') {
 			e.preventDefault();
 			openTypeDropdown(keyInputEl ?? undefined);
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
-			if (e.shiftKey) {
-				onexitnesting(field.id);
-			} else {
-				onnextsibling(field.id);
-			}
+			if (e.shiftKey) onexitnesting(field.id);
+			else onnextsibling(field.id);
 		} else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '') {
 			e.preventDefault();
 			onremove(field.id);
@@ -218,7 +187,6 @@
 		}
 	}
 
-	// ── Type selection ─────────────────────────────────────────────────────
 	function openTypeDropdown(el?: HTMLElement) {
 		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		activeAnchorEl = el ?? typeChipEl ?? keyInputEl;
@@ -229,13 +197,10 @@
 
 	function handleTypeSelect(name: string) {
 		const newType = name as ZodFieldType;
-		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		dropdownOpen = null;
 		onupdatetype(field.id, newType);
-
 		if (newType === 'enum') {
 			phase = 'enumTags';
-			dropdownOpen = null;
 		} else {
 			phase = 'modifiers';
 			tick().then(() => {
@@ -245,7 +210,6 @@
 		}
 	}
 
-	// ── Modifier flows ─────────────────────────────────────────────────────
 	function openModifierDropdown(el?: HTMLElement) {
 		if (availableMods.length === 0) return;
 		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
@@ -256,146 +220,76 @@
 		dropdownOpen = 'modifier';
 	}
 
-	function openModifierReplace(index: number, el: HTMLElement) {
-		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
-		activeAnchorEl = el;
-		if (activeAnchorEl) activeAnchorEl.style.setProperty('anchor-name', '--editor-anchor');
-		replacingModifierIndex = index;
-		phase = 'modifierPicker';
-		dropdownOpen = 'modifier';
-	}
-
 	function handleModifierSelect(name: string) {
-		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		dropdownOpen = null;
 		const spec = availableMods.find((m) => m.name === name);
 		if (!spec) return;
 
-		if (replacingModifierIndex !== null) {
-			// Replace existing modifier
-			const targetIdx = replacingModifierIndex;
-			onremovemodifier(field.id, replacingModifierIndex);
-			const defaultVal1 = spec.hasValue
-				? (typeof spec.defaultValue === 'boolean' ? String(spec.defaultValue) : spec.defaultValue)
-				: undefined;
-			onaddmodifier(field.id, { name, value: defaultVal1 });
-			replacingModifierIndex = null;
-			if (spec.hasValue) {
-				editingModifierIndex = targetIdx;
-				phase = 'modifierArg';
-			} else {
-				editingModifierIndex = null;
-				phase = 'modifiers';
-				tick().then(() => modAreaEl?.focus());
-			}
+		const targetIdx = replacingModifierIndex !== null ? replacingModifierIndex : field.modifiers.length;
+		if (replacingModifierIndex !== null) onremovemodifier(field.id, replacingModifierIndex);
+		
+		onaddmodifier(field.id, { name, value: spec.hasValue ? spec.defaultValue : undefined });
+		
+		if (spec.hasValue) {
+			editingModifierIndex = targetIdx;
+			phase = 'modifierArg';
 		} else {
-			// Add new modifier
-			const newIdx = field.modifiers.length;
-			const defaultVal2 = spec.hasValue
-				? (typeof spec.defaultValue === 'boolean' ? String(spec.defaultValue) : spec.defaultValue)
-				: undefined;
-			onaddmodifier(field.id, { name, value: defaultVal2 });
-			if (spec.hasValue) {
-				editingModifierIndex = newIdx;
-				phase = 'modifierArg';
-			} else {
-				editingModifierIndex = null;
-				phase = 'modifiers';
-				tick().then(() => modAreaEl?.focus());
-			}
+			editingModifierIndex = null;
+			phase = 'modifiers';
+			tick().then(() => modAreaEl?.focus());
 		}
+		replacingModifierIndex = null;
 	}
 
-	function handleModifierArgCommit(index: number, value: string, isNext = false) {
-		editingModifierIndex = null;
-		phase = 'modifiers';
-		onupdatemodifier(field.id, index, value);
-		tick().then(() => {
-			modAreaEl?.focus();
-			if (isNext) {
-				openModifierDropdown();
-			}
-		});
-	}
-
-	function handleModifierArgCancel(index: number) {
-		editingModifierIndex = null;
-		phase = 'modifiers';
-		onremovemodifier(field.id, index);
-		tick().then(() => modAreaEl?.focus());
-	}
-
-	// ── Modifier area keyboard handling ────────────────────────────────────
 	function handleModAreaKeydown(e: KeyboardEvent) {
 		if (e.key === '.') {
 			e.preventDefault();
 			openModifierDropdown(modAreaEl ?? undefined);
 		} else if (e.key === 'Backspace') {
 			e.preventDefault();
-			if (field.modifiers.length > 0) {
-				onremovemodifier(field.id, field.modifiers.length - 1);
-			} else if (isEnum) {
-				phase = 'enumTags';
-			} else if (field.type) {
-				openTypeDropdown();
-			}
-		} else if (e.key === 'Enter') {
+			if (field.modifiers.length > 0) onremovemodifier(field.id, field.modifiers.length - 1);
+			else if (isEnum) phase = 'enumTags';
+			else openTypeDropdown();
+		} else if (e.key === 'Enter' || e.key === ',') {
 			e.preventDefault();
-			if (e.shiftKey) {
-				onexitnesting(field.id);
-			} else {
-				onnextsibling(field.id);
-			}
-		} else if (e.key === ',') {
-			e.preventDefault();
-			onnextsibling(field.id);
+			if (e.shiftKey) onexitnesting(field.id);
+			else onnextsibling(field.id);
 		}
 	}
 
-	// ── Type chip click ────────────────────────────────────────────────────
-	function handleTypeChipClick(e: MouseEvent) {
-		openTypeDropdown(e.currentTarget as HTMLElement);
-	}
-
-	// ── Close dropdown ─────────────────────────────────────────────────────
 	function closeDropdown() {
 		if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
 		dropdownOpen = null;
 		replacingModifierIndex = null;
-		if (phase === 'type' || phase === 'elementType' || phase === 'modifierPicker' || phase === 'mapping') {
-			phase = 'modifiers';
-		}
+		if (['type', 'modifierPicker', 'mapping'].includes(phase)) phase = 'modifiers';
 		tick().then(() => modAreaEl?.focus());
 	}
 
-	// ── Click on the line (outside interactive elements) ──────────────────
-	function handleLineClick(e: MouseEvent) {
-		const t = e.target as HTMLElement;
-		if (t.closest('.key-input, .type-chip, .mod-pill, .enum-tags, .dot-btn, .remove-btn, .inline-dropdown, .mapping-area')) return;
-		keyInputEl?.focus();
-	}
-
 	const indentPx = $derived(12 + field.indent * 20);
-
-
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	bind:this={lineEl}
 	class="editor-line"
 	class:is-active={isActive}
 	class:is-group={isGroup}
+	role="button"
+	tabindex="-1"
+	aria-label="Edit field {field.key}"
 	style="--indent: {indentPx}px"
 	data-field-id={field.id}
 	data-testid="editor-line"
-	onclick={handleLineClick}
+	onclick={(e) => {
+		const t = e.target as HTMLElement;
+		if (!t.closest('.key-input, .type-chip, .mod-pill, .enum-tags, .dot-btn, .remove-btn, .inline-dropdown, .mapping-area, .mapping-btn')) {
+			keyInputEl?.focus();
+		}
+	}}
+	onkeydown={(e) => {
+		if (e.key === 'Enter') keyInputEl?.focus();
+	}}
 >
-	<!-- Indent gutter -->
 	<span class="indent-gutter" aria-hidden="true"></span>
 
-	<!-- Key (name) cell -->
 	<div class="key-cell">
 		<input
 			bind:this={keyInputEl}
@@ -409,27 +303,28 @@
 			data-testid="key-input"
 		/>
 
-		<!-- Mapping (Story 3/5) - Inline with text -->
-		{#if availableSourceKeys.length > 0 || relationships.length > 0}
+		{#if mappingMenuItems.length > 1 || heuristicMatch}
 			<div class="mapping-anchor-inline">
 				<button
 					type="button"
 					class="mapping-btn"
-					class:is-mapped={isExplicitlyMapped}
-					class:is-magic={isHeuristicallyMapped}
-					title={activeMappingLabel ? `Mapped to ${activeMappingLabel}` : 'Map to subject field'}
+					class:is-mapped={!!activeMappingLabel}
+					class:is-magic={!!heuristicMatch && !activeMappingLabel}
+					title={activeMappingLabel ? `Mapped to ${activeMappingLabel}` : (heuristicMatch ? `Heuristic match: ${heuristicMatch.name}` : 'Map field...')}
 					onclick={(e) => openMappingDropdown(e.currentTarget as HTMLElement)}
 				>
 					<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
 					{#if activeMappingLabel}
 						<span class="mapped-label t-code-tight">{activeMappingLabel}</span>
+					{:else if heuristicMatch}
+						<span class="mapped-label t-code-tight magic">*{heuristicMatch.name}</span>
 					{/if}
 				</button>
 
 				{#if dropdownOpen === 'mapping'}
 					<InlineDropdown
 						items={mappingMenuItems}
-						value={field.relationMapping || mappedSourceKey || undefined}
+						value={activeMappingLabel ?? undefined}
 						scope="mapping"
 						onselect={handleMappingSelect}
 						onclose={closeDropdown}
@@ -439,20 +334,18 @@
 		{/if}
 	</div>
 
-	<!-- Separator -->
 	<span class="sep t-code" aria-hidden="true">:</span>
 
-	<!-- Type chip area (relative so dropdown can anchor) -->
 	<span class="type-area" style="position: relative">
-		<!-- svelte-ignore a11y_interactive_supports_focus -->
 		<span
 			bind:this={typeChipEl}
 			class="type-chip t-code-sm"
 			class:has-type={!!field.type}
 			data-type={field.type}
 			role="button"
-			aria-label="Change type"
-			onclick={handleTypeChipClick}
+			tabindex="0"
+			onclick={(e) => openTypeDropdown(e.currentTarget as HTMLElement)}
+			onkeydown={(e) => e.key === 'Enter' && openTypeDropdown(e.currentTarget as HTMLElement)}
 		>
 			{#if field.type}
 				{FIELD_TYPES[field.type]?.label ?? field.type}
@@ -462,7 +355,6 @@
 		</span>
 
 		{#if dropdownOpen === 'type'}
-			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<InlineDropdown
 				items={typeMenuItems}
 				value={field.type}
@@ -473,7 +365,6 @@
 		{/if}
 	</span>
 
-	<!-- Enum tags -->
 	{#if isEnum}
 		<EnumTagInput
 			values={field.enumValues ?? []}
@@ -482,21 +373,16 @@
 		/>
 	{/if}
 
-	<!-- Modifier pills -->
-	<span class="mods-area">
+	<div class="mods-area">
 		{#each field.modifiers as mod, i}
-			<span class="mod-pill t-code-sm" data-category={availableMods.find(m => m.name === mod.name)?.category}>
-				<!-- Modifier name — click to replace -->
-				<!-- svelte-ignore a11y_interactive_supports_focus -->
-				<span
-					class="mod-name"
-					role="button"
-					aria-label="Replace modifier"
-					onclick={(e) => openModifierReplace(i, e.currentTarget as HTMLElement)}
+			<span class="mod-pill t-code-sm">
+				<button
+					type="button"
+					class="mod-name-btn"
+					onclick={(e) => { replacingModifierIndex = i; openModifierDropdown(e.currentTarget as HTMLElement); }}
 					style="position: relative"
 				>
 					{mod.name.replace(/\(\)$/, '')}
-
 					{#if dropdownOpen === 'modifier' && replacingModifierIndex === i}
 						<InlineDropdown
 							items={modifierMenuItems}
@@ -506,372 +392,103 @@
 							onclose={closeDropdown}
 						/>
 					{/if}
-				</span>
+				</button>
 
-				<!-- Arg (value) -->
 				{#if mod.value !== undefined}
 					{#if editingModifierIndex === i}
 						<InlineArgInput
 							value={mod.value}
-							oncommit={(v, isNext) => handleModifierArgCommit(i, v, isNext)}
-							oncancel={() => handleModifierArgCancel(i)}
+							oncommit={(v, isNext) => {
+								editingModifierIndex = null;
+								phase = 'modifiers';
+								onupdatemodifier(field.id, i, v);
+								tick().then(() => { modAreaEl?.focus(); if (isNext) openModifierDropdown(); });
+							}}
+							oncancel={() => { editingModifierIndex = null; phase = 'modifiers'; onremovemodifier(field.id, i); tick().then(() => modAreaEl?.focus()); }}
 						/>
 					{:else}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<span
-							class="mod-val t-code-sm"
-							onclick={() => { editingModifierIndex = i; phase = 'modifierArg'; }}
-						>
+						<button type="button" class="mod-val t-code-sm" onclick={() => { editingModifierIndex = i; phase = 'modifierArg'; }}>
 							<span class="punct">(</span><span class="val">{mod.value}</span><span class="punct">)</span>
-						</span>
+						</button>
 					{/if}
 				{:else if mod.name.endsWith('()')}
 					<span class="mod-parens t-code-sm"><span class="punct">()</span></span>
 				{/if}
 
-				<!-- Remove modifier -->
-				<button
-					class="mod-x"
-					type="button"
-					aria-label="Remove modifier {mod.name}"
-					onclick={(e) => { e.stopPropagation(); onremovemodifier(field.id, i); }}
-				>×</button>
+				<button class="mod-x" type="button" onclick={(e) => { e.stopPropagation(); onremovemodifier(field.id, i); }}>×</button>
 			</span>
 		{/each}
 
-		<!-- Modifier add area — receives focus for keyboard navigation -->
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<span
+		<div
 			bind:this={modAreaEl}
 			class="mod-add-area"
+			role="button"
 			tabindex={phase === 'modifiers' || field.type ? 0 : -1}
-			role="presentation"
 			onkeydown={handleModAreaKeydown}
 			onfocus={() => { phase = 'modifiers'; onfocus?.(field.id); }}
 		>
 			{#if availableMods.length > 0}
-				<button
-					class="dot-btn t-code-sm"
-					type="button"
-					aria-label="Add modifier"
-					onclick={(e) => { 
-						e.stopPropagation(); 
-						activeAnchorEl = e.currentTarget as HTMLElement;
-						openModifierDropdown(); 
-					}}
-				>.</button>
+				<button class="dot-btn t-code-sm" type="button" onclick={(e) => { e.stopPropagation(); openModifierDropdown(e.currentTarget as HTMLElement); }}>.</button>
 			{/if}
-
 			{#if dropdownOpen === 'modifier' && replacingModifierIndex === null}
-				<InlineDropdown
-					items={modifierMenuItems}
-					scope="modifier"
-					onselect={handleModifierSelect}
-					onclose={closeDropdown}
-				/>
+				<InlineDropdown items={modifierMenuItems} scope="modifier" onselect={handleModifierSelect} onclose={closeDropdown} />
 			{/if}
-		</span>
-	</span>
+		</div>
+	</div>
 	
-	<!-- Remove button -->
-	<button
-		class="remove-btn"
-		type="button"
-		aria-label="Remove field {field.key}"
-		onclick={(e) => { e.stopPropagation(); onremove(field.id); }}
-	>×</button>
+	<button class="remove-btn" type="button" onclick={(e) => { e.stopPropagation(); onremove(field.id); }}>×</button>
 </div>
 
 <style>
 	.editor-line {
 		display: flex;
 		align-items: center;
-		flex-wrap: nowrap;
 		gap: var(--space-1);
-		min-height: var(--h-row);
+		min-height: 28px;
 		padding: var(--space-1) var(--space-4) var(--space-1) var(--indent, var(--space-4));
 		border-bottom: 1px solid var(--bg-2);
 		position: relative;
 		cursor: text;
-		transition: background var(--ease-quick);
 	}
 
-	.editor-line:hover {
-		background: var(--bg-2);
-	}
+	.editor-line:hover { background: var(--bg-2); }
+	.editor-line.is-active { background: var(--bg-1); box-shadow: inset 2px 0 0 var(--accent); }
+	.editor-line.is-group { border-bottom-color: var(--line-strong); }
 
-	.editor-line.is-active {
-		background: var(--bg-1);
-		box-shadow: inset 2px 0 0 var(--accent);
-	}
+	.key-cell { display: flex; align-items: center; min-width: 140px; }
+	.key-input { background: transparent; border: none; color: var(--syn-key); padding: 2px 4px; border-radius: var(--radius-sm); font: inherit; flex-shrink: 1; min-width: 0; }
+	.key-input:focus { outline: none; background: var(--bg-3); box-shadow: 0 0 0 1px var(--accent-edge); }
 
-	.editor-line.is-group {
-		border-bottom-color: var(--line-strong);
-	}
+	.mapping-anchor-inline { display: flex; align-items: center; }
+	.mapping-btn { display: flex; align-items: center; gap: 4px; padding: 1px 4px; border-radius: var(--r-sm); color: var(--ink-3); background: transparent; border: 1px solid transparent; cursor: pointer; opacity: 0.4; }
+	.mapping-btn:hover { opacity: 1; background: var(--bg-1); border-color: var(--line); }
+	.mapping-btn.is-magic { opacity: 0.6; color: var(--ink-3); background: var(--bg-1); border-color: var(--line-strong); }
+	.mapping-btn.is-mapped:hover, .mapping-btn.is-magic:hover { opacity: 1; background: var(--accent-soft); }
+	.mapped-label { font-size: 10px; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.mapped-label.magic { color: var(--ink-3); font-style: italic; font-weight: 400; }
 
-	/* Indent gutter */
-	.indent-gutter {
-		display: none; /* purely consumed by --indent CSS var */
-	}
+	.type-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--bg-3); color: var(--syn-type); cursor: pointer; font-size: 12px; }
+	.type-chip:hover { border-color: var(--accent-edge); background: var(--accent-soft); color: var(--accent-bright); }
+	.type-placeholder { color: var(--ink-3); font-style: italic; }
 
-	/* Key cell and input */
-	.key-cell {
-		display: flex;
-		align-items: center;
-		flex-wrap: nowrap;
-		min-width: 140px;
-		flex-shrink: 0;
-	}
+	.sep { color: var(--ink-3); }
 
-	.key-input {
-		background: transparent;
-		border: none;
-		color: var(--syn-key);
-		padding: 2px 2px 2px 4px;
-		border-radius: var(--radius-sm);
-		font: inherit;
-		flex-shrink: 1;
-		min-width: 0;
-	}
+	.mods-area { display: inline-flex; align-items: center; gap: var(--space-1); }
+	.mod-pill { display: inline-flex; align-items: center; gap: 1px; padding: 0 4px; height: 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--bg-2); color: var(--ink-1); }
+	.mod-name-btn { background: transparent; border: none; padding: 0; color: var(--syn-fn); font: inherit; cursor: pointer; font-weight: 500; }
+	.mod-name-btn:focus { outline: none; color: var(--accent-bright); }
+	.mod-val { background: transparent; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+	.mod-val .punct { color: var(--ink-3); opacity: 0.7; }
+	.mod-val .val { color: var(--syn-number); }
+	.mod-parens .punct { color: var(--ink-3); opacity: 0.7; }
+	.mod-x { background: transparent; border: none; color: var(--ink-3); font-size: 11px; cursor: pointer; padding: 0; opacity: 0; margin-left: 2px; }
+	.mod-pill:hover .mod-x { opacity: 1; }
 
-	.mapping-anchor-inline {
-		display: flex;
-		align-items: center;
-		flex-shrink: 0;
-	}
+	.mod-add-area { display: inline-flex; align-items: center; outline: none; }
+	.dot-btn { background: transparent; border: none; color: var(--ink-3); cursor: pointer; padding: 0 4px; font-weight: 800; font-size: 14px; }
+	.dot-btn:hover { color: var(--accent-bright); }
 
-	.key-input:focus {
-		outline: none;
-		background: var(--bg-3);
-		box-shadow: 0 0 0 1px var(--accent-edge);
-	}
-
-	/* Type chip — Aligned with Builder/TypeChip.svelte */
-	.type-chip {
-		display: inline-flex;
-		align-items: center;
-		height: 20px;
-		padding: 0 6px;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--line-strong);
-		background: var(--bg-3);
-		color: var(--syn-type);
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all var(--ease-quick);
-		user-select: none;
-	}
-
-	.type-chip:hover,
-	.type-chip.has-type:hover {
-		border-color: var(--accent-edge);
-		background: var(--accent-soft);
-		color: var(--accent-bright);
-	}
-
-	.type-chip.has-type {
-		background: var(--bg-2);
-		border-color: var(--line-strong);
-	}
-
-	.type-placeholder {
-		color: var(--ink-3);
-		font-style: italic;
-	}
-
-	/* Mapping (Story 3) */
-	.mapping-btn {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		padding: 1px 3px;
-		border-radius: var(--r-sm);
-		color: var(--ink-3);
-		background: transparent;
-		border: 1px solid transparent;
-		cursor: pointer;
-		transition: all var(--ease-quick);
-		opacity: 0.4;
-	}
-
-	.mapping-btn:hover {
-		opacity: 1;
-		background: var(--bg-1);
-		color: var(--ink-1);
-		border-color: var(--line);
-	}
-
-	.mapping-btn.is-mapped {
-		opacity: 0.8;
-		color: var(--accent);
-		background: var(--accent-soft);
-	}
-	.mapping-btn.is-magic {
-		opacity: 0.6;
-		color: var(--ink-3);
-		background: var(--bg-1);
-		border-color: var(--line-strong);
-	}
-	.mapping-btn.is-mapped:hover, .mapping-btn.is-magic:hover {
-		opacity: 1;
-		background: var(--accent-soft-hover, var(--accent-soft));
-	}
-
-	.mapped-label {
-		font-size: 10px;
-		font-weight: 600;
-		max-width: 80px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	/* Separator */
-	.sep {
-		color: var(--ink-3);
-	}
-
-	/* Modifier pills */
-	.mods-area {
-		display: inline-flex;
-		align-items: center;
-		flex-wrap: nowrap;
-		gap: var(--space-1);
-	}
-
-	.mod-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 1px;
-		padding: 0 4px;
-		height: var(--h-mod, 20px);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		background: var(--bg-2);
-		color: var(--ink-1);
-		user-select: none;
-		transition: all var(--ease-quick);
-	}
-
-	.mod-pill:hover {
-		border-color: var(--accent-edge);
-		background: var(--bg-3);
-	}
-
-	.mod-name {
-		color: var(--syn-fn, var(--ink-1));
-		font-weight: 500;
-		cursor: pointer;
-	}
-
-	.mod-name:hover {
-		color: var(--accent);
-	}
-
-	.mod-val .punct {
-		color: var(--ink-3);
-		opacity: 0.7;
-	}
-
-	.mod-val .val {
-		color: var(--syn-number, hsl(38 90% 65%));
-		cursor: pointer;
-	}
-
-	.mod-val .val:hover {
-		text-decoration: underline;
-	}
-
-	.mod-parens .punct {
-		color: var(--ink-3);
-		opacity: 0.7;
-	}
-
-	.mod-x {
-		background: transparent;
-		border: none;
-		color: var(--ink-3);
-		font-size: 11px;
-		line-height: 1;
-		cursor: pointer;
-		padding: 0;
-		opacity: 0;
-		margin-left: 2px;
-		display: flex;
-		align-items: center;
-		border-radius: 50%;
-		width: 12px;
-		height: 12px;
-		justify-content: center;
-		transition: all var(--ease-quick);
-	}
-
-	.mod-pill:hover .mod-x {
-		opacity: 1;
-	}
-
-	.mod-x:hover {
-		background: var(--ink-3);
-		color: var(--bg-1);
-	}
-
-	/* Dot button */
-	.mod-add-area {
-		display: inline-flex;
-		align-items: center;
-		outline: none;
-	}
-
-	.dot-btn {
-		background: transparent;
-		border: none;
-		color: var(--ink-3);
-		cursor: pointer;
-		padding: 0 2px;
-		border-radius: var(--radius-sm);
-		font-weight: 700;
-		font-size: 1.1em;
-		line-height: 1;
-		opacity: 0.5;
-		transition: all var(--ease-quick);
-	}
-
-	.dot-btn:hover,
-	.mod-add-area:focus .dot-btn {
-		opacity: 1;
-		color: var(--accent);
-		background: var(--accent-soft);
-	}
-
-	/* Remove button */
-	.remove-btn {
-		position: absolute;
-		right: var(--space-2);
-		top: 50%;
-		transform: translateY(-50%);
-		background: transparent;
-		border: none;
-		color: var(--ink-3);
-		cursor: pointer;
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		opacity: 0;
-		transition: all var(--ease-quick);
-	}
-
-	.editor-line:hover .remove-btn,
-	.editor-line.is-active .remove-btn {
-		opacity: 1;
-	}
-
-	.remove-btn:hover {
-		background: var(--red-soft, hsl(0 70% 55% / 0.15));
-		color: var(--red-bright, hsl(0 70% 65%));
-	}
+	.remove-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--ink-3); font-size: 16px; cursor: pointer; opacity: 0; }
+	.editor-line:hover .remove-btn { opacity: 1; }
+	.remove-btn:hover { color: var(--red); }
 </style>
-

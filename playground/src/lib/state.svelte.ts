@@ -1,7 +1,6 @@
 /**
  * state.svelte.ts
  * Central reactive state store for the playground, using Svelte 5 $state runes.
- * All mutations go through the exported functions — no direct state mutation from components.
  */
 
 import type { ZodFieldType } from "./field-types";
@@ -20,50 +19,36 @@ export interface FieldDef {
   type: ZodFieldType;
   modifiers: ModifierDef[];
   indent: number;
-  /** For enum fields — the allowed values */
   enumValues: string[];
-  /** For object/group fields — nested children */
   children: FieldDef[];
-  /** Manual mapping to a relationship ID (overrides heuristics) */
-  relationMapping?: string;
+
+  /**
+   * Matcher metadata for the new core API.
+   * - If schema.derivedFrom is set, sourceMapping is the key in the source object.
+   * - If relationMapping is set, this field is a foreign key for that relation.
+   */
+  sourceMapping?: string;
+  relationMapping?: {
+    relationName: string;
+    targetFieldKey: string;
+  };
 }
 
-export interface SubjectDef {
-  id: string;
+export interface SchemaRelation {
   name: string;
-  /** How many instances to populate */
-  count: number;
-  fields: FieldDef[];
+  targetSchemaId: string;
 }
 
 export interface SchemaDef {
   id: string;
   name: string;
   fields: FieldDef[];
-}
-
-export interface RelationshipDef {
-  id: string;
-  /** Subject name (from) */
-  from: string;
-  cardinality: "1" | "0..1" | "0..n" | "1..n";
-  /** Subject name (to) */
-  to: string;
-  /** Relation name used in defineSubjectType options, e.g. "owner" */
-  relationName: string;
-  /** The field on the 'from' subject that holds the 'to' identity */
-  key?: string;
-}
-
-/**
- * Links a schema to a subject + maps schema field keys → subject field keys.
- * Generates: `world.withSchema(schema, subject, { userId: (s) => s.id, ... })`
- */
-export interface SchemaBinding {
-  schemaId: string;
-  subjectId: string;
-  /** { schemaFieldKey: subjectFieldKey } */
-  fieldMap: Record<string, string>;
+  /** How many instances to populate in the world registry */
+  populateCount: number;
+  /** ID of another schema this is derived from (projection) */
+  derivedFrom?: string;
+  /** List of named relations to other schemas */
+  relations: SchemaRelation[];
 }
 
 export interface WorldConfig {
@@ -77,19 +62,13 @@ export interface WorldConfig {
 export interface UIState {
   exportOpen: boolean;
   outputTab: "code" | "data" | "world";
-  sectionStates: Record<string, boolean>;
+  activeMobileTab: "config" | "editor" | "output";
 }
 
 export interface PlaygroundState {
   world: WorldConfig;
-  subjects: SubjectDef[];
-  activeSubjectId: string | null;
   schemas: SchemaDef[];
   activeSchemaId: string | null;
-  /** Which entity type is currently being edited in the builder */
-  activeEntityType: "subject" | "schema";
-  relationships: RelationshipDef[];
-  bindings: SchemaBinding[];
   ui: UIState;
   /** The dynamic Zod instance */
   z: any;
@@ -132,13 +111,14 @@ export function findField(fields: FieldDef[], id: string): FieldDef | null {
   return null;
 }
 
-// ─── Default scenario (mirrors hi-fi mockup) ──────────────────────────────────
+// ─── Default scenario ─────────────────────────────────────────────────────────
 
 export function makeDefaultState(): PlaygroundState {
-  const userSubject: SubjectDef = {
-    id: uid("subj"),
+  const userSchema: SchemaDef = {
+    id: uid("schema"),
     name: "User",
-    count: 6,
+    populateCount: 6,
+    relations: [],
     fields: [
       makeField({ key: "id", type: "uuid" }),
       makeField({ key: "firstName", type: "string" }),
@@ -153,46 +133,14 @@ export function makeDefaultState(): PlaygroundState {
     ],
   };
 
-  const orderSubject: SubjectDef = {
-    id: uid("subj"),
-    name: "Order",
-    count: 4,
-    fields: [
-      makeField({ key: "id", type: "uuid" }),
-      makeField({ key: "userId", type: "uuid" }),
-      makeField({
-        key: "status",
-        type: "enum",
-        enumValues: ["pending", "shipped", "delivered", "cancelled"],
-      }),
-      makeField({
-        key: "totalCents",
-        type: "number",
-        modifiers: [{ name: ".int()" }, { name: ".min", value: 0 }],
-      }),
-      makeField({ key: "createdAt", type: "date" }),
-      makeField({
-        key: "products",
-        type: "uuid",
-        modifiers: [{ name: ".array()" }],
-      }),
-    ],
-  };
-
-  const productSubject: SubjectDef = {
-    id: uid("subj"),
+  const productSchema: SchemaDef = {
+    id: uid("schema"),
     name: "Product",
-    count: 5,
+    populateCount: 5,
+    relations: [],
     fields: [
       makeField({ key: "id", type: "uuid" }),
-      makeField({
-        key: "name",
-        type: "string",
-        modifiers: [
-          { name: ".min", value: 2 },
-          { name: ".max", value: 100 },
-        ],
-      }),
+      makeField({ key: "name", type: "string" }),
       makeField({ key: "sku", type: "string" }),
       makeField({
         key: "priceCents",
@@ -203,23 +151,44 @@ export function makeDefaultState(): PlaygroundState {
     ],
   };
 
+  const orderSchema: SchemaDef = {
+    id: uid("schema"),
+    name: "Order",
+    populateCount: 4,
+    relations: [
+      { name: "customer", targetSchemaId: userSchema.id },
+      { name: "items", targetSchemaId: productSchema.id },
+    ],
+    fields: [
+      makeField({ key: "id", type: "uuid" }),
+      makeField({
+        key: "userId",
+        type: "uuid",
+        relationMapping: { relationName: "customer", targetFieldKey: "id" },
+      }),
+      makeField({
+        key: "status",
+        type: "enum",
+        enumValues: ["pending", "shipped", "delivered", "cancelled"],
+      }),
+      makeField({
+        key: "totalCents",
+        type: "number",
+        modifiers: [{ name: ".int()" }, { name: ".min", value: 0 }],
+      }),
+    ],
+  };
+
   const userApiSchema: SchemaDef = {
     id: uid("schema"),
     name: "UserApi",
+    populateCount: 0,
+    derivedFrom: userSchema.id,
+    relations: [],
     fields: [
-      makeField({ key: "userId", type: "uuid" }),
-      makeField({ key: "displayName", type: "string" }),
-      makeField({ key: "email", type: "email" }),
-      makeField({
-        key: "avatarUrl",
-        type: "url",
-        modifiers: [{ name: ".optional()" }],
-      }),
-      makeField({
-        key: "role",
-        type: "enum",
-        enumValues: ["admin", "member", "viewer"],
-      }),
+      makeField({ key: "userId", type: "uuid", sourceMapping: "id" }),
+      makeField({ key: "displayName", type: "string", sourceMapping: "firstName" }),
+      makeField({ key: "email", type: "email", sourceMapping: "email" }),
     ],
   };
 
@@ -231,34 +200,14 @@ export function makeDefaultState(): PlaygroundState {
       defaultArrayLengthMax: 5,
       zodVersion: "4.4.3",
     },
-    subjects: [userSubject, orderSubject, productSubject],
-    activeSubjectId: userSubject.id,
-    schemas: [userApiSchema],
-    activeSchemaId: null,
-    activeEntityType: "subject",
-    relationships: [
-      {
-        id: uid("rel"),
-        from: "Order",
-        cardinality: "1",
-        to: "User",
-        relationName: "customer",
-      },
-      {
-        id: uid("rel"),
-        from: "Order",
-        cardinality: "1..n",
-        to: "Product",
-        relationName: "products",
-      },
-    ],
-    bindings: [],
+    schemas: [userSchema, productSchema, orderSchema, userApiSchema],
+    activeSchemaId: userSchema.id,
     ui: {
       exportOpen: false,
       outputTab: "data",
-      sectionStates: { world: false, subjects: true, schemas: false },
+      activeMobileTab: "editor",
     },
-    z: null, // Will be set on init
+    z: null,
     availableZodVersions: [],
     isZodLoading: false,
   };
@@ -313,76 +262,37 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
   }
 
-  // Initialize with static zod if not already set
   if (!state.z) {
     state.z = staticZod;
     if (!state.world.zodVersion) state.world.zodVersion = "4.4.3";
   }
 
-  // ── Subjects ───────────────────────────────────────────────────────────
-
-  function addSubject(name = "NewSubject") {
-    const subj: SubjectDef = { id: uid("subj"), name, count: 3, fields: [] };
-    state.subjects.push(subj);
-    state.activeSubjectId = subj.id;
-    state.activeEntityType = "subject";
-  }
-
-  function removeSubject(id: string) {
-    const idx = state.subjects.findIndex((s) => s.id === id);
-    if (idx === -1) return;
-    state.subjects.splice(idx, 1);
-    // Remove dangling relationships + bindings
-    state.relationships = state.relationships.filter(
-      (r) => r.from !== state.subjects[idx]?.name && r.to !== state.subjects[idx]?.name,
-    );
-    state.bindings = state.bindings.filter((b) => b.subjectId !== id);
-    // Reselect
-    if (state.activeSubjectId === id) {
-      state.activeSubjectId = state.subjects[0]?.id ?? null;
-    }
-  }
-
-  function renameSubject(id: string, name: string) {
-    const subj = state.subjects.find((s) => s.id === id);
-    if (!subj) return;
-    const old = subj.name;
-    subj.name = name;
-    // Update relationship references
-    for (const rel of state.relationships) {
-      if (rel.from === old) rel.from = name;
-      if (rel.to === old) rel.to = name;
-    }
-  }
-
-  function setSubjectCount(id: string, count: number) {
-    const subj = state.subjects.find((s) => s.id === id);
-    if (subj) subj.count = Math.max(1, count);
-  }
-
-  function setActiveSubject(id: string) {
-    state.activeSubjectId = id;
-    state.activeEntityType = "subject";
-    state.activeSchemaId = null;
-  }
-
   // ── Schemas ────────────────────────────────────────────────────────────
 
   function addSchema(name = "NewSchema") {
-    const schema: SchemaDef = { id: uid("schema"), name, fields: [] };
+    const schema: SchemaDef = {
+      id: uid("schema"),
+      name,
+      fields: [],
+      populateCount: 0,
+      relations: [],
+    };
     state.schemas.push(schema);
     state.activeSchemaId = schema.id;
-    state.activeEntityType = "schema";
-    state.activeSubjectId = null;
   }
 
   function removeSchema(id: string) {
     const idx = state.schemas.findIndex((s) => s.id === id);
     if (idx === -1) return;
     state.schemas.splice(idx, 1);
-    state.bindings = state.bindings.filter((b) => b.schemaId !== id);
     if (state.activeSchemaId === id) {
-      state.activeSchemaId = null;
+      state.activeSchemaId = state.schemas[0]?.id ?? null;
+    }
+    // Clean up derivedFrom references
+    for (const s of state.schemas) {
+      if (s.derivedFrom === id) s.derivedFrom = undefined;
+      // Clean up relations
+      s.relations = s.relations.filter((r) => r.targetSchemaId !== id);
     }
   }
 
@@ -391,27 +301,54 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     if (schema) schema.name = name;
   }
 
-  function setActiveSchema(id: string) {
+  function setActiveSchema(id: string | null) {
     state.activeSchemaId = id;
-    state.activeEntityType = "schema";
-    state.activeSubjectId = null;
   }
 
-  // ── Fields (shared for subjects + schemas) ─────────────────────────────
+  function setPopulateCount(id: string, count: number) {
+    const schema = state.schemas.find((s) => s.id === id);
+    if (schema) schema.populateCount = Math.max(0, count);
+  }
 
-  function _getFields(entityType: "subject" | "schema", entityId: string): FieldDef[] | null {
-    if (entityType === "subject") {
-      return state.subjects.find((s) => s.id === entityId)?.fields ?? null;
+  function setDerivedFrom(id: string, sourceId: string | undefined) {
+    const schema = state.schemas.find((s) => s.id === id);
+    if (schema) {
+      schema.derivedFrom = sourceId;
+      // When unsetting derivedFrom, clean up field source mappings
+      if (!sourceId) {
+        for (const f of schema.fields) f.sourceMapping = undefined;
+      }
     }
-    return state.schemas.find((s) => s.id === entityId)?.fields ?? null;
   }
 
-  function addField(entityType: "subject" | "schema", entityId: string, parentId?: string) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return null;
+  function addSchemaRelation(id: string, targetSchemaId: string, name: string) {
+    const schema = state.schemas.find((s) => s.id === id);
+    if (schema) {
+      schema.relations.push({ name, targetSchemaId });
+    }
+  }
+
+  function removeSchemaRelation(id: string, relationName: string) {
+    const schema = state.schemas.find((s) => s.id === id);
+    if (schema) {
+      schema.relations = schema.relations.filter((r) => r.name !== relationName);
+      // Clean up field mappings for this relation
+      for (const f of schema.fields) {
+        if (f.relationMapping?.relationName === relationName) {
+          f.relationMapping = undefined;
+        }
+      }
+    }
+  }
+
+  // ── Fields ─────────────────────────────────────────────────────────────
+
+  function addField(schemaId: string, parentId?: string) {
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return null;
 
     if (parentId) {
-      const parent = findField(fields, parentId);
+      const parent = findField(schema.fields, parentId);
       if (parent && parent.kind === "group") {
         const newField = makeField({ indent: parent.indent + 1 });
         parent.children.push(newField);
@@ -420,13 +357,13 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
 
     const newField = makeField();
-    fields.push(newField);
+    schema.fields.push(newField);
     return newField.id;
   }
 
-  function removeField(entityType: "subject" | "schema", entityId: string, fieldId: string) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
+  function removeField(schemaId: string, fieldId: string) {
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return;
 
     function recursiveRemove(list: FieldDef[]): boolean {
       const idx = list.findIndex((f) => f.id === fieldId);
@@ -441,19 +378,17 @@ export function createPlaygroundState(initial?: PlaygroundState) {
       }
       return false;
     }
-
-    recursiveRemove(fields);
+    recursiveRemove(schema.fields);
   }
 
   function updateField(
-    entityType: "subject" | "schema",
-    entityId: string,
+    schemaId: string,
     fieldId: string,
-    patch: Partial<Pick<FieldDef, "key" | "type" | "enumValues" | "kind">>,
+    patch: Partial<FieldDef>,
   ) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
-    const field = findField(fields, fieldId);
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return;
+    const field = findField(schema.fields, fieldId);
     if (!field) return;
     Object.assign(field, patch);
 
@@ -466,52 +401,37 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
   }
 
-  function setRelationMapping(
-    entityType: "subject" | "schema",
-    entityId: string,
-    fieldId: string,
-    relationMapping?: string,
-  ) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
-    const field = findField(fields, fieldId);
-    if (field) field.relationMapping = relationMapping;
-  }
-
   function addModifier(
-    entityType: "subject" | "schema",
-    entityId: string,
+    schemaId: string,
     fieldId: string,
     modifier: ModifierDef,
   ) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
-    const field = findField(fields, fieldId);
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return;
+    const field = findField(schema.fields, fieldId);
     if (field) field.modifiers.push(modifier);
   }
 
   function removeModifier(
-    entityType: "subject" | "schema",
-    entityId: string,
+    schemaId: string,
     fieldId: string,
     modifierIndex: number,
   ) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
-    const field = findField(fields, fieldId);
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return;
+    const field = findField(schema.fields, fieldId);
     if (field) field.modifiers.splice(modifierIndex, 1);
   }
 
   function updateModifierValue(
-    entityType: "subject" | "schema",
-    entityId: string,
+    schemaId: string,
     fieldId: string,
     modifierIndex: number,
     value: string | number | boolean,
   ) {
-    const fields = _getFields(entityType, entityId);
-    if (!fields) return;
-    const field = findField(fields, fieldId);
+    const schema = state.schemas.find((s) => s.id === schemaId);
+    if (!schema) return;
+    const field = findField(schema.fields, fieldId);
     if (field?.modifiers[modifierIndex]) {
       const mod = field.modifiers[modifierIndex];
       let finalValue: string | number | boolean = value;
@@ -528,63 +448,8 @@ export function createPlaygroundState(initial?: PlaygroundState) {
           if (value.toLowerCase() === "false") finalValue = false;
         }
       }
-
       mod.value = finalValue;
     }
-  }
-
-  // ── Relationships ──────────────────────────────────────────────────────
-
-  function addRelationship(initial: Partial<Omit<RelationshipDef, "id">> = {}) {
-    const names = state.subjects.map((s) => s.name);
-    state.relationships.push({
-      id: uid("rel"),
-      from: initial.from ?? names[0] ?? "",
-      cardinality: initial.cardinality ?? "1",
-      to: initial.to ?? names[1] ?? names[0] ?? "",
-      relationName: initial.relationName ?? "relation",
-      key: initial.key,
-    });
-  }
-
-  function updateRelationship(
-    id: string,
-    patch: Partial<Pick<RelationshipDef, "from" | "to" | "cardinality" | "relationName" | "key">>,
-  ) {
-    const rel = state.relationships.find((r) => r.id === id);
-    if (rel) Object.assign(rel, patch);
-  }
-
-  function removeRelationship(id: string) {
-    const idx = state.relationships.findIndex((r) => r.id === id);
-    if (idx !== -1) state.relationships.splice(idx, 1);
-  }
-
-  // ── Bindings ───────────────────────────────────────────────────────────
-
-  function bindSchemaToSubject(schemaId: string, subjectId: string | null) {
-    const idx = state.bindings.findIndex((b) => b.schemaId === schemaId);
-    if (subjectId === null) {
-      if (idx !== -1) state.bindings.splice(idx, 1);
-      return;
-    }
-
-    if (idx !== -1) {
-      state.bindings[idx].subjectId = subjectId;
-      state.bindings[idx].fieldMap = {};
-    } else {
-      state.bindings.push({ schemaId, subjectId, fieldMap: {} });
-    }
-  }
-
-  function setFieldMapping(schemaId: string, schemaFieldKey: string, subjectFieldKey: string) {
-    const binding = state.bindings.find((b) => b.schemaId === schemaId);
-    if (binding) binding.fieldMap[schemaFieldKey] = subjectFieldKey;
-  }
-
-  function removeFieldMapping(schemaId: string, schemaFieldKey: string) {
-    const binding = state.bindings.find((b) => b.schemaId === schemaId);
-    if (binding) delete binding.fieldMap[schemaFieldKey];
   }
 
   // ── UI ─────────────────────────────────────────────────────────────────
@@ -597,50 +462,23 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     state.ui.exportOpen = open;
   }
 
-  function toggleSection(id: string) {
-    state.ui.sectionStates[id] = !state.ui.sectionStates[id];
+  function setMobileTab(tab: "config" | "editor" | "output") {
+    state.ui.activeMobileTab = tab;
   }
 
   // ── Derived helpers ────────────────────────────────────────────────────
 
-  /** The currently active subject or null */
-  const activeSubject = $derived(
-    state.activeEntityType === "subject"
-      ? (state.subjects.find((s) => s.id === state.activeSubjectId) ?? null)
-      : null,
-  );
-
-  /** The currently active schema or null */
   const activeSchema = $derived(
-    state.activeEntityType === "schema"
-      ? (state.schemas.find((s) => s.id === state.activeSchemaId) ?? null)
-      : null,
+    state.schemas.find((s) => s.id === state.activeSchemaId) ?? null,
   );
 
-  /** Fields being edited in the builder right now */
-  const activeFields = $derived(activeSubject?.fields ?? activeSchema?.fields ?? []);
+  const activeFields = $derived(activeSchema?.fields ?? []);
 
-  /** Builder pane title */
-  const builderTitle = $derived(
-    state.activeEntityType === "subject"
-      ? (activeSubject?.name ?? "Builder")
-      : (activeSchema?.name ?? "Builder"),
-  );
-
-  /** Binding for the active schema (if any) */
-  const activeBinding = $derived(
-    activeSchema ? (state.bindings.find((b) => b.schemaId === activeSchema.id) ?? null) : null,
-  );
+  const builderTitle = $derived(activeSchema?.name ?? "World Config");
 
   return {
-    // Expose raw state for reading
     get state() {
       return state;
-    },
-
-    // Derived
-    get activeSubject() {
-      return activeSubject;
     },
     get activeSchema() {
       return activeSchema;
@@ -651,27 +489,21 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     get builderTitle() {
       return builderTitle;
     },
-    get activeBinding() {
-      return activeBinding;
-    },
 
-    // Mutations
     setWorldSeed,
     setOptionalProbability,
     setDefaultArrayLength,
     fetchAvailableZodVersions,
     setZodVersion,
 
-    addSubject,
-    removeSubject,
-    renameSubject,
-    setSubjectCount,
-    setActiveSubject,
-
     addSchema,
     removeSchema,
     renameSchema,
     setActiveSchema,
+    setPopulateCount,
+    setDerivedFrom,
+    addSchemaRelation,
+    removeSchemaRelation,
 
     addField,
     removeField,
@@ -680,19 +512,9 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     removeModifier,
     updateModifierValue,
 
-    addRelationship,
-    updateRelationship,
-    removeRelationship,
-
-    setRelationMapping,
-
-    bindSchemaToSubject,
-    setFieldMapping,
-    removeFieldMapping,
-
     setOutputTab,
     setExportOpen,
-    toggleSection,
+    setMobileTab,
   };
 }
 

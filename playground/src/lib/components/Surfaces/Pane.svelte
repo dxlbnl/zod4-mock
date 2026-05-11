@@ -9,9 +9,10 @@
 		children?: Snippet;
 		actions?: Snippet;
 		onupdatetitle?: (val: string) => void;
+		titleTestId?: string;
 	}
 
-	let { title, accentTitle, subtitle, children, actions, onupdatetitle }: Props = $props();
+	let { title, accentTitle, subtitle, children, actions, onupdatetitle, titleTestId }: Props = $props();
 
 	function handleInput(e: Event) {
 		const val = (e.target as HTMLInputElement).value;
@@ -27,6 +28,7 @@
 					type="text" 
 					class="pane-title-input t-title" 
 					value={title}
+					data-testid={titleTestId}
 					oninput={handleInput}
 				/>
 			{:else}

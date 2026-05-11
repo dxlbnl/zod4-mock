@@ -5,10 +5,8 @@
  */
 
 import type { ZodTypeAny } from "zod";
-import type { FieldDef, ModifierDef, PlaygroundState } from "./state.svelte";
-import { defineSubjectType, createWorld as _createWorld } from "zod4-mock";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef } from "./state.svelte";
+import { createWorld as _createWorld } from "zod4-mock";
 
 // ─── Field → Zod schema ───────────────────────────────────────────────────────
 
@@ -16,7 +14,7 @@ function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAn
   let s = schema;
   for (const mod of modifiers) {
     const val = mod.value;
-    const name = mod.name.replace(/\(\)$/, ""); // strip trailing ()
+    const name = mod.name.replace(/\(\)$/, ""); 
     try {
       switch (name) {
         case ".min":
@@ -79,30 +77,16 @@ export function buildZodField(z: any, field: FieldDef): ZodTypeAny {
   let base: ZodTypeAny;
 
   switch (field.type) {
-    case "string":
-      base = z.string();
-      break;
-    case "number":
-      base = z.number();
-      break;
-    case "boolean":
-      base = z.boolean();
-      break;
-    case "date":
-      base = z.date();
-      break;
-    case "uuid":
-      base = z.uuid();
-      break;
-    case "email":
-      base = z.email();
-      break;
-    case "url":
-      base = z.url();
-      break;
+    case "string": base = z.string(); break;
+    case "number": base = z.number(); break;
+    case "boolean": base = z.boolean(); break;
+    case "date": base = z.date(); break;
+    case "uuid": base = z.uuid(); break;
+    case "email": base = z.email(); break;
+    case "url": base = z.url(); break;
     case "enum":
       if (field.enumValues.length === 0) {
-        base = z.string(); // fallback
+        base = z.string(); 
       } else {
         base = z.enum(field.enumValues as [string, ...string[]]);
       }
@@ -125,7 +109,7 @@ export function buildZodField(z: any, field: FieldDef): ZodTypeAny {
   return applyModifiers(base, field.modifiers);
 }
 
-export function buildZodSchema(z: any, fields: FieldDef[]): ReturnType<typeof z.object> {
+export function buildZodSchema(z: any, fields: FieldDef[]): any {
   const shape: Record<string, ZodTypeAny> = {};
   for (const field of fields) {
     if (!field.key) continue;
@@ -137,7 +121,6 @@ export function buildZodSchema(z: any, fields: FieldDef[]): ReturnType<typeof z.
 // ─── PlaygroundState → World ──────────────────────────────────────────────────
 
 export function buildWorld(state: PlaygroundState) {
-  const subjectMap = new Map<string, ReturnType<typeof defineSubjectType>>();
   const schemaMap = new Map<string, ZodTypeAny>();
 
   let world = _createWorld({
@@ -146,73 +129,60 @@ export function buildWorld(state: PlaygroundState) {
     defaultArrayLength: [state.world.defaultArrayLengthMin, state.world.defaultArrayLengthMax],
   });
 
-  // Register subjects
-  for (const subj of state.subjects) {
-    const schema = buildZodSchema(state.z, subj.fields);
-
-    // Map relations to core lib format
-    const relations: Record<string, any> = {};
-    const rels = state.relationships.filter((r) => r.from === subj.name);
-    for (const r of rels) {
-      // We only pass the key if it's EXPLICITLY set.
-      // Otherwise, we let the core library use its internal heuristics (The Magic).
-      let key = r.key;
-
-      // Check if any field explicitly maps to this relation via 🔗 icon
-      if (!key) {
-        const fieldMapping = subj.fields.find((f) => f.relationMapping === r.relationName);
-        if (fieldMapping) key = fieldMapping.key;
-      }
-
-      relations[r.relationName] = {
-        type: r.to,
-        cardinality: r.cardinality,
-        ...(key ? { key } : {}),
-      };
-    }
-
-    const subjectType = defineSubjectType(subj.name, schema, { relations });
-    subjectMap.set(subj.id, subjectType);
-    schemaMap.set(subj.id, schema);
-    world = world.withSubject(subjectType) as typeof world;
-    // Register the subject's own schema so world.generate(z.array(schema)) pulls from the registry
-    world = world.withSchema(schema, subjectType) as typeof world;
-  }
-
-  // Register schemas with bindings
+  // First pass: Build all Zod schemas
   for (const schemaDef of state.schemas) {
-    const apiSchema = buildZodSchema(state.z, schemaDef.fields);
-    schemaMap.set(schemaDef.id, apiSchema);
-
-    const binding = state.bindings.find((b) => b.schemaId === schemaDef.id);
-    if (!binding) {
-      // Even if no binding, register the schema so world.generate(apiSchema) works ad-hoc
-      continue;
-    }
-    const subjectType = subjectMap.get(binding.subjectId);
-    if (!subjectType) continue;
-
-    // Build matchers from fieldMap
-    const matchers: Record<string, (s: Record<string, unknown>, ctx: any) => unknown> = {};
-    for (const [schemaKey, subjectKey] of Object.entries(binding.fieldMap)) {
-      matchers[schemaKey] = (s) => s[subjectKey];
-    }
-
-    world = world.withSchema(apiSchema, subjectType, matchers as any) as typeof world;
+    const zSchema = buildZodSchema(state.z, schemaDef.fields);
+    schemaMap.set(schemaDef.id, zSchema);
   }
 
-  // Populate subjects
-  for (const subj of state.subjects) {
-    const subjectType = subjectMap.get(subj.id);
-    if (subjectType && subj.count > 0) {
-      world = world.populate(subjectType, subj.count) as typeof world;
+  // Second pass: Register schemas with relations and matchers
+  for (const schemaDef of state.schemas) {
+    const zSchema = schemaMap.get(schemaDef.id)!;
+    const opts: any = {};
+
+    // Projections
+    if (schemaDef.derivedFrom) {
+      opts.from = schemaMap.get(schemaDef.derivedFrom);
+    }
+
+    // Relations
+    if (schemaDef.relations.length > 0) {
+      const relations: Record<string, ZodTypeAny> = {};
+      for (const r of schemaDef.relations) {
+        const target = schemaMap.get(r.targetSchemaId);
+        if (target) relations[r.name] = target;
+      }
+      opts.relations = relations;
+    }
+
+    // Matchers
+    const matchers: Record<string, any> = {};
+    for (const f of schemaDef.fields) {
+      if (schemaDef.derivedFrom && f.sourceMapping) {
+        matchers[f.key] = (ctx: any) => ctx.source[f.sourceMapping!];
+      } else if (f.relationMapping) {
+        matchers[f.key] = (ctx: any) => ctx.related(f.relationMapping!.relationName)[f.relationMapping!.targetFieldKey];
+      }
+    }
+    if (Object.keys(matchers).length > 0) {
+      opts.matchers = matchers;
+    }
+
+    world = world.withSchema(zSchema, opts);
+  }
+
+  // Populate
+  for (const schemaDef of state.schemas) {
+    if (schemaDef.populateCount > 0) {
+      const zSchema = schemaMap.get(schemaDef.id)!;
+      world = world.populate(zSchema, schemaDef.populateCount);
     }
   }
 
-  return { world, subjectMap, schemaMap };
+  return { world, schemaMap };
 }
 
-// ─── Generate preview data for a subject ─────────────────────────────────────
+// ─── Generation Previews ──────────────────────────────────────────────────────
 
 export interface GenerationResult {
   ok: boolean;
@@ -220,16 +190,13 @@ export interface GenerationResult {
   error?: string;
 }
 
-export function generateSubjectData(state: PlaygroundState, subjectId: string): GenerationResult {
+export function generateSchemaPreview(state: PlaygroundState, schemaId: string): GenerationResult {
   try {
-    const subj = state.subjects.find((s) => s.id === subjectId);
-    if (!subj) return { ok: false, error: "Subject not found" };
-
     const { world, schemaMap } = buildWorld(state);
-    const schema = schemaMap.get(subjectId);
-    if (!schema) return { ok: false, error: "Subject schema not found" };
+    const schema = schemaMap.get(schemaId);
+    if (!schema) return { ok: false, error: "Schema not found" };
 
-    const data = world.generate(state.z.array(schema)) as unknown[];
+    const data = world.generate(state.z.array(schema).length(3)) as unknown[];
     return { ok: true, data };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -241,22 +208,18 @@ export function generateWorldData(state: PlaygroundState): GenerationResult {
     const { world, schemaMap } = buildWorld(state);
     const results: Record<string, unknown[]> = {};
 
-    // Generate for all subjects
-    for (const subj of state.subjects) {
-      const schema = schemaMap.get(subj.id);
-      if (schema) {
-        results[subj.name] = world.generate(state.z.array(schema)) as unknown[];
-      }
-    }
-
-    // Generate for all schemas
     for (const schemaDef of state.schemas) {
       const schema = schemaMap.get(schemaDef.id);
       if (schema) {
-        results[schemaDef.name] = world.generate(state.z.array(schema).length(3)) as unknown[];
+        // If it's a "subject-like" schema (populateCount > 0), generate its registry content
+        if (schemaDef.populateCount > 0) {
+          results[schemaDef.name] = world.registry.all(schema) as unknown[];
+        } else {
+          // Otherwise generate some samples
+          results[schemaDef.name] = world.generate(state.z.array(schema).length(3)) as unknown[];
+        }
       }
     }
-
     return { ok: true, data: results };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

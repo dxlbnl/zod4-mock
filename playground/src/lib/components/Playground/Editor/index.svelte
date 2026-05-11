@@ -1,25 +1,21 @@
 <script lang="ts">
 	/**
 	 * SchemaEditor/index.svelte
-	 * Root component — drop-in replacement for BuilderPane.
-	 *
-	 * Renders a list of SchemaEditorLines (and recursively nested ones for groups),
-	 * manages cross-line navigation and field creation/removal.
 	 */
 
 	import Pane from '$lib/components/Surfaces/Pane.svelte';
 	import SchemaEditorLine from './SchemaEditorLine.svelte';
-	import InlineDropdown from './InlineDropdown.svelte';
-	import type { FieldDef, ModifierDef } from '$lib/state.svelte';
-	import { makeField } from '$lib/state.svelte';
-	import { FIELD_TYPES, type ZodFieldType } from '$lib/field-types';
+	import RelationsManager from './RelationsManager.svelte';
+	import WorldConfig from '../Sidebar/WorldConfig.svelte';
+	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
+	import type { FieldDef, ModifierDef, SchemaDef } from '$lib/state.svelte';
+	import { type ZodFieldType } from '$lib/field-types';
 	import { tick } from 'svelte';
 
 	interface Props {
-		fields: FieldDef[];
+		schema: SchemaDef | null;
+		schemas: SchemaDef[];
 		title: string;
-		accentTitle?: string;
-		subtitle?: string;
 
 		onaddfield?: (parentId?: string) => string | void;
 		onremovefield?: (id: string) => void;
@@ -28,28 +24,28 @@
 		onupdatemodifier?: (fieldId: string, index: number, value: string | number | boolean) => void;
 		onremovemodifier?: (fieldId: string, index: number) => void;
 		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
-		/** Notify parent of selection change */
 		onselectfield?: (id: string | null) => void;
-		/** Currently selected field ID (controlled from parent) */
 		selectedFieldId?: string | null;
 		onupdatetitle?: (val: string) => void;
+		onupdatepopulate?: (val: number) => void;
 
-		/** Binding related (Story 3) */
-		activeEntityType?: 'subject' | 'schema';
-		subjects?: import('$lib/state.svelte').SubjectDef[];
-		activeBinding?: import('$lib/state.svelte').SchemaBinding | null;
-		relationships?: import('$lib/state.svelte').RelationshipDef[];
-		onbindschema?: (subjectId: string | null) => void;
-		onsetmapping?: (fieldKey: string, subjectKey: string) => void;
-		onremovemapping?: (fieldKey: string) => void;
-		onupdaterelationmapping?: (fieldId: string, relationName: string | undefined) => void;
+		onupdatederived?: (sourceId: string | undefined) => void;
+		onaddrelation?: (targetId: string, name: string) => void;
+		onremoverelation?: (name: string) => void;
+
+		onupdateseed?: (val: number) => void;
+		onupdateprob?: (val: number) => void;
+
+		// Mobile context
+		activeSchemaId?: string | null;
+		onaddschema?: () => void;
+		onselectschema?: (id: string | null) => void;
 	}
 
 	let {
-		fields = [],
+		schema = null,
+		schemas = [],
 		title,
-		accentTitle,
-		subtitle,
 		onaddfield,
 		onremovefield,
 		onupdatefield,
@@ -60,46 +56,26 @@
 		onselectfield,
 		selectedFieldId = null,
 		onupdatetitle,
-		activeEntityType,
-		subjects = [],
-		relationships = [],
-		activeBinding = null,
-		onbindschema,
-		onsetmapping,
-		onremovemapping,
-		onupdaterelationmapping
+		onupdatepopulate,
+		onupdatederived,
+		onaddrelation,
+		onremoverelation,
+		world,
+		onupdateseed,
+		onupdateprob,
+		activeSchemaId = null,
+		onaddschema,
+		onselectschema
 	}: Props = $props();
 
-	// ── Subject Picker State ───────────────────────────────────────────────
-	let activeAnchorEl = $state<HTMLElement | null>(null);
-	let subjectDropdownOpen = $state(false);
-	const boundSubject = $derived(subjects.find((s) => s.id === activeBinding?.subjectId) ?? null);
-	const subjectMenuItems = $derived([
-		...subjects.map((s) => ({
-			name: s.name,
-			desc: '',
-			category: 'Subjects'
-		})),
-		{ name: 'None', desc: 'Clear binding', category: 'Action' }
-	]);
-
-	function handleBindSchema(subjectName: string) {
-		if (subjectName === 'None') {
-			onbindschema?.(null);
-		} else {
-			const subj = subjects.find((s) => s.name === subjectName);
-			if (subj) onbindschema?.(subj.id);
-		}
-		subjectDropdownOpen = false;
-	}
-
 	// ── Active line tracking ───────────────────────────────────────────────
-	let activeLineId = $derived(selectedFieldId);
 	let lastAddedId = $state<string | null>(null);
+
+	const fields = $derived(schema?.fields ?? []);
+	const sourceSchema = $derived(schemas.find(s => s.id === schema?.derivedFrom));
 
 	// ── Field helpers ──────────────────────────────────────────────────────
 
-	/** Collect all field IDs in render order (flattened, DFS) */
 	function flattenIds(list: FieldDef[]): string[] {
 		const ids: string[] = [];
 		for (const f of list) {
@@ -119,7 +95,6 @@
 	}
 
 	function handleRemoveField(id: string) {
-		// Before removing, try to focus the previous line
 		const ids = flattenIds(fields);
 		const idx = ids.indexOf(id);
 		const prevId = idx > 0 ? ids[idx - 1] : ids[idx + 1] ?? null;
@@ -130,7 +105,6 @@
 	}
 
 	function handleNextSibling(id: string) {
-		// Find the parent list that contains this field
 		function findParentId(list: FieldDef[], targetId: string, parentId?: string): string | undefined {
 			for (const f of list) {
 				if (f.id === targetId) return parentId;
@@ -146,7 +120,6 @@
 	}
 
 	function handleExitNesting(id: string) {
-		// Find the parent's parent and add a sibling there
 		function findAncestorId(list: FieldDef[], targetId: string, ancestors: string[]): string[] | null {
 			for (const f of list) {
 				if (f.id === targetId) return ancestors;
@@ -158,7 +131,6 @@
 			return null;
 		}
 		const ancestors = findAncestorId(fields, id, []);
-		// ancestors = [...grandparent, parent]. We want to add after parent.
 		const grandparentId = ancestors && ancestors.length >= 2 ? ancestors[ancestors.length - 2] : undefined;
 		handleAddField(grandparentId);
 	}
@@ -166,105 +138,125 @@
 	function handleUpdateType(id: string, type: ZodFieldType) {
 		const isGroup = type === 'object';
 		onupdatefield?.(id, { type, kind: isGroup ? 'group' : 'field' });
-
-		// Auto-spawn a child for object types
 		if (type === 'object') {
 			tick().then(() => handleAddField(id));
 		}
 	}
+	const mobileOptions = $derived([
+		{ label: '🌍 World Config', value: 'world' },
+		...schemas.map(s => ({ label: `📄 ${s.name}`, value: s.id })),
+		{ label: '➕ Add Schema', value: 'add' }
+	]);
 
-
+	function handleMobileSwitch(val: string) {
+		if (val === 'add') {
+			onaddschema?.();
+		} else {
+			onselectfield?.(null); // Clear selected field
+			onupdatederived?.(undefined); // Unused here but to be safe
+			// Wait, I need a way to tell the parent to switch active schema
+			// I'll add onselectschema to props
+		}
+	}
 </script>
 
-<Pane {title} {accentTitle} {subtitle} {onupdatetitle}>
-	<div class="schema-editor">
-		<!-- Header hint bar -->
-		<div class="hint-bar t-code-tight" aria-label="Keyboard shortcuts">
-			<span><kbd>:</kbd> type</span>
-			<span><kbd>.</kbd> modifier</span>
-			<span><kbd>↵</kbd> next field</span>
-			<span><kbd>⇧↵</kbd> exit nest</span>
-			<span><kbd>⌫</kbd> delete</span>
-		</div>
+{#snippet actions()}
+	<div class="mobile-switcher">
+		<FancySelect
+			options={mobileOptions}
+			value={activeSchemaId ?? 'world'}
+			onchange={(val) => {
+				if (val === 'add') {
+					onaddschema?.();
+				} else {
+					onselectschema?.(val === 'world' ? null : val);
+				}
+			}}
+		/>
+	</div>
+{/snippet}
 
-		<!-- Subject Relations (Story 5) -->
-		{#if activeEntityType === 'subject'}
-			{@const subjRels = relationships.filter(r => r.from === title)}
-			{#if subjRels.length > 0}
-				<div class="relations-bar t-code-tight">
-					<span class="label">Relations:</span>
-					<div class="rel-tags">
-						{#each subjRels as rel}
-							<div class="rel-tag" title="{rel.relationName} -> {rel.to} ({rel.cardinality}){rel.key ? ` via ${rel.key}` : ''}">
-								<span class="rel-name">{rel.relationName}</span>
-								<span class="rel-arrow">→</span>
-								<span class="rel-to">{rel.to}</span>
-							</div>
-						{/each}
+<Pane {title} onupdatetitle={onupdatetitle} titleTestId="schema-name-input" {actions}>
+	<div class="schema-editor" data-testid="active-schema-editor">
+		{#if schema}
+			<!-- Config Bar -->
+			<div class="config-bar">
+				<div class="config-row">
+					<div class="config-item">
+						<label for="populate-count">Populate</label>
+						<input 
+							id="populate-count"
+							type="number" 
+							value={schema.populateCount} 
+							oninput={(e) => onupdatepopulate?.(parseInt(e.currentTarget.value) || 0)}
+							min="0"
+						/>
+					</div>
+					<div class="config-item">
+						<label for="derived-from">Derived From</label>
+						<FancySelect
+							options={[
+								{ label: 'None (Independent)', value: '' },
+								...schemas
+									.filter(s => s.id !== schema?.id)
+									.map(s => ({ label: s.name, value: s.id }))
+							]}
+							value={schema.derivedFrom ?? ''}
+							onchange={(val) => onupdatederived?.(val || undefined)}
+						/>
 					</div>
 				</div>
-			{/if}
-		{/if}
 
-		<!-- Subject Picker (Story 3) -->
-		{#if activeEntityType === 'schema'}
-			<div class="binding-bar t-code-tight">
-				<span class="label">Identity Source:</span>
-				<div class="picker-container" style="position: relative;">
-					<button
-						type="button"
-						class="picker-btn"
-						class:is-bound={!!boundSubject}
-						onclick={(e) => {
-							if (activeAnchorEl) activeAnchorEl.style.removeProperty('anchor-name');
-							activeAnchorEl = e.currentTarget as HTMLElement;
-							activeAnchorEl.style.setProperty('anchor-name', '--subject-picker-anchor');
-							subjectDropdownOpen = true;
-						}}
-					>
-						{#if boundSubject}
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="link-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-							<span class="subject-name">{boundSubject.name}</span>
-						{:else}
-							<span class="unbound-label">Not bound</span>
-						{/if}
-						<span class="chevron">▾</span>
-					</button>
-
-					{#if subjectDropdownOpen}
-						<InlineDropdown
-							items={subjectMenuItems}
-							value={activeBinding?.subjectId}
-							scope="subject"
-							anchorName="--subject-picker-anchor"
-							onselect={handleBindSchema}
-							onclose={() => (subjectDropdownOpen = false)}
+				<div class="config-row">
+					<div class="config-item full">
+						<span class="label">Relations</span>
+						<RelationsManager 
+							{schema} 
+							{schemas} 
+							onadd={onaddrelation!} 
+							onremove={onremoverelation!} 
 						/>
-					{/if}
+					</div>
 				</div>
-				{#if boundSubject}
-					<span class="hint">Fields can now map to {boundSubject.name} data.</span>
-				{:else}
-					<span class="hint">Bind to a subject to enable stable identity.</span>
-				{/if}
+			</div>
+
+			<!-- Field lines -->
+			<div class="lines" role="list" aria-label="Schema fields">
+				{@render lineList(fields, undefined)}
+			</div>
+
+			<!-- Add property button -->
+			<div class="add-row">
+				<button
+					type="button"
+					class="add-btn t-code-sm"
+					onclick={() => handleAddField()}
+				>
+					<span class="plus" aria-hidden="true">+</span> add property
+				</button>
+			</div>
+		{:else}
+			<div class="world-config-container">
+				<Pane title="World Config" subtitle="Global Mock Settings">
+					<div class="world-config-body">
+						<WorldConfig 
+							seed={world?.seed ?? 0}
+							optionalProbability={world?.optionalProbability ?? 0}
+							onupdateseed={onupdateseed}
+							onupdateprob={onupdateprob}
+						/>
+						
+						<div class="config-section extra">
+							<span class="t-small section-label">Zod Version</span>
+							<div class="zod-info t-code-sm">
+								Currently using <strong>zod@{world?.zodVersion}</strong>
+							</div>
+							<p class="help t-code-tight">Change version in the top bar.</p>
+						</div>
+					</div>
+				</Pane>
 			</div>
 		{/if}
-
-		<!-- Field lines -->
-		<div class="lines" role="list" aria-label="Schema fields">
-			{@render lineList(fields, undefined)}
-		</div>
-
-		<!-- Add property button -->
-		<div class="add-row">
-			<button
-				type="button"
-				class="add-btn t-code-sm"
-				onclick={() => handleAddField()}
-			>
-				<span class="plus" aria-hidden="true">+</span> add property
-			</button>
-		</div>
 	</div>
 </Pane>
 
@@ -273,33 +265,32 @@
 		<div role="listitem">
 			<SchemaEditorLine
 				{field}
-				subjects={subjects}
-				{relationships}
-				isActive={activeLineId === field.id}
+				isActive={selectedFieldId === field.id}
 				autofocus={lastAddedId === field.id}
-				availableSourceKeys={boundSubject?.fields.map((f) => f.key) ?? []}
-				mappedSourceKey={activeBinding?.fieldMap[field.key] ?? null}
-				onupdatekey={(id, key) => onupdatefield?.(id, { key })}
+				
+				{schemas}
+				sourceSchema={sourceSchema}
+				currentSchemaRelations={schema?.relations ?? []}
+
+				onupdatekey={(id: string, key: string) => onupdatefield?.(id, { key })}
 				onupdatetype={handleUpdateType}
-				onaddmodifier={(id, mod) => onaddmodifier?.(id, mod)}
-				onupdatemodifier={(id, idx, val) => onupdatemodifier?.(id, idx, val)}
-				onremovemodifier={(id, idx) => onremovemodifier?.(id, idx)}
-				onupdateenumvalues={(id, vals) => onupdateenumvalues?.(id, vals)}
-				onsetmapping={(id, schemaKey, subjKey) => onsetmapping?.(schemaKey, subjKey)}
-				onremovemapping={(id, schemaKey) => onremovemapping?.(schemaKey)}
-				onupdaterelationmapping={(id, rid) => onupdaterelationmapping?.(id, rid)}
+				onaddmodifier={(id: string, mod: ModifierDef) => onaddmodifier?.(id, mod)}
+				onupdatemodifier={(id: string, idx: number, val: string | number | boolean) => onupdatemodifier?.(id, idx, val)}
+				onremovemodifier={(id: string, idx: number) => onremovemodifier?.(id, idx)}
+				onupdateenumvalues={(id: string, vals: string[]) => onupdateenumvalues?.(id, vals)}
+				
+				onupdatemapping={(patch: Partial<FieldDef>) => onupdatefield?.(field.id, patch)}
+
 				onremove={handleRemoveField}
 				onnextsibling={handleNextSibling}
 				onexitnesting={handleExitNesting}
-				onfocus={(id) => onselectfield?.(id)}
+				onfocus={(id: string | null) => onselectfield?.(id)}
 			/>
 
-			<!-- Nested children for group fields -->
 			{#if field.kind === 'group' && field.children?.length}
 				<div class="nested-lines" role="list" aria-label="Nested fields of {field.key}">
 					{@render lineList(field.children, field.id)}
 				</div>
-				<!-- Nested add button -->
 				<div class="nested-add" style="--ind: {12 + (field.indent + 1) * 20}px">
 					<button
 						type="button"
@@ -319,146 +310,67 @@
 		min-height: 0;
 	}
 
-	/* Keyboard hint bar */
-	.hint-bar {
+	.mobile-switcher {
+		display: none;
+		min-width: 160px;
+	}
+
+	@media (max-width: 768px) {
+		.mobile-switcher {
+			display: block;
+		}
+	}
+
+	.config-bar {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		padding: var(--space-4);
+		background: var(--bg-1);
+		border-bottom: 1px solid var(--line-strong);
+	}
+
+	.config-row {
 		display: flex;
 		gap: var(--space-4);
-		padding: var(--space-2) var(--space-4);
-		border-bottom: 1px solid var(--bg-2);
-		color: var(--ink-3);
-		background: var(--bg-2);
-		flex-wrap: wrap;
 	}
 
-	.hint-bar kbd {
-		display: inline-block;
-		padding: 0 4px;
-		border: 1px solid var(--line-strong);
-		border-radius: 3px;
-		background: var(--bg-1);
-		color: var(--ink-1);
-		font-size: 0.85em;
-		font-family: inherit;
-		line-height: 1.5;
-	}
-
-	/* Binding bar */
-	.binding-bar {
+	.config-item {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-2) var(--space-4);
-		background: var(--bg-1);
-		border-bottom: 1px solid var(--line-strong);
-		color: var(--ink-2);
-	}
-
-	.binding-bar .label {
-		color: var(--ink-3);
-		font-weight: 500;
-	}
-
-	.picker-btn {
-		display: flex;
-		align-items: center;
+		flex-direction: column;
 		gap: var(--space-1);
-		padding: 2px 8px;
-		background: var(--bg-2);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		color: var(--ink-1);
-		cursor: pointer;
-		transition: all var(--ease-quick);
+		flex: 1;
 	}
+	.config-item.full { flex: none; width: 100%; }
 
-	.picker-btn:hover {
-		background: var(--bg-3);
-		border-color: var(--ink-3);
-	}
-
-	.picker-btn.is-bound {
-		color: var(--accent-bright);
-		background: var(--accent-soft);
-		border-color: var(--accent-edge);
-	}
-
-	.picker-btn .link-icon {
-		opacity: 0.8;
-	}
-
-	.picker-btn .chevron {
-		font-size: 0.8em;
-		opacity: 0.5;
-	}
-
-	.binding-bar .hint {
-		font-size: 0.9em;
+	.config-item label {
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
 		color: var(--ink-3);
-		opacity: 0.7;
-		font-style: italic;
+		letter-spacing: 0.05em;
 	}
 
-	/* Relations Bar (Story 5) */
-	.relations-bar {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-2) var(--space-4);
-		background: var(--bg-1);
-		border-bottom: 1px solid var(--line-strong);
-		color: var(--ink-2);
-	}
-
-	.relations-bar .label {
-		color: var(--ink-3);
-		font-weight: 500;
-	}
-
-	.rel-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-	}
-
-	.rel-tag {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		padding: 2px 8px;
+	input {
 		background: var(--bg-2);
 		border: 1px solid var(--line);
 		border-radius: var(--radius-sm);
-		cursor: help;
-		transition: all var(--ease-quick);
-	}
-
-	.rel-tag:hover {
-		border-color: var(--accent-edge);
-		background: var(--accent-soft);
-	}
-
-	.rel-name {
-		color: var(--accent-bright);
-		font-weight: 600;
-	}
-
-	.rel-arrow {
-		color: var(--ink-3);
-		font-size: 10px;
-	}
-
-	.rel-to {
+		padding: var(--space-1) var(--space-2);
 		color: var(--ink-1);
-		font-weight: 500;
+		font-family: inherit;
+		font-size: 13px;
 	}
 
-	/* Lines */
+	input:focus {
+		outline: none;
+		border-color: var(--accent-bright);
+	}
+
 	.lines {
 		flex: 1;
 		overflow-y: auto;
 	}
 
-	/* Nested add button */
 	.nested-add {
 		padding: var(--space-1) var(--space-4) var(--space-1) var(--ind);
 		border-bottom: 1px solid var(--bg-2);
@@ -477,7 +389,6 @@
 		color: var(--accent);
 	}
 
-	/* Add row */
 	.add-row {
 		padding: var(--space-4);
 	}
@@ -503,9 +414,20 @@
 		background: var(--accent-soft);
 	}
 
-	.plus {
-		font-size: 1.2em;
-		line-height: 0;
-		margin-bottom: 2px;
+	.section-label {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		letter-spacing: 0.05em;
+		margin-bottom: var(--space-1);
+	}
+
+	.zod-info {
+		padding: var(--space-2) var(--space-3);
+		background: var(--bg-2);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sm);
+		color: var(--ink-1);
 	}
 </style>

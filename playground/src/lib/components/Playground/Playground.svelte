@@ -5,6 +5,7 @@
 	import OutputPane from "./Output/OutputPane.svelte";
 	import ExportSheet from "$lib/components/Surfaces/ExportSheet.svelte";
 	import ExportContent from "./Output/ExportContent.svelte";
+	import MobileTabBar from "./MobileTabBar.svelte";
 
 	import { untrack, onMount } from "svelte";
 	import { createPlaygroundState } from "$lib/state.svelte";
@@ -12,16 +13,14 @@
 		generateTokenizedCode,
 		generateTokenizedData,
 		generateTokenizedWorldData,
-		generateSubjectCode,
 		generateFullExport,
+		generateSchemaCode,
 		exportLineCount,
 	} from "$lib/codegen";
 	import {
-		generateSubjectData,
+		generateSchemaPreview,
 		generateWorldData,
-		buildWorld,
 	} from "$lib/schema-builder";
-
 
 	interface Props {
 		initialState?: any;
@@ -40,58 +39,24 @@
 	let selectedFieldId = $state<string | null>(null);
 
 	// Derived values
-	const activeEntityType = $derived(store.state.activeEntityType);
+	const activeSchema = $derived(store.activeSchema);
 	const activeFields = $derived(store.activeFields);
 	const builderTitle = $derived(store.builderTitle);
 
-	// Active entity helper — used in builder callbacks
-	const entityId = $derived(
-		activeEntityType === "subject"
-			? store.activeSubject?.id
-			: store.activeSchema?.id,
-	);
-
 	const codeLines = $derived.by(() => {
-		if (activeEntityType === "subject" && store.activeSubject) {
-			return generateTokenizedCode(
-				store.activeSubject,
-				store.state.relationships,
-			);
-		}
-		if (activeEntityType === "schema" && store.activeSchema) {
-			return generateTokenizedCode(
-				{
-					...store.activeSchema,
-					count: 0,
-				} as any,
-				[],
-			);
+		if (activeSchema) {
+			return generateTokenizedCode(activeSchema);
 		}
 		return [];
 	});
 
 	// Mock data generation
 	const generationResult = $derived.by(() => {
-		if (activeEntityType === "subject" && store.activeSubject) {
-			return generateSubjectData(store.state, store.activeSubject.id);
-		}
-		if (activeEntityType === "schema" && store.activeSchema) {
-			try {
-				const { world, schemaMap } = buildWorld(store.state);
-				const apiSchema = schemaMap.get(store.activeSchema.id);
-				if (!apiSchema) return { ok: false, error: "Schema not found in world map" };
-
-				const data = world.generate(
-					store.state.z.array(apiSchema).length(3),
-				) as unknown[];
-				return { ok: true, data };
-			} catch (e) {
-				return { ok: false, error: e instanceof Error ? e.message : String(e) };
-			}
+		if (activeSchema) {
+			return generateSchemaPreview(store.state, activeSchema.id);
 		}
 		return { ok: false };
 	});
-
 
 	const dataLines = $derived(
 		generationResult.ok && activeFields.length > 0
@@ -103,17 +68,13 @@
 	const worldResult = $derived(generateWorldData(store.state));
 	const worldLines = $derived(
 		worldResult.ok
-			? generateTokenizedWorldData(
-					worldResult.data as Record<string, any[]>,
-				)
+			? generateTokenizedWorldData(worldResult.data as Record<string, any[]>)
 			: [],
 	);
 
 	// Export logic
 	const fullExportCode = $derived(generateFullExport(store.state));
 	const exportLines = $derived.by(() => {
-		// We'd need a full tokenized version of the export
-		// For now, let's just show the raw lines with basic highlighting
 		return fullExportCode.split("\n").map((text, i) => ({
 			lineNumber: i + 1,
 			tokens: [{ kind: "plain" as const, text }],
@@ -147,96 +108,60 @@
 		onexport={() => store.setExportOpen(true)}
 	/>
 
-	<div class="main-layout">
-		<div class="rail-column">
+	<div class="main-layout" class:mobile-editor={store.state.ui.activeMobileTab === 'editor'} class:mobile-output={store.state.ui.activeMobileTab === 'output'}>
+		<div class="rail-column column">
 			<LeftRail {store} />
 		</div>
 
-		<div class="builder-column">
+		<div class="builder-column column">
 			<SchemaEditor
 				title={builderTitle}
-				fields={activeFields}
+				schema={activeSchema}
+				schemas={store.state.schemas}
 				{selectedFieldId}
-				{activeEntityType}
-				subjects={store.state.subjects}
-				relationships={store.state.relationships}
-				activeBinding={store.activeBinding}
-				onbindschema={(sid) =>
-					store.bindSchemaToSubject(store.state.activeSchemaId!, sid)}
-				onsetmapping={(fk, sk) =>
-					store.setFieldMapping(store.state.activeSchemaId!, fk, sk)}
-				onremovemapping={(fk) =>
-					store.removeFieldMapping(store.state.activeSchemaId!, fk)}
-				onupdaterelationmapping={(fid, rid) =>
-					entityId &&
-					store.setRelationMapping(activeEntityType, entityId, fid, rid)}
 				onselectfield={(id) => (selectedFieldId = id)}
-				onaddfield={(pid) =>
-					(entityId
-						? store.addField(activeEntityType, entityId, pid)
-						: null) ?? undefined}
-				onupdatefield={(id, p) =>
-					entityId &&
-					store.updateField(activeEntityType, entityId, id, p)}
-				onremovefield={(id) =>
-					entityId &&
-					store.removeField(activeEntityType, entityId, id)}
-				onaddmodifier={(id, m) =>
-					entityId &&
-					store.addModifier(activeEntityType, entityId, id, m)}
-				onupdatemodifier={(id, idx, val) =>
-					entityId &&
-					store.updateModifierValue(
-						activeEntityType,
-						entityId,
-						id,
-						idx,
-						val,
-					)}
-				onremovemodifier={(fid, mid) =>
-					entityId &&
-					store.removeModifier(activeEntityType, entityId, fid, mid)}
-				onupdateenumvalues={(id, vals) =>
-					entityId &&
-					store.updateField(activeEntityType, entityId, id, {
-						enumValues: vals,
-					})}
-				onupdatetitle={(val) => {
-					if (activeEntityType === "subject" && store.activeSubject) {
-						store.renameSubject(store.activeSubject.id, val);
-					} else if (
-						activeEntityType === "schema" &&
-						store.activeSchema
-					) {
-						store.renameSchema(store.activeSchema.id, val);
-					}
-				}}
+				onaddfield={(pid) => activeSchema ? (store.addField(activeSchema.id, pid) ?? undefined) : undefined}
+				onupdatefield={(id, p) => activeSchema && store.updateField(activeSchema.id, id, p)}
+				onremovefield={(id) => activeSchema && store.removeField(activeSchema.id, id)}
+				onaddmodifier={(id, m) => activeSchema && store.addModifier(activeSchema.id, id, m)}
+				onupdatemodifier={(id, idx, val) => activeSchema && store.updateModifierValue(activeSchema.id, id, idx, val)}
+				onremovemodifier={(fid, mid) => activeSchema && store.removeModifier(activeSchema.id, fid, mid)}
+				onupdateenumvalues={(id, vals) => activeSchema && store.updateField(activeSchema.id, id, { enumValues: vals })}
+				onupdatetitle={(val) => activeSchema && store.renameSchema(activeSchema.id, val)}
+				onupdatepopulate={(val) => activeSchema && store.setPopulateCount(activeSchema.id, val)}
+				onupdatederived={(val) => activeSchema && store.setDerivedFrom(activeSchema.id, val)}
+				onaddrelation={(target, name) => activeSchema && store.addSchemaRelation(activeSchema.id, target, name)}
+				onremoverelation={(name) => activeSchema && store.removeSchemaRelation(activeSchema.id, name)}
+
+				world={store.state.world}
+				onupdateseed={(v) => store.setWorldSeed(v)}
+				onupdateprob={(v) => store.setOptionalProbability(v)}
+
+				activeSchemaId={store.state.activeSchemaId}
+				onaddschema={() => store.addSchema('NewSchema')}
+				onselectschema={(id) => store.setActiveSchema(id)}
 			/>
 		</div>
 
-		<div class="output-column">
+		<div class="output-column column">
 			<OutputPane
 				bind:activeTab={store.state.ui.outputTab}
 				{codeLines}
 				{dataLines}
 				{worldLines}
-				fullCode={store.activeSubject
-					? generateSubjectCode(
-							store.activeSubject,
-							store.state.relationships,
-						)
-					: ""}
-				fullData={generationResult.ok
-					? JSON.stringify(generationResult.data, null, 2)
-					: ""}
-				fullWorld={worldResult.ok
-					? JSON.stringify(worldResult.data, null, 2)
-					: ""}
+				fullCode={activeSchema ? generateSchemaCode(activeSchema) : ""}
+				fullData={generationResult.ok ? JSON.stringify(generationResult.data, null, 2) : ""}
+				fullWorld={worldResult.ok ? JSON.stringify(worldResult.data, null, 2) : ""}
 				{selectedFieldId}
 				onchangetab={(tab) => store.setOutputTab(tab)}
 			/>
 		</div>
 	</div>
+
+	<MobileTabBar 
+		activeTab={store.state.ui.activeMobileTab} 
+		onchange={(tab) => store.setMobileTab(tab)} 
+	/>
 
 	<ExportSheet
 		open={store.state.ui.exportOpen}
@@ -265,17 +190,37 @@
 		min-height: 0;
 	}
 
-	.rail-column {
+	.column {
 		border-right: 1px solid var(--line);
 		overflow: hidden;
 	}
 
 	.builder-column {
-		border-right: 1px solid var(--line);
 		overflow-y: auto;
 	}
 
 	.output-column {
-		overflow: hidden;
+		border-right: none;
+	}
+
+	@media (max-width: 1024px) {
+		.main-layout {
+			grid-template-columns: 264px 1fr;
+		}
+		.output-column {
+			display: none;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.main-layout {
+			grid-template-columns: 1fr;
+		}
+		.column {
+			display: none;
+			border-right: none;
+		}
+		.main-layout.mobile-editor .builder-column { display: block; }
+		.main-layout.mobile-output .output-column { display: block; }
 	}
 </style>
