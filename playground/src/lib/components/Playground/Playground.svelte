@@ -140,6 +140,9 @@
 				activeSchemaId={store.state.activeSchemaId}
 				onaddschema={() => store.addSchema('NewSchema')}
 				onselectschema={(id) => store.setActiveSchema(id)}
+
+				availableZodVersions={store.state.availableZodVersions}
+				onchangezod={(v) => store.setZodVersion(v)}
 			/>
 		</div>
 
@@ -159,7 +162,7 @@
 	</div>
 
 	<MobileTabBar 
-		activeTab={store.state.ui.activeMobileTab} 
+		activeTab={store.state.ui.activeMobileTab as any} 
 		onchange={(tab) => store.setMobileTab(tab)} 
 	/>
 

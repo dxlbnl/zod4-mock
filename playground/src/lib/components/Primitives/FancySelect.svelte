@@ -15,9 +15,20 @@
 		disabled?: boolean;
 		onchange?: (value: string) => void;
 		class?: string;
+		triggerClass?: string;
+		variant?: 'default' | 'ghost';
 	}
 
-	let { options, value, placeholder = 'Select...', disabled = false, onchange, class: className = '' }: Props = $props();
+	let { 
+		options, 
+		value, 
+		placeholder = 'Select...', 
+		disabled = false, 
+		onchange, 
+		class: className = '',
+		triggerClass = '',
+		variant = 'default'
+	}: Props = $props();
 
 	let isOpen = $state(false);
 	let containerEl = $state<HTMLDivElement | null>(null);
@@ -90,7 +101,8 @@
 >
 	<button 
 		type="button" 
-		class="select-trigger t-code-sm" 
+		class="select-trigger {triggerClass}" 
+		class:variant-ghost={variant === 'ghost'}
 		onclick={toggle} 
 		aria-haspopup="listbox" 
 		aria-expanded={isOpen}
@@ -111,7 +123,7 @@
 			{#each options as opt, i}
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div 
-					class="option t-code-sm" 
+					class="option" 
 					class:is-selected={value === opt.value}
 					class:is-active={activeIndex === i}
 					role="option"
@@ -130,7 +142,7 @@
 				</div>
 			{/each}
 			{#if options.length === 0}
-				<div class="empty t-code-tight">No options</div>
+				<div class="empty">No options</div>
 			{/if}
 		</div>
 	{/if}
@@ -140,6 +152,7 @@
 	.fancy-select {
 		position: relative;
 		width: 100%;
+		height: 100%;
 	}
 
 	.select-trigger {
@@ -147,12 +160,14 @@
 		align-items: center;
 		justify-content: space-between;
 		width: 100%;
-		height: 28px;
+		height: 32px;
 		padding: 0 var(--space-3);
 		background: var(--bg-1);
 		border: 1px solid var(--line);
 		border-radius: var(--radius-sm);
 		color: var(--ink-1);
+		font-family: "Inter", system-ui, sans-serif;
+		font-size: 13px;
 		cursor: pointer;
 		text-align: left;
 		transition: all var(--ease-quick);
@@ -162,6 +177,17 @@
 	.select-trigger:hover:not(:disabled) {
 		background: var(--bg-2);
 		border-color: var(--line-strong);
+	}
+
+	.select-trigger.variant-ghost {
+		background: transparent;
+		border-color: transparent;
+		padding: 0 var(--space-5);
+		height: 100%;
+		border-radius: 0;
+	}
+	.select-trigger.variant-ghost:hover:not(:disabled) {
+		background: var(--bg-2);
 	}
 
 	.fancy-select.is-open .select-trigger {
@@ -187,8 +213,8 @@
 		transition: transform var(--ease-quick);
 	}
 
-	.is-open .chevron {
-		transform: rotate(180deg);
+	.select-trigger.variant-ghost:hover:not(:disabled) {
+		background: var(--bg-hover);
 	}
 
 	.options-menu {
@@ -209,15 +235,17 @@
 		overflow-y: auto;
 	}
 
+
 	.option {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		padding: var(--space-1) var(--space-2);
+		padding: var(--space-2) var(--space-3);
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		transition: all var(--ease-quick);
 		color: var(--ink-2);
+		font-size: 13px;
 	}
 
 	.option.is-active {
@@ -243,13 +271,6 @@
 		padding: var(--space-4);
 		text-align: center;
 		color: var(--ink-3);
-	}
-
-	.disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-	.disabled .select-trigger {
-		cursor: not-allowed;
+		font-size: 12px;
 	}
 </style>

@@ -115,4 +115,10 @@
 		opacity: 0.5;
 		pointer-events: none;
 	}
+
+	@media (max-width: 768px) {
+		.zod-selector, .workspace-name {
+			display: none;
+		}
+	}
 </style>

@@ -111,10 +111,7 @@
 	}
 
 	@media (max-width: 768px) {
-		.mobile-selector {
-			display: block;
-		}
-		.desktop-content {
+		.rail {
 			display: none;
 		}
 	}

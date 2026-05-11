@@ -1,9 +1,17 @@
 <script lang="ts">
+	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
+
+
 	interface Props {
 		seed: number;
 		optionalProbability: number;
 		onupdateseed?: (val: number) => void;
 		onupdateprob?: (val: number) => void;
+		
+		zodVersion?: string;
+		availableZodVersions?: string[];
+		onchangezod?: (v: string) => void;
+
 		isCompact?: boolean;
 	}
 
@@ -12,6 +20,9 @@
 		optionalProbability, 
 		onupdateseed, 
 		onupdateprob,
+		zodVersion = '',
+		availableZodVersions = [],
+		onchangezod,
 		isCompact = false
 	}: Props = $props();
 </script>
@@ -19,7 +30,7 @@
 <div class="world-config" class:is-compact={isCompact}>
 	<div class="config-section">
 		<label>
-			<span class="t-small">Generation Seed</span>
+			<span class="section-label">Generation Seed</span>
 			<div class="control">
 				<input 
 					type="number" 
@@ -36,7 +47,7 @@
 
 	<div class="config-section">
 		<label>
-			<span class="t-small">Optionality</span>
+			<span class="section-label">Optionality</span>
 			<div class="control">
 				<div class="slider-row">
 					<input 
@@ -55,6 +66,24 @@
 			</div>
 		</label>
 	</div>
+
+	{#if zodVersion && availableZodVersions.length > 0}
+		<div class="config-section">
+			<label>
+				<span class="section-label">Zod Version</span>
+				<div class="control">
+					<FancySelect
+						options={availableZodVersions.map(v => ({ label: `zod@${v}`, value: v }))}
+						value={zodVersion}
+						onchange={onchangezod}
+					/>
+					{#if !isCompact}
+						<p class="help t-code-tight">Changing version reloads the Zod library.</p>
+					{/if}
+				</div>
+			</label>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -62,12 +91,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-6);
-		padding: var(--space-4);
 	}
 
 	.is-compact {
 		gap: var(--space-3);
-		padding: var(--space-3) var(--space-4);
 	}
 
 	.config-section {
@@ -80,11 +107,18 @@
 		gap: var(--space-1);
 	}
 
-	label {
+	.section-label {
+		font-size: 11px;
 		font-weight: 700;
 		text-transform: uppercase;
 		color: var(--ink-3);
 		letter-spacing: 0.05em;
+		margin-bottom: var(--space-1);
+		display: block;
+	}
+
+	label {
+		display: block;
 	}
 
 	.control {

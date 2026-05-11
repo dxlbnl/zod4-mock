@@ -3,16 +3,30 @@
 	import Button from '$lib/components/Primitives/Button.svelte';
 
 	interface Props {
-		title: string;
+		title?: string;
 		accentTitle?: string;
 		subtitle?: string;
 		children?: Snippet;
 		actions?: Snippet;
+		titleSnippet?: Snippet;
 		onupdatetitle?: (val: string) => void;
+		onsettings?: (e: MouseEvent) => void;
+		isSettingsActive?: boolean;
 		titleTestId?: string;
 	}
 
-	let { title, accentTitle, subtitle, children, actions, onupdatetitle, titleTestId }: Props = $props();
+	let { 
+		title = '', 
+		accentTitle, 
+		subtitle, 
+		children, 
+		actions, 
+		titleSnippet,
+		onupdatetitle, 
+		onsettings,
+		isSettingsActive = false,
+		titleTestId 
+	}: Props = $props();
 
 	function handleInput(e: Event) {
 		const val = (e.target as HTMLInputElement).value;
@@ -22,32 +36,43 @@
 
 <section class="pane">
 	<div class="pane-head">
-		<div class="pane-title-container">
-			{#if onupdatetitle}
-				<input 
-					type="text" 
-					class="pane-title-input t-title" 
-					value={title}
-					data-testid={titleTestId}
-					oninput={handleInput}
-				/>
-			{:else}
-				<span class="pane-title t-title">{title}</span>
-			{/if}
-			{#if accentTitle}
-				<span class="pane-title t-title">
-					· <span class="accent">{accentTitle}</span>
-				</span>
-			{/if}
-		</div>
-		{#if subtitle}
+		{#if titleSnippet}
+			{@render titleSnippet()}
+		{:else}
+			<div class="pane-title-container" class:has-snippet={!!titleSnippet}>
+				{#if onupdatetitle}
+					<input 
+						type="text" 
+						class="pane-title-input t-title" 
+						value={title}
+						data-testid={titleTestId}
+						oninput={handleInput}
+					/>
+				{:else}
+					<span class="pane-title t-title">{title}</span>
+				{/if}
+				{#if accentTitle}
+					<span class="pane-title t-title">
+						· <span class="accent">{accentTitle}</span>
+					</span>
+				{/if}
+			</div>
+		{/if}
+		
+		{#if subtitle && !titleSnippet}
 			<span class="pane-sub t-code-sm">{subtitle}</span>
 		{/if}
+		
 		<div class="pane-actions">
 			{#if actions}
 				{@render actions()}
-			{:else}
-				<Button variant="ghost" class="icon-btn" aria-label="Settings">⚙</Button>
+			{:else if onsettings}
+				<Button 
+					variant="ghost" 
+					class="icon-btn {isSettingsActive ? 'active' : ''}" 
+					aria-label="Settings" 
+					onclick={onsettings}
+				>⚙</Button>
 			{/if}
 		</div>
 	</div>
@@ -72,9 +97,8 @@
 	.pane-head {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
 		height: var(--h-pane-head);
-		padding: 0 var(--space-4);
+		padding: 0;
 		border-bottom: 1px solid var(--line);
 		background: var(--bg-1);
 		flex-shrink: 0;
@@ -84,6 +108,11 @@
 		align-items: center;
 		min-width: 0;
 		flex: 1;
+		padding-left: var(--space-5);
+		gap: var(--space-3);
+	}
+	.pane-title-container.has-snippet {
+		padding-left: 0;
 	}
 	.pane-title-input {
 		background: transparent;
@@ -122,6 +151,13 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-1);
+		padding-right: var(--space-5);
+	}
+	.pane-actions :global(.icon-btn.active) {
+		color: var(--accent-bright);
+		background: var(--accent-soft);
+		border: 1px solid var(--accent-edge) !important;
+		box-shadow: 0 0 0 1px var(--accent-soft);
 	}
 	.pane-body {
 		flex: 1;

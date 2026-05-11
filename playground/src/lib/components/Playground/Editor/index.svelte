@@ -11,6 +11,7 @@
 	import type { FieldDef, ModifierDef, SchemaDef } from '$lib/state.svelte';
 	import { type ZodFieldType } from '$lib/field-types';
 	import { tick } from 'svelte';
+	import { slide } from 'svelte/transition';
 
 	interface Props {
 		schema: SchemaDef | null;
@@ -35,6 +36,11 @@
 
 		onupdateseed?: (val: number) => void;
 		onupdateprob?: (val: number) => void;
+
+		// World config (for mobile/empty state)
+		world?: { seed: number; optionalProbability: number; zodVersion: string };
+		availableZodVersions?: string[];
+		onchangezod?: (v: string) => void;
 
 		// Mobile context
 		activeSchemaId?: string | null;
@@ -65,11 +71,30 @@
 		onupdateprob,
 		activeSchemaId = null,
 		onaddschema,
-		onselectschema
+		onselectschema,
+		availableZodVersions = [],
+		onchangezod
 	}: Props = $props();
 
-	// ── Active line tracking ───────────────────────────────────────────────
+	// ── UI state ──────────────────────────────────────────────────────────
 	let lastAddedId = $state<string | null>(null);
+	let showSettings = $state(false);
+	let configBarEl = $state<HTMLDivElement | null>(null);
+
+	import { onMount } from 'svelte';
+	onMount(() => {
+		const handleClick = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			const isCogClick = !!target.closest('.icon-btn');
+			const isInsideSettings = configBarEl?.contains(target);
+
+			if (showSettings && !isInsideSettings && !isCogClick) {
+				showSettings = false;
+			}
+		};
+		window.addEventListener('click', handleClick);
+		return () => window.removeEventListener('click', handleClick);
+	});
 
 	const fields = $derived(schema?.fields ?? []);
 	const sourceSchema = $derived(schemas.find(s => s.id === schema?.derivedFrom));
@@ -147,24 +172,16 @@
 		...schemas.map(s => ({ label: `📄 ${s.name}`, value: s.id })),
 		{ label: '➕ Add Schema', value: 'add' }
 	]);
-
-	function handleMobileSwitch(val: string) {
-		if (val === 'add') {
-			onaddschema?.();
-		} else {
-			onselectfield?.(null); // Clear selected field
-			onupdatederived?.(undefined); // Unused here but to be safe
-			// Wait, I need a way to tell the parent to switch active schema
-			// I'll add onselectschema to props
-		}
-	}
 </script>
 
-{#snippet actions()}
-	<div class="mobile-switcher">
+{#snippet titleSnippet()}
+	<div class="header-switcher">
 		<FancySelect
+			class="header-dropdown"
 			options={mobileOptions}
 			value={activeSchemaId ?? 'world'}
+			variant="ghost"
+			triggerClass="t-title"
 			onchange={(val) => {
 				if (val === 'add') {
 					onaddschema?.();
@@ -173,52 +190,76 @@
 				}
 			}}
 		/>
+		<div class="desktop-title">
+			<span class="pane-title t-title">{title}</span>
+		</div>
 	</div>
 {/snippet}
 
-<Pane {title} onupdatetitle={onupdatetitle} titleTestId="schema-name-input" {actions}>
+<Pane 
+	{titleSnippet} 
+	onsettings={schema ? (e) => { e.stopPropagation(); showSettings = !showSettings; } : undefined}
+	isSettingsActive={showSettings}
+>
 	<div class="schema-editor" data-testid="active-schema-editor">
 		{#if schema}
-			<!-- Config Bar -->
-			<div class="config-bar">
-				<div class="config-row">
-					<div class="config-item">
-						<label for="populate-count">Populate</label>
-						<input 
-							id="populate-count"
-							type="number" 
-							value={schema.populateCount} 
-							oninput={(e) => onupdatepopulate?.(parseInt(e.currentTarget.value) || 0)}
-							min="0"
-						/>
+			<!-- Config Bar (Collapsible) -->
+			{#if showSettings}
+				<div 
+					bind:this={configBarEl}
+					class="config-bar" 
+					transition:slide={{ duration: 200 }}
+				>
+					<div class="config-row">
+						<div class="config-item">
+							<label for="schema-name-settings">Schema Name</label>
+							<input 
+								id="schema-name-settings"
+								type="text" 
+								value={schema.name}
+								oninput={(e) => onupdatetitle?.(e.currentTarget.value)}
+							/>
+						</div>
+						<div class="config-item">
+							<label for="populate-count">Populate</label>
+							<input 
+								id="populate-count"
+								type="number" 
+								value={schema.populateCount} 
+								oninput={(e) => onupdatepopulate?.(parseInt(e.currentTarget.value) || 0)}
+								min="0"
+							/>
+						</div>
 					</div>
-					<div class="config-item">
-						<label for="derived-from">Derived From</label>
-						<FancySelect
-							options={[
-								{ label: 'None (Independent)', value: '' },
-								...schemas
-									.filter(s => s.id !== schema?.id)
-									.map(s => ({ label: s.name, value: s.id }))
-							]}
-							value={schema.derivedFrom ?? ''}
-							onchange={(val) => onupdatederived?.(val || undefined)}
-						/>
+					<div class="config-row">
+						<div class="config-item">
+							<label for="derived-from">Derived From</label>
+							<FancySelect
+								options={[
+									{ label: 'None (Independent)', value: '' },
+									...schemas
+										.filter(s => s.id !== schema?.id)
+										.map(s => ({ label: s.name, value: s.id }))
+								]}
+								value={schema.derivedFrom ?? ''}
+								onchange={(val) => onupdatederived?.(val || undefined)}
+							/>
+						</div>
 					</div>
-				</div>
 
-				<div class="config-row">
-					<div class="config-item full">
-						<span class="label">Relations</span>
-						<RelationsManager 
-							{schema} 
-							{schemas} 
-							onadd={onaddrelation!} 
-							onremove={onremoverelation!} 
-						/>
+					<div class="config-row">
+						<div class="config-item full">
+							<span class="label">Relations</span>
+							<RelationsManager 
+								{schema} 
+								{schemas} 
+								onadd={onaddrelation!} 
+								onremove={onremoverelation!} 
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Field lines -->
 			<div class="lines" role="list" aria-label="Schema fields">
@@ -236,25 +277,16 @@
 				</button>
 			</div>
 		{:else}
-			<div class="world-config-container">
-				<Pane title="World Config" subtitle="Global Mock Settings">
-					<div class="world-config-body">
-						<WorldConfig 
-							seed={world?.seed ?? 0}
-							optionalProbability={world?.optionalProbability ?? 0}
-							onupdateseed={onupdateseed}
-							onupdateprob={onupdateprob}
-						/>
-						
-						<div class="config-section extra">
-							<span class="t-small section-label">Zod Version</span>
-							<div class="zod-info t-code-sm">
-								Currently using <strong>zod@{world?.zodVersion}</strong>
-							</div>
-							<p class="help t-code-tight">Change version in the top bar.</p>
-						</div>
-					</div>
-				</Pane>
+			<div class="world-config-body">
+				<WorldConfig 
+					seed={world?.seed ?? 0}
+					optionalProbability={world?.optionalProbability ?? 0}
+					onupdateseed={onupdateseed}
+					onupdateprob={onupdateprob}
+					zodVersion={world?.zodVersion}
+					{availableZodVersions}
+					{onchangezod}
+				/>
 			</div>
 		{/if}
 	</div>
@@ -307,27 +339,59 @@
 	.schema-editor {
 		display: flex;
 		flex-direction: column;
-		min-height: 0;
+		height: 100%;
+		position: relative;
 	}
 
-	.mobile-switcher {
-		display: none;
-		min-width: 160px;
+	.header-switcher {
+		display: flex;
+		align-items: center;
+		flex: 1;
+		min-width: 0;
+		height: 100%;
+	}
+
+	.desktop-title {
+		padding-left: var(--space-5);
+		display: flex;
+		align-items: center;
+		flex: 1;
+		min-width: 0;
+	}
+
+	:global(.header-dropdown) {
+		display: none !important;
+		width: auto !important;
+		min-width: 140px;
+		height: 100%;
 	}
 
 	@media (max-width: 768px) {
-		.mobile-switcher {
-			display: block;
+		:global(.header-dropdown) {
+			display: block !important;
+			flex: 1;
+			width: 100% !important;
+			height: 100%;
+		}
+		.desktop-title {
+			display: none;
 		}
 	}
 
+
 	.config-bar {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
 		padding: var(--space-4);
 		background: var(--bg-1);
 		border-bottom: 1px solid var(--line-strong);
+		z-index: 10;
+		box-shadow: var(--shadow-pop);
 	}
 
 	.config-row {
@@ -414,20 +478,10 @@
 		background: var(--accent-soft);
 	}
 
-	.section-label {
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		color: var(--ink-3);
-		letter-spacing: 0.05em;
-		margin-bottom: var(--space-1);
-	}
-
-	.zod-info {
-		padding: var(--space-2) var(--space-3);
-		background: var(--bg-2);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-sm);
-		color: var(--ink-1);
+	.world-config-body {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		padding: var(--space-4);
 	}
 </style>
