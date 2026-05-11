@@ -10,27 +10,46 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import { generators, createWorld, createPrng } from "../../src/index.js";
-import type { BoundGenerators, GeneratorContext, KeyGenerator, Registry } from "../../src/index.js";
+import { generateFromSchema } from "../../src/generators/schema/router.js";
+import type {
+  BoundGenerators,
+  GenerateOptions,
+  GeneratorContext,
+  KeyGenerator,
+  Registry,
+} from "../../src/index.js";
 
 const STUB_REGISTRY: Registry = {
-  store:  () => { /* no-op */ },
-  all:    () => [],
-  pick:   () => { throw new Error("stub registry: pick not supported"); },
+  store: () => {
+    /* no-op */
+  },
+  all: () => [],
+  pick: () => {
+    throw new Error("stub registry: pick not supported");
+  },
   filter: () => [],
-  count:  () => 0,
+  count: () => 0,
 };
 
 function makeCtx(seed = 42): GeneratorContext {
   const gen = {} as BoundGenerators;
-  return {
-    prng:     createPrng(seed),
+  const ctx: GeneratorContext = {
+    prng: createPrng(seed),
     gen,
-    source:   undefined,
+    source: undefined,
     registry: STUB_REGISTRY,
     fieldPath: "",
-    related:  <T>(_: string) => ({}) as T,
+    related: <T>(_: string) => ({}) as T,
+    generate<S extends z.ZodTypeAny>(s: S, o?: GenerateOptions<z.infer<S>>) {
+      const depth = (o?.fieldPath ?? this.fieldPath).split(".").filter(Boolean).length;
+      if (depth > this.recursionLimit) return null as any;
+      return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
+    },
+    recursionLimit: 5,
+    optionalProbability: 0.2,
     current: {},
   };
+  return ctx;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,9 +58,9 @@ function makeCtx(seed = 42): GeneratorContext {
 
 const ProductSchema = z.object({
   vendorCode: z.string(),
-  unitPrice:  z.number().int(),
-  label:      z.string(),
-  email:      z.string(),
+  unitPrice: z.number().int(),
+  label: z.string(),
+  email: z.string(),
 });
 
 // ---------------------------------------------------------------------------
@@ -59,11 +78,22 @@ describe("generators namespace", () => {
 
   it("contains all expected categories", () => {
     const expected = [
-      "commerce", "company", "date", "finance", "internet",
-      "location", "person", "phone", "vehicle", "word", "string",
+      "commerce",
+      "company",
+      "date",
+      "finance",
+      "internet",
+      "location",
+      "person",
+      "phone",
+      "vehicle",
+      "word",
+      "string",
     ];
     for (const name of expected) {
-      expect(typeof (generators as Record<string, unknown>)[name], `generators.${name}`).toBe("object");
+      expect(typeof (generators as Record<string, unknown>)[name], `generators.${name}`).toBe(
+        "object",
+      );
     }
   });
 
@@ -137,16 +167,13 @@ describe("generators namespace", () => {
 describe("ctx.gen — bound generators in matchers", () => {
   it("ctx.gen.person.firstName() is equivalent to generators.person.firstName(ctx.prng)", () => {
     let fromCtxGen: string | undefined;
-    let fromGenerators: string | undefined;
 
     const S = z.object({ name: z.string() });
     createWorld({ seed: 42 })
       .withSchema(S, {
         matchers: {
           name: (ctx) => {
-            fromCtxGen   = ctx.gen.person.firstName();
-            // Calling the raw generator with the same PRNG produces the same value
-            fromGenerators = generators.person.firstName(ctx.prng);
+            fromCtxGen = ctx.gen.person.firstName();
             return fromCtxGen;
           },
         },
@@ -192,8 +219,9 @@ describe("ctx.gen — bound generators in matchers", () => {
   it("ctx.gen values are deterministic across same-seed worlds", () => {
     const S = z.object({ title: z.string() });
     const makeWorld = () =>
-      createWorld({ seed: 42 })
-        .withSchema(S, { matchers: { title: (ctx) => ctx.gen.word.sentence() } });
+      createWorld({ seed: 42 }).withSchema(S, {
+        matchers: { title: (ctx) => ctx.gen.word.sentence() },
+      });
     expect(makeWorld().generate(S)).toEqual(makeWorld().generate(S));
   });
 });
@@ -343,7 +371,7 @@ describe("matchers vs key-based generators priority", () => {
 describe("case-insensitive key matching", () => {
   const MixedCaseSchema = z.object({
     VendorCode: z.string(),
-    LABEL:      z.string(),
+    LABEL: z.string(),
   });
 
   it("matches schema field VendorCode against generator registered as vendorcode", () => {
@@ -370,7 +398,7 @@ describe("case-insensitive key matching", () => {
 describe("schema-gated custom generators", () => {
   const GatedSchema = z.object({
     unitPrice: z.number().int(),
-    label:     z.string(),
+    label: z.string(),
   });
 
   it("custom generator can use ctx.prng for deterministic values", () => {
@@ -378,7 +406,7 @@ describe("schema-gated custom generators", () => {
       .withSchema(GatedSchema)
       .withGenerators({
         unitPrice: (_schema, ctx) => ctx.prng.int(500, 999),
-        label:     (_schema, ctx) => `LBL-${ctx.prng.int(1, 99)}`,
+        label: (_schema, ctx) => `LBL-${ctx.prng.int(1, 99)}`,
       });
 
     const result = world.generate(GatedSchema);
@@ -474,7 +502,14 @@ describe("generators.internet", () => {
 
 describe("generators.location", () => {
   it("exposes all expected functions", () => {
-    for (const name of ["city", "country", "streetAddress", "postalCode", "latitude", "longitude"] as const) {
+    for (const name of [
+      "city",
+      "country",
+      "streetAddress",
+      "postalCode",
+      "latitude",
+      "longitude",
+    ] as const) {
       expect(typeof generators.location[name], `generators.location.${name}`).toBe("function");
     }
   });
@@ -642,7 +677,9 @@ describe("DEFAULT_KEY_PATTERNS", () => {
   });
 
   it("string patterns: *uuid suffix → UUID for string schema", () => {
-    expect(z.uuid().safeParse(generateFromKey("fileUuid", z.string(), makeCtx())).success).toBe(true);
+    expect(z.uuid().safeParse(generateFromKey("fileUuid", z.string(), makeCtx())).success).toBe(
+      true,
+    );
   });
 
   it("string patterns: bare 'id' → UUID for string schema", () => {

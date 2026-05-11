@@ -23,11 +23,11 @@ import { generate } from "zod4-mock";
 
 const user = generate(
   z.object({
-    id:        z.uuid(),
+    id: z.uuid(),
     firstName: z.string(),
-    lastName:  z.string(),
-    email:     z.email(),
-    role:      z.enum(["admin", "user", "viewer"]),
+    lastName: z.string(),
+    email: z.email(),
+    role: z.enum(["admin", "user", "viewer"]),
     createdAt: z.date(),
   }),
 );
@@ -65,14 +65,13 @@ Register matchers to override how specific fields are generated. Use `ctx.gen` t
 ```ts
 import { createWorld } from "zod4-mock";
 
-const world = createWorld({ seed: 42 })
-  .withSchema(ProductSchema, {
-    matchers: {
-      name:     (ctx) => ctx.gen.commerce.productName(),
-      sku:      (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
-      priceCents: (ctx) => ctx.prng.int(100, 50_000),
-    },
-  });
+const world = createWorld({ seed: 42 }).withSchema(ProductSchema, {
+  matchers: {
+    name: (ctx) => ctx.gen.commerce.productName(),
+    sku: (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
+    priceCents: (ctx) => ctx.prng.int(100, 50_000),
+  },
+});
 
 const products = world.generate(z.array(ProductSchema).min(10));
 ```
@@ -94,11 +93,11 @@ const world = createWorld({ seed: 42 })
     relations: { author: PersonSchema },
     matchers: {
       authorId: (ctx) => ctx.related("author").personId,
-      title:    (ctx) => ctx.gen.word.sentence(),
+      title: (ctx) => ctx.gen.word.sentence(),
     },
   });
 
-const people    = world.generate(z.array(PersonSchema).min(3));
+const people = world.generate(z.array(PersonSchema).min(3));
 const documents = world.generate(z.array(DocumentSchema).min(10));
 
 // Every document.authorId is guaranteed to be a real person's personId
@@ -118,12 +117,12 @@ const world = createWorld({ seed: 42 })
   .withSchema(PersonSummarySchema, {
     from: PersonSchema,
     matchers: {
-      id:          (ctx) => ctx.source.personId,
+      id: (ctx) => ctx.source.personId,
       displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
     },
   });
 
-const people    = world.generate(z.array(PersonSchema).min(5));
+const people = world.generate(z.array(PersonSchema).min(5));
 const summaries = world.generate(z.array(PersonSummarySchema));
 
 // people[0].personId === summaries[0].id — always
@@ -149,9 +148,7 @@ const lockedUser = world.generate(UserSchema, {
 const invoice = world.generate(InvoiceSchema, {
   transform: (data) => ({
     ...data,
-    lines: data.lines.map((line, i) =>
-      i === 0 ? { ...line, quantity: 99 } : line,
-    ),
+    lines: data.lines.map((line, i) => (i === 0 ? { ...line, quantity: 99 } : line)),
   }),
 });
 ```

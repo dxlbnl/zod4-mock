@@ -33,47 +33,47 @@ import { createWorld } from "../../../src/index.js";
 // A B2B customer.
 export const CustomerSchema = z.object({
   customerId: z.uuid(),
-  name:       z.string().min(2).max(80),
-  vatNumber:  z.string().regex(/^NL\d{9}B\d{2}$/),
-  email:      z.email(),
+  name: z.string().min(2).max(80),
+  vatNumber: z.string().regex(/^NL\d{9}B\d{2}$/),
+  email: z.email(),
 });
 
 // A product in the shared catalogue.
 export const ProductSchema = z.object({
-  productId:      z.uuid(),
-  sku:            z.string().min(4).max(20),
-  name:           z.string().min(2).max(100),
+  productId: z.uuid(),
+  sku: z.string().min(4).max(20),
+  name: z.string().min(2).max(100),
   unitPriceCents: z.number().int().min(100).max(50_000),
 });
 
 // A single line on an invoice.
 export const LineItemSchema = z.object({
-  productId:      z.uuid(), // → ProductSchema.productId
-  sku:            z.string(),
-  description:    z.string(),
-  quantity:       z.number().int().min(1).max(20),
+  productId: z.uuid(), // → ProductSchema.productId
+  sku: z.string(),
+  description: z.string(),
+  quantity: z.number().int().min(1).max(20),
   unitPriceCents: z.number().int().min(1),
-  totalCents:     z.number().int().min(1), // must equal quantity * unitPriceCents
+  totalCents: z.number().int().min(1), // must equal quantity * unitPriceCents
 });
 
 // A full invoice sent to a customer.
 export const InvoiceSchema = z.object({
-  id:          z.uuid(),
-  customerId:  z.uuid(), // → CustomerSchema.customerId
+  id: z.uuid(),
+  customerId: z.uuid(), // → CustomerSchema.customerId
   invoiceDate: z.date(),
-  dueDate:     z.date(),
-  status:      z.enum(["draft", "sent", "paid", "overdue", "cancelled"]),
-  lines:       z.array(LineItemSchema).min(1).max(10),
-  totalCents:  z.number().int().min(1), // must equal sum(lines[*].totalCents)
-  currency:    z.enum(["EUR", "USD", "GBP"]),
+  dueDate: z.date(),
+  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]),
+  lines: z.array(LineItemSchema).min(1).max(10),
+  totalCents: z.number().int().min(1), // must equal sum(lines[*].totalCents)
+  currency: z.enum(["EUR", "USD", "GBP"]),
 });
 
 // A rolled-up view of a customer's invoicing history.
 export const CustomerSummarySchema = z.object({
-  customerId:     z.uuid(), // → CustomerSchema.customerId
-  name:           z.string(),
-  email:          z.email(),
-  invoiceCount:   z.number().int().min(0),
+  customerId: z.uuid(), // → CustomerSchema.customerId
+  name: z.string(),
+  email: z.email(),
+  invoiceCount: z.number().int().min(0),
   totalOwedCents: z.number().int().min(0),
 });
 
@@ -88,7 +88,6 @@ export function createInvoicingWorld(seed = 42) {
 
   return (
     createWorld({ seed })
-
       // CustomerSchema — primary. Field-name heuristics cover customerId,
       // name, and email. vatNumber uses the schema-based regex generator.
       .withSchema(CustomerSchema)
@@ -97,8 +96,8 @@ export function createInvoicingWorld(seed = 42) {
       // unitPriceCents is constrained to €1–€500 in whole-euro steps.
       .withSchema(ProductSchema, {
         matchers: {
-          sku:            (ctx) => `SKU-${ctx.gen.string.alphanumeric(6).toUpperCase()}`,
-          name:           (ctx) => ctx.gen.commerce.productName(),
+          sku: (ctx) => `SKU-${ctx.gen.string.alphanumeric(6).toUpperCase()}`,
+          name: (ctx) => ctx.gen.commerce.productName(),
           unitPriceCents: (ctx) => ctx.prng.int(1, 500) * 100,
         },
       })
@@ -116,26 +115,25 @@ export function createInvoicingWorld(seed = 42) {
             let invoiceTotal = 0;
 
             const lines = Array.from({ length: count }, () => {
-              const product   = ctx.registry.pick(ProductSchema);
-              const quantity  = ctx.prng.int(1, 10);
+              const product = ctx.registry.pick(ProductSchema);
+              const quantity = ctx.prng.int(1, 10);
               const lineCents = quantity * product.unitPriceCents;
-              invoiceTotal   += lineCents;
+              invoiceTotal += lineCents;
 
               return {
-                productId:      product.productId,
-                sku:            product.sku,
-                description:    product.name,
+                productId: product.productId,
+                sku: product.sku,
+                description: product.name,
                 quantity,
                 unitPriceCents: product.unitPriceCents,
-                totalCents:     lineCents,
+                totalCents: lineCents,
               };
             });
 
             lineTotals.set(ctx.fieldPath.replace(".lines", ""), invoiceTotal);
             return lines;
           },
-          totalCents: (ctx) =>
-            lineTotals.get(ctx.fieldPath.replace(".totalCents", "")) ?? 1,
+          totalCents: (ctx) => lineTotals.get(ctx.fieldPath.replace(".totalCents", "")) ?? 1,
         },
       })
 
@@ -146,8 +144,8 @@ export function createInvoicingWorld(seed = 42) {
         from: CustomerSchema,
         matchers: {
           customerId: (ctx) => ctx.source.customerId,
-          name:       (ctx) => ctx.source.name,
-          email:      (ctx) => ctx.source.email,
+          name: (ctx) => ctx.source.name,
+          email: (ctx) => ctx.source.email,
         },
       })
   );
@@ -155,9 +153,9 @@ export function createInvoicingWorld(seed = 42) {
 
 // Convenience builder used by most tests.
 export function buildInvoicingDataset(seed = 42) {
-  const world     = createInvoicingWorld(seed);
-  const products  = world.generate(z.array(ProductSchema).min(5).max(10));
-  const invoices  = world.generate(z.array(InvoiceSchema).min(5).max(10));
+  const world = createInvoicingWorld(seed);
+  const products = world.generate(z.array(ProductSchema).min(5).max(10));
+  const invoices = world.generate(z.array(InvoiceSchema).min(5).max(10));
   const summaries = world.generate(z.array(CustomerSummarySchema));
   return { world, products, invoices, summaries };
 }

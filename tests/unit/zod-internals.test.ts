@@ -62,10 +62,7 @@ describe("schema type discriminators", () => {
     [z.string().pipe(z.string()), "pipe"],
     // NOTE: z.discriminatedUnion() stores as "union", not "discriminatedUnion"
     [
-      z.discriminatedUnion("t", [
-        z.object({ t: z.literal("a") }),
-        z.object({ t: z.literal("b") }),
-      ]),
+      z.discriminatedUnion("t", [z.object({ t: z.literal("a") }), z.object({ t: z.literal("b") })]),
       "union",
     ],
     // NOTE: z.templateLiteral() stores as "template_literal", not "templateLiteral"
@@ -537,7 +534,11 @@ describe("template literal def structure", () => {
   });
 
   it("parts are stored in d.parts (not d.types or d.items)", () => {
-    const d = def(z.templateLiteral([z.string(), " world"])) as unknown as { parts?: unknown[]; types?: unknown; items?: unknown };
+    const d = def(z.templateLiteral([z.string(), " world"])) as unknown as {
+      parts?: unknown[];
+      types?: unknown;
+      items?: unknown;
+    };
     expect(Array.isArray(d.parts)).toBe(true);
     expect(d.parts!.length).toBe(2);
     expect(d.types).toBeUndefined();

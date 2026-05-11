@@ -18,12 +18,12 @@ One world = one seed = one deterministic dataset. All schemas registered on a wo
 
 ### Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `seed` | `number` | _(required)_ | Master seed. Same seed → same output. |
-| `optionalProbability` | `number` | `0.2` | Chance that `z.optional()` / `z.nullable()` fields are omitted. |
-| `defaultArrayLength` | `[number, number]` | `[1, 5]` | Fallback array length when no `.min()` / `.max()` is set. |
-| `generators` | `Record<string, KeyGenerator>` | `{}` | Custom key-based generators applied globally. |
+| Option                | Type                           | Default      | Description                                                     |
+| --------------------- | ------------------------------ | ------------ | --------------------------------------------------------------- |
+| `seed`                | `number`                       | _(required)_ | Master seed. Same seed → same output.                           |
+| `optionalProbability` | `number`                       | `0.2`        | Chance that `z.optional()` / `z.nullable()` fields are omitted. |
+| `defaultArrayLength`  | `[number, number]`             | `[1, 5]`     | Fallback array length when no `.min()` / `.max()` is set.       |
+| `generators`          | `Record<string, KeyGenerator>` | `{}`         | Custom key-based generators applied globally.                   |
 
 ---
 
@@ -34,7 +34,7 @@ Every schema you register with `withSchema` is tracked by the world. There are t
 ### Primary — identity anchor
 
 ```ts
-world.withSchema(PersonSchema)
+world.withSchema(PersonSchema);
 ```
 
 A primary schema generates independent instances. The world cycles through them deterministically as you call `generate()`. Instances are stored in the registry and can be referenced by other schemas.
@@ -45,10 +45,10 @@ A primary schema generates independent instances. The world cycles through them 
 world.withSchema(PersonSummarySchema, {
   from: PersonSchema,
   matchers: {
-    id:   (ctx) => ctx.source.personId,
+    id: (ctx) => ctx.source.personId,
     name: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
   },
-})
+});
 ```
 
 `from:` binds this schema to a primary schema. Each generated instance of `PersonSummarySchema` is a projection of the corresponding `PersonSchema` instance. `ctx.source` holds the source entity's data.
@@ -61,7 +61,7 @@ world.withSchema(DocumentSchema, {
   matchers: {
     authorId: (ctx) => ctx.related("author").personId,
   },
-})
+});
 ```
 
 `relations` declares which other schemas this one references. `ctx.related("author")` resolves to the data of a specific instance of `PersonSchema`.
@@ -88,14 +88,14 @@ You only need to provide matchers for fields the pipeline can't resolve correctl
 
 Every matcher receives a `ctx` with:
 
-| Property | Description |
-|----------|-------------|
-| `ctx.gen` | Generator library with PRNG pre-applied. `ctx.gen.person.firstName()`, `ctx.gen.internet.email()`, `ctx.gen.finance.amount(10, 999)`. |
-| `ctx.prng` | Raw PRNG for custom ranges. `ctx.prng.int(min, max)`, `ctx.prng.pick([...])`, `ctx.prng.random()`. |
-| `ctx.source` | Data of the source schema instance (only when `from:` is declared). |
-| `ctx.related(name)` | Resolves and returns the data of a related schema instance. |
-| `ctx.registry` | Access to all generated data. |
-| `ctx.fieldPath` | Dot-path of the field being generated, e.g. `"address.street"`. |
+| Property            | Description                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `ctx.gen`           | Generator library with PRNG pre-applied. `ctx.gen.person.firstName()`, `ctx.gen.internet.email()`, `ctx.gen.finance.amount(10, 999)`. |
+| `ctx.prng`          | Raw PRNG for custom ranges. `ctx.prng.int(min, max)`, `ctx.prng.pick([...])`, `ctx.prng.random()`.                                    |
+| `ctx.source`        | Data of the source schema instance (only when `from:` is declared).                                                                   |
+| `ctx.related(name)` | Resolves and returns the data of a related schema instance.                                                                           |
+| `ctx.registry`      | Access to all generated data.                                                                                                         |
+| `ctx.fieldPath`     | Dot-path of the field being generated, e.g. `"address.street"`.                                                                       |
 
 ### `ctx.gen` — generator library
 
@@ -150,7 +150,7 @@ const world = createWorld({ seed: 42 })
   .withSchema(AddressSchema, {
     matchers: {
       street: (ctx) => ctx.gen.location.street(),
-      city:   (ctx) => ctx.gen.location.city(),
+      city: (ctx) => ctx.gen.location.city(),
     },
   })
   .withSchema(PersonSchema); // PersonSchema has address: AddressSchema

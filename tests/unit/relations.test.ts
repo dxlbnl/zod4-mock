@@ -24,11 +24,11 @@ import { createWorld } from "../../src/index.js";
 
 const PersonSchema = z.object({
   personId: z.uuid(),
-  name:     z.string(),
+  name: z.string(),
 });
 
 const FileSchema = z.object({
-  fileId:  z.uuid(),
+  fileId: z.uuid(),
   ownerId: z.uuid(), // → PersonSchema.personId
 });
 
@@ -66,8 +66,8 @@ describe("auto-provisioning", () => {
   });
 
   it("file.ownerId matches the provisioned person.personId", () => {
-    const world  = setup();
-    const file   = world.generate(FileSchema);
+    const world = setup();
+    const file = world.generate(FileSchema);
     const person = world.registry.all(PersonSchema)[0]!;
     expect(file.ownerId).toBe(person.personId);
   });
@@ -89,8 +89,8 @@ describe("reuse of existing instances", () => {
   });
 
   it("file.ownerId matches one of the pre-populated persons", () => {
-    const world   = setup().populate(PersonSchema, 3);
-    const files   = world.generate(z.array(FileSchema).length(5));
+    const world = setup().populate(PersonSchema, 3);
+    const files = world.generate(z.array(FileSchema).length(5));
     const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
     for (const file of files) {
       expect(personIds.has(file.ownerId)).toBe(true);
@@ -110,8 +110,8 @@ describe("determinism of relations", () => {
   });
 
   it("ownerIds are always valid across multiple generated files", () => {
-    const world   = setup().populate(PersonSchema, 3);
-    const files   = world.generate(z.array(FileSchema).length(5));
+    const world = setup().populate(PersonSchema, 3);
+    const files = world.generate(z.array(FileSchema).length(5));
     const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
     for (const file of files) {
       expect(personIds.has(file.ownerId)).toBe(true);
@@ -128,9 +128,9 @@ describe("determinism of relations", () => {
 // ---------------------------------------------------------------------------
 
 describe("deep relation chains", () => {
-  const AuthorSchema   = z.object({ authorId: z.uuid() });
+  const AuthorSchema = z.object({ authorId: z.uuid() });
   const DocumentSchema = z.object({ docId: z.uuid(), authorId: z.uuid() });
-  const SentenceSchema = z.object({ sentId: z.uuid(), docId:    z.uuid() });
+  const SentenceSchema = z.object({ sentId: z.uuid(), docId: z.uuid() });
 
   function deepSetup() {
     return createWorld({ seed: 42 })
@@ -146,17 +146,17 @@ describe("deep relation chains", () => {
   }
 
   it("sentence.docId refers to a generated document", () => {
-    const world   = deepSetup();
-    const docs    = world.generate(z.array(DocumentSchema).length(3));
+    const world = deepSetup();
+    const docs = world.generate(z.array(DocumentSchema).length(3));
     const sentences = world.generate(z.array(SentenceSchema).length(6));
-    const docIds  = new Set(docs.map((d) => d.docId));
+    const docIds = new Set(docs.map((d: { docId: string }) => d.docId));
     for (const s of sentences) {
       expect(docIds.has(s.docId)).toBe(true);
     }
   });
 
   it("document.authorId refers to a generated author", () => {
-    const world   = deepSetup();
+    const world = deepSetup();
     world.generate(z.array(AuthorSchema).length(2));
     world.generate(z.array(SentenceSchema).length(4));
     const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
@@ -166,11 +166,11 @@ describe("deep relation chains", () => {
   });
 
   it("the full three-level chain is valid", () => {
-    const world   = deepSetup();
+    const world = deepSetup();
     world.generate(z.array(AuthorSchema).length(2));
     world.generate(z.array(DocumentSchema).length(4));
     const sentences = world.generate(z.array(SentenceSchema).length(8));
-    const docIds  = new Set(world.registry.all(DocumentSchema).map((d) => d.docId));
+    const docIds = new Set(world.registry.all(DocumentSchema).map((d) => d.docId));
     for (const s of sentences) {
       expect(docIds.has(s.docId)).toBe(true);
     }
@@ -185,11 +185,11 @@ describe("deep relation chains", () => {
 // ---------------------------------------------------------------------------
 
 describe("multiple relations on the same schema", () => {
-  const AuthorSchema    = z.object({ authorId: z.uuid() });
-  const ReviewerSchema  = z.object({ reviewerId: z.uuid() });
-  const ArticleSchema   = z.object({
-    articleId:  z.uuid(),
-    authorId:   z.uuid(), // → AuthorSchema.authorId
+  const AuthorSchema = z.object({ authorId: z.uuid() });
+  const ReviewerSchema = z.object({ reviewerId: z.uuid() });
+  const ArticleSchema = z.object({
+    articleId: z.uuid(),
+    authorId: z.uuid(), // → AuthorSchema.authorId
     reviewerId: z.uuid(), // → ReviewerSchema.reviewerId
   });
 
@@ -200,14 +200,14 @@ describe("multiple relations on the same schema", () => {
       .withSchema(ArticleSchema, {
         relations: { author: AuthorSchema, reviewer: ReviewerSchema },
         matchers: {
-          authorId:   (ctx) => ctx.related("author").authorId,
+          authorId: (ctx) => ctx.related("author").authorId,
           reviewerId: (ctx) => ctx.related("reviewer").reviewerId,
         },
       });
   }
 
   it("article.authorId refers to a generated author", () => {
-    const world    = multiSetup();
+    const world = multiSetup();
     const articles = world.generate(z.array(ArticleSchema).length(3));
     const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
     for (const a of articles) {
@@ -216,8 +216,8 @@ describe("multiple relations on the same schema", () => {
   });
 
   it("article.reviewerId refers to a generated reviewer", () => {
-    const world      = multiSetup();
-    const articles   = world.generate(z.array(ArticleSchema).length(3));
+    const world = multiSetup();
+    const articles = world.generate(z.array(ArticleSchema).length(3));
     const reviewerIds = new Set(world.registry.all(ReviewerSchema).map((r) => r.reviewerId));
     for (const a of articles) {
       expect(reviewerIds.has(a.reviewerId)).toBe(true);
@@ -251,7 +251,7 @@ describe("Regression Tests", () => {
             return author.id;
           },
           authorId2: (ctx) => ctx.related("author").id,
-        }
+        },
       });
 
     world.populate(AuthorSchema, 1);

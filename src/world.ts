@@ -21,6 +21,7 @@
  * 6. `options.transform` function
  */
 
+import { z } from "zod";
 import type { ZodTypeAny, input } from "zod";
 import type {
   World,
@@ -121,7 +122,10 @@ export class WorldImpl implements World {
   private generationCounter = 0;
 
   private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
-  private readonly schemaKeyMaps: Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>> = new Map();
+  private readonly schemaKeyMaps: Map<
+    ZodTypeAny,
+    Record<string, (ctx: GeneratorContext) => unknown>
+  > = new Map();
   private readonly relationPools: Map<string, unknown[]> = new Map();
 
   constructor(private readonly options: WorldOptions) {
@@ -140,13 +144,13 @@ export class WorldImpl implements World {
     TSchema extends ZodTypeAny,
     TSource extends ZodTypeAny | undefined = undefined,
     TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
-  >(
-    schema: TSchema,
-    opts?: SchemaOpts<TSchema, TSource, TRelations>,
-  ): this {
+  >(schema: TSchema, opts?: SchemaOpts<TSchema, TSource, TRelations>): this {
     const from = (opts?.from as ZodTypeAny | undefined) ?? null;
     const relations = opts?.relations ?? {};
-    const matchers = (opts?.matchers ?? {}) as unknown as Record<string, (ctx: GeneratorContext) => unknown>;
+    const matchers = (opts?.matchers ?? {}) as unknown as Record<
+      string,
+      (ctx: GeneratorContext) => unknown
+    >;
     this.schemaRegs.push({
       schema,
       from,
@@ -209,8 +213,8 @@ export class WorldImpl implements World {
 
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
-    options?: GenerateOptions<input<TSchema>>,
-  ): input<TSchema> {
+    options?: GenerateOptions<z.infer<TSchema>>,
+  ): z.infer<TSchema> {
     let current: ZodTypeAny = schema;
     let d = def(current);
     const outerWrappers: Array<"optional" | "nullable"> = [];
@@ -228,7 +232,7 @@ export class WorldImpl implements World {
         for (const wrapper of outerWrappers) {
           if (prng.random() < optProb) {
             this.generationCounter++;
-            return (wrapper === "optional" ? undefined : null) as input<TSchema>;
+            return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
           }
         }
       }
@@ -236,19 +240,15 @@ export class WorldImpl implements World {
         d.element!,
         current,
         options as GenerateOptions<unknown[]> | undefined,
-      ) as input<TSchema>;
+      ) as z.infer<TSchema>;
     }
 
-    return this.generateSingleItem(schema, options as GenerateOptions<unknown>) as input<TSchema>;
+    return this.generateSingleItem(schema, options as GenerateOptions<unknown>) as z.infer<TSchema>;
   }
 
   // -------------------------------------------------------------------------
   // Private: registration lookups
   // -------------------------------------------------------------------------
-
-  private findAllRegs(schema: ZodTypeAny): SchemaReg[] {
-    return this.schemaRegs.filter((r) => r.schema === schema);
-  }
 
   private findPrimaryRegs(schema: ZodTypeAny): SchemaReg[] {
     return this.schemaRegs.filter((r) => r.schema === schema && r.from === null);
@@ -268,7 +268,10 @@ export class WorldImpl implements World {
       const boundNs: Record<string, (...args: unknown[]) => unknown> = {};
       // Cast to a uniform function type — actual signatures vary per generator but callers
       // access through BoundGenerators which erases the per-function types intentionally.
-      const fns = nsObj as Record<string, (p: ReturnType<typeof createPrng>, ...rest: unknown[]) => unknown>;
+      const fns = nsObj as Record<
+        string,
+        (p: ReturnType<typeof createPrng>, ...rest: unknown[]) => unknown
+      >;
       for (const [name, fn] of Object.entries(fns)) {
         boundNs[name] = (...args: unknown[]) => fn(prng, ...args);
       }
@@ -303,7 +306,13 @@ export class WorldImpl implements World {
       registry: this.registry,
       fieldPath,
       optionalProbability: this.options.optionalProbability ?? 0.2,
-      related: <T = Record<string, unknown>>(relName: string): T => this.resolveRelated<T>(reg, recordPrng, recordId, relName),
+      related: <T = Record<string, unknown>>(relName: string): T =>
+        this.resolveRelated<T>(reg, recordPrng, recordId, relName),
+      generate: <S extends ZodTypeAny>(s: S, o?: GenerateOptions<z.infer<S>>): z.infer<S> => {
+        const nextPath = o?.fieldPath ?? (o?.fieldPath === "" ? "" : fieldPath);
+        return this.generate(s, { ...o, fieldPath: nextPath });
+      },
+      recursionLimit: this.options.recursionLimit ?? 5,
       current: (current ?? {}) as Partial<any>,
     };
   }
@@ -353,13 +362,25 @@ export class WorldImpl implements World {
   // Private: primary record generation
   // -------------------------------------------------------------------------
 
-  private generateAndStorePrimary(schema: ZodTypeAny, reg: SchemaReg | null): unknown {
+  private generateAndStorePrimary(
+    schema: ZodTypeAny,
+    reg: SchemaReg | null,
+    options?: GenerateOptions<unknown>,
+  ): unknown {
     const recordIndex = this.registry.count(schema);
     const effectiveRegId = reg?.regId ?? -1;
     const recordId = `reg${effectiveRegId}#${recordIndex}`;
     const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
     const effectiveReg = reg ?? EMPTY_REG;
-    const result = this.generateObjectFields(schema, effectiveReg, undefined, recordPrng, recordId, recordId);
+    const fieldPath = options?.fieldPath ?? recordId;
+    const result = this.generateObjectFields(
+      schema,
+      effectiveReg,
+      undefined,
+      recordPrng,
+      recordId,
+      fieldPath,
+    );
     this.registry.store(schema, result);
     return result;
   }
@@ -395,10 +416,19 @@ export class WorldImpl implements World {
     recordId: string,
     fieldPathPrefix: string,
   ): unknown {
-    const d = def(schema);
+    let current = schema;
+    let d = def(current);
+
+    while (d.type === "lazy") {
+      current = d.getter!();
+      d = def(current);
+    }
 
     if (d.type !== "object") {
-      return generateFromSchema(schema, this.makeFieldCtx(reg, source, recordPrng, recordPrng, fieldPathPrefix, recordId));
+      return generateFromSchema(
+        current,
+        this.makeFieldCtx(reg, source, recordPrng, recordPrng, fieldPathPrefix, recordId),
+      );
     }
 
     const shape = d.shape!;
@@ -407,7 +437,15 @@ export class WorldImpl implements World {
     for (const [key, fieldSchema] of Object.entries(shape)) {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
-      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, recordId, result);
+      const fieldCtx = this.makeFieldCtx(
+        reg,
+        source,
+        recordPrng,
+        fieldPrng,
+        fieldPath,
+        recordId,
+        result,
+      );
 
       // 1. Matcher
       const matcher = reg.matchers[key];
@@ -432,10 +470,11 @@ export class WorldImpl implements World {
 
       while (fd.type === "optional" || fd.type === "nullable" || fd.type === "default") {
         const isAbsent = fieldCtx.prng.random() < (this.options.optionalProbability ?? 0.2);
-        
+
         if (isAbsent) {
           if (fd.type === "default") {
-            result[key] = typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
+            result[key] =
+              typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
           } else if (fd.type === "optional") {
             result[key] = hasFallback ? fallbackValue : undefined;
           } else if (fd.type === "nullable") {
@@ -446,7 +485,8 @@ export class WorldImpl implements World {
         }
 
         if (fd.type === "default") {
-          fallbackValue = typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
+          fallbackValue =
+            typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
           hasFallback = true;
         }
 
@@ -474,7 +514,14 @@ export class WorldImpl implements World {
       // If it's an object, recurse with same recordId but new path prefix
       const innerDef = def(unwrap(innerSchema));
       if (innerDef.type === "object") {
-        result[key] = this.generateObjectFields(innerSchema, reg, source, fieldPrng, recordId, fieldPath);
+        result[key] = this.generateObjectFields(
+          innerSchema,
+          reg,
+          source,
+          fieldPrng,
+          recordId,
+          fieldPath,
+        );
       } else {
         result[key] = generateFromSchema(innerSchema, fieldCtx);
       }
@@ -540,10 +587,10 @@ export class WorldImpl implements World {
 
       const minRequired = resolveMinRequired(arraySchema, defMin);
       const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
-      const target = Math.max(existingCount, genPrng.int(
-        Math.min(minRequired, maxAllowed),
-        Math.max(minRequired, maxAllowed),
-      ));
+      const target = Math.max(
+        existingCount,
+        genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+      );
 
       while (this.registry.count(innerSchema) < target) {
         this.generateAndStorePrimary(innerSchema, reg);
@@ -558,7 +605,11 @@ export class WorldImpl implements World {
     let N = defMin;
     let maxN = defMax;
     for (const c of checks(arraySchema)) {
-      if (c.check === "length_equals") { N = c.length!; maxN = N; break; }
+      if (c.check === "length_equals") {
+        N = c.length!;
+        maxN = N;
+        break;
+      }
       if (c.check === "min_length" && c.minimum !== undefined) N = Math.max(N, c.minimum);
       if (c.check === "max_length" && c.maximum !== undefined) maxN = Math.min(maxN, c.maximum);
     }
@@ -593,14 +644,22 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
+    const fieldPath = options?.fieldPath ?? "";
+    const depth = fieldPath ? fieldPath.split(".").length : 0;
+    if (depth > (this.options.recursionLimit ?? 5)) return null;
+
     this.generationCounter++;
 
     const derivedRegs = this.findDerivedRegs(schema);
     const primaryRegs = this.findPrimaryRegs(schema);
 
     let result: unknown;
+    const sourceOverride = (options as any)?.source;
 
-    if (derivedRegs.length > 0) {
+    if (sourceOverride !== undefined) {
+      const reg = derivedRegs[0] ?? { ...EMPTY_REG, schema };
+      result = this.generateDerivedRecord(schema, reg as SchemaReg, sourceOverride, 0);
+    } else if (derivedRegs.length > 0) {
       // Pick first available source across all derived regs, auto-provisioning if needed
       for (const reg of derivedRegs) {
         if (this.registry.count(reg.from!) === 0) {
@@ -623,16 +682,27 @@ export class WorldImpl implements World {
       const { source, reg, sourceIndex } = pairs[idx]!;
       result = this.generateDerivedRecord(schema, reg, source, sourceIndex);
     } else if (primaryRegs.length > 0) {
-      result = this.generateAndStorePrimary(schema, primaryRegs[0]!);
+      result = this.generateAndStorePrimary(schema, primaryRegs[0]!, options);
     } else {
       // Ad-hoc
       const recordId = `adhoc-${this.generationCounter}`;
       const adHocPrng = this.prng.fork(recordId);
+      const fieldPath = options?.fieldPath ?? recordId;
       const keyMap = this.schemaKeyMaps.get(schema);
       if (keyMap !== undefined && def(schema).type === "object") {
-        result = this.generateObjectFields(schema, EMPTY_REG, undefined, adHocPrng, recordId);
+        result = this.generateObjectFields(
+          schema,
+          EMPTY_REG,
+          undefined,
+          adHocPrng,
+          recordId,
+          fieldPath,
+        );
       } else {
-        result = generateFromSchema(schema, this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, recordId));
+        result = generateFromSchema(
+          schema,
+          this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath, recordId),
+        );
       }
     }
 

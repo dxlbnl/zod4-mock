@@ -294,13 +294,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
       state.availableZodVersions = versions;
     } catch (e) {
       console.error("Failed to fetch zod versions", e);
-      state.availableZodVersions = [
-        "4.4.3",
-        "4.4.2",
-        "4.4.1",
-        "4.4.0",
-        "4.0.0",
-      ];
+      state.availableZodVersions = ["4.4.3", "4.4.2", "4.4.1", "4.4.0", "4.0.0"];
     }
   }
 
@@ -309,15 +303,10 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     state.world.zodVersion = version;
     state.isZodLoading = true;
     try {
-      const module = await import(
-        /* @vite-ignore */ `https://esm.sh/zod@${version}`
-      );
+      const module = await import(/* @vite-ignore */ `https://esm.sh/zod@${version}`);
       state.z = module.z || module.default || module;
     } catch (e) {
-      console.error(
-        `Failed to load zod@${version}, falling back to bundled`,
-        e,
-      );
+      console.error(`Failed to load zod@${version}, falling back to bundled`, e);
       state.z = staticZod;
     } finally {
       state.isZodLoading = false;
@@ -345,9 +334,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     state.subjects.splice(idx, 1);
     // Remove dangling relationships + bindings
     state.relationships = state.relationships.filter(
-      (r) =>
-        r.from !== state.subjects[idx]?.name &&
-        r.to !== state.subjects[idx]?.name,
+      (r) => r.from !== state.subjects[idx]?.name && r.to !== state.subjects[idx]?.name,
     );
     state.bindings = state.bindings.filter((b) => b.subjectId !== id);
     // Reselect
@@ -412,21 +399,14 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   // ── Fields (shared for subjects + schemas) ─────────────────────────────
 
-  function _getFields(
-    entityType: "subject" | "schema",
-    entityId: string,
-  ): FieldDef[] | null {
+  function _getFields(entityType: "subject" | "schema", entityId: string): FieldDef[] | null {
     if (entityType === "subject") {
       return state.subjects.find((s) => s.id === entityId)?.fields ?? null;
     }
     return state.schemas.find((s) => s.id === entityId)?.fields ?? null;
   }
 
-  function addField(
-    entityType: "subject" | "schema",
-    entityId: string,
-    parentId?: string,
-  ) {
+  function addField(entityType: "subject" | "schema", entityId: string, parentId?: string) {
     const fields = _getFields(entityType, entityId);
     if (!fields) return null;
 
@@ -444,11 +424,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     return newField.id;
   }
 
-  function removeField(
-    entityType: "subject" | "schema",
-    entityId: string,
-    fieldId: string,
-  ) {
+  function removeField(entityType: "subject" | "schema", entityId: string, fieldId: string) {
     const fields = _getFields(entityType, entityId);
     if (!fields) return;
 
@@ -541,12 +517,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
       let finalValue: string | number | boolean = value;
 
       if (typeof value === "string") {
-        const isNumericMod = [
-          ".min",
-          ".max",
-          ".length",
-          ".multipleOf",
-        ].includes(mod.name);
+        const isNumericMod = [".min", ".max", ".length", ".multipleOf"].includes(mod.name);
         const isDefault = mod.name === ".default";
 
         if (isNumericMod || (isDefault && field.type === "number")) {
@@ -578,12 +549,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   function updateRelationship(
     id: string,
-    patch: Partial<
-      Pick<
-        RelationshipDef,
-        "from" | "to" | "cardinality" | "relationName" | "key"
-      >
-    >,
+    patch: Partial<Pick<RelationshipDef, "from" | "to" | "cardinality" | "relationName" | "key">>,
   ) {
     const rel = state.relationships.find((r) => r.id === id);
     if (rel) Object.assign(rel, patch);
@@ -611,11 +577,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
   }
 
-  function setFieldMapping(
-    schemaId: string,
-    schemaFieldKey: string,
-    subjectFieldKey: string,
-  ) {
+  function setFieldMapping(schemaId: string, schemaFieldKey: string, subjectFieldKey: string) {
     const binding = state.bindings.find((b) => b.schemaId === schemaId);
     if (binding) binding.fieldMap[schemaFieldKey] = subjectFieldKey;
   }
@@ -656,9 +618,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
   );
 
   /** Fields being edited in the builder right now */
-  const activeFields = $derived(
-    activeSubject?.fields ?? activeSchema?.fields ?? [],
-  );
+  const activeFields = $derived(activeSubject?.fields ?? activeSchema?.fields ?? []);
 
   /** Builder pane title */
   const builderTitle = $derived(
@@ -669,9 +629,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   /** Binding for the active schema (if any) */
   const activeBinding = $derived(
-    activeSchema
-      ? (state.bindings.find((b) => b.schemaId === activeSchema.id) ?? null)
-      : null,
+    activeSchema ? (state.bindings.find((b) => b.schemaId === activeSchema.id) ?? null) : null,
   );
 
   return {

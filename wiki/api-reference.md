@@ -40,7 +40,7 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 function generate<TSchema extends ZodTypeAny>(
   schema: TSchema,
   options?: GenerateOptions<input<TSchema>>,
-): input<TSchema>
+): input<TSchema>;
 ```
 
 Zero-config entry point. Creates a temporary world internally and discards it. No setup required.
@@ -68,8 +68,8 @@ Creates a new seeded world. Returns a `World` instance that supports fluent chai
 
 ```ts
 interface WorldOptions {
-  seed: number;                              // required
-  optionalProbability?: number;             // default: 0.2
+  seed: number; // required
+  optionalProbability?: number; // default: 0.2
   defaultArrayLength?: readonly [number, number]; // default: [1, 5]
   generators?: Record<string, KeyGenerator>; // default: {}
 }
@@ -138,22 +138,22 @@ The same output schema can be registered multiple times with different `from:` v
 
 ```ts
 // Primary — no relations
-world.withSchema(PersonSchema)
+world.withSchema(PersonSchema);
 
 // Relational — ownerId drawn from a related person
 world.withSchema(FileSchema, {
   relations: { owner: PersonSchema },
   matchers: { ownerId: (ctx) => ctx.related("owner").personId },
-})
+});
 
 // Derived — one output per text file source
 world.withSchema(RawDataSchema, {
   from: TextFileSchema,
   matchers: {
-    id:   (ctx) => ctx.source.fileId,
+    id: (ctx) => ctx.source.fileId,
     type: () => "text" as const,
   },
-})
+});
 ```
 
 ### `.withGenerators(map)`
@@ -215,18 +215,18 @@ Generates a value matching the schema. The return type is fully inferred.
 **Array modifier chaining** is fully supported:
 
 ```ts
-world.generate(PersonSchema.array())              // array
-world.generate(PersonSchema.array().optional())   // array | undefined
-world.generate(PersonSchema.array().nullable())   // array | null
+world.generate(PersonSchema.array()); // array
+world.generate(PersonSchema.array().optional()); // array | undefined
+world.generate(PersonSchema.array().nullable()); // array | null
 ```
 
 **`GenerateOptions`**
 
 ```ts
 interface GenerateOptions<T> {
-  overrides?: DeepPartial<T>;    // deep-merged after generation; arrays replaced
-  transform?: (data: T) => T;    // applied after overrides
-  seed?: number;                  // only used by module-level generate()
+  overrides?: DeepPartial<T>; // deep-merged after generation; arrays replaced
+  transform?: (data: T) => T; // applied after overrides
+  seed?: number; // only used by module-level generate()
 }
 ```
 
@@ -243,9 +243,7 @@ populate(schema: ZodTypeAny, count: number): this
 Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining.
 
 ```ts
-const world = createWorld({ seed: 42 })
-  .withSchema(PersonSchema)
-  .populate(PersonSchema, 3);  // 3 persons in registry before any generate()
+const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 3); // 3 persons in registry before any generate()
 ```
 
 ### `.registry`
@@ -357,7 +355,7 @@ matchers: {
 lineTotals.set(ctx.fieldPath.replace(".lines", ""), total);
 
 // Inside the totalCents matcher, read it back:
-lineTotals.get(ctx.fieldPath.replace(".totalCents", ""))
+lineTotals.get(ctx.fieldPath.replace(".totalCents", ""));
 ```
 
 **`related(name)`** — resolves the related schema instance declared in `relations`. Auto-provisions one if the registry is empty, then picks deterministically. All fields in the same record that call `ctx.related("owner")` receive the same owner — the pick is record-scoped, not field-scoped.
@@ -381,7 +379,6 @@ matchers: {
   }
 }
 ```
-
 
 ---
 
@@ -459,12 +456,12 @@ import { generators } from "zod4-mock";
 
 ### `generators.lorem` / `generators.word`
 
-| Function    | Signature                        | Output example                  |
-| ----------- | -------------------------------- | ------------------------------- |
-| `word`      | `(prng) => string`               | `'lorem'`                       |
-| `sentence`  | `(prng) => string`               | `'Lorem ipsum dolor sit amet.'` |
-| `paragraph` | `(prng) => string`               | multiple sentences              |
-| `words`     | `(prng, count: number) => string`| space-separated words           |
+| Function    | Signature                         | Output example                  |
+| ----------- | --------------------------------- | ------------------------------- |
+| `word`      | `(prng) => string`                | `'lorem'`                       |
+| `sentence`  | `(prng) => string`                | `'Lorem ipsum dolor sit amet.'` |
+| `paragraph` | `(prng) => string`                | multiple sentences              |
+| `words`     | `(prng, count: number) => string` | space-separated words           |
 
 ### `generators.string`
 

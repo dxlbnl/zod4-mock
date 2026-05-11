@@ -7,13 +7,13 @@ import {
   UnsupportedSchemaError,
 } from "../../../src/generators/schema/router.js";
 import { SchemaRegistry } from "../../../src/registry.js";
-import type { BoundGenerators, GeneratorContext } from "../../../src/types.js";
+import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../src/types.js";
 
 const EMPTY_GEN = {} as BoundGenerators;
 
 function ctx(seed = 42): GeneratorContext {
   const prng = createPrng(seed);
-  return {
+  const c: GeneratorContext = {
     prng,
     gen: EMPTY_GEN,
     current: {},
@@ -22,7 +22,14 @@ function ctx(seed = 42): GeneratorContext {
     fieldPath: "",
     optionalProbability: 0,
     related: <T>(_: string) => ({}) as T,
+    generate<S extends z.ZodTypeAny>(s: S, o?: GenerateOptions<z.infer<S>>) {
+      const depth = (o?.fieldPath ?? this.fieldPath).split(".").filter(Boolean).length;
+      if (depth > this.recursionLimit) return null as any;
+      return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
+    },
+    recursionLimit: 5,
   };
+  return c;
 }
 
 describe("schema/advanced", () => {
@@ -75,6 +82,8 @@ describe("schema/advanced", () => {
     const d = (schema as any)._zod.def;
     d.optionsMap = undefined;
     d.options = undefined;
-    expect(() => generateFromSchema(schema, ctx())).toThrow("Unsupported schema: union missing options");
+    expect(() => generateFromSchema(schema, ctx())).toThrow(
+      "Unsupported schema: union missing options",
+    );
   });
 });

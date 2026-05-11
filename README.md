@@ -12,10 +12,10 @@ import { generate } from "zod4-mock";
 
 const user = generate(
   z.object({
-    id:        z.uuid(),
+    id: z.uuid(),
     firstName: z.string(),
-    email:     z.email(),
-    role:      z.enum(["admin", "user"]),
+    email: z.email(),
+    role: z.enum(["admin", "user"]),
     createdAt: z.date(),
   }),
 );
@@ -48,14 +48,13 @@ const users = world.generate(z.array(UserSchema).min(5).max(20));
 Register matchers to control specific fields. `ctx.gen` gives you the full generator library with the PRNG already applied — no need to pass `prng` anywhere:
 
 ```ts
-const world = createWorld({ seed: 42 })
-  .withSchema(ProductSchema, {
-    matchers: {
-      name:  (ctx) => ctx.gen.commerce.productName(),
-      sku:   (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
-      price: (ctx) => ctx.prng.int(100, 50_000), // cents, custom range
-    },
-  });
+const world = createWorld({ seed: 42 }).withSchema(ProductSchema, {
+  matchers: {
+    name: (ctx) => ctx.gen.commerce.productName(),
+    sku: (ctx) => `SKU-${ctx.gen.string.alphanumeric(6)}`,
+    price: (ctx) => ctx.prng.int(100, 50_000), // cents, custom range
+  },
+});
 
 const products = world.generate(z.array(ProductSchema).min(10));
 ```
@@ -73,11 +72,11 @@ const world = createWorld({ seed: 42 })
     relations: { author: PersonSchema },
     matchers: {
       authorId: (ctx) => ctx.related("author").personId,
-      title:    (ctx) => ctx.gen.word.sentence(),
+      title: (ctx) => ctx.gen.word.sentence(),
     },
   });
 
-const people    = world.generate(z.array(PersonSchema).min(3));
+const people = world.generate(z.array(PersonSchema).min(3));
 const documents = world.generate(z.array(DocumentSchema).min(10));
 
 // documents[*].authorId ∈ people[*].personId — guaranteed
@@ -93,13 +92,13 @@ const world = createWorld({ seed: 42 })
   .withSchema(PersonSummarySchema, {
     from: PersonSchema,
     matchers: {
-      id:          (ctx) => ctx.source.personId,
+      id: (ctx) => ctx.source.personId,
       displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
-      initials:    (ctx) => `${ctx.source.firstName[0]}${ctx.source.lastName[0]}`,
+      initials: (ctx) => `${ctx.source.firstName[0]}${ctx.source.lastName[0]}`,
     },
   });
 
-const people    = world.generate(z.array(PersonSchema).min(5));
+const people = world.generate(z.array(PersonSchema).min(5));
 const summaries = world.generate(z.array(PersonSummarySchema));
 
 // people[0].personId === summaries[0].id — always
@@ -113,8 +112,8 @@ Register matchers for a schema once — they apply automatically wherever that s
 const world = createWorld({ seed: 42 })
   .withSchema(AddressSchema, {
     matchers: {
-      street:  (ctx) => ctx.gen.location.street(),
-      city:    (ctx) => ctx.gen.location.city(),
+      street: (ctx) => ctx.gen.location.street(),
+      city: (ctx) => ctx.gen.location.city(),
       country: (ctx) => ctx.gen.location.countryCode(),
     },
   })

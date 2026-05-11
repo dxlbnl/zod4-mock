@@ -12,7 +12,10 @@ describe("field-types", () => {
   it("every selectable type has .array() as a modifier", () => {
     for (const type of SELECTABLE_FIELD_TYPES) {
       const mods = getModifiers(type);
-      expect(mods.some((m) => m.name === ".array()"), `${type} missing .array() modifier`).toBe(true);
+      expect(
+        mods.some((m) => m.name === ".array()"),
+        `${type} missing .array() modifier`,
+      ).toBe(true);
     }
   });
 

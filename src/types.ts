@@ -3,7 +3,8 @@
  * Core TypeScript interfaces and types for the zod-mock library.
  */
 
-import type { ZodTypeAny, input } from "zod";
+import type { ZodTypeAny, input, z } from "zod";
+import type { createPrng } from "./prng.js";
 
 // ---------------------------------------------------------------------------
 // PRNG
@@ -92,6 +93,14 @@ export interface GeneratorContext<T = any> {
    * Auto-provisions one if the registry is empty.
    */
   related<T = Record<string, unknown>>(relationName: string): T;
+  /**
+   * Generates a value using the full world engine (honoring matchers and registry).
+   */
+  generate<S extends ZodTypeAny>(schema: S, options?: GenerateOptions<z.infer<S>>): z.infer<S>;
+  /**
+   * Maximum recursion depth.
+   */
+  readonly recursionLimit: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,6 +149,9 @@ export interface GenerateOptions<T> {
   readonly overrides?: DeepPartial<T>;
   readonly transform?: (data: T) => T;
   readonly seed?: number;
+  readonly source?: any;
+  readonly fieldPath?: string;
+  readonly prng?: ReturnType<typeof createPrng>;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +163,7 @@ export interface WorldOptions {
   readonly optionalProbability?: number;
   readonly defaultArrayLength?: readonly [number, number];
   readonly generators?: Record<string, KeyGenerator>;
+  readonly recursionLimit?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +184,11 @@ export interface SchemaOpts<
   relations?: TRelations;
   matchers?: {
     [K in keyof input<TSchema>]?: (
-      ctx: MatcherCtx<TRelations, TSource extends ZodTypeAny ? input<TSource> : undefined, input<TSchema>>,
+      ctx: MatcherCtx<
+        TRelations,
+        TSource extends ZodTypeAny ? input<TSource> : undefined,
+        input<TSchema>
+      >,
     ) => input<TSchema>[K];
   };
 }
@@ -231,8 +248,8 @@ export interface World {
    */
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
-    options?: GenerateOptions<input<TSchema>>,
-  ): input<TSchema>;
+    options?: GenerateOptions<z.infer<TSchema>>,
+  ): z.infer<TSchema>;
 
   /**
    * Pre-generate `count` instances of the schema and store them in the registry.

@@ -21,18 +21,18 @@ import { createWorld } from "../../src/index.js";
 
 const PersonSchema = z.object({
   personId: z.uuid(),
-  name:     z.string(),
-  email:    z.email(),
+  name: z.string(),
+  email: z.email(),
 });
 
 const PostSchema = z.object({
-  postId:   z.uuid(),
+  postId: z.uuid(),
   authorId: z.uuid(), // → PersonSchema.personId
-  title:    z.string(),
+  title: z.string(),
 });
 
 const SummarySchema = z.object({
-  id:          z.uuid(),
+  id: z.uuid(),
   displayName: z.string(),
 });
 
@@ -101,9 +101,11 @@ describe("relational registration — withSchema(schema, { relations })", () => 
   }
 
   it("ctx.related resolves to a PersonSchema instance", () => {
-    const world   = setup();
-    const post    = world.generate(PostSchema);
-    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    const world = setup();
+    const post = world.generate(PostSchema);
+    const personIds = new Set(
+      world.registry.all(PersonSchema).map((p: { personId: string }) => p.personId),
+    );
     expect(personIds.has(post.authorId)).toBe(true);
   });
 
@@ -121,9 +123,11 @@ describe("relational registration — withSchema(schema, { relations })", () => 
   });
 
   it("post.authorId matches PersonSchema.personId for every post", () => {
-    const world   = setup().populate(PersonSchema, 3);
-    const posts   = world.generate(z.array(PostSchema).length(6));
-    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    const world = setup().populate(PersonSchema, 3);
+    const posts = world.generate(z.array(PostSchema).length(6));
+    const personIds = new Set(
+      world.registry.all(PersonSchema).map((p: { personId: string }) => p.personId),
+    );
     for (const post of posts) {
       expect(personIds.has(post.authorId)).toBe(true);
     }
@@ -149,15 +153,15 @@ describe("derived registration — withSchema(schema, { from })", () => {
       .withSchema(SummarySchema, {
         from: PersonSchema,
         matchers: {
-          id:          (ctx) => ctx.source.personId,
+          id: (ctx) => ctx.source.personId,
           displayName: (ctx) => ctx.source.name,
         },
       });
   }
 
   it("ctx.source provides the source schema instance", () => {
-    const world    = setup();
-    const persons  = world.generate(z.array(PersonSchema).length(3));
+    const world = setup();
+    const persons = world.generate(z.array(PersonSchema).length(3));
     const summaries = world.generate(z.array(SummarySchema));
     for (let i = 0; i < persons.length; i++) {
       expect(summaries[i]!.id).toBe(persons[i]!.personId);
@@ -172,7 +176,7 @@ describe("derived registration — withSchema(schema, { from })", () => {
   });
 
   it("derived records validate against their schema", () => {
-    const world    = setup();
+    const world = setup();
     world.generate(z.array(PersonSchema).length(3));
     const summaries = world.generate(z.array(SummarySchema));
     for (const s of summaries) {
@@ -199,9 +203,9 @@ describe("derived registration — withSchema(schema, { from })", () => {
 // ---------------------------------------------------------------------------
 
 describe("multiple from: bindings on the same output schema", () => {
-  const TextFileSchema  = z.object({ fileId: z.uuid() });
+  const TextFileSchema = z.object({ fileId: z.uuid() });
   const AudioFileSchema = z.object({ fileId: z.uuid() });
-  const RawDataSchema   = z.object({ id: z.uuid(), kind: z.enum(["text", "audio"]) });
+  const RawDataSchema = z.object({ id: z.uuid(), kind: z.enum(["text", "audio"]) });
 
   function setup() {
     return createWorld({ seed: 42 })
@@ -210,14 +214,14 @@ describe("multiple from: bindings on the same output schema", () => {
       .withSchema(RawDataSchema, {
         from: TextFileSchema,
         matchers: {
-          id:   (ctx) => ctx.source.fileId,
+          id: (ctx) => ctx.source.fileId,
           kind: () => "text" as const,
         },
       })
       .withSchema(RawDataSchema, {
         from: AudioFileSchema,
         matchers: {
-          id:   (ctx) => ctx.source.fileId,
+          id: (ctx) => ctx.source.fileId,
           kind: () => "audio" as const,
         },
       });
@@ -231,22 +235,25 @@ describe("multiple from: bindings on the same output schema", () => {
   });
 
   it("kind field discriminates correctly per binding", () => {
-    const world  = setup();
+    const world = setup();
     world.generate(z.array(TextFileSchema).length(2));
     world.generate(z.array(AudioFileSchema).length(2));
-    const rawdata     = world.generate(z.array(RawDataSchema));
-    const textRecords  = rawdata.filter((r) => r.kind === "text");
-    const audioRecords = rawdata.filter((r) => r.kind === "audio");
+    const rawdata = world.generate(z.array(RawDataSchema));
+    const textRecords = rawdata.filter((r: { kind: string }) => r.kind === "text");
+    const audioRecords = rawdata.filter((r: { kind: string }) => r.kind === "audio");
     expect(textRecords).toHaveLength(2);
     expect(audioRecords).toHaveLength(2);
   });
 
   it("rawdata.id matches source fileId for each binding", () => {
-    const world  = setup();
-    const texts  = world.generate(z.array(TextFileSchema).length(2));
+    const world = setup();
+    const texts = world.generate(z.array(TextFileSchema).length(2));
     const audios = world.generate(z.array(AudioFileSchema).length(2));
     const rawdata = world.generate(z.array(RawDataSchema));
-    const fileIds = new Set([...texts.map((t) => t.fileId), ...audios.map((a) => a.fileId)]);
+    const fileIds = new Set([
+      ...texts.map((t: { fileId: string }) => t.fileId),
+      ...audios.map((a: { fileId: string }) => a.fileId),
+    ]);
     for (const r of rawdata) {
       expect(fileIds.has(r.id)).toBe(true);
     }

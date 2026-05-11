@@ -39,4 +39,3 @@ export class SchemaRegistry implements Registry {
     return (this.buckets.get(schema) ?? []).length;
   }
 }
-

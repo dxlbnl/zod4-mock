@@ -18,17 +18,17 @@ import { createWorld } from "../../src/index.js";
 // ---------------------------------------------------------------------------
 
 const StepSchema = z.object({
-  name:   z.string(),
+  name: z.string(),
   status: z.enum(["pending", "running", "done", "failed"]),
 });
 
 const FileSchema = z.object({
-  id:     z.uuid(),
+  id: z.uuid(),
   status: z.enum(["pending", "processing", "done", "failed"]),
   metadata: z.object({
     uploadedBy: z.string(),
-    sizeBytes:  z.number().int().min(0),
-    tags:       z.array(z.string()),
+    sizeBytes: z.number().int().min(0),
+    tags: z.array(z.string()),
   }),
   steps: z.array(StepSchema).length(4),
 });
@@ -109,7 +109,7 @@ describe("transform", () => {
     const file = makeWorld().generate(FileSchema, {
       transform: (data) => ({
         ...data,
-        steps: data.steps.map((step, i) =>
+        steps: data.steps.map((step: z.infer<typeof StepSchema>, i: number) =>
           i === 2 ? { ...step, status: "failed" as const } : step,
         ),
       }),
@@ -169,7 +169,10 @@ describe("overrides + transform combined", () => {
       overrides: { status: "done" },
       transform: (data) => ({
         ...data,
-        steps: data.steps.map((s) => ({ ...s, status: "done" as const })),
+        steps: data.steps.map((s: z.infer<typeof StepSchema>) => ({
+          ...s,
+          status: "done" as const,
+        })),
       }),
     });
     expect(FileSchema.safeParse(file).success).toBe(true);

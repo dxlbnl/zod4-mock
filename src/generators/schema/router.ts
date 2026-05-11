@@ -98,33 +98,36 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return generateZodArray(schema, ctx);
 
     case "intersection": {
-      const left = generateFromSchema(d.left!, ctx);
-      const right = generateFromSchema(d.right!, {
-        ...ctx,
+      const left = ctx.generate(d.left!, ctx);
+      const right = ctx.generate(d.right!, {
         prng: ctx.prng.fork("right"),
       });
-      if (typeof left === "object" && left !== null && typeof right === "object" && right !== null) {
+      if (
+        typeof left === "object" &&
+        left !== null &&
+        typeof right === "object" &&
+        right !== null
+      ) {
         return { ...left, ...right };
       }
       return left;
     }
 
     case "xor": {
-      // If xor is implemented via left/right
       const pickLeft = prng.random() > 0.5;
       const chosen = pickLeft ? d.left : d.right;
       if (!chosen) return generateString(prng, 3, 10);
-      return generateFromSchema(chosen, { ...ctx, prng: ctx.prng.fork(pickLeft ? "l" : "r") });
+      return ctx.generate(chosen, { prng: ctx.prng.fork(pickLeft ? "l" : "r") });
     }
 
     case "optional": {
       if (prng.random() < optProb) return undefined;
-      return generateFromSchema(d.innerType!, ctx);
+      return ctx.generate(d.innerType!, ctx);
     }
 
     case "nullable": {
       if (prng.random() < optProb) return null;
-      return generateFromSchema(d.innerType!, ctx);
+      return ctx.generate(d.innerType!, ctx);
     }
 
     case "union": {
@@ -133,21 +136,18 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
         throw new Error("Unsupported schema: union missing options");
       }
       const chosen = options[prng.int(0, options.length - 1)]!;
-      return generateFromSchema(chosen, ctx);
+      return ctx.generate(chosen, ctx);
     }
 
     case "discriminatedUnion": {
-      console.log('DU def:', d);
-      // In Zod, discriminated unions have optionsMap
       if (d.optionsMap && d.optionsMap.size > 0) {
         const keys = Array.from(d.optionsMap.keys());
         const randomKey = keys[prng.int(0, keys.length - 1)]!;
         const chosen = d.optionsMap.get(randomKey)!;
-        return generateFromSchema(chosen, ctx);
+        return ctx.generate(chosen, ctx);
       } else if (d.options && d.options.length > 0) {
-        // Fallback if it has standard options array
         const chosen = d.options[prng.int(0, d.options.length - 1)]!;
-        return generateFromSchema(chosen, ctx);
+        return ctx.generate(chosen, ctx);
       }
       throw new Error("Unsupported schema: discriminated union missing options");
     }
@@ -159,11 +159,8 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
     case "readonly":
       return generateFromSchema(d.innerType!, ctx);
 
-    case "lazy": {
-      const depth = (ctx.fieldPath ?? "").split(".").length;
-      if (depth > 5) return null;
-      return generateFromSchema(d.getter!(), ctx);
-    }
+    case "lazy":
+      return ctx.generate(d.getter!());
 
     case "promise":
       return undefined;

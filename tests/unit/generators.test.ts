@@ -29,16 +29,23 @@ const stubRegistry: Registry = {
 function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
   const prng = createPrng(seed);
   const gen = {} as BoundGenerators;
-  return {
+  const ctx: GeneratorContext = {
     prng,
     gen,
-    source:  undefined,
+    source: undefined,
     registry: stubRegistry,
     fieldPath,
     optionalProbability: 0.2,
     related: <T>(_: string) => ({}) as T,
+    generate<S extends z.ZodTypeAny>(s: S, o?: any) {
+      const depth = (o?.fieldPath ?? this.fieldPath).split(".").filter(Boolean).length;
+      if (depth > this.recursionLimit) return null as any;
+      return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
+    },
+    recursionLimit: 5,
     current: {},
   };
+  return ctx;
 }
 
 // ---------------------------------------------------------------------------

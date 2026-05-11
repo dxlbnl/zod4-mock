@@ -287,7 +287,10 @@ export function generateTemplateLiteral(schema: ZodTypeAny, ctx: GeneratorContex
   // In Zod 4, z.templateLiteral is an array of types or strings?
   // It's often represented recursively, but since we don't know the exact def structure yet,
   // we'll try to guess based on schema._zod.def.items or .types
-  const d = def(schema) as unknown as { types?: Array<ZodTypeAny | string>; items?: Array<ZodTypeAny | string> };
+  const d = def(schema) as unknown as {
+    types?: Array<ZodTypeAny | string>;
+    items?: Array<ZodTypeAny | string>;
+  };
   const parts = d.types ?? d.items ?? [];
   let result = "";
   for (let i = 0; i < parts.length; i++) {

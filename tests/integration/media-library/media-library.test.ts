@@ -19,9 +19,6 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import {
   PersonSchema,
-  TextFileSchema,
-  AudioFileSchema,
-  BankFileSchema,
   RawDataSchema,
   TextApiSchema,
   AudioApiSchema,
@@ -32,7 +29,6 @@ import {
 } from "./world.js";
 
 describe("media-library", () => {
-
   // ---------------------------------------------------------------------------
   // Schema validity
   //
@@ -87,7 +83,7 @@ describe("media-library", () => {
 
   it("text API fileIds all appear in rawdata as id", () => {
     const { rawdata, texts } = buildMediaLibrary();
-    const rawIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r: { id: string }) => r.id));
     for (const t of texts) {
       expect(rawIds.has(t.fileId)).toBe(true);
     }
@@ -95,7 +91,7 @@ describe("media-library", () => {
 
   it("audio API fileIds all appear in rawdata as id", () => {
     const { rawdata, audios } = buildMediaLibrary();
-    const rawIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r: { id: string }) => r.id));
     for (const a of audios) {
       expect(rawIds.has(a.fileId)).toBe(true);
     }
@@ -103,7 +99,7 @@ describe("media-library", () => {
 
   it("bank API fileIds all appear in rawdata as id", () => {
     const { rawdata, banks } = buildMediaLibrary();
-    const rawIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r: { id: string }) => r.id));
     for (const b of banks) {
       expect(rawIds.has(b.fileId)).toBe(true);
     }
@@ -119,14 +115,14 @@ describe("media-library", () => {
 
   it("rawdata.type matches the file type for every record", () => {
     const { rawdata, texts, audios, banks } = buildMediaLibrary();
-    const textIds  = new Set(texts.map((t) => t.fileId));
-    const audioIds = new Set(audios.map((a) => a.fileId));
-    const bankIds  = new Set(banks.map((b) => b.fileId));
+    const textIds = new Set(texts.map((t: { fileId: string }) => t.fileId));
+    const audioIds = new Set(audios.map((a: { fileId: string }) => a.fileId));
+    const bankIds = new Set(banks.map((b: { fileId: string }) => b.fileId));
 
     for (const r of rawdata) {
-      if (textIds.has(r.id))  expect(r.type).toBe("text");
+      if (textIds.has(r.id)) expect(r.type).toBe("text");
       if (audioIds.has(r.id)) expect(r.type).toBe("audio");
-      if (bankIds.has(r.id))  expect(r.type).toBe("bank");
+      if (bankIds.has(r.id)) expect(r.type).toBe("bank");
     }
   });
 
@@ -141,7 +137,7 @@ describe("media-library", () => {
 
   it("entity.fileIds contains all rawdata IDs owned by that person", () => {
     const { rawdata, entities } = buildMediaLibrary();
-    const rawIds = new Set(rawdata.map((r) => r.id));
+    const rawIds = new Set(rawdata.map((r: { id: string }) => r.id));
     for (const entity of entities) {
       for (const fileId of entity.fileIds) {
         expect(rawIds.has(fileId)).toBe(true);
@@ -158,7 +154,9 @@ describe("media-library", () => {
 
   it("every entity.personId refers to a generated person", () => {
     const { entities, world } = buildMediaLibrary();
-    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    const personIds = new Set(
+      world.registry.all(PersonSchema).map((p: { personId: string }) => p.personId),
+    );
     for (const entity of entities) {
       expect(personIds.has(entity.personId)).toBe(true);
     }
@@ -174,7 +172,9 @@ describe("media-library", () => {
 
   it("text.uploadedBy refers to a generated person", () => {
     const { texts, world } = buildMediaLibrary();
-    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    const personIds = new Set(
+      world.registry.all(PersonSchema).map((p: { personId: string }) => p.personId),
+    );
     for (const t of texts) {
       expect(personIds.has(t.uploadedBy)).toBe(true);
     }
@@ -182,7 +182,9 @@ describe("media-library", () => {
 
   it("audio.uploadedBy refers to a generated person", () => {
     const { audios, world } = buildMediaLibrary();
-    const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
+    const personIds = new Set(
+      world.registry.all(PersonSchema).map((p: { personId: string }) => p.personId),
+    );
     for (const a of audios) {
       expect(personIds.has(a.uploadedBy)).toBe(true);
     }
@@ -243,5 +245,4 @@ describe("media-library", () => {
     const b = buildMediaLibrary(2).rawdata;
     expect(a).not.toEqual(b);
   });
-
 });

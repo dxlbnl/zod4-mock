@@ -1,7 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../../types.js";
 import { def, checks } from "./zod-def.js";
-import { generateFromSchema } from "./router.js";
 
 export function resolveArrayLength(
   schema: ZodTypeAny,
@@ -28,10 +27,9 @@ export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unk
   const [defMin, defMax] = [1, 5];
   const length = resolveArrayLength(schema, defMin, defMax, ctx.prng);
   return Array.from({ length }, (_, i) =>
-    generateFromSchema(d.element!, {
-      ...ctx,
+    ctx.generate(d.element!, {
       prng: ctx.prng.fork(`el-${i}`),
-      fieldPath: `${ctx.fieldPath}[${i}]`,
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
     }),
   );
 }
@@ -40,12 +38,20 @@ export function generateZodTuple(schema: ZodTypeAny, ctx: GeneratorContext): unk
   const d = def(schema);
   const items = d.items ?? [];
   const result = items.map((item, i) =>
-    generateFromSchema(item, { ...ctx, prng: ctx.prng.fork(`t-${i}`) }),
+    ctx.generate(item, {
+      prng: ctx.prng.fork(`t-${i}`),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+    }),
   );
   if (d.rest) {
     const restCount = ctx.prng.int(0, 3);
     for (let i = 0; i < restCount; i++) {
-      result.push(generateFromSchema(d.rest, { ...ctx, prng: ctx.prng.fork(`tr-${i}`) }));
+      result.push(
+        ctx.generate(d.rest, {
+          prng: ctx.prng.fork(`tr-${i}`),
+          fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${items.length + i}` : `${items.length + i}`,
+        }),
+      );
     }
   }
   return result;
@@ -59,10 +65,13 @@ export function generateZodRecord(
   const count = ctx.prng.int(2, 5);
   const result: Record<string, unknown> = {};
   for (let i = 0; i < count; i++) {
-    const key = generateFromSchema(d.keyType!, { ...ctx, prng: ctx.prng.fork(`rk-${i}`) });
-    result[String(key)] = generateFromSchema(d.valueType!, {
-      ...ctx,
+    const key = ctx.generate(d.keyType!, {
+      prng: ctx.prng.fork(`rk-${i}`),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.<key:${i}>` : `<key:${i}>`,
+    });
+    result[String(key)] = ctx.generate(d.valueType!, {
       prng: ctx.prng.fork(`rv-${i}`),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : String(key),
     });
   }
   return result;
@@ -73,8 +82,14 @@ export function generateZodMap(schema: ZodTypeAny, ctx: GeneratorContext): Map<u
   const count = ctx.prng.int(2, 4);
   const result = new Map<unknown, unknown>();
   for (let i = 0; i < count; i++) {
-    const key = generateFromSchema(d.keyType!, { ...ctx, prng: ctx.prng.fork(`mk-${i}`) });
-    const val = generateFromSchema(d.valueType!, { ...ctx, prng: ctx.prng.fork(`mv-${i}`) });
+    const key = ctx.generate(d.keyType!, {
+      prng: ctx.prng.fork(`mk-${i}`),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.<key:${i}>` : `<key:${i}>`,
+    });
+    const val = ctx.generate(d.valueType!, {
+      prng: ctx.prng.fork(`mv-${i}`),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : String(key),
+    });
     result.set(key, val);
   }
   return result;
@@ -92,7 +107,12 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
 
   const result = new Set<unknown>();
   for (let i = 0; i < size; i++) {
-    result.add(generateFromSchema(d.valueType!, { ...ctx, prng: ctx.prng.fork(`sv-${i}`) }));
+    result.add(
+      ctx.generate(d.valueType!, {
+        prng: ctx.prng.fork(`sv-${i}`),
+        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+      }),
+    );
   }
   return result;
 }
@@ -126,7 +146,7 @@ export function generateZodObject(
 
     while (d.type === "optional" || d.type === "nullable" || d.type === "default") {
       const isAbsent = childCtx.prng.random() < (ctx.optionalProbability ?? 0.2);
-      
+
       if (isAbsent) {
         if (d.type === "default") {
           result[key] = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
@@ -153,7 +173,7 @@ export function generateZodObject(
 
     // Try key-based heuristics first
     const keyResult = generateFromKey(key, innerSchema, childCtx);
-    result[key] = keyResult !== undefined ? keyResult : generateFromSchema(innerSchema, childCtx);
+    result[key] = keyResult !== undefined ? keyResult : childCtx.generate(innerSchema);
   }
   return result;
 }

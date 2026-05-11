@@ -84,12 +84,7 @@ export const AudioApiSchema = z.object({
   fileId: z.uuid(), // must equal AudioFileSchema.fileId
   uploadedBy: z.uuid(), // must equal AudioFileSchema.ownerId
   durationS: z.number().int().min(1),
-  sampleRate: z.union([
-    z.literal(8000),
-    z.literal(16000),
-    z.literal(44100),
-    z.literal(48000),
-  ]),
+  sampleRate: z.union([z.literal(8000), z.literal(16000), z.literal(44100), z.literal(48000)]),
 });
 
 /** Bank statement metadata. */
@@ -230,12 +225,8 @@ export function createMediaLibraryWorld(seed = 42) {
           lastName: (ctx) => ctx.source.lastName,
           fileIds: (ctx) => {
             const ownedBy = (
-              s:
-                | typeof TextFileSchema
-                | typeof AudioFileSchema
-                | typeof BankFileSchema,
-            ) =>
-              ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
+              s: typeof TextFileSchema | typeof AudioFileSchema | typeof BankFileSchema,
+            ) => ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
             return [
               ...ownedBy(TextFileSchema),
               ...ownedBy(AudioFileSchema),
@@ -244,12 +235,8 @@ export function createMediaLibraryWorld(seed = 42) {
           },
           fileCount: (ctx) => {
             const ownedBy = (
-              s:
-                | typeof TextFileSchema
-                | typeof AudioFileSchema
-                | typeof BankFileSchema,
-            ) =>
-              ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
+              s: typeof TextFileSchema | typeof AudioFileSchema | typeof BankFileSchema,
+            ) => ctx.registry.filter(s, (f) => f.ownerId === ctx.source.personId);
             return (
               ownedBy(TextFileSchema).length +
               ownedBy(AudioFileSchema).length +

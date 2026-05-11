@@ -24,41 +24,41 @@ import { createWorld } from "../../../src/index.js";
 
 // Root entity — drives the hierarchy.
 export const AuthorSchema = z.object({
-  authorId:  z.uuid(),
+  authorId: z.uuid(),
   firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.email(),
-  language:  z.enum(["nl", "en", "de", "fr"]),
+  lastName: z.string(),
+  email: z.email(),
+  language: z.enum(["nl", "en", "de", "fr"]),
 });
 
 // A document written by one author.
 // authorId and language are derived from the related author so they stay
 // consistent rather than being generated independently.
 export const DocumentSchema = z.object({
-  id:        z.uuid(),
-  authorId:  z.uuid(), // → AuthorSchema.authorId
-  title:     z.string().min(5).max(80),
+  id: z.uuid(),
+  authorId: z.uuid(), // → AuthorSchema.authorId
+  title: z.string().min(5).max(80),
   wordCount: z.number().int().min(50).max(5000),
   createdAt: z.date(),
-  language:  z.enum(["nl", "en", "de", "fr"]), // mirrors author.language
+  language: z.enum(["nl", "en", "de", "fr"]), // mirrors author.language
 });
 
 // A sentence extracted from a document.
 export const SentenceSchema = z.object({
-  id:         z.uuid(),
+  id: z.uuid(),
   documentId: z.uuid(), // → DocumentSchema.id
-  text:       z.string().min(10).max(300),
-  position:   z.number().int().min(0),
+  text: z.string().min(10).max(300),
+  position: z.number().int().min(0),
 });
 
 // An NLP annotation: a labelled character span within a sentence.
 export const AnnotationSchema = z.object({
-  id:         z.uuid(),
+  id: z.uuid(),
   sentenceId: z.uuid(), // → SentenceSchema.id
-  authorId:   z.uuid(), // → AuthorSchema.authorId
-  label:      z.enum(["PERSON", "ORG", "LOC", "DATE", "MISC"]),
-  offset:     z.number().int().min(0).max(250),
-  length:     z.number().int().min(1).max(50),
+  authorId: z.uuid(), // → AuthorSchema.authorId
+  label: z.enum(["PERSON", "ORG", "LOC", "DATE", "MISC"]),
+  offset: z.number().int().min(0).max(250),
+  length: z.number().int().min(1).max(50),
 });
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,6 @@ export const AnnotationSchema = z.object({
 export function createDocumentCorpusWorld(seed = 42) {
   return (
     createWorld({ seed })
-
       // AuthorSchema is the root — no relations, no matchers needed.
       // Field-name heuristics handle firstName, lastName, email automatically.
       .withSchema(AuthorSchema)
@@ -81,7 +80,7 @@ export function createDocumentCorpusWorld(seed = 42) {
         matchers: {
           authorId: (ctx) => ctx.related("author").authorId,
           language: (ctx) => ctx.related("author").language,
-          title:    (ctx) => ctx.gen.word.sentence(),
+          title: (ctx) => ctx.gen.word.sentence(),
         },
       })
 
@@ -91,8 +90,8 @@ export function createDocumentCorpusWorld(seed = 42) {
         relations: { document: DocumentSchema },
         matchers: {
           documentId: (ctx) => ctx.related("document").id,
-          text:       (ctx) => ctx.gen.word.sentence(),
-          position:   (ctx) => ctx.prng.int(0, 99),
+          text: (ctx) => ctx.gen.word.sentence(),
+          position: (ctx) => ctx.prng.int(0, 99),
         },
       })
 
@@ -103,8 +102,8 @@ export function createDocumentCorpusWorld(seed = 42) {
         relations: { sentence: SentenceSchema, author: AuthorSchema },
         matchers: {
           sentenceId: (ctx) => ctx.related("sentence").id,
-          authorId:   (ctx) => ctx.related("author").authorId,
-          offset:     (ctx) => ctx.prng.int(0, 250),
+          authorId: (ctx) => ctx.related("author").authorId,
+          offset: (ctx) => ctx.prng.int(0, 250),
         },
       })
   );
@@ -112,10 +111,10 @@ export function createDocumentCorpusWorld(seed = 42) {
 
 // Convenience: build a fully-populated world and return all four collections.
 export function buildCorpus(seed = 42) {
-  const world       = createDocumentCorpusWorld(seed);
-  const authors     = world.generate(z.array(AuthorSchema).min(3).max(5));
-  const documents   = world.generate(z.array(DocumentSchema).min(5).max(10));
-  const sentences   = world.generate(z.array(SentenceSchema).min(15).max(30));
+  const world = createDocumentCorpusWorld(seed);
+  const authors = world.generate(z.array(AuthorSchema).min(3).max(5));
+  const documents = world.generate(z.array(DocumentSchema).min(5).max(10));
+  const sentences = world.generate(z.array(SentenceSchema).min(15).max(30));
   const annotations = world.generate(z.array(AnnotationSchema).min(20).max(40));
   return { world, authors, documents, sentences, annotations };
 }

@@ -8,7 +8,8 @@ export { generateFromSchema, generateFromKey, data } from "./generators/index.js
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
 
-import type { ZodTypeAny, input } from "zod";
+import { z } from "zod";
+import type { ZodTypeAny } from "zod";
 import type { GenerateOptions } from "./types.js";
 import { createWorld } from "./world.js";
 import * as gen from "./generators/data/index.js";
@@ -26,8 +27,8 @@ import * as gen from "./generators/data/index.js";
  */
 export function generate<TSchema extends ZodTypeAny>(
   schema: TSchema,
-  options?: GenerateOptions<input<TSchema>>,
-): input<TSchema> {
+  options?: GenerateOptions<z.infer<TSchema>>,
+): z.infer<TSchema> {
   const seed = options?.seed ?? Math.floor(Math.random() * 0xffffffff);
   return createWorld({ seed }).generate(schema, options);
 }

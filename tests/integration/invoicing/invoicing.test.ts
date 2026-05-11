@@ -23,7 +23,6 @@ import {
 } from "./world.js";
 
 describe("invoicing", () => {
-
   // ---------------------------------------------------------------------------
   // Schema validity
   //
@@ -75,7 +74,7 @@ describe("invoicing", () => {
 
   it("every line.productId refers to a generated product", () => {
     const { invoices, products } = buildInvoicingDataset();
-    const productIds = new Set(products.map((p) => p.productId));
+    const productIds = new Set(products.map((p: { productId: string }) => p.productId));
 
     for (const inv of invoices) {
       for (const line of inv.lines) {
@@ -86,7 +85,9 @@ describe("invoicing", () => {
 
   it("summary.customerId matches a customer in the registry", () => {
     const { summaries, world } = buildInvoicingDataset();
-    const customerIds = new Set(world.registry.all(CustomerSchema).map((c) => c.customerId));
+    const customerIds = new Set(
+      world.registry.all(CustomerSchema).map((c: { customerId: string }) => c.customerId),
+    );
 
     for (const s of summaries) {
       expect(customerIds.has(s.customerId)).toBe(true);
@@ -113,7 +114,10 @@ describe("invoicing", () => {
   it("invoice.totalCents === sum of its line totalCents", () => {
     const { invoices } = buildInvoicingDataset();
     for (const inv of invoices) {
-      const expected = inv.lines.reduce((sum, l) => sum + l.totalCents, 0);
+      const expected = inv.lines.reduce(
+        (sum: number, l: { totalCents: number }) => sum + l.totalCents,
+        0,
+      );
       expect(inv.totalCents).toBe(expected);
     }
   });
@@ -154,9 +158,7 @@ describe("invoicing", () => {
 
   it("summary.customerId and email match the source customer", () => {
     const { summaries, world } = buildInvoicingDataset();
-    const customerByID = new Map(
-      world.registry.all(CustomerSchema).map((c) => [c.customerId, c]),
-    );
+    const customerByID = new Map(world.registry.all(CustomerSchema).map((c) => [c.customerId, c]));
 
     for (const s of summaries) {
       const customer = customerByID.get(s.customerId);
@@ -184,15 +186,17 @@ describe("invoicing", () => {
 
   it("changing the seed does not break the arithmetic invariant", () => {
     for (const seed of [1, 2, 3, 99, 12345]) {
-      const world    = createInvoicingWorld(seed);
+      const world = createInvoicingWorld(seed);
       world.generate(z.array(ProductSchema).min(5));
       const invoices = world.generate(z.array(InvoiceSchema).min(3));
 
       for (const inv of invoices) {
-        const expected = inv.lines.reduce((sum, l) => sum + l.totalCents, 0);
+        const expected = inv.lines.reduce(
+          (sum: number, l: { totalCents: number }) => sum + l.totalCents,
+          0,
+        );
         expect(inv.totalCents).toBe(expected);
       }
     }
   });
-
 });

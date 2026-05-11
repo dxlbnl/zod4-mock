@@ -22,7 +22,6 @@ import {
 } from "./world.js";
 
 describe("document-corpus", () => {
-
   // ---------------------------------------------------------------------------
   // Schema validity
   //
@@ -64,7 +63,9 @@ describe("document-corpus", () => {
 
   it("every document.authorId refers to a generated author", () => {
     const { documents, world } = buildCorpus();
-    const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
+    const authorIds = new Set(
+      world.registry.all(AuthorSchema).map((a: { authorId: string }) => a.authorId),
+    );
 
     for (const doc of documents) {
       expect(authorIds.has(doc.authorId)).toBe(true);
@@ -73,7 +74,7 @@ describe("document-corpus", () => {
 
   it("every sentence.documentId refers to a generated document", () => {
     const { documents, sentences } = buildCorpus();
-    const docIds = new Set(documents.map((d) => d.id));
+    const docIds = new Set(documents.map((d: { id: string }) => d.id));
 
     for (const sentence of sentences) {
       expect(docIds.has(sentence.documentId)).toBe(true);
@@ -82,7 +83,7 @@ describe("document-corpus", () => {
 
   it("every annotation.sentenceId refers to a generated sentence", () => {
     const { sentences, annotations } = buildCorpus();
-    const sentenceIds = new Set(sentences.map((s) => s.id));
+    const sentenceIds = new Set(sentences.map((s: { id: string }) => s.id));
 
     for (const annotation of annotations) {
       expect(sentenceIds.has(annotation.sentenceId)).toBe(true);
@@ -91,7 +92,9 @@ describe("document-corpus", () => {
 
   it("every annotation.authorId refers to a generated author", () => {
     const { annotations, world } = buildCorpus();
-    const authorIds = new Set(world.registry.all(AuthorSchema).map((a) => a.authorId));
+    const authorIds = new Set(
+      world.registry.all(AuthorSchema).map((a: { authorId: string }) => a.authorId),
+    );
 
     for (const annotation of annotations) {
       expect(authorIds.has(annotation.authorId)).toBe(true);
@@ -108,9 +111,7 @@ describe("document-corpus", () => {
 
   it("every document.language matches the language of its author", () => {
     const { documents, world } = buildCorpus();
-    const authorById = new Map(
-      world.registry.all(AuthorSchema).map((a) => [a.authorId, a]),
-    );
+    const authorById = new Map(world.registry.all(AuthorSchema).map((a) => [a.authorId, a]));
 
     for (const doc of documents) {
       const author = authorById.get(doc.authorId);
@@ -160,5 +161,4 @@ describe("document-corpus", () => {
     const docs2 = world2.generate(z.array(DocumentSchema).length(3));
     expect(docs1).not.toEqual(docs2);
   });
-
 });

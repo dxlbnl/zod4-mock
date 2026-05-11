@@ -15,17 +15,17 @@ import { createWorld, generate } from "../../src/index.js";
 // ---------------------------------------------------------------------------
 
 const PersonSchema = z.object({
-  personId:  z.uuid(),
+  personId: z.uuid(),
   firstName: z.string(),
-  lastName:  z.string(),
-  email:     z.email(),
-  age:       z.number().int().min(18).max(90),
+  lastName: z.string(),
+  email: z.email(),
+  age: z.number().int().min(18).max(90),
 });
 
 const OrderSchema = z.object({
-  orderId:    z.uuid(),
+  orderId: z.uuid(),
   customerId: z.uuid(), // → PersonSchema.personId
-  status:     z.enum(["pending", "processing", "done", "cancelled"]),
+  status: z.enum(["pending", "processing", "done", "cancelled"]),
   totalCents: z.number().int().min(100),
 });
 
@@ -141,13 +141,12 @@ describe("world.generate — primitives (ad-hoc, no registration)", () => {
 
 describe("world.generate — registered schema with matchers", () => {
   function setup() {
-    return createWorld({ seed: 42 })
-      .withSchema(PersonSchema, {
-        matchers: {
-          email: (ctx) =>
-            `${ctx.gen.person.firstName()}.${ctx.gen.person.lastName()}@example.nl`.toLowerCase(),
-        },
-      });
+    return createWorld({ seed: 42 }).withSchema(PersonSchema, {
+      matchers: {
+        email: (ctx) =>
+          `${ctx.gen.person.firstName()}.${ctx.gen.person.lastName()}@example.nl`.toLowerCase(),
+      },
+    });
   }
 
   it("generates an object that validates against the schema", () => {
@@ -232,8 +231,9 @@ describe("ctx.gen — bound generators in matchers", () => {
   it("ctx.gen produces deterministic values (same seed → same result)", () => {
     const S = z.object({ title: z.string() });
     const makeWorld = () =>
-      createWorld({ seed: 42 })
-        .withSchema(S, { matchers: { title: (ctx) => ctx.gen.word.sentence() } });
+      createWorld({ seed: 42 }).withSchema(S, {
+        matchers: { title: (ctx) => ctx.gen.word.sentence() },
+      });
     expect(makeWorld().generate(S)).toEqual(makeWorld().generate(S));
   });
 
@@ -243,8 +243,14 @@ describe("ctx.gen — bound generators in matchers", () => {
     createWorld({ seed: 42 })
       .withSchema(S, {
         matchers: {
-          a: (ctx) => { captured.push(ctx.gen.person.firstName()); return captured[0]!; },
-          b: (ctx) => { captured.push(ctx.gen.person.firstName()); return captured[1]!; },
+          a: (ctx) => {
+            captured.push(ctx.gen.person.firstName());
+            return captured[0]!;
+          },
+          b: (ctx) => {
+            captured.push(ctx.gen.person.firstName());
+            return captured[1]!;
+          },
         },
       })
       .generate(S);
@@ -350,10 +356,10 @@ describe("world.generate — array as modifier chain", () => {
 
 describe("world.generate — optional and nullable fields in objects", () => {
   const SchemaWithOptionals = z.object({
-    name:  z.string(),
-    bio:   z.string().optional(),
+    name: z.string(),
+    bio: z.string().optional(),
     score: z.number().optional(),
-    tag:   z.string().nullable(),
+    tag: z.string().nullable(),
   });
 
   it("sometimes produces undefined for optional fields (across seeds)", () => {
@@ -373,7 +379,9 @@ describe("world.generate — optional and nullable fields in objects", () => {
   });
 
   it("optionalProbability: 1.0 always omits optional fields", () => {
-    const result = createWorld({ seed: 42, optionalProbability: 1.0 }).generate(SchemaWithOptionals);
+    const result = createWorld({ seed: 42, optionalProbability: 1.0 }).generate(
+      SchemaWithOptionals,
+    );
     expect(result.bio).toBeUndefined();
     expect(result.score).toBeUndefined();
     expect(result.tag).toBeNull();
@@ -393,7 +401,7 @@ describe("world.generate — optional and nullable fields in objects", () => {
     // the key-based heuristic.
     const ProfileSchema = z.object({
       userId: z.string(),
-      email:  z.string().optional(),
+      email: z.string().optional(),
     });
     const results = Array.from({ length: 20 }, (_, i) =>
       createWorld({ seed: i, optionalProbability: 0 }).generate(ProfileSchema),
@@ -423,8 +431,8 @@ describe("relations — ctx.related()", () => {
   }
 
   it("order.customerId matches a generated person.personId", () => {
-    const world  = setup();
-    const order  = world.generate(OrderSchema);
+    const world = setup();
+    const order = world.generate(OrderSchema);
     const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
     expect(personIds.has(order.customerId)).toBe(true);
   });
@@ -476,7 +484,7 @@ describe("world.populate", () => {
       })
       .populate(PersonSchema, 2);
 
-    const orders   = world.generate(z.array(OrderSchema).length(10));
+    const orders = world.generate(z.array(OrderSchema).length(10));
     const personIds = new Set(world.registry.all(PersonSchema).map((p) => p.personId));
     for (const o of orders) {
       expect(personIds.has(o.customerId)).toBe(true);
@@ -494,8 +502,8 @@ describe("world.populate", () => {
 
 describe("derived schemas — from: and ctx.source", () => {
   const PersonSummarySchema = z.object({
-    id:        z.uuid(),
-    fullName:  z.string(),
+    id: z.uuid(),
+    fullName: z.string(),
     emailHash: z.string(),
   });
 
@@ -505,26 +513,26 @@ describe("derived schemas — from: and ctx.source", () => {
       .withSchema(PersonSummarySchema, {
         from: PersonSchema,
         matchers: {
-          id:        (ctx) => ctx.source.personId,
-          fullName:  (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
+          id: (ctx) => ctx.source.personId,
+          fullName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName}`,
           emailHash: (ctx) => ctx.source.email.split("@")[0] ?? "",
         },
       });
   }
 
   it("derived id equals the source personId", () => {
-    const world    = setup();
-    const persons  = world.generate(z.array(PersonSchema).length(3));
+    const world = setup();
+    const persons = world.generate(z.array(PersonSchema).length(3));
     const summaries = world.generate(z.array(PersonSummarySchema));
-    const personIds = new Set(persons.map((p) => p.personId));
+    const personIds = new Set(persons.map((p: { personId: string }) => p.personId));
     for (const s of summaries) {
       expect(personIds.has(s.id)).toBe(true);
     }
   });
 
   it("ctx.source provides the source schema data", () => {
-    const world    = setup();
-    const persons  = world.generate(z.array(PersonSchema).length(3));
+    const world = setup();
+    const persons = world.generate(z.array(PersonSchema).length(3));
     const summaries = world.generate(z.array(PersonSummarySchema));
     for (let i = 0; i < persons.length; i++) {
       expect(summaries[i]!.fullName).toBe(`${persons[i]!.firstName} ${persons[i]!.lastName}`);
@@ -565,7 +573,7 @@ describe("registry — schema-reference API", () => {
   }
 
   it("registry.all(Schema) returns all generated instances", () => {
-    const world   = setup().populate(PersonSchema, 3);
+    const world = setup().populate(PersonSchema, 3);
     const persons = world.registry.all(PersonSchema);
     expect(persons).toHaveLength(3);
     for (const p of persons) {
@@ -574,16 +582,16 @@ describe("registry — schema-reference API", () => {
   });
 
   it("registry.pick(Schema) returns a single valid instance", () => {
-    const world  = setup().populate(PersonSchema, 5);
+    const world = setup().populate(PersonSchema, 5);
     const person = world.registry.pick(PersonSchema);
     expect(PersonSchema.safeParse(person).success).toBe(true);
   });
 
   it("registry.filter(Schema, predicate) returns matching instances", () => {
-    const world  = setup().populate(PersonSchema, 5);
+    const world = setup().populate(PersonSchema, 5);
     world.generate(z.array(OrderSchema).length(10));
     const targetId = world.registry.all(PersonSchema)[0]!.personId;
-    const orders   = world.registry.filter(OrderSchema, (o) => o.customerId === targetId);
+    const orders = world.registry.filter(OrderSchema, (o) => o.customerId === targetId);
     for (const o of orders) {
       expect(o.customerId).toBe(targetId);
     }
@@ -644,14 +652,16 @@ describe("ctx.current propagation", () => {
   it("first field sees an empty current object", () => {
     let capturedCurrent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
-    createWorld({ seed: 42 }).withSchema(S, {
-      matchers: {
-        a: (ctx) => {
-          capturedCurrent = { ...ctx.current }; // snapshot — live ref fills up after
-          return "first";
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          a: (ctx) => {
+            capturedCurrent = { ...ctx.current }; // snapshot — live ref fills up after
+            return "first";
+          },
         },
-      },
-    }).generate(S);
+      })
+      .generate(S);
     expect(capturedCurrent).toBeDefined();
     expect(Object.keys(capturedCurrent!)).toHaveLength(0);
   });
@@ -659,22 +669,42 @@ describe("ctx.current propagation", () => {
   it("later fields see previously generated siblings in current", () => {
     let capturedCurrent: Record<string, unknown> | undefined;
     const S = z.object({ a: z.string(), b: z.string() });
-    createWorld({ seed: 42 }).withSchema(S, {
-      matchers: {
-        b: (ctx) => {
-          capturedCurrent = { ...ctx.current }; // snapshot
-          return "second";
+    createWorld({ seed: 42 })
+      .withSchema(S, {
+        matchers: {
+          b: (ctx) => {
+            capturedCurrent = { ...ctx.current }; // snapshot
+            return "second";
+          },
         },
-      },
-    }).generate(S);
+      })
+      .generate(S);
     expect(capturedCurrent).toBeDefined();
     expect(typeof capturedCurrent!["a"]).toBe("string");
   });
 
   it("key-based firstName picks only female names when gender sibling is 'female'", () => {
     const FEMALE_NAMES = [
-      "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
-      "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+      "Marie",
+      "Anna",
+      "Lisa",
+      "Emma",
+      "Sara",
+      "Lena",
+      "Nora",
+      "Eva",
+      "Julia",
+      "Inge",
+      "Lieke",
+      "Noa",
+      "Lotte",
+      "Fleur",
+      "Tess",
+      "Mila",
+      "Sanne",
+      "Sophie",
+      "Roos",
+      "Isa",
     ];
     const S = z.object({ gender: z.literal("female"), firstName: z.string() });
     for (let seed = 0; seed < 20; seed++) {
@@ -685,8 +715,26 @@ describe("ctx.current propagation", () => {
 
   it("key-based firstName picks only male names when gender sibling is 'male'", () => {
     const MALE_NAMES = [
-      "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
-      "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+      "Jan",
+      "Piet",
+      "Klaas",
+      "Hans",
+      "Dirk",
+      "Erik",
+      "Tom",
+      "Sven",
+      "Luc",
+      "Bas",
+      "Thijs",
+      "Bram",
+      "Luuk",
+      "Lars",
+      "Stijn",
+      "Gijs",
+      "Sem",
+      "Daan",
+      "Finn",
+      "Willem",
     ];
     const S = z.object({ gender: z.literal("male"), firstName: z.string() });
     for (let seed = 0; seed < 20; seed++) {
@@ -716,7 +764,7 @@ describe("Regression Tests", () => {
             return ctx.source.id;
           },
           label: (ctx) => `Label: ${ctx.source.name}`,
-        }
+        },
       });
 
     world.populate(SourceSchema, 1);
@@ -733,7 +781,7 @@ describe("Regression Tests", () => {
     const world = createWorld({ seed: 42 });
 
     const result = world.generate(z.array(ItemSchema).length(3), {
-      overrides: [{ val: 999 }, { val: 999 }, { val: 999 }]
+      overrides: [{ val: 999 }, { val: 999 }, { val: 999 }],
     }) as any[];
 
     expect(result[0].val).toBe(999);
@@ -746,7 +794,7 @@ describe("Regression Tests", () => {
     const world = createWorld({ seed: 42 });
 
     const result = world.generate(Schema, {
-      overrides: { optional: undefined }
+      overrides: { optional: undefined },
     });
 
     expect(result.optional).toBeUndefined();
