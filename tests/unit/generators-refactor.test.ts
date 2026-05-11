@@ -75,6 +75,13 @@ describe("Comprehensive Heuristic Constraints & Modifiers", () => {
       const result = createWorld({ seed: 1 }).generate(Schema);
       expect(result.city.length).toBe(10);
     });
+
+    it("should respect combinations (min + endsWith)", () => {
+      const Schema = z.object({ firstName: z.string().min(30).endsWith("bla") });
+      const result = createWorld({ seed: 1 }).generate(Schema);
+      expect(result.firstName.length).toBeGreaterThanOrEqual(30);
+      expect(result.firstName.endsWith("bla")).toBe(true);
+    });
   });
 
   describe("Number Heuristics (e.g. age, price, amount)", () => {

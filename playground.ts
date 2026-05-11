@@ -14,8 +14,8 @@ const print = (label: string, data: unknown) => {
 
 const UserSchema = z.object({
   id: z.string().uuid(),
-  firstName: z.string(),
-  lastName: z.string().min(20),
+  firstName: z.string().min(30).endsWith('bla'),
+  lastName: z.string().max(2),
   email: z.string().email().toUpperCase(),
   age: z.number().min(80).max(1200).multipleOf(2),
 });

@@ -101,7 +101,7 @@ export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
       if (typeof tx === "function") result = tx(result);
     }
 
-    // 2. Add required prefixes/suffixes/inclusions
+    // 2. Add required prefixes/suffixes/inclusions to base string
     for (const c of formats) {
       if (c.format === "starts_with" && c.prefix) {
         if (!result.startsWith(c.prefix)) result = c.prefix + result;
@@ -115,10 +115,37 @@ export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
     }
 
     // 3. Apply length bounds
+
     if (result.length < min) result = result.padEnd(min, "x");
     if (result.length > max) result = result.slice(0, max);
 
-    // 4. Re-apply transformations to ensure final string (including padding) respects case
+    // 4. RE-FIX formats that might have been broken by padding/slicing
+    // We replace the start/end to preserve the length we just calculated
+    for (const c of formats) {
+      if (c.format === "starts_with" && c.prefix) {
+        if (!result.startsWith(c.prefix)) {
+          result = c.prefix + result.slice(c.prefix.length);
+        }
+      }
+      if (c.format === "ends_with" && c.suffix) {
+        if (!result.endsWith(c.suffix)) {
+          const start = Math.max(0, result.length - c.suffix.length);
+          result = result.slice(0, start) + c.suffix;
+        }
+      }
+      if (c.format === "includes" && c.includes) {
+        if (!result.includes(c.includes)) {
+          // If it doesn't fit, we just append it and accept the length violation
+          // or try to squeeze it in the middle. Squeezing in the middle is safer.
+          const mid = Math.floor(result.length / 2);
+          const start = Math.max(0, mid - Math.floor(c.includes.length / 2));
+          result =
+            result.slice(0, start) + c.includes + result.slice(start + c.includes.length);
+        }
+      }
+    }
+
+    // 5. Re-apply transformations to ensure final string respects case
     for (const c of overwrites) {
       const tx = (c as unknown as { tx?: (v: string) => string }).tx;
       if (typeof tx === "function") result = tx(result);
