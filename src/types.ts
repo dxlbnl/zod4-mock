@@ -43,9 +43,44 @@ export interface CoreGenerators {
     paragraph(): string;
     word(): string;
   };
+  readonly commerce: {
+    productName(): string;
+    productDescription(): string;
+    department(): string;
+    price(): string;
+  };
+  readonly company: {
+    companyName(): string;
+    catchPhrase(): string;
+    bs(): string;
+  };
+  readonly finance: {
+    accountName(): string;
+    amount(): string;
+    currencyName(): string;
+    currencyCode(): string;
+    creditCardNumber(): string;
+  };
   readonly internet: {
     email(): string;
     username(): string;
+  };
+  readonly location: {
+    street(): string;
+    city(): string;
+    country(): string;
+    zipCode(): string;
+    latitude(): number;
+    longitude(): number;
+  };
+  readonly phone: {
+    number(): string;
+  };
+  readonly vehicle: {
+    type(): string;
+    fuel(): string;
+    model(): string;
+    manufacturer(): string;
   };
   readonly string: {
     alphanumeric(len: number): string;

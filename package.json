@@ -52,8 +52,8 @@
     "fix:all": "pnpm -r --include-workspace-root fix",
     "check:all": "pnpm typecheck && pnpm -r check",
     "validate": "pnpm check:all && pnpm test:all && pnpm lint:all && pnpm fmt:check",
-    "play": "vitest run --config vitest.playground.config.ts --reporter=verbose",
-    "play:watch": "vitest --config vitest.playground.config.ts --reporter=verbose"
+    "play": "vitest run --config vitest.playground.config.ts",
+    "play:watch": "vitest --config vitest.playground.config.ts"
   },
   "devDependencies": {
     "@types/node": "^25.6.1",

@@ -40,7 +40,14 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
     generate<S extends z.ZodTypeAny>(s: S, o?: any) {
       const depth = (o?.fieldPath ?? this.fieldPath).split(".").filter(Boolean).length;
       if (depth > this.recursionLimit) return null as any;
-      return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
+      
+      let current = s as any;
+      let d = (current as any)._zod.def;
+      while (d.type === "lazy") {
+        current = d.getter();
+        d = current._zod.def;
+      }
+      return generateFromSchema(current, { ...this, ...o }) as z.infer<S>;
     },
     recursionLimit: 5,
     current: {},

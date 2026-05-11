@@ -160,7 +160,7 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return generateFromSchema(d.innerType!, ctx);
 
     case "lazy":
-      return ctx.generate(d.getter!());
+      return ctx.generate(schema);
 
     case "promise":
       return undefined;

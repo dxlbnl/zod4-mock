@@ -1,72 +1,220 @@
 // playground.ts — edit freely, run with: pnpm play  (watch: pnpm play:watch)
-
 import { describe, it } from "vitest";
 import { z } from "zod";
+import { generate, createWorld } from "./src/index.js";
 
-import {
-  createMediaLibraryWorld,
-  PersonSchema,
-  RawDataSchema,
-  TextApiSchema,
-  AudioApiSchema,
-  BankApiSchema,
-  EntityApiSchema,
-} from "./tests/integration/media-library/world.js";
+const print = (label: string, data: unknown) => {
+  console.log(`\n=== ${label} ===`);
+  console.log(JSON.stringify(data, null, 2));
+};
 
-import {
-  createInvoicingWorld,
-  ProductSchema,
-  InvoiceSchema,
-  CustomerSummarySchema,
-} from "./tests/integration/invoicing/world.js";
+// ---------------------------------------------------------
+// 1. Zero-Config & Advanced Types
+// ---------------------------------------------------------
 
-import { createDocumentCorpusWorld } from "./tests/integration/document-corpus/world.js";
-import {
-  DocumentSchema,
-  SentenceSchema,
-  AnnotationSchema,
-} from "./tests/integration/document-corpus/world.js";
-
-const print = (data: unknown) => console.log(JSON.stringify(data, null, 2));
-
-// ---------------------------------------------------------------------------
-// Media Library — rawdata generated first so file subjects enter the registry
-// ---------------------------------------------------------------------------
-
-describe.only("Media Library", () => {
-  const world = createMediaLibraryWorld(42).populate(PersonSchema, 3);
-  const rawdata = world.generate(z.array(RawDataSchema).min(6).max(9));
-
-  it("persons", () => print(world.registry.all(PersonSchema)));
-  it("rawdata", () => print(rawdata));
-  it("text API", () => print(world.generate(z.array(TextApiSchema))));
-  it("audio API", () => print(world.generate(z.array(AudioApiSchema))));
-  it("bank API", () => print(world.generate(z.array(BankApiSchema))));
-  it("entity API", () => print(world.generate(z.array(EntityApiSchema))));
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().email(),
 });
 
-// ---------------------------------------------------------------------------
-// Invoicing
-// ---------------------------------------------------------------------------
+const ActionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("login"), timestamp: z.date(), ip: z.string() }),
+  z.object({ type: z.literal("signup"), userId: z.string().uuid() }),
+]);
 
-describe("Invoicing", () => {
-  const world = createInvoicingWorld(42);
-  world.populate(ProductSchema, 6);
-  const invoices = world.generate(z.array(InvoiceSchema).min(4).max(6));
-
-  it("invoices", () => print(invoices));
-  it("customer summaries", () => print(world.generate(z.array(CustomerSummarySchema))));
+describe.only("Zero-Config & Advanced Types", () => {
+  it("Generates realistic data and complex unions without any configuration", () => {
+    print("Zero-Config User", generate(UserSchema));
+    print("Zero-Config Action", generate(ActionSchema));
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Document Corpus
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------
+// 2. Determinism & Field Stability
+// ---------------------------------------------------------
 
-describe("Document Corpus", () => {
-  const world = createDocumentCorpusWorld(42);
-  const docs = world.generate(z.array(DocumentSchema).min(3).max(5));
+// We expand the UserSchema from Act 1 to show field stability.
+const ExtendedUserSchema = UserSchema.extend({
+  email: z.string().email(),
+  bio: z.string(),
+  avatarUrl: z.string().url(),
+});
 
-  it("documents", () => print(docs));
-  it("sentences", () => print(world.generate(z.array(SentenceSchema).min(8).max(15))));
-  it("annotations", () => print(world.generate(z.array(AnnotationSchema).min(5).max(10))));
+describe("Determinism & Field Stability", () => {
+  it("Guarantees identical values for existing fields when new ones are added", () => {
+    const seed = 123;
+    const v1 = createWorld({ seed }).generate(UserSchema);
+    const v2 = createWorld({ seed }).generate(ExtendedUserSchema);
+
+    print("User V1 (Basic)", v1);
+    print("User V2 (Extended)", v2);
+
+    // Note: v2.firstName === v1.firstName despite new fields
+  });
+});
+
+// ---------------------------------------------------------
+// 3. Composition & Nested Matchers
+// ---------------------------------------------------------
+
+const AddressSchema = z.object({
+  street: z.string(),
+  city: z.string(),
+});
+
+const UserWithAddressSchema = ExtendedUserSchema.extend({
+  address: AddressSchema,
+});
+
+describe("Composition & Nested Matchers", () => {
+  it("Automatically applies sub-schema matchers to nested fields", () => {
+    const world = createWorld({ seed: 42 })
+      .withSchema(AddressSchema, {
+        matchers: {
+          street: (ctx) => ctx.gen.location.street(),
+          city: (ctx) => ctx.gen.location.city(),
+        },
+      })
+      .withSchema(UserWithAddressSchema);
+
+    const result = world.generate(UserWithAddressSchema);
+    print("User with Nested Matchers", result);
+  });
+});
+
+// ---------------------------------------------------------
+// 4. Business Logic & Registry Lookups
+// ---------------------------------------------------------
+
+const ProductSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  priceCents: z.number().int().min(100),
+});
+
+const OrderSchema = z.object({
+  orderId: z.string().cuid2(),
+  customerId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(5),
+  unitPriceCents: z.number().int(),
+  totalCents: z.number().int(),
+});
+
+describe("Business Logic & Registry Lookups", () => {
+  it("Calculates totals and picks random customers from the registry", () => {
+    const world = createWorld({ seed: 99 });
+
+    // We reuse UserSchema from Act 1
+    world.populate(UserSchema, 1);
+
+    world.withSchema(OrderSchema, {
+      matchers: {
+        customerId: (ctx) => ctx.registry.pick(UserSchema).id,
+        totalCents: (ctx) => {
+          return (
+            (ctx.current.quantity ?? 1) * (ctx.current.unitPriceCents ?? 1)
+          );
+        },
+      },
+    });
+
+    const product = generate(ProductSchema);
+    const order = world.generate(OrderSchema, {
+      overrides: { unitPriceCents: product.priceCents },
+    });
+
+    print("User", world.registry.all(UserSchema));
+    print("Order with calculated total", order);
+  });
+});
+
+// ---------------------------------------------------------
+// 5. Relational Graphs & Derived Schemas
+// ---------------------------------------------------------
+
+const PostSchema = z.object({
+  id: z.string().cuid2(),
+  authorId: z.string().uuid(),
+  title: z.string(),
+});
+
+const PublicProfileSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string(),
+});
+
+describe("Relational Graphs & Derived Schemas", () => {
+  it("Syncs IDs across relations and projects users into public profiles", () => {
+    // We reuse UserSchema as our "Author" anchor
+    const world = createWorld({ seed: 777 })
+      .withSchema(UserSchema)
+      .withSchema(PostSchema, {
+        relations: { author: UserSchema },
+        matchers: {
+          authorId: (ctx) => ctx.related("author").id,
+        },
+      })
+      .withSchema(PublicProfileSchema, {
+        from: UserSchema,
+        matchers: {
+          id: (ctx) => ctx.source.id,
+          displayName: (ctx) =>
+            `${ctx.source.firstName} ${ctx.source.lastName[0]}.`,
+        },
+      });
+
+    world.populate(UserSchema, 2);
+
+    print("User", world.generate(UserSchema.array()));
+    print("Related Posts", world.generate(z.array(PostSchema).length(3)));
+    print("Derived Profile", world.generate(PublicProfileSchema));
+  });
+});
+
+// ---------------------------------------------------------
+// 6. Recursion
+// ---------------------------------------------------------
+
+interface Category {
+  id: string;
+  name: string;
+  children: Category[];
+}
+
+const CategorySchema: z.ZodType<Category> = z.lazy(() =>
+  z.object({
+    id: z.string().cuid2(),
+    name: z.string(),
+    children: z.array(CategorySchema).max(2),
+  }),
+);
+
+describe.skip("Recursion", () => {
+  it("Generates deterministic tree structures", () => {
+    print("Recursive Tree", generate(CategorySchema, { seed: 123 }));
+  });
+});
+
+// ---------------------------------------------------------
+// 7. The "Tweak" Kit
+// ---------------------------------------------------------
+
+const TaskSchema = z.object({
+  title: z.string(),
+  desc: z.string().optional(),
+  done: z.boolean().nullable(),
+});
+
+describe("The 'Tweak' Kit", () => {
+  it("Allows pinning specific values and controlling optionality", () => {
+    const world = createWorld({ seed: 42, optionalProbability: 1 });
+
+    print("Sparse Task", world.generate(TaskSchema));
+    print(
+      "Overridden Task",
+      world.generate(TaskSchema, { overrides: { title: "FIXED" } }),
+    );
+  });
 });

@@ -127,6 +127,7 @@ export class WorldImpl implements World {
     Record<string, (ctx: GeneratorContext) => unknown>
   > = new Map();
   private readonly relationPools: Map<string, unknown[]> = new Map();
+  private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
 
   constructor(private readonly options: WorldOptions) {
     this.prng = createPrng(options.seed);
@@ -225,6 +226,16 @@ export class WorldImpl implements World {
       d = def(current);
     }
 
+    while (d.type === "lazy") {
+      let resolved = this.lazyCache.get(current);
+      if (!resolved) {
+        resolved = d.getter!();
+        this.lazyCache.set(current, resolved);
+      }
+      current = resolved;
+      d = def(current);
+    }
+
     if (d.type === "array") {
       if (outerWrappers.length > 0) {
         const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
@@ -263,21 +274,27 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   private bindGenerators(prng: ReturnType<typeof createPrng>): BoundGenerators {
-    const result = {} as BoundGenerators;
-    for (const [ns, nsObj] of Object.entries(generatorsData)) {
-      const boundNs: Record<string, (...args: unknown[]) => unknown> = {};
-      // Cast to a uniform function type — actual signatures vary per generator but callers
-      // access through BoundGenerators which erases the per-function types intentionally.
-      const fns = nsObj as Record<
-        string,
-        (p: ReturnType<typeof createPrng>, ...rest: unknown[]) => unknown
-      >;
-      for (const [name, fn] of Object.entries(fns)) {
-        boundNs[name] = (...args: unknown[]) => fn(prng, ...args);
-      }
-      result[ns] = boundNs;
-    }
-    return result;
+    const boundCache: Record<string, any> = {};
+
+    return new Proxy({} as BoundGenerators, {
+      get: (_target, ns: string) => {
+        if (boundCache[ns]) return boundCache[ns];
+
+        const nsObj = (generatorsData as Record<string, any>)[ns];
+        if (!nsObj) return undefined;
+
+        const boundNs = new Proxy(nsObj, {
+          get: (target, name: string) => {
+            const fn = target[name];
+            if (typeof fn !== "function") return fn;
+            return (...args: unknown[]) => fn(prng, ...args);
+          },
+        });
+
+        boundCache[ns] = boundNs;
+        return boundNs;
+      },
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -380,6 +397,7 @@ export class WorldImpl implements World {
       recordPrng,
       recordId,
       fieldPath,
+      options?.overrides as Record<string, unknown>,
     );
     this.registry.store(schema, result);
     return result;
@@ -394,10 +412,19 @@ export class WorldImpl implements World {
     reg: SchemaReg,
     source: unknown,
     sourceIndex: number,
+    options?: GenerateOptions<unknown>,
   ): unknown {
     const recordId = `dreg${reg.regId}#${sourceIndex}`;
     const recordPrng = createPrng(fieldSeed(this.options.seed, recordId, ""));
-    return this.generateObjectFields(schema, reg, source, recordPrng, recordId, recordId);
+    return this.generateObjectFields(
+      schema,
+      reg,
+      source,
+      recordPrng,
+      recordId,
+      recordId,
+      options?.overrides as Record<string, unknown>,
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -415,12 +442,21 @@ export class WorldImpl implements World {
     recordPrng: ReturnType<typeof createPrng>,
     recordId: string,
     fieldPathPrefix: string,
+    overrides?: Record<string, unknown>,
   ): unknown {
+    const depth = fieldPathPrefix ? fieldPathPrefix.split(".").filter(Boolean).length : 0;
+    if (depth > (this.options.recursionLimit ?? 5)) return null;
+
     let current = schema;
     let d = def(current);
 
     while (d.type === "lazy") {
-      current = d.getter!();
+      let resolved = this.lazyCache.get(current);
+      if (!resolved) {
+        resolved = d.getter!();
+        this.lazyCache.set(current, resolved);
+      }
+      current = resolved;
       d = def(current);
     }
 
@@ -447,17 +483,30 @@ export class WorldImpl implements World {
         result,
       );
 
+      // 0. Overrides (Eager)
+      // If an override is provided for this key, use it.
+      // If it's an object, we still proceed to generateObjectFields below to handle nested overrides.
+      const fieldOverride = overrides?.[key];
+      if (
+        fieldOverride !== undefined &&
+        (typeof fieldOverride !== "object" || fieldOverride === null || Array.isArray(fieldOverride))
+      ) {
+        result[key] = fieldOverride;
+        continue;
+      }
+
       // 1. Matcher
       const matcher = reg.matchers[key];
       if (matcher) {
-        result[key] = matcher(fieldCtx);
+        // Matchers can still be overridden by an explicit object override
+        result[key] = fieldOverride !== undefined ? fieldOverride : matcher(fieldCtx);
         continue;
       }
 
       // 2. Per-schema key map
-      const keyMapFn = this.schemaKeyMaps.get(schema)?.[key];
+      const keyMapFn = (this.schemaKeyMaps.get(schema)?.[key]) ?? (this.schemaKeyMaps.get(current)?.[key]);
       if (keyMapFn !== undefined) {
-        result[key] = keyMapFn(fieldCtx);
+        result[key] = fieldOverride !== undefined ? fieldOverride : keyMapFn(fieldCtx);
         continue;
       }
 
@@ -471,7 +520,7 @@ export class WorldImpl implements World {
       while (fd.type === "optional" || fd.type === "nullable" || fd.type === "default") {
         const isAbsent = fieldCtx.prng.random() < (this.options.optionalProbability ?? 0.2);
 
-        if (isAbsent) {
+        if (isAbsent && fieldOverride === undefined) {
           if (fd.type === "default") {
             result[key] =
               typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
@@ -499,31 +548,26 @@ export class WorldImpl implements World {
       // 4. Custom world-level key generator
       const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
-        result[key] = customGen(innerSchema, fieldCtx);
+        result[key] = fieldOverride !== undefined ? fieldOverride : customGen(innerSchema, fieldCtx);
         continue;
       }
 
       // 5. Key-based heuristic generator
       const keyResult = generateFromKey(key, innerSchema, fieldCtx);
       if (keyResult !== undefined) {
-        result[key] = keyResult;
+        result[key] = fieldOverride !== undefined ? fieldOverride : keyResult;
         continue;
       }
 
       // 6. Schema-based generator
-      // If it's an object, recurse with same recordId but new path prefix
-      const innerDef = def(unwrap(innerSchema));
-      if (innerDef.type === "object") {
-        result[key] = this.generateObjectFields(
-          innerSchema,
-          reg,
-          source,
-          fieldPrng,
-          recordId,
-          fieldPath,
-        );
+      const innerUnwrapped = unwrap(innerSchema);
+      const innerDef = def(innerUnwrapped);
+      const isObjectLike = innerDef.type === "object" || innerDef.type === "lazy";
+
+      if (isObjectLike) {
+        result[key] = fieldCtx.generate(innerSchema, { overrides: fieldOverride });
       } else {
-        result[key] = generateFromSchema(innerSchema, fieldCtx);
+        result[key] = fieldOverride !== undefined ? fieldOverride : generateFromSchema(innerSchema, fieldCtx);
       }
     }
 
@@ -539,6 +583,10 @@ export class WorldImpl implements World {
     arraySchema: ZodTypeAny,
     options?: GenerateOptions<unknown[]>,
   ): unknown[] {
+    const fieldPath = options?.fieldPath ?? "";
+    const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
+    if (depth > (this.options.recursionLimit ?? 5)) return [];
+
     this.generationCounter++;
     const genPrng = this.prng.fork(`gen-${this.generationCounter}`);
 
@@ -645,20 +693,34 @@ export class WorldImpl implements World {
 
   private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
     const fieldPath = options?.fieldPath ?? "";
-    const depth = fieldPath ? fieldPath.split(".").length : 0;
+    const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
     if (depth > (this.options.recursionLimit ?? 5)) return null;
 
     this.generationCounter++;
 
-    const derivedRegs = this.findDerivedRegs(schema);
-    const primaryRegs = this.findPrimaryRegs(schema);
+    let current = schema;
+    let d = def(current);
+
+    while (d.type === "lazy") {
+      let resolved = this.lazyCache.get(current);
+      if (!resolved) {
+        resolved = d.getter!();
+        this.lazyCache.set(current, resolved);
+      }
+      current = resolved;
+      d = def(current);
+    }
+    const targetSchema = current;
+
+    const derivedRegs = this.findDerivedRegs(schema).length > 0 ? this.findDerivedRegs(schema) : this.findDerivedRegs(targetSchema);
+    const primaryRegs = this.findPrimaryRegs(schema).length > 0 ? this.findPrimaryRegs(schema) : this.findPrimaryRegs(targetSchema);
 
     let result: unknown;
     const sourceOverride = (options as any)?.source;
 
     if (sourceOverride !== undefined) {
       const reg = derivedRegs[0] ?? { ...EMPTY_REG, schema };
-      result = this.generateDerivedRecord(schema, reg as SchemaReg, sourceOverride, 0);
+      result = this.generateDerivedRecord(schema, reg as SchemaReg, sourceOverride, 0, options);
     } else if (derivedRegs.length > 0) {
       // Pick first available source across all derived regs, auto-provisioning if needed
       for (const reg of derivedRegs) {
@@ -680,7 +742,7 @@ export class WorldImpl implements World {
 
       const idx = (this.generationCounter - 1) % pairs.length;
       const { source, reg, sourceIndex } = pairs[idx]!;
-      result = this.generateDerivedRecord(schema, reg, source, sourceIndex);
+      result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
     } else if (primaryRegs.length > 0) {
       result = this.generateAndStorePrimary(schema, primaryRegs[0]!, options);
     } else {
@@ -689,18 +751,19 @@ export class WorldImpl implements World {
       const adHocPrng = this.prng.fork(recordId);
       const fieldPath = options?.fieldPath ?? recordId;
       const keyMap = this.schemaKeyMaps.get(schema);
-      if (keyMap !== undefined && def(schema).type === "object") {
+      if (keyMap !== undefined && def(targetSchema).type === "object") {
         result = this.generateObjectFields(
-          schema,
+          targetSchema,
           EMPTY_REG,
           undefined,
           adHocPrng,
           recordId,
           fieldPath,
+          options?.overrides as Record<string, unknown>,
         );
       } else {
         result = generateFromSchema(
-          schema,
+          targetSchema,
           this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath, recordId),
         );
       }
