@@ -4,6 +4,7 @@ import {
   generateWorldCode,
   generateFullExport,
   generateTokenizedCode,
+  generateTokenizedFullExport,
 } from "./codegen";
 import type { SchemaDef, PlaygroundState } from "./state.svelte";
 import { makeField } from "./state.svelte";
@@ -138,5 +139,71 @@ describe("generateTokenizedCode", () => {
     expect(Array.isArray(lines)).toBe(true);
     expect(lines.length).toBeGreaterThan(0);
     expect(lines[0].lineNumber).toBe(1);
+  });
+});
+// ─── generateTokenizedFullExport ──────────────────────────────────────────────
+
+describe("generateTokenizedFullExport", () => {
+  it("returns semantic tokens for world setup", () => {
+    const lines = generateTokenizedFullExport(minimalState);
+
+    // Find world setup line (not the import line)
+    const createWorldLine = lines.find(
+      (l) => l.tokens.some((t) => t.text === "world") && l.tokens.some((t) => t.text === "createWorld"),
+    );
+    expect(createWorldLine).toBeDefined();
+
+    const seedToken = createWorldLine!.tokens.find((t) => t.text === "seed");
+    expect(seedToken?.kind).toBe("property");
+
+    const numToken = createWorldLine!.tokens.find((t) => t.text === "42");
+    expect(numToken?.kind).toBe("number");
+
+    // Find withSchema line
+    const withSchemaLine = lines.find((l) => l.tokens.some((t) => t.text === "withSchema"));
+    expect(withSchemaLine).toBeDefined();
+    expect(withSchemaLine!.tokens.find((t) => t.text === "withSchema")?.kind).toBe("fn");
+    expect(withSchemaLine!.tokens.find((t) => t.text === "UserSchema")?.kind).toBe("type");
+  });
+});
+
+// ─── Folding & Depth ─────────────────────────────────────────────────────────
+
+describe("TokenEmitter Folding", () => {
+  it("calculates depth correctly for nested blocks", () => {
+    const nestedSchema: SchemaDef = {
+      id: "sn",
+      name: "Nested",
+      populateCount: 0,
+      derivedFrom: null,
+      relations: [],
+      fields: [
+        {
+          ...makeField(),
+          key: "obj",
+          type: "object",
+          children: [
+            { ...makeField(), key: "inner", type: "string" }
+          ]
+        }
+      ]
+    };
+    
+    const lines = generateTokenizedCode(nestedSchema);
+    
+    // Find the line that starts the object block
+    const objLine = lines.find(l => l.tokens.some(t => t.text === "object") && l.isFoldable);
+    expect(objLine).toBeDefined();
+    expect(objLine!.isFoldable).toBe(true);
+    
+    // Find the inner field line
+    const innerLine = lines.find(l => l.tokens.some(t => t.text === "inner"));
+    expect(innerLine).toBeDefined();
+    expect(innerLine!.depth).toBeGreaterThan(objLine!.depth);
+    
+    // Find the closing line
+    const closingLine = lines.find(l => l.tokens.some(t => t.text.startsWith("}")));
+    expect(closingLine).toBeDefined();
+    expect(closingLine!.depth).toBe(objLine!.depth);
   });
 });
