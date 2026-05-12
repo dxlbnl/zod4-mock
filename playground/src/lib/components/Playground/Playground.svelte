@@ -136,20 +136,22 @@
 		.main-layout {
 			grid-template-columns: 264px 1fr;
 		}
-		.output-column {
+		.builder-column, .output-column {
 			display: none;
 		}
+		.main-layout.mobile-editor .builder-column { display: block; }
+		.main-layout.mobile-output .output-column { display: block; }
 	}
 
 	@media (max-width: 768px) {
 		.main-layout {
 			grid-template-columns: 1fr;
 		}
-		.column {
+		.rail-column {
 			display: none;
+		}
+		.column {
 			border-right: none;
 		}
-		.main-layout.mobile-editor .builder-column { display: block; }
-		.main-layout.mobile-output .output-column { display: block; }
 	}
 </style>

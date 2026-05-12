@@ -31,9 +31,9 @@ export interface CodeLine {
   /** The field ID this line corresponds to (for active-line tracking) */
   fieldId?: string;
   /** Indentation depth for folding */
-  depth: number;
+  depth?: number;
   /** Whether this line can be folded (starts a block) */
-  isFoldable: boolean;
+  isFoldable?: boolean;
 }
 
 /**
@@ -83,7 +83,7 @@ export class TokenEmitter implements Emitter {
         .map((t) => t.text)
         .join("")
         .trim();
-      
+
       // If line starts with a closer, it belongs to the outer depth
       if (
         text.startsWith("}") ||
@@ -93,18 +93,18 @@ export class TokenEmitter implements Emitter {
       ) {
         d = Math.max(0, d - 1);
       }
-      
+
       const updatedLine = { ...line, depth: d };
-      
+
       // If line was marked foldable (opened a block), increment for next lines
       if (line.isFoldable) d++;
-      
+
       return updatedLine;
     });
 
     // Pass 2: Refine isFoldable (any line followed by a deeper line is foldable)
     return withDepths.map((line, i) => {
-      const next = withDepths[i+1];
+      const next = withDepths[i + 1];
       const isFoldable = (next && next.depth > line.depth) || line.isFoldable;
       return { ...line, isFoldable };
     });

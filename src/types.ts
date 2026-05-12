@@ -246,4 +246,6 @@ export interface World {
 
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;
+  /** Internal PRNG for testing and stability checks. */
+  readonly prng: ReturnType<typeof createPrng>;
 }

@@ -149,7 +149,8 @@ describe("generateTokenizedFullExport", () => {
 
     // Find world setup line (not the import line)
     const createWorldLine = lines.find(
-      (l) => l.tokens.some((t) => t.text === "world") && l.tokens.some((t) => t.text === "createWorld"),
+      (l) =>
+        l.tokens.some((t) => t.text === "world") && l.tokens.some((t) => t.text === "createWorld"),
     );
     expect(createWorldLine).toBeDefined();
 
@@ -175,35 +176,39 @@ describe("TokenEmitter Folding", () => {
       id: "sn",
       name: "Nested",
       populateCount: 0,
-      derivedFrom: null,
+      derivedFrom: undefined,
       relations: [],
       fields: [
         {
           ...makeField(),
           key: "obj",
           type: "object",
-          children: [
-            { ...makeField(), key: "inner", type: "string" }
-          ]
-        }
-      ]
+          children: [{ ...makeField(), key: "inner", type: "string" }],
+        },
+      ],
     };
-    
+
     const lines = generateTokenizedCode(nestedSchema);
-    
-    // Find the line that starts the object block
-    const objLine = lines.find(l => l.tokens.some(t => t.text === "object") && l.isFoldable);
+
+    // Find the line for 'obj: z.object({'
+    const objLine = lines.find((l) => l.tokens.some((t) => t.text === "obj") && l.isFoldable);
     expect(objLine).toBeDefined();
-    expect(objLine!.isFoldable).toBe(true);
-    
+
     // Find the inner field line
-    const innerLine = lines.find(l => l.tokens.some(t => t.text === "inner"));
+    const innerLine = lines.find((l) => l.tokens.some((t) => t.text === "inner"));
     expect(innerLine).toBeDefined();
-    expect(innerLine!.depth).toBeGreaterThan(objLine!.depth);
-    
-    // Find the closing line
-    const closingLine = lines.find(l => l.tokens.some(t => t.text.startsWith("}")));
+    expect(innerLine!.depth ?? 0).toBeGreaterThan(objLine!.depth ?? 0);
+
+    // Find the closing line for 'obj' (which should be '  }),')
+    const closingLine = lines.find((l) => l.tokens.some((t) => t.text === "inner"))
+      ? lines.find(
+          (l, idx) =>
+            idx > lines.findIndex((ol) => ol === objLine) &&
+            l.tokens.some((t) => t.text.includes("}")),
+        )
+      : undefined;
+
     expect(closingLine).toBeDefined();
-    expect(closingLine!.depth).toBe(objLine!.depth);
+    expect(closingLine!.depth ?? 0).toBe(objLine!.depth ?? 0);
   });
 });

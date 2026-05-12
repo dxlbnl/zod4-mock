@@ -93,7 +93,7 @@ function resolveMaxAllowed(schema: ZodTypeAny, defaultMax: number): number {
 // ---------------------------------------------------------------------------
 
 export class WorldImpl implements World {
-  private readonly prng: ReturnType<typeof createPrng>;
+  readonly prng: ReturnType<typeof createPrng>;
   readonly registry: Registry;
 
   private readonly schemaRegs: SchemaReg[] = [];

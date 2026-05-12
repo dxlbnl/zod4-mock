@@ -569,7 +569,7 @@ describe("effects and pipelines (unified as 'pipe' in v4)", () => {
   it("distinguishes between effects and pipelines", () => {
     const eff = z.string().transform((v) => v.length);
     const pre = z.preprocess((v) => String(v), z.string());
-    const pipe = z.string().pipe(z.number());
+    const pipe = z.string().pipe(z.number() as any);
 
     const dEff = def(eff) as any;
     const dPre = def(pre) as any;

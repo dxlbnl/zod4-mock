@@ -27,15 +27,16 @@
 	 * When a line is folded, we merge it with its closing partner and skip the interior.
 	 */
 	const renderableLines = $derived.by(() => {
-		const result: (CodeLine & { isFoldedWrapper?: boolean; partnerTokens?: any[] })[] = [];
+		const result: (CodeLine & { isFoldedWrapper?: boolean; triggerTokens?: any[]; partnerTokens?: any[] })[] = [];
 		
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
+			const lineDepth = line.depth ?? 0;
 			
 			if (foldedLineNumbers.has(line.lineNumber)) {
 				// Find the closing partner: the next line that returns to the same depth
 				let j = i + 1;
-				while (j < lines.length && lines[j].depth > line.depth) {
+				while (j < lines.length && (lines[j].depth ?? 0) > lineDepth) {
 					j++;
 				}
 				

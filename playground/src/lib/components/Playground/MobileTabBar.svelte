@@ -33,7 +33,7 @@
 		padding-bottom: max(var(--space-1), env(safe-area-inset-bottom));
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1024px) {
 		.mobile-tab-bar {
 			display: grid;
 		}

@@ -13,6 +13,7 @@ export interface ZodDef {
   optionsMap?: Map<string | number | symbol, ZodTypeAny>; // for discriminated union
   discriminator?: string;
   in?: ZodTypeAny;
+  out?: ZodTypeAny;
   items?: ZodTypeAny[];
   rest?: ZodTypeAny;
   keyType?: ZodTypeAny;
