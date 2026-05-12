@@ -299,7 +299,7 @@ describe("generators/data/finance", () => {
   });
 
   it("creditCardIssuer returns a known issuer name", () => {
-    const issuers = ["Visa", "Mastercard", "American Express", "Discover"];
+    const issuers = ["Visa", "Mastercard", "American Express", "Discover", "Maestro", "Diners Club", "JCB"];
     expect(issuers).toContain(finance.creditCardIssuer(prng()));
   });
 
@@ -330,7 +330,7 @@ describe("generators/data/finance", () => {
 
 describe("generators/data/internet", () => {
   it("domainSuffix returns a known TLD", () => {
-    const tlds = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co"];
+    const tlds = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"];
     expect(tlds).toContain(internet.domainSuffix(prng()));
   });
 
@@ -376,7 +376,7 @@ describe("generators/data/internet", () => {
   });
 
   it("protocol returns a known protocol", () => {
-    const protos = ["http", "https", "ftp", "ssh", "ws", "wss"];
+    const protos = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"];
     expect(protos).toContain(internet.protocol(prng()));
   });
 
@@ -411,7 +411,7 @@ describe("generators/data/internet", () => {
   });
 
   it("httpMethod returns a known method", () => {
-    const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+    const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"];
     expect(methods).toContain(internet.httpMethod(prng()));
   });
 
@@ -574,7 +574,7 @@ describe("generators/data/vehicle", () => {
   });
 
   it("fuel returns a fuel type", () => {
-    const fuels = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof"];
+    const fuels = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof", "LPG", "CNG", "PHEV"];
     expect(fuels).toContain(vehicle.fuel(prng()));
   });
 

@@ -10,7 +10,7 @@
  * a new field never affects the values of existing fields.
  *
  * ## Algorithms
- * - **PRNG**: Mulberry32 — fast, excellent distribution, 32-bit state.
+ * - **PRNG**: SFC32 — passes all standard statistical tests, 128-bit state, period ~3.4×10³⁸.
  * - **Hash**: FNV-1a 32-bit — fast, low collision rate for short strings.
  */
 
@@ -27,16 +27,33 @@ function fnv1a(str: string): number {
 }
 
 /**
- * Returns a Mulberry32 generator function seeded with `seed`.
- * Each call advances the internal state and returns a float in [0, 1).
+ * Expands one 32-bit seed into four via splitmix32, used to initialise SFC32.
  */
-function mulberry32(seed: number): () => number {
+function seedToSfc32(seed: number): [number, number, number, number] {
   let s = seed >>> 0;
+  const next = (): number => {
+    s = Math.imul(s ^ (s >>> 15), s | 1) >>> 0;
+    s = (s ^ (s + Math.imul(s ^ (s >>> 7), s | 61))) >>> 0;
+    return (s ^ (s >>> 14)) >>> 0;
+  };
+  return [next(), next(), next(), next()];
+}
+
+/**
+ * Returns an SFC32 generator function seeded with four 32-bit values.
+ * Each call advances the internal state and returns a float in [0, 1).
+ * SFC32 passes all standard statistical tests and has a period of ~3.4×10³⁸.
+ */
+function sfc32(a: number, b: number, c: number, d: number): () => number {
+  let _a = a >>> 0, _b = b >>> 0, _c = c >>> 0, _d = d >>> 0;
   return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    const t = (_a + _b + _d) | 0;
+    _d = (_d + 1) | 0;
+    _a = _b ^ (_b >>> 9);
+    _b = (_c + (_c << 3)) | 0;
+    _c = (_c << 21 | _c >>> 11);
+    _c = (_c + t) | 0;
+    return (t >>> 0) / 4294967296;
   };
 }
 
@@ -46,7 +63,7 @@ function mulberry32(seed: number): () => number {
  * @param seed - Any 32-bit integer.  The same seed always produces the same sequence.
  */
 export function createPrng(seed: number): Prng {
-  const rand = mulberry32(seed);
+  const rand = sfc32(...seedToSfc32(seed));
 
   const prng: Prng = {
     random() {

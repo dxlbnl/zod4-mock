@@ -65,7 +65,7 @@ describe("Dutch Localization Verification", () => {
 
     it("generates Dutch transaction types", () => {
       const tt = generators.finance.transactionType(prng);
-      const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie"];
+      const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie", "overschrijving", "incasso", "salaris", "rente", "dividend"];
       expect(dutchTTs).toContain(tt);
     });
   });

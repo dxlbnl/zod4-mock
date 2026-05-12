@@ -143,8 +143,15 @@ describe("world.generate — registered schema with matchers", () => {
   function setup() {
     return createWorld({ seed: 42 }).withSchema(PersonSchema, {
       matchers: {
-        email: (ctx) =>
-          `${ctx.gen.person.firstName()}.${ctx.gen.person.lastName()}@example.nl`.toLowerCase(),
+        email: (ctx) => {
+          const ascii = (s: string) =>
+            s
+              .normalize("NFD")
+              .replace(/[̀-ͯ]/g, "")
+              .toLowerCase()
+              .replace(/[^a-z]/g, "x");
+          return `${ascii(ctx.gen.person.firstName())}.${ascii(ctx.gen.person.lastName())}@example.nl`;
+        },
       },
     });
   }
@@ -685,26 +692,10 @@ describe("ctx.current propagation", () => {
 
   it("key-based firstName picks only female names when gender sibling is 'female'", () => {
     const FEMALE_NAMES = [
-      "Marie",
-      "Anna",
-      "Lisa",
-      "Emma",
-      "Sara",
-      "Lena",
-      "Nora",
-      "Eva",
-      "Julia",
-      "Inge",
-      "Lieke",
-      "Noa",
-      "Lotte",
-      "Fleur",
-      "Tess",
-      "Mila",
-      "Sanne",
-      "Sophie",
-      "Roos",
-      "Isa",
+      "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
+      "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+      "Zoë", "Evi", "Maud", "Lynn", "Yara", "Liv", "Sarah", "Nina", "Suze", "Fenny",
+      "Sofie", "Fenna", "Bo", "Luna", "Feline", "Milou", "Lauren", "Vera", "Anne", "Laura",
     ];
     const S = z.object({ gender: z.literal("female"), firstName: z.string() });
     for (let seed = 0; seed < 20; seed++) {
@@ -715,26 +706,10 @@ describe("ctx.current propagation", () => {
 
   it("key-based firstName picks only male names when gender sibling is 'male'", () => {
     const MALE_NAMES = [
-      "Jan",
-      "Piet",
-      "Klaas",
-      "Hans",
-      "Dirk",
-      "Erik",
-      "Tom",
-      "Sven",
-      "Luc",
-      "Bas",
-      "Thijs",
-      "Bram",
-      "Luuk",
-      "Lars",
-      "Stijn",
-      "Gijs",
-      "Sem",
-      "Daan",
-      "Finn",
-      "Willem",
+      "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
+      "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+      "Milan", "Levi", "Lucas", "Noah", "Jesse", "Max", "Ruben", "Mees", "Sam", "Guus",
+      "Julian", "Tim", "Koen", "Teun", "Jens", "Hugo", "Roel", "Floris", "Joris", "Mark",
     ];
     const S = z.object({ gender: z.literal("male"), firstName: z.string() });
     for (let seed = 0; seed < 20; seed++) {

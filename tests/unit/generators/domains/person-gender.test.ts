@@ -9,60 +9,25 @@ describe("Person Gender-Aware Generation", () => {
 
   describe("Standalone Generators", () => {
     it("firstName picks male names for 'male' gender", () => {
-      // Check a few to be sure
+      const MALE_NAMES = [
+        "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
+        "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+        "Milan", "Levi", "Lucas", "Noah", "Jesse", "Max", "Ruben", "Mees", "Sam", "Guus",
+        "Julian", "Tim", "Koen", "Teun", "Jens", "Hugo", "Roel", "Floris", "Joris", "Mark",
+      ];
       const names = Array.from({ length: 10 }, () => firstName(prng, "male"));
-      names.forEach((n) => {
-        expect([
-          "Jan",
-          "Piet",
-          "Klaas",
-          "Hans",
-          "Dirk",
-          "Erik",
-          "Tom",
-          "Sven",
-          "Luc",
-          "Bas",
-          "Thijs",
-          "Bram",
-          "Luuk",
-          "Lars",
-          "Stijn",
-          "Gijs",
-          "Sem",
-          "Daan",
-          "Finn",
-          "Willem",
-        ]).toContain(n);
-      });
+      names.forEach((n) => { expect(MALE_NAMES).toContain(n); });
     });
 
     it("firstName picks female names for 'female' gender", () => {
+      const FEMALE_NAMES = [
+        "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
+        "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+        "Zoë", "Evi", "Maud", "Lynn", "Yara", "Liv", "Sarah", "Nina", "Suze", "Fenny",
+        "Sofie", "Fenna", "Bo", "Luna", "Feline", "Milou", "Lauren", "Vera", "Anne", "Laura",
+      ];
       const names = Array.from({ length: 10 }, () => firstName(prng, "female"));
-      names.forEach((n) => {
-        expect([
-          "Marie",
-          "Anna",
-          "Lisa",
-          "Emma",
-          "Sara",
-          "Lena",
-          "Nora",
-          "Eva",
-          "Julia",
-          "Inge",
-          "Lieke",
-          "Noa",
-          "Lotte",
-          "Fleur",
-          "Tess",
-          "Mila",
-          "Sanne",
-          "Sophie",
-          "Roos",
-          "Isa",
-        ]).toContain(n);
-      });
+      names.forEach((n) => { expect(FEMALE_NAMES).toContain(n); });
     });
 
     it("prefix matches gender", () => {
@@ -82,52 +47,22 @@ describe("Person Gender-Aware Generation", () => {
       // Generate multiple times to ensure consistency
       for (let i = 0; i < 20; i++) {
         const result = world.generate(schema) as { gender: string; firstName: string };
+        const MALE_NAMES = [
+          "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas",
+          "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+          "Milan", "Levi", "Lucas", "Noah", "Jesse", "Max", "Ruben", "Mees", "Sam", "Guus",
+          "Julian", "Tim", "Koen", "Teun", "Jens", "Hugo", "Roel", "Floris", "Joris", "Mark",
+        ];
+        const FEMALE_NAMES = [
+          "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge",
+          "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+          "Zoë", "Evi", "Maud", "Lynn", "Yara", "Liv", "Sarah", "Nina", "Suze", "Fenny",
+          "Sofie", "Fenna", "Bo", "Luna", "Feline", "Milou", "Lauren", "Vera", "Anne", "Laura",
+        ];
         if (result.gender === "man") {
-          expect([
-            "Jan",
-            "Piet",
-            "Klaas",
-            "Hans",
-            "Dirk",
-            "Erik",
-            "Tom",
-            "Sven",
-            "Luc",
-            "Bas",
-            "Thijs",
-            "Bram",
-            "Luuk",
-            "Lars",
-            "Stijn",
-            "Gijs",
-            "Sem",
-            "Daan",
-            "Finn",
-            "Willem",
-          ]).toContain(result.firstName);
+          expect(MALE_NAMES).toContain(result.firstName);
         } else {
-          expect([
-            "Marie",
-            "Anna",
-            "Lisa",
-            "Emma",
-            "Sara",
-            "Lena",
-            "Nora",
-            "Eva",
-            "Julia",
-            "Inge",
-            "Lieke",
-            "Noa",
-            "Lotte",
-            "Fleur",
-            "Tess",
-            "Mila",
-            "Sanne",
-            "Sophie",
-            "Roos",
-            "Isa",
-          ]).toContain(result.firstName);
+          expect(FEMALE_NAMES).toContain(result.firstName);
         }
       }
     });
@@ -142,11 +77,11 @@ describe("Person Gender-Aware Generation", () => {
       const result = world.generate(schema) as { geslacht: string; voornaam: string };
       if (result.geslacht === "man") {
         expect(result.voornaam).toMatch(
-          /^(Jan|Piet|Klaas|Hans|Dirk|Erik|Tom|Sven|Luc|Bas|Thijs|Bram|Luuk|Lars|Stijn|Gijs|Sem|Daan|Finn|Willem)$/,
+          /^(Jan|Piet|Klaas|Hans|Dirk|Erik|Tom|Sven|Luc|Bas|Thijs|Bram|Luuk|Lars|Stijn|Gijs|Sem|Daan|Finn|Willem|Milan|Levi|Lucas|Noah|Jesse|Max|Ruben|Mees|Sam|Guus|Julian|Tim|Koen|Teun|Jens|Hugo|Roel|Floris|Joris|Mark)$/,
         );
       } else {
         expect(result.voornaam).toMatch(
-          /^(Marie|Anna|Lisa|Emma|Sara|Lena|Nora|Eva|Julia|Inge|Lieke|Noa|Lotte|Fleur|Tess|Mila|Sanne|Sophie|Roos|Isa)$/,
+          /^(Marie|Anna|Lisa|Emma|Sara|Lena|Nora|Eva|Julia|Inge|Lieke|Noa|Lotte|Fleur|Tess|Mila|Sanne|Sophie|Roos|Isa|Zoë|Evi|Maud|Lynn|Yara|Liv|Sarah|Nina|Suze|Fenny|Sofie|Fenna|Bo|Luna|Feline|Milou|Lauren|Vera|Anne|Laura)$/,
         );
       }
     });

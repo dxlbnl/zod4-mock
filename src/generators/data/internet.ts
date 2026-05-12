@@ -92,12 +92,12 @@ export function userAgent(prng: Prng): string {
   const firefoxVersion = `${prng.int(90, 120)}.0`;
   const safariVersion = `${prng.int(14, 17)}.${prng.int(0, 5)}`;
   
-  const browsers = [
+  const browsers: [string, ...string[]] = [
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion}`,
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Version/${safariVersion} Safari/${webkitVersion}`,
     `Gecko/20100101 Firefox/${firefoxVersion}`,
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Mobile Safari/${webkitVersion}`,
-    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion} Edg/${chromeVersion}`
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion} Edg/${chromeVersion}`,
   ];
   return `Mozilla/5.0 (${os}) ${prng.pick(browsers)}`;
 }

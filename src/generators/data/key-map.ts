@@ -5,6 +5,17 @@ import { resolveNumberBounds, generateNumberWithBounds } from "../schema/number.
 import { resolveStringLength } from "../schema/string.js";
 import * as data from "./index.js";
 
+/**
+ * Accumulates sentences until the result is at least `minLen` characters,
+ * then clips to `maxLen`. Used by bio/description-type key generators so
+ * they produce naturally fitting text rather than x-padded strings.
+ */
+function generateTextToLength(prng: Prng, minLen: number, maxLen: number): string {
+  let result = data.word.sentence(prng);
+  while (result.length < minLen) result += " " + data.word.sentence(prng);
+  return result.length > maxLen ? result.slice(0, maxLen) : result;
+}
+
 // ---------------------------------------------------------------------------
 // PrngGen — map value type
 // ---------------------------------------------------------------------------
@@ -33,7 +44,10 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     name: data.person.fullName as PrngGen,
     prefix: data.person.prefix as PrngGen,
     suffix: data.person.suffix as PrngGen,
-    bio: data.person.bio as PrngGen,
+    bio: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
     gender: data.person.gender as PrngGen,
     sex: data.person.sex as PrngGen,
     jobtitle: data.person.jobTitle as PrngGen,
@@ -145,16 +159,46 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 
     // Word/Text
     word: data.word.noun as PrngGen,
-    text: data.word.sentence as PrngGen,
-    description: (p) => data.word.paragraph(p),
-    note: (p) => data.word.paragraph(p),
-    summary: (p) => data.word.paragraph(p),
-    comment: (p) => data.word.paragraph(p),
-    body: (p) => data.word.paragraph(p),
-    content: (p) => data.word.paragraph(p),
-    message: (p) => data.word.paragraph(p),
-    omschrijving: data.word.sentence as PrngGen,
-    bericht: (p) => data.word.paragraph(p),
+    text: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    description: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    note: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    summary: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    comment: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    body: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    content: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    message: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    omschrijving: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
+    bericht: (p, _ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, min, max);
+    },
 
     // Dutch names
     voornaam: data.person.firstName as PrngGen,

@@ -107,28 +107,9 @@ bytes(n: number): Uint8Array {
 },
 ```
 
-## 3. `fork()` Result Caching
+## 3. `fork()` Result Caching — Not Applicable
 
-**Problem:** Every field in every generated object calls `prng.fork(fieldPath)`, which runs an FNV-1a hash. For a 50-field schema generated 1,000 times, that's 50,000 separate hash computations — all for the same set of field paths.
-
-**Solution:** Cache `fork(key)` results within a single `generate()` call. Field paths are stable across records; only the subject index changes. A `Map<string, Prng>` on the world-level generation context, cleared between top-level `generate()` calls, eliminates redundant hashing.
-
-```typescript
-// Pseudocode — inside the generation pass
-const forkCache = new Map<string, number>(); // key → seed
-
-function cachedFork(parentSeed: number, key: string): number {
-  const cacheKey = `${parentSeed}:${key}`;
-  let seed = forkCache.get(cacheKey);
-  if (seed === undefined) {
-    seed = fnv1a(`${parentSeed}:${key}`);
-    forkCache.set(cacheKey, seed);
-  }
-  return seed;
-}
-```
-
-This is a correctness-neutral optimization — same output, fewer hash calls.
+**Closed by architecture.** The premise was that generating N records would call `prng.fork(fieldPath)` N times for the same key on the same parent PRNG. In practice, `fieldSeed(worldSeed, subjectId, fieldPath)` pre-computes a unique seed for every (record, field) pair upfront. Each record gets its own independent `createPrng(fieldSeed(...))` — no shared parent PRNG ever forks the same key twice. There is nothing to cache.
 
 ---
 
