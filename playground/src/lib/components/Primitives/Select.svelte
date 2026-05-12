@@ -51,7 +51,7 @@
 		width: 100%;
 		background: var(--bg-1);
 		border: 1px solid var(--line);
-		border-radius: var(--r-md);
+		border-radius: var(--radius-md);
 		transition: all 0.15s ease;
 		overflow: hidden;
 	}

@@ -10,6 +10,7 @@
 		parameters: {
 			layout: "fullscreen",
 			a11y: { disable: true },
+			chromatic: { viewports: [1200] }
 		},
 	});
 </script>
@@ -21,10 +22,15 @@
 	play={async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		// 1. Find the title input in the builder pane
-		const titleInput = await canvas.findByTestId("schema-name-input");
+		// 1. Open settings
+		const settingsBtn = await canvas.findByRole("button", { name: /Settings/i });
+		await userEvent.click(settingsBtn);
+		await tick();
 
-		// 2. Rename it to "Member"
+		// 2. Find the title input in the builder pane
+		const titleInput = await canvas.findByLabelText(/Schema Name/i);
+
+		// 3. Rename it to "Member"
 		await userEvent.clear(titleInput);
 		await userEvent.type(titleInput, "Member");
 		await tick();
@@ -46,14 +52,19 @@
 		await userEvent.click(userApiItem);
 		await tick();
 
-		// 2. Verify we are in the Schema Editor for UserApi
-		const titleInput = await canvas.findByTestId("schema-name-input");
+		// 1. Open settings
+		const settingsBtn = await canvas.findByRole("button", { name: /Settings/i });
+		await userEvent.click(settingsBtn);
+		await tick();
+
+		// 3. Verify we are in the Schema Editor for UserApi
+		const titleInput = await canvas.findByLabelText(/Schema Name/i);
 		await expect(titleInput).toHaveValue("UserApi");
 
-		// 3. Find Derived From select and check it's set to "User"
-		const derivedSelect = canvas.getByLabelText(
+		// 4. Find Derived From select and check it's set to "User"
+		const derivedSelect = (await canvas.findByLabelText(
 			/Derived From/i,
-		) as HTMLSelectElement;
+		)) as HTMLSelectElement;
 		expect(derivedSelect.value).toBeDefined();
 
 		// 4. Verify a field is mapped
@@ -78,7 +89,12 @@
 		await userEvent.click(addSchemaBtn);
 		await tick();
 
-		const titleInput = await canvas.findByTestId("schema-name-input");
+		// Open settings to rename schema
+		const settingsBtn = await canvas.findByRole("button", { name: /Settings/i });
+		await userEvent.click(settingsBtn);
+		await tick();
+
+		const titleInput = await canvas.findByLabelText(/Schema Name/i);
 		await userEvent.clear(titleInput);
 		await userEvent.type(titleInput, "Order");
 		await tick();
@@ -88,42 +104,50 @@
 		await userEvent.click(addPropBtn);
 		await tick();
 
-		const keyInputs = await canvas.findAllByTestId("key-input");
+		const keyInputs = await canvas.findAllByLabelText(/Field name/i);
 		const lastKeyInput = keyInputs[keyInputs.length - 1];
 		await userEvent.clear(lastKeyInput);
 		await userEvent.type(lastKeyInput, "userId");
 		await tick();
 
-		// 3. Add Relationship at schema level
-		const relNameInput = canvas.getByPlaceholderText(/relation name/i);
+		// 3. Open settings again to see Relationship manager
+		const settingsBtnAgain = await canvas.findByRole("button", { name: /Settings/i });
+		await userEvent.click(settingsBtnAgain);
+		await tick();
+
+		// 4. Add Relationship at schema level
+		const relNameInput = await canvas.findByLabelText(/Relation Name/i);
 		await userEvent.type(relNameInput, "customer");
 
-		const relTargetSelect = canvas
-			.getAllByRole("combobox")
-			.find((el) =>
-				el.closest(".relations-manager"),
-			) as HTMLSelectElement;
-		const userOption = Array.from(relTargetSelect.options).find(
-			(opt) => opt.text === "User",
-		);
-		await userEvent.selectOptions(relTargetSelect, userOption!.value);
+		const relTargetTrigger = await canvas.findByLabelText(/Target Schema/i);
+		await userEvent.click(relTargetTrigger);
+		await tick();
 
-		const addRelBtn = canvas.getByTestId("add-rel-btn");
+		const userOption = await canvas.findByRole("option", { name: /^User$/ });
+		await userEvent.click(userOption);
+		await tick();
+
+		const addRelBtn = await canvas.findByRole("button", { name: /^Add$/ });
 		await userEvent.click(addRelBtn);
 		await tick();
 
+		// Wait for the relationship to appear in the manager
+		await canvas.findByText("customer");
+
 		// 4. Bind field to relation
-		const userIdLine = lastKeyInput.closest(
-			"[data-field-id]",
+		// Re-find the line after re-renders
+		const userIdLine = (await canvas.findAllByTestId("editor-line")).find(line => 
+			within(line).queryByDisplayValue("userId")
 		) as HTMLElement;
-		const mappingBtn = within(userIdLine).getByTitle(
+		
+		const mappingBtn = await within(userIdLine).findByTitle(
 			/Map field|match:|Mapped to/i,
 		);
 		await userEvent.click(mappingBtn);
 		await tick();
 
-		// Wait for dropdown and find the option
-		const customerOpt = await canvas.findByText(/FK for customer/i);
+		// Wait for dropdown and find the specific relationship option
+		const customerOpt = await canvas.findByRole("option", { name: /rel:customer:id/ });
 		await userEvent.click(customerOpt);
 		await tick();
 

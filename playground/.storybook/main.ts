@@ -11,7 +11,7 @@ const config: StorybookConfig = {
     "@storybook/addon-a11y",
     "@storybook/addon-docs",
     "@storybook/addon-themes",
-    "@storybook/addon-mcp"
+    "@storybook/addon-mcp",
   ],
   framework: "@storybook/sveltekit",
   viteFinal: (config) => ({

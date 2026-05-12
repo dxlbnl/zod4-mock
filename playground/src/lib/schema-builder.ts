@@ -5,7 +5,7 @@
  */
 
 import type { ZodTypeAny } from "zod";
-import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef } from "./state.svelte";
+import type { FieldDef, ModifierDef, PlaygroundState } from "./state.svelte";
 import { createWorld as _createWorld } from "zod4-mock";
 
 // ─── Field → Zod schema ───────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ function applyModifiers(schema: ZodTypeAny, modifiers: ModifierDef[]): ZodTypeAn
   let s = schema;
   for (const mod of modifiers) {
     const val = mod.value;
-    const name = mod.name.replace(/\(\)$/, ""); 
+    const name = mod.name.replace(/\(\)$/, "");
     try {
       switch (name) {
         case ".min":
@@ -77,16 +77,30 @@ export function buildZodField(z: any, field: FieldDef): ZodTypeAny {
   let base: ZodTypeAny;
 
   switch (field.type) {
-    case "string": base = z.string(); break;
-    case "number": base = z.number(); break;
-    case "boolean": base = z.boolean(); break;
-    case "date": base = z.date(); break;
-    case "uuid": base = z.uuid(); break;
-    case "email": base = z.email(); break;
-    case "url": base = z.url(); break;
+    case "string":
+      base = z.string();
+      break;
+    case "number":
+      base = z.number();
+      break;
+    case "boolean":
+      base = z.boolean();
+      break;
+    case "date":
+      base = z.date();
+      break;
+    case "uuid":
+      base = z.uuid();
+      break;
+    case "email":
+      base = z.email();
+      break;
+    case "url":
+      base = z.url();
+      break;
     case "enum":
       if (field.enumValues.length === 0) {
-        base = z.string(); 
+        base = z.string();
       } else {
         base = z.enum(field.enumValues as [string, ...string[]]);
       }
@@ -161,7 +175,8 @@ export function buildWorld(state: PlaygroundState) {
       if (schemaDef.derivedFrom && f.sourceMapping) {
         matchers[f.key] = (ctx: any) => ctx.source[f.sourceMapping!];
       } else if (f.relationMapping) {
-        matchers[f.key] = (ctx: any) => ctx.related(f.relationMapping!.relationName)[f.relationMapping!.targetFieldKey];
+        matchers[f.key] = (ctx: any) =>
+          ctx.related(f.relationMapping!.relationName)[f.relationMapping!.targetFieldKey];
       }
     }
     if (Object.keys(matchers).length > 0) {

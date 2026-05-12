@@ -32,17 +32,15 @@ const orderSchema: SchemaDef = {
   id: "s2",
   name: "Order",
   populateCount: 2,
-  relations: [
-    { name: "customer", targetSchemaId: "s1" }
-  ],
+  relations: [{ name: "customer", targetSchemaId: "s1" }],
   fields: [
     { ...makeField(), id: "f5", key: "id", type: "uuid" },
-    { 
-      ...makeField(), 
-      id: "f6", 
-      key: "userId", 
+    {
+      ...makeField(),
+      id: "f6",
+      key: "userId",
       type: "uuid",
-      relationMapping: { relationName: "customer", targetFieldKey: "id" }
+      relationMapping: { relationName: "customer", targetFieldKey: "id" },
     },
   ],
 };
@@ -53,9 +51,7 @@ const userApiSchema: SchemaDef = {
   populateCount: 0,
   derivedFrom: "s1",
   relations: [],
-  fields: [
-    { ...makeField(), id: "sf1", key: "userId", type: "uuid", sourceMapping: "id" },
-  ],
+  fields: [{ ...makeField(), id: "sf1", key: "userId", type: "uuid", sourceMapping: "id" }],
 };
 
 const minimalState: PlaygroundState = {
@@ -105,7 +101,7 @@ describe("generateWorldCode", () => {
     expect(code).toContain(".withSchema(OrderSchema, {");
     expect(code).toContain("relations: {");
     expect(code).toContain("customer: UserSchema");
-    expect(code).toContain("userId: (ctx) => ctx.related(\"customer\").id");
+    expect(code).toContain('userId: (ctx) => ctx.related("customer").id');
   });
 
   it("registers derived schemas", () => {

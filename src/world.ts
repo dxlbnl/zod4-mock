@@ -39,6 +39,7 @@ import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
 import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def.js";
+import { deepMerge } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 
 // ---------------------------------------------------------------------------
@@ -60,29 +61,6 @@ const EMPTY_REG: SchemaReg = {
   matchers: {},
   regId: -1,
 };
-
-// ---------------------------------------------------------------------------
-// Deep merge helper (non-array, non-null objects only)
-// ---------------------------------------------------------------------------
-
-function deepMerge(target: unknown, source: unknown): unknown {
-  if (
-    typeof source !== "object" ||
-    source === null ||
-    Array.isArray(source) ||
-    typeof target !== "object" ||
-    target === null ||
-    Array.isArray(target)
-  ) {
-    return source;
-  }
-  const result = { ...(target as Record<string, unknown>) };
-  for (const k of Object.keys(source as Record<string, unknown>)) {
-    const sv = (source as Record<string, unknown>)[k];
-    result[k] = deepMerge(result[k], sv);
-  }
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Array constraint resolvers
@@ -131,8 +109,8 @@ export class WorldImpl implements World {
   private readonly pendingCounts: Map<ZodTypeAny, number> = new Map();
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
 
-  constructor(private readonly options: WorldOptions) {
-    this.rootSeed = options.seed ?? Math.floor(Math.random() * 0xffffffff);
+  constructor(private readonly options: WorldOptions = {}) {
+    this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
     this.registry = new SchemaRegistry(this.prng.fork("registry"));
     for (const [k, fn] of Object.entries(options.generators ?? {})) {
@@ -802,6 +780,6 @@ export class WorldImpl implements World {
 // Public factory
 // ---------------------------------------------------------------------------
 
-export function createWorld(options: WorldOptions): World {
-  return new WorldImpl(options);
+export function createWorld(options?: WorldOptions): World {
+  return new WorldImpl(options ?? {});
 }

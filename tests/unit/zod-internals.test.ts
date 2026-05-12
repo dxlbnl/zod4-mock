@@ -9,7 +9,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { def, checks, unwrap } from "../../src/generators/schema/zod-def.js";
-import { deepMerge } from "../../src/utils/merge.js";
 
 // ---------------------------------------------------------------------------
 // _zod.def accessor
@@ -553,7 +552,7 @@ describe("discriminated union def structure", () => {
     const s2 = z.object({ type: z.literal("b"), value: z.number() });
     const du = z.discriminatedUnion("type", [s1, s2]);
     const d = def(du);
-    
+
     expect(d.type).toBe("union");
     expect(d.discriminator).toBe("type");
     expect(d.options).toBeDefined();
@@ -562,26 +561,26 @@ describe("discriminated union def structure", () => {
 
 describe("effects and pipelines (unified as 'pipe' in v4)", () => {
   it("z.transform is typed as 'pipe'", () => {
-    const s = z.string().transform(v => v.length);
+    const s = z.string().transform((v) => v.length);
     const d = def(s);
     expect(d.type).toBe("pipe");
   });
 
   it("distinguishes between effects and pipelines", () => {
-    const eff = z.string().transform(v => v.length);
-    const pre = z.preprocess(v => String(v), z.string());
+    const eff = z.string().transform((v) => v.length);
+    const pre = z.preprocess((v) => String(v), z.string());
     const pipe = z.string().pipe(z.number());
-    
+
     const dEff = def(eff) as any;
     const dPre = def(pre) as any;
     const dPipe = def(pipe) as any;
-    
+
     expect(dEff.type).toBe("pipe");
     expect(def(dEff.out).type).toBe("transform");
-    
+
     expect(dPre.type).toBe("pipe");
     expect(def(dPre.in).type).toBe("transform");
-    
+
     expect(dPipe.type).toBe("pipe");
     expect(def(dPipe.in).type).toBe("string");
     expect(def(dPipe.out).type).toBe("number");

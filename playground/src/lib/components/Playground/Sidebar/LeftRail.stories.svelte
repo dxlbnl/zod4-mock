@@ -4,17 +4,14 @@
 	import LeftRail from "./LeftRail.svelte";
 	import { createPlaygroundState } from "$lib/state.svelte";
 	import { tick } from "svelte";
+	import TestProvider from "../TestProvider.svelte";
 
 	const { Story } = defineMeta({
 		title: "Playground/Sidebar/LeftRail",
 		component: LeftRail,
 		parameters: {
-			docs: {
-				description: {
-					component:
-						"264px wide sidebar. Two accordion sections: World and Schemas.",
-				},
-			},
+			layout: "fullscreen",
+			chromatic: { viewports: [1200] }
 		},
 		tags: ["autodocs"],
 	});
@@ -36,10 +33,10 @@
 <Story name="Default">
 	{#snippet template()}
 		{@const store = getStoryStore("Default")}
-		<div
-			style="height: 600px; border: 1px solid var(--line); width: 264px;"
-		>
-			<LeftRail {store} />
+		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+			<TestProvider {store}>
+				<LeftRail />
+			</TestProvider>
 		</div>
 	{/snippet}
 </Story>
@@ -70,18 +67,22 @@
 		).resolves.toBeInTheDocument();
 
 		// LR-4: Toggle World to see details
-		const worldItem = desktop.getByText("Global Config");
+		const worldItem = desktop.getByText("World");
 		await userEvent.click(worldItem);
 		await tick();
-		await expect(worldItem.closest(".world-item")).toHaveClass("selected");
+		await expect(worldItem.closest(".accordion-section")).toHaveAttribute("data-open", "false");
+		
+		await userEvent.click(worldItem);
+		await tick();
+		await expect(worldItem.closest(".accordion-section")).toHaveAttribute("data-open", "true");
 	}}
 >
 	{#snippet template()}
 		{@const store = getStoryStore("Interactions")}
-		<div
-			style="height: 600px; border: 1px solid var(--line); width: 264px;"
-		>
-			<LeftRail {store} />
+		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+			<TestProvider {store}>
+				<LeftRail />
+			</TestProvider>
 		</div>
 	{/snippet}
 </Story>
@@ -93,10 +94,10 @@
 				s.addSchema(`ExtraSchema${i}`);
 			}
 		})}
-		<div
-			style="height: 600px; border: 1px solid var(--line); width: 264px;"
-		>
-			<LeftRail {store} />
+		<div style="height: 600px; border: 1px solid var(--line); width: 264px;">
+			<TestProvider {store}>
+				<LeftRail />
+			</TestProvider>
 		</div>
 	{/snippet}
 </Story>

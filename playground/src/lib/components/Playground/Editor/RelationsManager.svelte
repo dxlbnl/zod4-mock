@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { SchemaDef } from "$lib/state.svelte";
+	import Button from '$lib/components/Primitives/Button.svelte';
+	import Input from '$lib/components/Primitives/Input.svelte';
 	import FancySelect from "$lib/components/Primitives/FancySelect.svelte";
 
 	interface Props {
@@ -37,18 +39,30 @@
 	</div>
 
 	<div class="add-form">
-		<input 
-			type="text" 
-			placeholder="relation name" 
-			bind:value={newRelName}
-		/>
-		<FancySelect 
-			placeholder="Target..."
-			options={schemas.filter(s => s.id !== schema.id).map(s => ({ label: s.name, value: s.id }))}
-			value={newRelTarget}
-			onchange={(v) => newRelTarget = v}
-		/>
-		<button type="button" onclick={handleAdd} disabled={!newRelName || !newRelTarget} data-testid="add-rel-btn">Add</button>
+		<div class="field">
+			<label class="t-eyebrow" for="rel-name">Relation Name</label>
+			<Input 
+				id="rel-name"
+				placeholder="e.g. author" 
+				bind:value={newRelName}
+			/>
+		</div>
+		<div class="field">
+			<label class="t-eyebrow" for="rel-target">Target Schema</label>
+			<FancySelect 
+				id="rel-target"
+				placeholder="Select target..."
+				options={schemas.filter(s => s.id !== schema.id).map(s => ({ label: s.name, value: s.id }))}
+				value={newRelTarget}
+				onchange={(v) => newRelTarget = v}
+			/>
+		</div>
+		<Button 
+			variant="primary" 
+			onclick={handleAdd} 
+			disabled={!newRelName || !newRelTarget} 
+			style="height: var(--h-input);"
+		>Add</Button>
 	</div>
 </div>
 
@@ -72,11 +86,12 @@
 	.rel-tag {
 		display: flex;
 		align-items: center;
+		height: var(--h-btn);
+		padding: 0 10px;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-md);
+		background: var(--bg-2);
 		gap: 4px;
-		background: var(--bg-1);
-		border: 1px solid var(--line);
-		padding: 2px 8px;
-		border-radius: var(--radius-sm);
 		font-size: 11px;
 	}
 
@@ -86,38 +101,41 @@
 
 	.remove {
 		background: transparent;
-		border: none;
-		color: var(--ink-3);
+		border: 0;
+		color: var(--ink-2);
+		border-radius: var(--radius-sm);
 		cursor: pointer;
 		padding: 0 0 0 4px;
 		font-size: 14px;
 	}
-	.remove:hover { color: var(--red); }
+	.remove:hover { color: var(--warn); }
 
 	.add-form {
 		display: flex;
-		gap: 4px;
+		align-items: flex-start;
+		gap: var(--space-2);
+		margin-top: var(--space-3);
 	}
 
-	input {
-		background: var(--bg-1);
-		border: 1px solid var(--line);
-		color: var(--ink-1);
-		font-size: 11px;
-		padding: 2px 4px;
-		border-radius: 4px;
+	.add-form :global(.btn) {
+		margin-top: 18px; /* Align with inputs below labels */
 	}
 
-	input { flex: 1; }
-
-	button {
-		background: var(--accent-bright);
-		color: white;
-		border: none;
-		padding: 2px 8px;
-		border-radius: 4px;
-		font-size: 11px;
-		cursor: pointer;
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		flex: 1;
+		min-width: 0;
 	}
-	button:disabled { opacity: 0.5; cursor: not-allowed; }
+	
+	.field :global(.input) {
+		width: 100%;
+		min-width: 120px;
+	}
+	
+	.field :global(.fancy-select) {
+		width: 140px;
+		flex-shrink: 0;
+	}
 </style>

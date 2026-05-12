@@ -13,6 +13,7 @@ import {
   generateZodSet,
   generateZodObject,
 } from "./collection.js";
+import { deepMerge } from "../../utils/merge.js";
 
 export class UnsupportedSchemaError extends Error {
   constructor(type: string) {
@@ -81,7 +82,7 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
     case "literal":
       return d.values![0];
 
-    case "templateLiteral":
+    case "template_literal":
       return generateTemplateLiteral(schema, ctx);
 
     case "tuple":
@@ -96,22 +97,6 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return generateZodObject(schema, ctx);
     case "array":
       return generateZodArray(schema, ctx);
-
-    case "intersection": {
-      const left = ctx.generate(d.left!, ctx);
-      const right = ctx.generate(d.right!, {
-        prng: ctx.prng.fork("right"),
-      });
-      if (
-        typeof left === "object" &&
-        left !== null &&
-        typeof right === "object" &&
-        right !== null
-      ) {
-        return { ...left, ...right };
-      }
-      return left;
-    }
 
     case "xor": {
       const pickLeft = prng.random() > 0.5;
@@ -131,6 +116,15 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
     }
 
     case "union": {
+      // In Zod v4, discriminatedUnion is often typed as 'union' but with discriminator/optionsMap
+      const dAny = d as any;
+      if (dAny.discriminator && dAny.optionsMap && dAny.optionsMap.size > 0) {
+        const keys = Array.from(dAny.optionsMap.keys());
+        const randomKey = keys[prng.int(0, keys.length - 1)]!;
+        const chosen = dAny.optionsMap.get(randomKey)!;
+        return ctx.generate(chosen, ctx);
+      }
+
       const options = d.options;
       if (!options || options.length === 0) {
         throw new Error("Unsupported schema: union missing options");
@@ -139,36 +133,70 @@ export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): u
       return ctx.generate(chosen, ctx);
     }
 
-    case "discriminatedUnion": {
-      if (d.optionsMap && d.optionsMap.size > 0) {
-        const keys = Array.from(d.optionsMap.keys());
-        const randomKey = keys[prng.int(0, keys.length - 1)]!;
-        const chosen = d.optionsMap.get(randomKey)!;
-        return ctx.generate(chosen, ctx);
-      } else if (d.options && d.options.length > 0) {
-        const chosen = d.options[prng.int(0, d.options.length - 1)]!;
-        return ctx.generate(chosen, ctx);
-      }
-      throw new Error("Unsupported schema: discriminated union missing options");
+    case "intersection": {
+      const left = ctx.generate(d.left!, ctx);
+      const right = ctx.generate(d.right!, ctx);
+      return deepMerge(left, right);
     }
 
-    case "default":
-      return typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+    case "pipe": {
+      const pipeIn = d.in;
+      const pipeOut = d.out;
+
+      if (!pipeIn || !pipeOut) {
+        return generateString(prng, 3, 20);
+      }
+
+      const dIn = def(pipeIn);
+      const dOut = def(pipeOut);
+
+      // Zod v4 uses 'pipe' for effects (transform/preprocess).
+      // If one side is a 'transform' tag, we have an effect.
+      if (dOut.type === "transform") {
+        // This is a transform (post-process).
+        const input = ctx.generate(pipeIn, ctx);
+        const transformFn = (dOut as any).transform;
+        if (typeof transformFn === "function") {
+          try {
+            // Try to apply the transformation.
+            const result = transformFn(input, { addIssue: () => {} });
+            return result !== undefined ? result : input;
+          } catch {
+            return input;
+          }
+        }
+        return input;
+      }
+
+      if (dIn.type === "transform") {
+        // This is a preprocess (pre-process).
+        // Since we can't easily invert a preprocessor, we generate the output type.
+        return ctx.generate(pipeOut, ctx);
+      }
+
+      // If both are schemas, it's a real pipeline.
+      // We prioritize the output side for generation to ensure the final
+      // constraints of the pipe chain are satisfied.
+      return ctx.generate(pipeOut, ctx);
+    }
+
+    case "default": {
+      const optProb = ctx.optionalProbability ?? 0.2;
+      if (prng.random() < optProb) {
+        return typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+      }
+      return ctx.generate(d.innerType!, ctx);
+    }
     case "catch":
-      return generateFromSchema(d.innerType!, ctx);
+      return ctx.generate(d.innerType!, ctx);
     case "readonly":
-      return generateFromSchema(d.innerType!, ctx);
+      return ctx.generate(d.innerType!, ctx);
 
     case "lazy":
       return ctx.generate(schema);
 
     case "promise":
       return undefined;
-
-    case "pipe": {
-      const pipeIn = d.in;
-      return pipeIn ? generateFromSchema(pipeIn, ctx) : generateString(prng, 3, 20);
-    }
 
     case "json":
       return generateJson(ctx);

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/Primitives/Button.svelte';
-	import Select from '$lib/components/Primitives/Select.svelte';
-	import Kbd from '$lib/components/Primitives/Kbd.svelte';
+	import Button from "$lib/components/Primitives/Button.svelte";
+	import Select from "$lib/components/Primitives/Select.svelte";
+	import Kbd from "$lib/components/Primitives/Kbd.svelte";
 
 	interface Props {
 		version: string;
@@ -14,18 +14,20 @@
 		onexport?: () => void;
 	}
 
-	let { 
-		version, 
-		workspace, 
-		project, 
-		zodVersion, 
-		availableZodVersions, 
+	let {
+		version,
+		workspace,
+		project,
+		zodVersion,
+		availableZodVersions,
 		isZodLoading = false,
-		onchangezod, 
-		onexport 
+		onchangezod,
+		onexport,
 	}: Props = $props();
 
-	const zodOptions = $derived(availableZodVersions.map(v => ({ label: `zod@${v}`, value: v })));
+	const zodOptions = $derived(
+		availableZodVersions.map((v) => ({ label: `zod@${v}`, value: v })),
+	);
 </script>
 
 <div class="topbar">
@@ -43,14 +45,13 @@
 
 	<div class="top-actions">
 		<div class="zod-selector" class:loading={isZodLoading}>
-			<Select 
-				options={zodOptions} 
-				value={zodVersion} 
-				onchange={onchangezod} 
+			<Select
+				options={zodOptions}
+				value={zodVersion}
+				onchange={onchangezod}
 			/>
 		</div>
 		<Button variant="primary" onclick={onexport}>⬇ Export</Button>
-		<Kbd keys="⌘ K" />
 	</div>
 </div>
 
@@ -73,8 +74,12 @@
 	.brand-logo {
 		width: var(--h-input);
 		height: var(--h-input);
-		border-radius: var(--r-md);
-		background: linear-gradient(135deg, var(--accent-dim), var(--accent-bright));
+		border-radius: var(--radius-md);
+		background: linear-gradient(
+			135deg,
+			var(--accent-dim),
+			var(--accent-bright)
+		);
 		display: grid;
 		place-items: center;
 		color: #fff;
@@ -117,7 +122,8 @@
 	}
 
 	@media (max-width: 768px) {
-		.zod-selector, .workspace-name {
+		.zod-selector,
+		.workspace-name {
 			display: none;
 		}
 	}

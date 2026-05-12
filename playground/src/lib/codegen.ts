@@ -4,12 +4,7 @@
  * Walks PlaygroundState and produces TypeScript source strings.
  */
 
-import type {
-  FieldDef,
-  ModifierDef,
-  PlaygroundState,
-  SchemaDef,
-} from "./state.svelte";
+import type { FieldDef, ModifierDef, PlaygroundState, SchemaDef } from "./state.svelte";
 
 // ─── Token types for syntax highlighting ─────────────────────────────────────
 
@@ -72,13 +67,27 @@ function fieldToZodExpr(field: FieldDef, indent = 0): string {
   let base: string;
 
   switch (field.type) {
-    case "string": base = "z.string()"; break;
-    case "number": base = "z.number()"; break;
-    case "boolean": base = "z.boolean()"; break;
-    case "date": base = "z.date()"; break;
-    case "uuid": base = "z.uuid()"; break;
-    case "email": base = "z.email()"; break;
-    case "url": base = "z.url()"; break;
+    case "string":
+      base = "z.string()";
+      break;
+    case "number":
+      base = "z.number()";
+      break;
+    case "boolean":
+      base = "z.boolean()";
+      break;
+    case "date":
+      base = "z.date()";
+      break;
+    case "uuid":
+      base = "z.uuid()";
+      break;
+    case "email":
+      base = "z.email()";
+      break;
+    case "url":
+      base = "z.url()";
+      break;
     case "enum":
       if (field.enumValues.length === 0) {
         base = "z.enum([])";
@@ -125,7 +134,9 @@ export function generateWorldCode(state: PlaygroundState): string {
     opts.push(`optionalProbability: ${state.world.optionalProbability}`);
   }
   if (state.world.defaultArrayLengthMin !== 1 || state.world.defaultArrayLengthMax !== 5) {
-    opts.push(`defaultArrayLength: [${state.world.defaultArrayLengthMin}, ${state.world.defaultArrayLengthMax}]`);
+    opts.push(
+      `defaultArrayLength: [${state.world.defaultArrayLengthMin}, ${state.world.defaultArrayLengthMax}]`,
+    );
   }
 
   lines.push(`const world = createWorld({ ${opts.join(", ")} })`);
@@ -134,15 +145,17 @@ export function generateWorldCode(state: PlaygroundState): string {
     const sOpts: string[] = [];
 
     if (schema.derivedFrom) {
-      const src = state.schemas.find(s => s.id === schema.derivedFrom);
+      const src = state.schemas.find((s) => s.id === schema.derivedFrom);
       if (src) sOpts.push(`from: ${src.name}Schema`);
     }
 
     if (schema.relations.length > 0) {
-      const rels = schema.relations.map(r => {
-        const target = state.schemas.find(s => s.id === r.targetSchemaId);
-        return `      ${r.name}: ${target?.name ?? "Unknown"}Schema`;
-      }).join(",\n");
+      const rels = schema.relations
+        .map((r) => {
+          const target = state.schemas.find((s) => s.id === r.targetSchemaId);
+          return `      ${r.name}: ${target?.name ?? "Unknown"}Schema`;
+        })
+        .join(",\n");
       sOpts.push(`relations: {\n${rels}\n    }`);
     }
 
@@ -151,7 +164,9 @@ export function generateWorldCode(state: PlaygroundState): string {
       if (schema.derivedFrom && f.sourceMapping) {
         matchers.push(`      ${f.key}: (ctx) => ctx.source.${f.sourceMapping}`);
       } else if (f.relationMapping) {
-        matchers.push(`      ${f.key}: (ctx) => ctx.related("${f.relationMapping.relationName}").${f.relationMapping.targetFieldKey}`);
+        matchers.push(
+          `      ${f.key}: (ctx) => ctx.related("${f.relationMapping.relationName}").${f.relationMapping.targetFieldKey}`,
+        );
       }
     }
 
@@ -327,6 +342,75 @@ export function generateTokenizedWorldData(data: Record<string, unknown[]>): Cod
 
 function lcFirst(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+export function generateTokenizedFullExport(state: PlaygroundState): CodeLine[] {
+  const code = generateFullExport(state);
+  const lines = code.split("\n");
+  return lines.map((line, i) => {
+    const tokens: CodeToken[] = [];
+    if (line.trim().startsWith("//")) {
+      tokens.push(t("comment", line));
+      return { lineNumber: i + 1, tokens };
+    }
+
+    const parts = line.split(/(\s+|\.|\(|\)|"|'|,|\[|\]|;|{|}|:)/g).filter(Boolean);
+    let inString = false;
+    let quoteChar = "";
+
+    for (let j = 0; j < parts.length; j++) {
+      const p = parts[j];
+      if (!inString && (p === '"' || p === "'")) {
+        inString = true;
+        quoteChar = p;
+        tokens.push(pt(p));
+        continue;
+      }
+      if (inString && p === quoteChar) {
+        inString = false;
+        tokens.push(pt(p));
+        continue;
+      }
+      if (inString) {
+        tokens.push(str(p));
+        continue;
+      }
+
+      const trimmed = p.trim();
+      if (!trimmed) {
+        tokens.push(pl(p));
+        continue;
+      }
+
+      if (/^(import|from|const|export|as|return|if|else|switch|case|break)$/.test(trimmed)) {
+        tokens.push(kw(p));
+      } else if (trimmed === "z") {
+        tokens.push(ty(p));
+      } else if (/^[A-Z][a-zA-Z0-9]+Schema$/.test(trimmed)) {
+        tokens.push(ty(p));
+      } else if (/^[A-Z][a-zA-Z0-9]+$/.test(trimmed)) {
+        tokens.push(ty(p));
+      } else if (/^[.(),[\];{}:]$/.test(trimmed)) {
+        tokens.push(pt(p));
+      } else if (/^\d+$/.test(trimmed)) {
+        tokens.push(num(p));
+      } else {
+        // Look ahead to see if this is a property (followed by :)
+        // or a function (preceded by .)
+        const nextPart = parts[j + 1]?.trim();
+        const prevPart = parts[j - 1]?.trim();
+
+        if (nextPart === ":") {
+          tokens.push(pr(p));
+        } else if (prevPart === ".") {
+          tokens.push(fn(p));
+        } else {
+          tokens.push(pl(p));
+        }
+      }
+    }
+    return { lineNumber: i + 1, tokens };
+  });
 }
 
 export function exportLineCount(state: PlaygroundState): number {

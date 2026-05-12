@@ -13,10 +13,7 @@ describe("Schema Relations & Projections", () => {
       name: "User",
       populateCount: 1,
       relations: [],
-      fields: [
-        makeField({ key: "id", type: "uuid" }),
-        makeField({ key: "name", type: "string" }),
-      ],
+      fields: [makeField({ key: "id", type: "uuid" }), makeField({ key: "name", type: "string" })],
     };
 
     // 2. Create a derived API schema
@@ -66,10 +63,10 @@ describe("Schema Relations & Projections", () => {
       populateCount: 1,
       relations: [{ name: "customer", targetSchemaId: "s1" }],
       fields: [
-        makeField({ 
-          key: "userId", 
-          type: "uuid", 
-          relationMapping: { relationName: "customer", targetFieldKey: "id" } 
+        makeField({
+          key: "userId",
+          type: "uuid",
+          relationMapping: { relationName: "customer", targetFieldKey: "id" },
         }),
       ],
     };

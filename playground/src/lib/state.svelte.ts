@@ -381,11 +381,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     recursiveRemove(schema.fields);
   }
 
-  function updateField(
-    schemaId: string,
-    fieldId: string,
-    patch: Partial<FieldDef>,
-  ) {
+  function updateField(schemaId: string, fieldId: string, patch: Partial<FieldDef>) {
     const schema = state.schemas.find((s) => s.id === schemaId);
     if (!schema) return;
     const field = findField(schema.fields, fieldId);
@@ -401,22 +397,14 @@ export function createPlaygroundState(initial?: PlaygroundState) {
     }
   }
 
-  function addModifier(
-    schemaId: string,
-    fieldId: string,
-    modifier: ModifierDef,
-  ) {
+  function addModifier(schemaId: string, fieldId: string, modifier: ModifierDef) {
     const schema = state.schemas.find((s) => s.id === schemaId);
     if (!schema) return;
     const field = findField(schema.fields, fieldId);
     if (field) field.modifiers.push(modifier);
   }
 
-  function removeModifier(
-    schemaId: string,
-    fieldId: string,
-    modifierIndex: number,
-  ) {
+  function removeModifier(schemaId: string, fieldId: string, modifierIndex: number) {
     const schema = state.schemas.find((s) => s.id === schemaId);
     if (!schema) return;
     const field = findField(schema.fields, fieldId);
@@ -468,9 +456,7 @@ export function createPlaygroundState(initial?: PlaygroundState) {
 
   // ── Derived helpers ────────────────────────────────────────────────────
 
-  const activeSchema = $derived(
-    state.schemas.find((s) => s.id === state.activeSchemaId) ?? null,
-  );
+  const activeSchema = $derived(state.schemas.find((s) => s.id === state.activeSchemaId) ?? null);
 
   const activeFields = $derived(activeSchema?.fields ?? []);
 

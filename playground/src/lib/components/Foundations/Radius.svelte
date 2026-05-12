@@ -6,33 +6,33 @@
 	<div class="grid-3">
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label t-title">--r-sm</span><span class="meta t-code-sm">3px</span>
+				<span class="label t-title">--radius-sm</span><span class="meta t-code-sm">3px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-sm);"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);"
 				></div>
 			</div>
 			<pre class="ds-snippet">pills · inputs · rows</pre>
 		</div>
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label t-title">--r-md</span><span class="meta t-code-sm">5px</span>
+				<span class="label t-title">--radius-md</span><span class="meta t-code-sm">5px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-md);"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md);"
 				></div>
 			</div>
 			<pre class="ds-snippet">buttons · seg control · float-menu</pre>
 		</div>
 		<div class="ds-card">
 			<div class="ds-card-head">
-				<span class="label t-title">--r-lg</span><span class="meta t-code-sm">8px</span>
+				<span class="label t-title">--radius-lg</span><span class="meta t-code-sm">8px</span>
 			</div>
 			<div class="ds-card-body center">
 				<div
-					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--r-lg);"
+					style="width: 60px; height: 60px; background: var(--bg-3); border: 1px solid var(--line-strong); border-radius: var(--radius-lg);"
 				></div>
 			</div>
 			<pre class="ds-snippet">sheets · cards</pre>

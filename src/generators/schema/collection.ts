@@ -65,13 +65,22 @@ export function generateZodRecord(
   const count = ctx.prng.int(2, 5);
   const result: Record<string, unknown> = {};
   for (let i = 0; i < count; i++) {
-    const key = ctx.generate(d.keyType!, {
+    const rawKey = ctx.generate(d.keyType!, {
       prng: ctx.prng.fork(`rk-${i}`),
       fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.<key:${i}>` : `<key:${i}>`,
     });
-    result[String(key)] = ctx.generate(d.valueType!, {
+
+    // Ensure key is a string and not "[object Object]"
+    let key: string;
+    if (typeof rawKey === "object" && rawKey !== null) {
+      key = JSON.stringify(rawKey);
+    } else {
+      key = String(rawKey);
+    }
+
+    result[key] = ctx.generate(d.valueType!, {
       prng: ctx.prng.fork(`rv-${i}`),
-      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : String(key),
+      fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
     });
   }
   return result;
@@ -106,13 +115,17 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
   const size = ctx.prng.int(Math.min(min, max), Math.max(min, max));
 
   const result = new Set<unknown>();
-  for (let i = 0; i < size; i++) {
+  let attempts = 0;
+  const maxAttempts = size * 10;
+
+  while (result.size < size && attempts < maxAttempts) {
     result.add(
       ctx.generate(d.valueType!, {
-        prng: ctx.prng.fork(`sv-${i}`),
-        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+        prng: ctx.prng.fork(`sv-${attempts}`),
+        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${result.size}` : `${result.size}`,
       }),
     );
+    attempts++;
   }
   return result;
 }

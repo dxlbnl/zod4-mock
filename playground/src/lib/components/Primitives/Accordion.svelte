@@ -101,7 +101,7 @@
     color: var(--ink-2);
     padding: 1px var(--space-2);
     border: 1px solid var(--line);
-    border-radius: var(--r-lg);
+    border-radius: var(--radius-lg);
   }
 
   .accordion-body {

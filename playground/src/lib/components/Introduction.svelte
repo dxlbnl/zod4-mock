@@ -76,7 +76,7 @@
 	.card {
 		background: var(--bg-1);
 		border: 1px solid var(--line);
-		border-radius: var(--r-lg);
+		border-radius: var(--radius-lg);
 		padding: 32px;
 		transition: all var(--ease-quick);
 	}

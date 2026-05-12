@@ -68,7 +68,7 @@ describe("schema-builder", () => {
       const { world, schemaMap } = buildWorld(state);
       expect(world).toBeDefined();
       expect(schemaMap.has("s1")).toBe(true);
-      
+
       // Verify registry population
       const users = world.registry.all(schemaMap.get("s1")!);
       expect(users.length).toBe(5);

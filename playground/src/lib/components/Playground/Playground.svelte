@@ -7,20 +7,10 @@
 	import ExportContent from "./Output/ExportContent.svelte";
 	import MobileTabBar from "./MobileTabBar.svelte";
 
-	import { untrack, onMount } from "svelte";
+	import { untrack, onMount, setContext } from "svelte";
 	import { createPlaygroundState } from "$lib/state.svelte";
-	import {
-		generateTokenizedCode,
-		generateTokenizedData,
-		generateTokenizedWorldData,
-		generateFullExport,
-		generateSchemaCode,
-		exportLineCount,
-	} from "$lib/codegen";
-	import {
-		generateSchemaPreview,
-		generateWorldData,
-	} from "$lib/schema-builder";
+	import { createOutputState } from "$lib/output.svelte";
+	import { exportLineCount } from "$lib/codegen";
 
 	interface Props {
 		initialState?: any;
@@ -28,8 +18,13 @@
 
 	let { initialState = undefined }: Props = $props();
 
-	// Initialize store
+	// Initialize stores
 	const store = createPlaygroundState(untrack(() => initialState));
+	const output = createOutputState(store);
+
+	// Provide to context
+	setContext("playground-store", store);
+	setContext("output-store", output);
 
 	onMount(() => {
 		store.fetchAvailableZodVersions();
@@ -38,55 +33,12 @@
 	// Track selection
 	let selectedFieldId = $state<string | null>(null);
 
-	// Derived values
-	const activeSchema = $derived(store.activeSchema);
-	const activeFields = $derived(store.activeFields);
-	const builderTitle = $derived(store.builderTitle);
-
-	const codeLines = $derived.by(() => {
-		if (activeSchema) {
-			return generateTokenizedCode(activeSchema);
-		}
-		return [];
-	});
-
-	// Mock data generation
-	const generationResult = $derived.by(() => {
-		if (activeSchema) {
-			return generateSchemaPreview(store.state, activeSchema.id);
-		}
-		return { ok: false };
-	});
-
-	const dataLines = $derived(
-		generationResult.ok && activeFields.length > 0
-			? generateTokenizedData(generationResult.data, activeFields)
-			: [],
-	);
-
-	// World generation
-	const worldResult = $derived(generateWorldData(store.state));
-	const worldLines = $derived(
-		worldResult.ok
-			? generateTokenizedWorldData(worldResult.data as Record<string, any[]>)
-			: [],
-	);
-
-	// Export logic
-	const fullExportCode = $derived(generateFullExport(store.state));
-	const exportLines = $derived.by(() => {
-		return fullExportCode.split("\n").map((text, i) => ({
-			lineNumber: i + 1,
-			tokens: [{ kind: "plain" as const, text }],
-		}));
-	});
-
 	function handleCopyExport() {
-		navigator.clipboard.writeText(fullExportCode);
+		navigator.clipboard.writeText(output.fullExportCode);
 	}
 
 	function handleDownload() {
-		const blob = new Blob([fullExportCode], { type: "text/typescript" });
+		const blob = new Blob([output.fullExportCode], { type: "text/typescript" });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
@@ -110,53 +62,27 @@
 
 	<div class="main-layout" class:mobile-editor={store.state.ui.activeMobileTab === 'editor'} class:mobile-output={store.state.ui.activeMobileTab === 'output'}>
 		<div class="rail-column column">
-			<LeftRail {store} />
+			<LeftRail />
 		</div>
 
 		<div class="builder-column column">
 			<SchemaEditor
-				title={builderTitle}
-				schema={activeSchema}
+				title={store.builderTitle}
+				schema={store.activeSchema}
 				schemas={store.state.schemas}
 				{selectedFieldId}
 				onselectfield={(id) => (selectedFieldId = id)}
-				onaddfield={(pid) => activeSchema ? (store.addField(activeSchema.id, pid) ?? undefined) : undefined}
-				onupdatefield={(id, p) => activeSchema && store.updateField(activeSchema.id, id, p)}
-				onremovefield={(id) => activeSchema && store.removeField(activeSchema.id, id)}
-				onaddmodifier={(id, m) => activeSchema && store.addModifier(activeSchema.id, id, m)}
-				onupdatemodifier={(id, idx, val) => activeSchema && store.updateModifierValue(activeSchema.id, id, idx, val)}
-				onremovemodifier={(fid, mid) => activeSchema && store.removeModifier(activeSchema.id, fid, mid)}
-				onupdateenumvalues={(id, vals) => activeSchema && store.updateField(activeSchema.id, id, { enumValues: vals })}
-				onupdatetitle={(val) => activeSchema && store.renameSchema(activeSchema.id, val)}
-				onupdatepopulate={(val) => activeSchema && store.setPopulateCount(activeSchema.id, val)}
-				onupdatederived={(val) => activeSchema && store.setDerivedFrom(activeSchema.id, val)}
-				onaddrelation={(target, name) => activeSchema && store.addSchemaRelation(activeSchema.id, target, name)}
-				onremoverelation={(name) => activeSchema && store.removeSchemaRelation(activeSchema.id, name)}
 
 				world={store.state.world}
-				onupdateseed={(v) => store.setWorldSeed(v)}
-				onupdateprob={(v) => store.setOptionalProbability(v)}
-
 				activeSchemaId={store.state.activeSchemaId}
-				onaddschema={() => store.addSchema('NewSchema')}
-				onselectschema={(id) => store.setActiveSchema(id)}
-
 				availableZodVersions={store.state.availableZodVersions}
-				onchangezod={(v) => store.setZodVersion(v)}
 			/>
 		</div>
 
 		<div class="output-column column">
 			<OutputPane
 				bind:activeTab={store.state.ui.outputTab}
-				{codeLines}
-				{dataLines}
-				{worldLines}
-				fullCode={activeSchema ? generateSchemaCode(activeSchema) : ""}
-				fullData={generationResult.ok ? JSON.stringify(generationResult.data, null, 2) : ""}
-				fullWorld={worldResult.ok ? JSON.stringify(worldResult.data, null, 2) : ""}
 				{selectedFieldId}
-				onchangetab={(tab) => store.setOutputTab(tab)}
 			/>
 		</div>
 	</div>
@@ -173,7 +99,7 @@
 		ondownload={handleDownload}
 		meta={`single file · world.ts · ${exportLineCount(store.state)} lines`}
 	>
-		<ExportContent lines={exportLines} />
+		<ExportContent lines={output.exportLines} />
 	</ExportSheet>
 </div>
 

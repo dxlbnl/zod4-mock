@@ -4,6 +4,7 @@
 	import { tick } from 'svelte';
 	import SchemaEditor from './index.svelte';
 	import { createPlaygroundState, makeField } from '$lib/state.svelte';
+	import TestProvider from '../TestProvider.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Playground/Editor',
@@ -37,22 +38,13 @@
 	{@const { store } = getState(name, fields)}
 	{@const schema = store.state.schemas[0]}
 	<div style="display: grid; grid-template-columns: 1fr; height: 100vh; background: var(--bg-0)">
-		<SchemaEditor
-			title="Schema Editor"
-			{schema}
-			schemas={store.state.schemas}
-			onaddfield={(pid) => schema ? (store.addField(schema.id, pid) ?? undefined) : undefined}
-			onupdatefield={(id, p) => schema && store.updateField(schema.id, id, p)}
-			onremovefield={(id) => schema && store.removeField(schema.id, id)}
-			onaddmodifier={(id, m) => schema && store.addModifier(schema.id, id, m)}
-			onupdatemodifier={(id, idx, val) => schema && store.updateModifierValue(schema.id, id, idx, val)}
-			onremovemodifier={(fid, mid) => schema && store.removeModifier(schema.id, fid, mid)}
-			onupdateenumvalues={(id, vals) => schema && store.updateField(schema.id, id, { enumValues: vals })}
-			onupdatepopulate={(val) => schema && store.setPopulateCount(schema.id, val)}
-			onupdatederived={(val) => schema && store.setDerivedFrom(schema.id, val)}
-			onaddrelation={(target, name) => schema && store.addSchemaRelation(schema.id, target, name)}
-			onremoverelation={(name) => schema && store.removeSchemaRelation(schema.id, name)}
-		/>
+		<TestProvider {store}>
+			<SchemaEditor
+				title="Schema Editor"
+				{schema}
+				schemas={store.state.schemas}
+			/>
+		</TestProvider>
 	</div>
 {/snippet}
 

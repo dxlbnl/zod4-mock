@@ -50,7 +50,7 @@
 		cursor: pointer;
 		color: var(--ink-2);
 		transition: all var(--ease-quick);
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 		margin: 0 var(--space-1);
 	}
 

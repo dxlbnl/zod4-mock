@@ -2,32 +2,28 @@
 	import Accordion from '$lib/components/Primitives/Accordion.svelte';
 	import SchemaItem from './SchemaItem.svelte';
 	import WorldConfig from './WorldConfig.svelte';
-	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
+	import { getContext } from 'svelte';
 	import type { PlaygroundStore } from '$lib/state.svelte';
 
-	interface Props {
-		store: PlaygroundStore;
-	}
+	const store = getContext<PlaygroundStore>('playground-store');
 
-	let { store }: Props = $props();
-
-	const schemas = $derived(store.state.schemas);
-	const world = $derived(store.state.world);
-	const activeSchemaId = $derived(store.state.activeSchemaId);
+	const schemas = $derived(store?.state?.schemas || []);
+	const world = $derived(store?.state?.world || { seed: 0, optionalProbability: 0 });
+	const activeSchemaId = $derived(store?.state?.activeSchemaId || null);
 
 	function getSectionMeta(id: string): string {
-		if (id === 'world') return `seed ${world.seed}`;
-		if (id === 'schemas') return String(schemas.length);
+		if (id === 'world') return `seed ${world?.seed ?? 0}`;
+		if (id === 'schemas') return String(schemas?.length ?? 0);
 		return '';
 	}
 
 	function handleAddSchema() {
-		store.addSchema('NewSchema');
-		store.setMobileTab('editor');
+		store?.addSchema('NewSchema');
+		store?.setMobileTab('editor');
 	}
 
 	function handleSelectSchema(id: string | null) {
-		store.setActiveSchema(id);
+		store?.setActiveSchema(id);
 	}
 </script>
 
@@ -99,7 +95,7 @@
 		padding: var(--space-2) var(--space-3);
 		margin: var(--space-2) var(--space-2) 0 var(--space-2);
 		border: 1px dashed var(--line-strong);
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 		color: var(--ink-2);
 		cursor: pointer;
 		transition: all var(--ease-quick);

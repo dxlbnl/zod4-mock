@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { generateFromSchema } from "../../src/generators/schema/router.js";
 import { createWorld } from "../../src/index.js";
@@ -26,16 +26,20 @@ describe("router - generateFromSchema", () => {
 
   it("handles optionality by sometimes returning undefined", () => {
     const schema = z.string().optional();
-    const results = Array.from({ length: 100 }, () => generateFromSchema(schema, { ...ctx, optionalProbability: 0.5 }));
-    expect(results.some(r => r === undefined)).toBe(true);
-    expect(results.some(r => typeof r === "string")).toBe(true);
+    const results = Array.from({ length: 100 }, () =>
+      generateFromSchema(schema, { ...ctx, optionalProbability: 0.5 }),
+    );
+    expect(results.some((r) => r === undefined)).toBe(true);
+    expect(results.some((r) => typeof r === "string")).toBe(true);
   });
 
   it("handles nullability by sometimes returning null", () => {
     const schema = z.string().nullable();
-    const results = Array.from({ length: 100 }, () => generateFromSchema(schema, { ...ctx, optionalProbability: 0.5 }));
-    expect(results.some(r => r === null)).toBe(true);
-    expect(results.some(r => typeof r === "string")).toBe(true);
+    const results = Array.from({ length: 100 }, () =>
+      generateFromSchema(schema, { ...ctx, optionalProbability: 0.5 }),
+    );
+    expect(results.some((r) => r === null)).toBe(true);
+    expect(results.some((r) => typeof r === "string")).toBe(true);
   });
 
   it("handles literal types", () => {
@@ -53,7 +57,7 @@ describe("router - generateFromSchema", () => {
   it("handles unions", () => {
     const schema = z.union([z.string(), z.number()]);
     const results = Array.from({ length: 50 }, () => generateFromSchema(schema, ctx));
-    expect(results.some(r => typeof r === "string")).toBe(true);
-    expect(results.some(r => typeof r === "number")).toBe(true);
+    expect(results.some((r) => typeof r === "string")).toBe(true);
+    expect(results.some((r) => typeof r === "number")).toBe(true);
   });
 });

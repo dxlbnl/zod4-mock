@@ -4,31 +4,39 @@
   import MockDataView from "./DataView.svelte";
   import WorldView from "./WorldView.svelte";
   import Button from "$lib/components/Primitives/Button.svelte";
-  import type { CodeLine } from "$lib/codegen";
+  import { getContext } from "svelte";
+  import type { OutputStore } from "$lib/output.svelte";
 
   interface Props {
     activeTab: "code" | "data" | "world";
-    codeLines: CodeLine[];
-    dataLines: CodeLine[];
-    worldLines?: CodeLine[];
-    fullCode: string;
-    fullData: string;
-    fullWorld?: string;
     selectedFieldId?: string | null;
-    onchangetab?: (tab: "code" | "data" | "world") => void;
+
+    // Optional props for testing/stories when context is missing
+    codeLines?: any[];
+    dataLines?: any[];
+    worldLines?: any[];
+    fullCode?: string;
+    fullData?: string;
+    fullWorld?: string;
   }
 
   let {
     activeTab = $bindable("data"),
-    codeLines = [],
-    dataLines = [],
-    worldLines = [],
-    fullCode = "",
-    fullData = "",
-    fullWorld = "",
     selectedFieldId = null,
-    onchangetab,
+    ...restProps
   }: Props = $props();
+
+  const contextOutput = getContext<OutputStore>("output-store");
+
+  // Use context if available, otherwise fall back to props (for stories/tests)
+  const output = contextOutput || {
+    get codeLines() { return restProps.codeLines || []; },
+    get dataLines() { return restProps.dataLines || []; },
+    get worldLines() { return restProps.worldLines || []; },
+    get fullSchemaCode() { return restProps.fullCode || ""; },
+    get fullDataJson() { return restProps.fullData || ""; },
+    get fullWorldJson() { return restProps.fullWorld || ""; },
+  };
 
   const tabs = [
     { id: "code", label: "Zod Definition", status: "active" as const },
@@ -39,10 +47,10 @@
   async function handleCopy() {
     const text =
       activeTab === "code"
-        ? fullCode
+        ? output.fullSchemaCode
         : activeTab === "data"
-          ? fullData
-          : fullWorld;
+          ? output.fullDataJson
+          : output.fullWorldJson;
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
@@ -55,7 +63,6 @@
   <OutputTabs
     {tabs}
     bind:activeTab
-    onchange={(id) => onchangetab?.(id as "code" | "data" | "world")}
   >
     {#snippet actions()}
       <Button variant="ghost" label="Copy" onclick={handleCopy} />
@@ -64,11 +71,11 @@
 
   <div class="content">
     {#if activeTab === "code"}
-      <CodeView lines={codeLines} {selectedFieldId} title="" />
+      <CodeView lines={output.codeLines} {selectedFieldId} title="" />
     {:else if activeTab === "data"}
-      <MockDataView lines={dataLines} {selectedFieldId} title="" />
+      <MockDataView lines={output.dataLines} {selectedFieldId} title="" />
     {:else}
-      <WorldView lines={worldLines} />
+      <WorldView lines={output.worldLines} />
     {/if}
   </div>
 </div>

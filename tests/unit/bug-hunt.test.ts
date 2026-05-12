@@ -3,13 +3,12 @@ import { z } from "zod";
 import { generate, createWorld } from "../../src/index.js";
 
 describe("bug-hunt — Consolidated Library Failures", () => {
-  
   // 1. Template Literal Bugs
   describe("z.templateLiteral()", () => {
     it("fails to generate a valid template literal (type mismatch & wrong parts field)", () => {
       const schema = z.templateLiteral([z.string(), z.literal(" world")]);
       const result = generate(schema);
-      
+
       // Expected to end in " world", but usually returns a random 3-10 char string or ""
       expect(schema.safeParse(result).success).toBe(true);
     });
@@ -20,7 +19,7 @@ describe("bug-hunt — Consolidated Library Failures", () => {
     it("ignores min length when startsWith is used", () => {
       const schema = z.string().min(50).startsWith("abc");
       const result = generate(schema);
-      
+
       expect(result.length).toBeGreaterThanOrEqual(50);
       expect(schema.safeParse(result).success).toBe(true);
     });
@@ -28,7 +27,7 @@ describe("bug-hunt — Consolidated Library Failures", () => {
     it("ignores max length when includes is used", () => {
       const schema = z.string().max(15).includes("hello-world");
       const result = generate(schema);
-      
+
       expect(result.length).toBeLessThanOrEqual(15);
       expect(schema.safeParse(result).success).toBe(true);
     });
@@ -39,7 +38,7 @@ describe("bug-hunt — Consolidated Library Failures", () => {
     it("fails to respect min_size when duplicate values are generated", () => {
       const schema = z.set(z.string()).min(3);
       const result = generate(schema);
-      
+
       expect(result.size).toBeGreaterThanOrEqual(3);
       expect(schema.safeParse(result).success).toBe(true);
     });
@@ -50,9 +49,9 @@ describe("bug-hunt — Consolidated Library Failures", () => {
     it("always returns the default value instead of generating variety (at root level)", () => {
       const schema = z.string().default("fixed");
       const world = createWorld({ seed: 42 });
-      
+
       const results = new Set(Array.from({ length: 20 }, () => world.generate(schema)));
-      
+
       // If the library always returns the default, size will be 1.
       // A good mock library should generate variety but satisfy the schema.
       expect(results.size).toBeGreaterThan(1);
@@ -65,9 +64,9 @@ describe("bug-hunt — Consolidated Library Failures", () => {
       const keySchema = z.string().min(5);
       const schema = z.record(keySchema, z.number());
       const result = generate(schema);
-      
+
       const keys = Object.keys(result);
-      expect(keys.some(k => k === "[object Object]")).toBe(false);
+      expect(keys.some((k) => k === "[object Object]")).toBe(false);
       expect(schema.safeParse(result).success).toBe(true);
     });
   });
@@ -85,7 +84,7 @@ describe("bug-hunt — Consolidated Library Failures", () => {
       const s2 = z.object({ person: z.object({ age: z.number() }) });
       const intersection = z.intersection(s1, s2);
       const res = generate(intersection) as any;
-      
+
       // Current implementation does shallow merge: { ...left, ...right }
       // So person.name will be missing because s2.person overwrites s1.person
       expect(res.person.name).toBeDefined();
@@ -98,7 +97,7 @@ describe("bug-hunt — Consolidated Library Failures", () => {
     it("fails when the output side has stricter constraints than the input side", () => {
       const schema = z.string().max(50).pipe(z.string().min(40));
       const result = generate(schema);
-      
+
       expect(schema.safeParse(result).success).toBe(true);
     });
   });
@@ -107,17 +106,17 @@ describe("bug-hunt — Consolidated Library Failures", () => {
   describe("z.effects()", () => {
     it("ignores preprocessors and returns raw generated data that might fail validation", () => {
       // Preprocessor that turns everything into a valid number string
-      const schema = z.preprocess((val) => "123", z.string().regex(/^\d+$/));
+      const schema = z.preprocess(() => "123", z.string().regex(/^\d+$/));
       const result = generate(schema);
-      
+
       // If preprocessor is ignored, it generates a random string which likely fails the regex
       expect(schema.safeParse(result).success).toBe(true);
     });
 
     it("ignores transforms", () => {
-      const schema = z.string().transform(v => v.length);
+      const schema = z.string().transform((v) => v.length);
       const result = generate(schema);
-      
+
       // Result should be a number, but will be a string
       expect(typeof result).toBe("number");
     });
@@ -130,10 +129,10 @@ describe("bug-hunt — Consolidated Library Failures", () => {
       const max = 10_000_000_000n;
       const schema = z.bigint().min(min).max(max);
       const world = createWorld({ seed: 42 });
-      
+
       const results = Array.from({ length: 100 }, () => world.generate(schema));
       const maxVal = results.reduce((a, b) => (a > b ? a : b), 0n);
-      
+
       // If capped at 1,000,000, no value will ever exceed 1,000,000.
       expect(maxVal).toBeGreaterThan(1_000_000n);
     });

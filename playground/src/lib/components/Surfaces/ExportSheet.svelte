@@ -72,7 +72,7 @@
 		width: 100%;
 		height: 800px;
 		background: var(--bg-0);
-		border-radius: var(--r-lg);
+		border-radius: var(--radius-lg);
 		overflow: hidden;
 		padding: var(--space-5);
 	}
@@ -80,7 +80,7 @@
 	.sheet {
 		background: var(--bg-1);
 		border: 1px solid var(--line-strong);
-		border-radius: var(--r-lg);
+		border-radius: var(--radius-lg);
 		width: 960px;
 		max-width: 92vw;
 		height: 720px;
@@ -142,4 +142,41 @@
 	}
 
 
+	@media (max-width: 768px) {
+		.sheet-backdrop {
+			padding: 0;
+		}
+
+		.sheet {
+			width: 100%;
+			max-width: 100vw;
+			height: 100%;
+			max-height: 100vh;
+			border-radius: 0;
+			border: none;
+		}
+
+		.sheet-head {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--space-3);
+			padding: var(--space-4);
+		}
+
+		.sheet-head .meta {
+			display: none;
+		}
+
+		.sheet-head .actions {
+			margin-left: 0;
+			width: 100%;
+			justify-content: flex-start;
+		}
+
+		.sheet-head :global(.close) {
+			position: absolute;
+			top: var(--space-3);
+			right: var(--space-3);
+		}
+	}
 </style>

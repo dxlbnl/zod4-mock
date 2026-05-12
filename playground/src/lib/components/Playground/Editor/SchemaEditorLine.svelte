@@ -7,14 +7,14 @@
 	import InlineArgInput from './InlineArgInput.svelte';
 	import EnumTagInput from './EnumTagInput.svelte';
 	import type { EditorPhase } from './schema-editor.types';
-	import type { FieldDef, ModifierDef, SchemaDef, SchemaRelation } from '$lib/state.svelte';
+	import type { FieldDef, ModifierDef, SchemaDef, SchemaRelation, PlaygroundStore } from '$lib/state.svelte';
 	import {
 		FIELD_TYPES,
 		SELECTABLE_FIELD_TYPES,
 		getModifiers,
 		type ZodFieldType
 	} from '$lib/field-types';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 
 	import { findMatchingRelation } from '$lib/utils/relations';
 
@@ -27,19 +27,13 @@
 		sourceSchema?: SchemaDef;
 		currentSchemaRelations: SchemaRelation[];
 
-		onupdatekey: (id: string, key: string) => void;
-		onupdatetype: (id: string, type: ZodFieldType) => void;
-		onaddmodifier: (id: string, mod: ModifierDef) => void;
-		onupdatemodifier: (id: string, index: number, value: string | number | boolean) => void;
-		onremovemodifier: (id: string, index: number) => void;
-		onupdateenumvalues: (id: string, values: string[]) => void;
-		
-		onupdatemapping: (patch: Partial<FieldDef>) => void;
-
 		onremove: (id: string) => void;
 		onnextsibling: (id: string) => void;
 		onexitnesting: (id: string) => void;
 		onfocus?: (id: string) => void;
+
+		// Handlers moved to store, but kept as on* for local logic if needed
+		onupdatetype: (id: string, type: ZodFieldType) => void;
 	}
 
 	let {
@@ -49,18 +43,14 @@
 		schemas,
 		sourceSchema,
 		currentSchemaRelations,
-		onupdatekey,
-		onupdatetype,
-		onaddmodifier,
-		onupdatemodifier,
-		onremovemodifier,
-		onupdateenumvalues,
-		onupdatemapping,
 		onremove,
 		onnextsibling,
 		onexitnesting,
 		onfocus,
+		onupdatetype,
 	}: Props = $props();
+
+	const store = getContext<PlaygroundStore>('playground-store');
 
 	// ── Phase / dropdown state ─────────────────────────────────────────────
 	let phase = $state<EditorPhase | 'mapping'>('name');
@@ -153,16 +143,19 @@
 
 	function handleMappingSelect(name: string) {
 		dropdownOpen = null;
+		const activeSchema = store.activeSchema;
+		if (!activeSchema) return;
+
 		if (name === 'None') {
-			onupdatemapping({ sourceMapping: undefined, relationMapping: undefined });
+			store.updateField(activeSchema.id, field.id, { sourceMapping: undefined, relationMapping: undefined });
 		} else if (name.startsWith('src:')) {
 			const key = name.slice(4);
-			onupdatemapping({ sourceMapping: key, relationMapping: undefined });
+			store.updateField(activeSchema.id, field.id, { sourceMapping: key, relationMapping: undefined });
 		} else if (name.startsWith('rel:')) {
 			const parts = name.split(':');
 			const relationName = parts[1];
 			const targetFieldKey = parts[2];
-			onupdatemapping({ 
+			store.updateField(activeSchema.id, field.id, { 
 				sourceMapping: undefined, 
 				relationMapping: { relationName, targetFieldKey } 
 			});
@@ -222,13 +215,16 @@
 
 	function handleModifierSelect(name: string) {
 		dropdownOpen = null;
+		const activeSchema = store.activeSchema;
+		if (!activeSchema) return;
+
 		const spec = availableMods.find((m) => m.name === name);
 		if (!spec) return;
 
 		const targetIdx = replacingModifierIndex !== null ? replacingModifierIndex : field.modifiers.length;
-		if (replacingModifierIndex !== null) onremovemodifier(field.id, replacingModifierIndex);
+		if (replacingModifierIndex !== null) store.removeModifier(activeSchema.id, field.id, replacingModifierIndex);
 		
-		onaddmodifier(field.id, { name, value: spec.hasValue ? spec.defaultValue : undefined });
+		store.addModifier(activeSchema.id, field.id, { name, value: spec.hasValue ? spec.defaultValue : undefined });
 		
 		if (spec.hasValue) {
 			editingModifierIndex = targetIdx;
@@ -242,12 +238,15 @@
 	}
 
 	function handleModAreaKeydown(e: KeyboardEvent) {
+		const activeSchema = store.activeSchema;
+		if (!activeSchema) return;
+
 		if (e.key === '.') {
 			e.preventDefault();
 			openModifierDropdown(modAreaEl ?? undefined);
 		} else if (e.key === 'Backspace') {
 			e.preventDefault();
-			if (field.modifiers.length > 0) onremovemodifier(field.id, field.modifiers.length - 1);
+			if (field.modifiers.length > 0) store.removeModifier(activeSchema.id, field.id, field.modifiers.length - 1);
 			else if (isEnum) phase = 'enumTags';
 			else openTypeDropdown();
 		} else if (e.key === 'Enter' || e.key === ',') {
@@ -297,10 +296,10 @@
 			style="width: {Math.max(field.key.length, 4)}ch"
 			value={field.key}
 			placeholder="name"
-			oninput={(e) => onupdatekey(field.id, (e.target as HTMLInputElement).value)}
+			oninput={(e) => store.activeSchema && store.updateField(store.activeSchema.id, field.id, { key: (e.target as HTMLInputElement).value })}
 			onkeydown={handleKeyInputKeydown}
 			onfocus={() => { phase = 'name'; onfocus?.(field.id); }}
-			data-testid="key-input"
+			aria-label="Field name"
 		/>
 
 		{#if mappingMenuItems.length > 1 || heuristicMatch}
@@ -368,7 +367,7 @@
 	{#if isEnum}
 		<EnumTagInput
 			values={field.enumValues ?? []}
-			onchange={(vals) => onupdateenumvalues(field.id, vals)}
+			onchange={(vals) => store.activeSchema && store.updateField(store.activeSchema.id, field.id, { enumValues: vals })}
 			ondone={() => { phase = 'modifiers'; tick().then(() => modAreaEl?.focus()); }}
 		/>
 	{/if}
@@ -401,10 +400,10 @@
 							oncommit={(v, isNext) => {
 								editingModifierIndex = null;
 								phase = 'modifiers';
-								onupdatemodifier(field.id, i, v);
+								store.activeSchema && store.updateModifierValue(store.activeSchema.id, field.id, i, v);
 								tick().then(() => { modAreaEl?.focus(); if (isNext) openModifierDropdown(); });
 							}}
-							oncancel={() => { editingModifierIndex = null; phase = 'modifiers'; onremovemodifier(field.id, i); tick().then(() => modAreaEl?.focus()); }}
+							oncancel={() => { editingModifierIndex = null; phase = 'modifiers'; store.activeSchema && store.removeModifier(store.activeSchema.id, field.id, i); tick().then(() => modAreaEl?.focus()); }}
 						/>
 					{:else}
 						<button type="button" class="mod-val t-code-sm" onclick={() => { editingModifierIndex = i; phase = 'modifierArg'; }}>
@@ -415,7 +414,7 @@
 					<span class="mod-parens t-code-sm"><span class="punct">()</span></span>
 				{/if}
 
-				<button class="mod-x" type="button" onclick={(e) => { e.stopPropagation(); onremovemodifier(field.id, i); }}>×</button>
+				<button class="mod-x" type="button" onclick={(e) => { e.stopPropagation(); store.activeSchema && store.removeModifier(store.activeSchema.id, field.id, i); }}>×</button>
 			</span>
 		{/each}
 
@@ -460,7 +459,7 @@
 	.key-input:focus { outline: none; background: var(--bg-3); box-shadow: 0 0 0 1px var(--accent-edge); }
 
 	.mapping-anchor-inline { display: flex; align-items: center; }
-	.mapping-btn { display: flex; align-items: center; gap: 4px; padding: 1px 4px; border-radius: var(--r-sm); color: var(--ink-3); background: transparent; border: 1px solid transparent; cursor: pointer; opacity: 0.4; }
+	.mapping-btn { display: flex; align-items: center; gap: 4px; padding: 1px 4px; border-radius: var(--radius-sm); color: var(--ink-3); background: transparent; border: 1px solid transparent; cursor: pointer; opacity: 0.4; }
 	.mapping-btn:hover { opacity: 1; background: var(--bg-1); border-color: var(--line); }
 	.mapping-btn.is-magic { opacity: 0.6; color: var(--ink-3); background: var(--bg-1); border-color: var(--line-strong); }
 	.mapping-btn.is-mapped:hover, .mapping-btn.is-magic:hover { opacity: 1; background: var(--accent-soft); }
@@ -490,5 +489,5 @@
 
 	.remove-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--ink-3); font-size: 16px; cursor: pointer; opacity: 0; }
 	.editor-line:hover .remove-btn { opacity: 1; }
-	.remove-btn:hover { color: var(--red); }
+	.remove-btn:hover { color: var(--warn); }
 </style>

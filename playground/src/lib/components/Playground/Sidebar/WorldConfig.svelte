@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
-
+	import NumberInput from '$lib/components/Primitives/NumberInput.svelte';
 
 	interface Props {
 		seed: number;
@@ -32,11 +32,9 @@
 		<label>
 			<span class="section-label">Generation Seed</span>
 			<div class="control">
-				<input 
-					type="number" 
+				<NumberInput 
 					value={seed} 
-					oninput={(e) => onupdateseed?.(Number(e.currentTarget.value))}
-					class="t-code-sm"
+					onchange={onupdateseed}
 				/>
 				{#if !isCompact}
 					<p class="help t-code-tight">Deterministic results for the same seed.</p>
@@ -127,17 +125,11 @@
 		gap: var(--space-1);
 	}
 
-	input[type="number"] {
-		background: var(--bg-1);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-sm);
-		padding: var(--space-1) var(--space-2);
-		color: var(--ink-1);
-		width: 100%;
+	:global(.number-input) {
 		max-width: 120px;
 	}
 
-	.is-compact input[type="number"] {
+	.is-compact :global(.number-input) {
 		max-width: 80px;
 	}
 

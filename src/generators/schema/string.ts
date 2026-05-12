@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../../types.js";
-import { def, checks } from "./zod-def.js";
+import { def, checks, applyModifiers } from "./zod-def.js";
 import { generateFromSchema } from "./router.js";
 import { toBase64 } from "../../utils/encoding.js";
 import { TECH_WORDS } from "../data/word.js";
@@ -230,17 +230,7 @@ export function generateZodString(schema: ZodTypeAny, ctx: GeneratorContext): st
     }
   }
 
-  for (const c of checks(schema)) {
-    if (c.check === "toLowerCase") result = result.toLowerCase();
-    if (c.check === "toUpperCase") result = result.toUpperCase();
-    if (c.check === "trim") result = result.trim();
-    if (c.check === "overwrite") {
-      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
-      if (typeof tx === "function") result = tx(result);
-    }
-  }
-
-  return result;
+  return applyModifiers(result, schema) as string;
 }
 
 export function generateTemplateLiteral(schema: ZodTypeAny, ctx: GeneratorContext): string {
@@ -248,10 +238,9 @@ export function generateTemplateLiteral(schema: ZodTypeAny, ctx: GeneratorContex
   // It's often represented recursively, but since we don't know the exact def structure yet,
   // we'll try to guess based on schema._zod.def.items or .types
   const d = def(schema) as unknown as {
-    types?: Array<ZodTypeAny | string>;
-    items?: Array<ZodTypeAny | string>;
+    parts?: Array<ZodTypeAny | string>;
   };
-  const parts = d.types ?? d.items ?? [];
+  const parts = d.parts ?? [];
   let result = "";
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];

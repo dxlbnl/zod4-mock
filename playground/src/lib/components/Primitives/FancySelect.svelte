@@ -9,6 +9,7 @@
 	}
 
 	interface Props {
+		id?: string;
 		options: Option[];
 		value: string;
 		placeholder?: string;
@@ -20,6 +21,7 @@
 	}
 
 	let { 
+		id,
 		options, 
 		value, 
 		placeholder = 'Select...', 
@@ -97,9 +99,14 @@
 	class:disabled 
 	class:is-open={isOpen}
 	onkeydown={handleKeydown}
-	role="none"
+	role="combobox"
+	tabindex="-1"
+	aria-haspopup="listbox"
+	aria-expanded={isOpen}
+	aria-controls={isOpen ? "options-menu" : undefined}
 >
 	<button 
+		{id}
 		type="button" 
 		class="select-trigger {triggerClass}" 
 		class:variant-ghost={variant === 'ghost'}
@@ -119,9 +126,8 @@
 	</button>
 
 	{#if isOpen}
-		<div class="options-menu" transition:fade={{ duration: 100 }} role="listbox">
+		<div id="options-menu" class="options-menu" transition:fade={{ duration: 100 }} role="listbox">
 			{#each options as opt, i}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div 
 					class="option" 
 					class:is-selected={value === opt.value}
@@ -129,8 +135,9 @@
 					role="option"
 					aria-selected={value === opt.value}
 					onclick={() => select(opt.value)}
+					onkeydown={(e) => e.key === 'Enter' && select(opt.value)}
 					onmouseenter={() => activeIndex = i}
-					tabindex="-1"
+					tabindex="0"
 				>
 					{#if opt.icon}
 						<span class="opt-icon">{opt.icon}</span>
@@ -151,7 +158,7 @@
 <style>
 	.fancy-select {
 		position: relative;
-		width: 100%;
+		min-width: 0;
 		height: 100%;
 	}
 

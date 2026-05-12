@@ -98,6 +98,7 @@ export function generateZodBigInt(schema: ZodTypeAny, ctx: GeneratorContext): bi
 
   const range = max - min;
   if (range <= BigInt(0)) return min;
-  const cap = range > BigInt(1_000_000) ? BigInt(1_000_000) : range;
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  const cap = range > maxSafe ? maxSafe : range;
   return min + BigInt(prng.int(0, Number(cap)));
 }

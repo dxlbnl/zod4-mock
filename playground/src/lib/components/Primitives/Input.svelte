@@ -93,7 +93,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		padding: var(--space-1) var(--space-2);
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 	}
 	.field-label {
 		color: var(--ink-2);
@@ -104,7 +104,7 @@
 		flex: 1;
 		background: var(--bg-2);
 		border: 1px solid var(--line);
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 		padding: 3px var(--space-2);
 		color: var(--ink-0);
 		font: inherit;

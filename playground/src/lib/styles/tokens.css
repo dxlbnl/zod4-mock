@@ -30,9 +30,9 @@
   --syn-fn: #fde68a;
   --syn-punct: #9494b0;
 
-  --r-sm: 3px;
-  --r-md: 5px;
-  --r-lg: 8px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
 
   /* Shadow tokens */
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.02);
@@ -46,6 +46,7 @@
   --space-5: 16px;
   --space-6: 24px;
   --space-7: 32px;
+  --space-8: 48px;
 
   /* Component Heights */
   --h-row: 28px;

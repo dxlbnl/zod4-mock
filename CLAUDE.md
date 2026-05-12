@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 **Library:**
+
 ```bash
 pnpm typecheck       # type-check
 pnpm lint            # lint code
@@ -12,6 +13,7 @@ pnpm test            # run all tests
 ```
 
 **Playground:**
+
 ```bash
 pnpm check           # svelte-check
 pnpm test:unit       # playground unit tests

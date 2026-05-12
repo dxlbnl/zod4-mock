@@ -8,73 +8,38 @@
 	import RelationsManager from './RelationsManager.svelte';
 	import WorldConfig from '../Sidebar/WorldConfig.svelte';
 	import FancySelect from '$lib/components/Primitives/FancySelect.svelte';
-	import type { FieldDef, ModifierDef, SchemaDef } from '$lib/state.svelte';
+	import NumberInput from '$lib/components/Primitives/NumberInput.svelte';
+	import Input from '$lib/components/Primitives/Input.svelte';
+	import type { FieldDef, ModifierDef, SchemaDef, PlaygroundStore } from '$lib/state.svelte';
 	import { type ZodFieldType } from '$lib/field-types';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 	import { slide } from 'svelte/transition';
 
 	interface Props {
+		title: string;
 		schema: SchemaDef | null;
 		schemas: SchemaDef[];
-		title: string;
-
-		onaddfield?: (parentId?: string) => string | void;
-		onremovefield?: (id: string) => void;
-		onupdatefield?: (id: string, patch: Partial<FieldDef>) => void;
-		onaddmodifier?: (fieldId: string, mod: ModifierDef) => void;
-		onupdatemodifier?: (fieldId: string, index: number, value: string | number | boolean) => void;
-		onremovemodifier?: (fieldId: string, index: number) => void;
-		onupdateenumvalues?: (fieldId: string, values: string[]) => void;
-		onselectfield?: (id: string | null) => void;
 		selectedFieldId?: string | null;
-		onupdatetitle?: (val: string) => void;
-		onupdatepopulate?: (val: number) => void;
-
-		onupdatederived?: (sourceId: string | undefined) => void;
-		onaddrelation?: (targetId: string, name: string) => void;
-		onremoverelation?: (name: string) => void;
-
-		onupdateseed?: (val: number) => void;
-		onupdateprob?: (val: number) => void;
-
+		onselectfield?: (id: string | null) => void;
+		
 		// World config (for mobile/empty state)
 		world?: { seed: number; optionalProbability: number; zodVersion: string };
 		availableZodVersions?: string[];
-		onchangezod?: (v: string) => void;
-
-		// Mobile context
 		activeSchemaId?: string | null;
-		onaddschema?: () => void;
-		onselectschema?: (id: string | null) => void;
 	}
 
 	let {
+		title,
 		schema = null,
 		schemas = [],
-		title,
-		onaddfield,
-		onremovefield,
-		onupdatefield,
-		onaddmodifier,
-		onupdatemodifier,
-		onremovemodifier,
-		onupdateenumvalues,
-		onselectfield,
 		selectedFieldId = null,
-		onupdatetitle,
-		onupdatepopulate,
-		onupdatederived,
-		onaddrelation,
-		onremoverelation,
+		onselectfield,
 		world,
-		onupdateseed,
-		onupdateprob,
-		activeSchemaId = null,
-		onaddschema,
-		onselectschema,
 		availableZodVersions = [],
-		onchangezod
+		activeSchemaId = null,
 	}: Props = $props();
+
+	const store = getContext<PlaygroundStore>('playground-store');
 
 	// ── UI state ──────────────────────────────────────────────────────────
 	let lastAddedId = $state<string | null>(null);
@@ -85,7 +50,7 @@
 	onMount(() => {
 		const handleClick = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
-			const isCogClick = !!target.closest('.icon-btn');
+			const isCogClick = !!target.closest('[data-testid="settings-toggle"]');
 			const isInsideSettings = configBarEl?.contains(target);
 
 			if (showSettings && !isInsideSettings && !isCogClick) {
@@ -111,7 +76,8 @@
 	}
 
 	async function handleAddField(parentId?: string) {
-		const newId = onaddfield?.(parentId);
+		if (!schema) return;
+		const newId = store.addField(schema.id, parentId);
 		if (typeof newId === 'string') {
 			lastAddedId = newId;
 			await tick();
@@ -120,10 +86,11 @@
 	}
 
 	function handleRemoveField(id: string) {
+		if (!schema) return;
 		const ids = flattenIds(fields);
 		const idx = ids.indexOf(id);
 		const prevId = idx > 0 ? ids[idx - 1] : ids[idx + 1] ?? null;
-		onremovefield?.(id);
+		store.removeField(schema.id, id);
 		tick().then(() => {
 			onselectfield?.(prevId);
 		});
@@ -161,8 +128,9 @@
 	}
 
 	function handleUpdateType(id: string, type: ZodFieldType) {
+		if (!schema) return;
 		const isGroup = type === 'object';
-		onupdatefield?.(id, { type, kind: isGroup ? 'group' : 'field' });
+		store.updateField(schema.id, id, { type, kind: isGroup ? 'group' : 'field' });
 		if (type === 'object') {
 			tick().then(() => handleAddField(id));
 		}
@@ -184,9 +152,9 @@
 			triggerClass="t-title"
 			onchange={(val) => {
 				if (val === 'add') {
-					onaddschema?.();
+					store.addSchema('NewSchema');
 				} else {
-					onselectschema?.(val === 'world' ? null : val);
+					store.setActiveSchema(val === 'world' ? null : val);
 				}
 			}}
 		/>
@@ -212,37 +180,31 @@
 				>
 					<div class="config-row">
 						<div class="config-item">
-							<label for="schema-name-settings">Schema Name</label>
-							<input 
+							<label for="schema-name-settings" class="t-eyebrow">Schema Name</label>
+							<Input 
 								id="schema-name-settings"
-								type="text" 
-								value={schema.name}
-								oninput={(e) => onupdatetitle?.(e.currentTarget.value)}
+								value={schema.name} 
+								oninput={(e) => store.renameSchema(schema.id, e.currentTarget.value)}
 							/>
 						</div>
 						<div class="config-item">
-							<label for="populate-count">Populate</label>
-							<input 
+							<label for="populate-count" class="t-eyebrow">Populate</label>
+							<NumberInput 
 								id="populate-count"
-								type="number" 
 								value={schema.populateCount} 
-								oninput={(e) => onupdatepopulate?.(parseInt(e.currentTarget.value) || 0)}
-								min="0"
+								onchange={(val) => store.setPopulateCount(schema.id, val)}
+								min={0}
 							/>
 						</div>
 					</div>
 					<div class="config-row">
 						<div class="config-item">
-							<label for="derived-from">Derived From</label>
+							<label for="derived-from" class="t-eyebrow">Derived From</label>
 							<FancySelect
-								options={[
-									{ label: 'None (Independent)', value: '' },
-									...schemas
-										.filter(s => s.id !== schema?.id)
-										.map(s => ({ label: s.name, value: s.id }))
-								]}
+								id="derived-from"
+								options={[{ label: 'None (Independent)', value: '' }, ...schemas.filter(s => s.id !== schema?.id).map(s => ({ label: s.name, value: s.id }))]}
 								value={schema.derivedFrom ?? ''}
-								onchange={(val) => onupdatederived?.(val || undefined)}
+								onchange={(val) => store.setDerivedFrom(schema.id, val || undefined)}
 							/>
 						</div>
 					</div>
@@ -253,10 +215,23 @@
 							<RelationsManager 
 								{schema} 
 								{schemas} 
-								onadd={onaddrelation!} 
-								onremove={onremoverelation!} 
+								onadd={(target, name) => store.addSchemaRelation(schema.id, target, name)} 
+								onremove={(name) => store.removeSchemaRelation(schema.id, name)} 
 							/>
 						</div>
+					</div>
+
+					<div class="config-row danger-zone">
+						<button 
+							class="btn danger t-eyebrow" 
+							style="width: 140px; height: var(--h-btn);"
+							onclick={() => {
+								store.removeSchema(schema.id);
+								showSettings = false;
+							}}
+						>
+							Delete Schema
+						</button>
 					</div>
 				</div>
 			{/if}
@@ -281,11 +256,11 @@
 				<WorldConfig 
 					seed={world?.seed ?? 0}
 					optionalProbability={world?.optionalProbability ?? 0}
-					onupdateseed={onupdateseed}
-					onupdateprob={onupdateprob}
+					onupdateseed={(v) => store.setWorldSeed(v)}
+					onupdateprob={(v) => store.setOptionalProbability(v)}
 					zodVersion={world?.zodVersion}
 					{availableZodVersions}
-					{onchangezod}
+					onchangezod={(v) => store.setZodVersion(v)}
 				/>
 			</div>
 		{/if}
@@ -304,19 +279,12 @@
 				sourceSchema={sourceSchema}
 				currentSchemaRelations={schema?.relations ?? []}
 
-				onupdatekey={(id: string, key: string) => onupdatefield?.(id, { key })}
 				onupdatetype={handleUpdateType}
-				onaddmodifier={(id: string, mod: ModifierDef) => onaddmodifier?.(id, mod)}
-				onupdatemodifier={(id: string, idx: number, val: string | number | boolean) => onupdatemodifier?.(id, idx, val)}
-				onremovemodifier={(id: string, idx: number) => onremovemodifier?.(id, idx)}
-				onupdateenumvalues={(id: string, vals: string[]) => onupdateenumvalues?.(id, vals)}
-				
-				onupdatemapping={(patch: Partial<FieldDef>) => onupdatefield?.(field.id, patch)}
 
 				onremove={handleRemoveField}
 				onnextsibling={handleNextSibling}
 				onexitnesting={handleExitNesting}
-				onfocus={(id: string | null) => onselectfield?.(id)}
+				onfocus={(id) => onselectfield?.(id)}
 			/>
 
 			{#if field.kind === 'group' && field.children?.length}
@@ -386,6 +354,7 @@
 		right: 0;
 		display: flex;
 		flex-direction: column;
+		align-items: flex-start;
 		gap: var(--space-4);
 		padding: var(--space-4);
 		background: var(--bg-1);
@@ -403,32 +372,21 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-1);
-		flex: 1;
+		flex: none;
 	}
-	.config-item.full { flex: none; width: 100%; }
+	.config-item.full { width: 100%; max-width: 400px; }
+	.config-item :global(.input), .config-item :global(.fancy-select), .config-item :global(.number-input) {
+		width: 180px;
+	}
+	.config-item.full :global(.fancy-select) {
+		width: 100%;
+	}
 
 	.config-item label {
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		color: var(--ink-3);
-		letter-spacing: 0.05em;
+		margin-bottom: var(--space-1);
 	}
 
-	input {
-		background: var(--bg-2);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-sm);
-		padding: var(--space-1) var(--space-2);
-		color: var(--ink-1);
-		font-family: inherit;
-		font-size: 13px;
-	}
-
-	input:focus {
-		outline: none;
-		border-color: var(--accent-bright);
-	}
+	/* input styles are global */
 
 	.lines {
 		flex: 1;
@@ -476,6 +434,12 @@
 		border-color: var(--accent);
 		color: var(--accent);
 		background: var(--accent-soft);
+	}
+
+	.danger-zone {
+		margin-top: var(--space-2);
+		padding-top: var(--space-4);
+		border-top: 1px solid var(--line);
 	}
 
 	.world-config-body {

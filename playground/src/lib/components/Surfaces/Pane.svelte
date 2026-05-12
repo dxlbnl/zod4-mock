@@ -117,7 +117,7 @@
 	.pane-title-input {
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: var(--r-sm);
+		border-radius: var(--radius-sm);
 		color: var(--ink-0);
 		padding: 2px 4px;
 		margin-left: -4px;
