@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createPrng } from "../../../src/prng.js";
-import { generateFromSchema } from "../../../src/generators/schema/router.js";
-import { SchemaRegistry } from "../../../src/registry.js";
-import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../src/types.js";
+import { createPrng } from "../../../../src/prng.js";
+import { generateFromSchema } from "../../../../src/generators/schema/router.js";
+import { SchemaRegistry } from "../../../../src/registry.js";
+import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
 
 const EMPTY_GEN = {} as BoundGenerators;
 

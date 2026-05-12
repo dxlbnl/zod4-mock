@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld } from "../../../src/index.js";
-import { firstName, prefix } from "../../../src/generators/data/person.js";
-import { createPrng } from "../../../src/prng.js";
+import { createWorld } from "../../../../src/index.js";
+import { firstName, prefix } from "../../../../src/generators/data/person.js";
+import { createPrng } from "../../../../src/prng.js";
 
 describe("Person Gender-Aware Generation", () => {
   const prng = createPrng(42);

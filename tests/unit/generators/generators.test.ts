@@ -7,8 +7,8 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { generateFromSchema, generateFromKey, createPrng } from "../../src/index.js";
-import type { BoundGenerators, GeneratorContext, Registry } from "../../src/index.js";
+import { generateFromSchema, generateFromKey, createPrng } from "../../../src/index.js";
+import type { BoundGenerators, GeneratorContext, Registry } from "../../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Minimal stub registry for isolated generator tests

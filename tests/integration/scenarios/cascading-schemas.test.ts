@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld } from "../../src/index.js";
+import { createWorld } from "../../../src/index.js";
 
 /**
  * Cascading / Nested Schemas Integration Test

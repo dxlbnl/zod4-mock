@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { generateFromSchema } from "../../src/generators/schema/router.js";
-import { createWorld } from "../../src/index.js";
+import { generateFromSchema } from "../../../src/generators/schema/router.js";
+import { createWorld } from "../../../src/index.js";
 
 describe("router - generateFromSchema", () => {
   const world = createWorld();

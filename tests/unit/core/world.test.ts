@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, generate } from "../../src/index.js";
+import { createWorld, generate } from "../../../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures

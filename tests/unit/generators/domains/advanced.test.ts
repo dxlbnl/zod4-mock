@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
-import { createPrng } from "../../../src/prng.js";
+import { createPrng } from "../../../../src/prng.js";
 import {
   generateFromSchema,
   UnsupportedSchemaError,
-} from "../../../src/generators/schema/router.js";
-import { SchemaRegistry } from "../../../src/registry.js";
-import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../src/types.js";
+} from "../../../../src/generators/schema/router.js";
+import { SchemaRegistry } from "../../../../src/registry.js";
+import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
 
 const EMPTY_GEN = {} as BoundGenerators;
 

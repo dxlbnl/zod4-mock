@@ -4,17 +4,17 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { createPrng } from "../../../src/prng.js";
-import * as commerce from "../../../src/generators/data/commerce.js";
-import * as company from "../../../src/generators/data/company.js";
-import * as date from "../../../src/generators/data/date.js";
-import * as finance from "../../../src/generators/data/finance.js";
-import * as internet from "../../../src/generators/data/internet.js";
-import * as location from "../../../src/generators/data/location.js";
-import * as phone from "../../../src/generators/data/phone.js";
-import * as vehicle from "../../../src/generators/data/vehicle.js";
-import * as word from "../../../src/generators/data/word.js";
-import { toBase64 } from "../../../src/utils/encoding.js";
+import { createPrng } from "../../../../src/prng.js";
+import * as commerce from "../../../../src/generators/data/commerce.js";
+import * as company from "../../../../src/generators/data/company.js";
+import * as date from "../../../../src/generators/data/date.js";
+import * as finance from "../../../../src/generators/data/finance.js";
+import * as internet from "../../../../src/generators/data/internet.js";
+import * as location from "../../../../src/generators/data/location.js";
+import * as phone from "../../../../src/generators/data/phone.js";
+import * as vehicle from "../../../../src/generators/data/vehicle.js";
+import * as word from "../../../../src/generators/data/word.js";
+import { toBase64 } from "../../../../src/utils/encoding.js";
 
 function prng(seed = 42) {
   return createPrng(seed);

@@ -9,15 +9,15 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
-import { generators, createWorld, createPrng } from "../../src/index.js";
-import { generateFromSchema } from "../../src/generators/schema/router.js";
+import { generators, createWorld, createPrng } from "../../../src/index.js";
+import { generateFromSchema } from "../../../src/generators/schema/router.js";
 import type {
   BoundGenerators,
   GenerateOptions,
   GeneratorContext,
   KeyGenerator,
   Registry,
-} from "../../src/index.js";
+} from "../../../src/index.js";
 
 const STUB_REGISTRY: Registry = {
   store: () => {
@@ -602,7 +602,7 @@ describe("generators.string", () => {
 // DEFAULT_KEY_MAP and DEFAULT_KEY_PATTERNS
 // ---------------------------------------------------------------------------
 
-import { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS, generateFromKey } from "../../src/index.js";
+import { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS, generateFromKey } from "../../../src/index.js";
 
 describe("DEFAULT_KEY_MAP", () => {
   it("is exported and is a plain object", () => {

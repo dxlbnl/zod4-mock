@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { def, checks, unwrap } from "../../src/generators/schema/zod-def.js";
+import { def, checks, unwrap } from "../../../src/generators/schema/zod-def.js";
 
 // ---------------------------------------------------------------------------
 // _zod.def accessor

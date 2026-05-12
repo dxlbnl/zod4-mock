@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generators, createPrng } from "../../../src/index.js";
+import { generators, createPrng } from "../../../../src/index.js";
 
 describe("Dutch Localization Verification", () => {
   const prng = createPrng(123);

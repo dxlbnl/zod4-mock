@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { createPrng, fieldSeed } from "../../src/index.js";
+import { createPrng, fieldSeed } from "../../../src/index.js";
 
 describe("createPrng", () => {
   it("is deterministic: same seed produces same sequence", () => {

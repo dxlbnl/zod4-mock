@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld, generators } from "../../src/index.js";
+import { createWorld, generators } from "../../../src/index.js";
 
 describe("Comprehensive Heuristic Constraints & Modifiers", () => {
   describe("String Heuristics (e.g. lastName, email, city)", () => {
