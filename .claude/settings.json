@@ -4,7 +4,8 @@
       "Bash(node -e ' *)",
       "Bash(pnpm test *)",
       "Bash(pnpm typecheck *)",
-      "Bash(pnpm play *)"
+      "Bash(pnpm play *)",
+      "WebSearch"
     ]
   }
 }

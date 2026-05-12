@@ -16,9 +16,14 @@ const CURRENCIES: [Currency, ...Currency[]] = [
   { code: "GBP", name: "Britse Pond", symbol: "£", numeric: "826" },
   { code: "JPY", name: "Japanse Yen", symbol: "¥", numeric: "392" },
   { code: "CHF", name: "Zwitserse Frank", symbol: "CHF", numeric: "756" },
+  { code: "CAD", name: "Canadese Dollar", symbol: "C$", numeric: "124" },
+  { code: "AUD", name: "Australische Dollar", symbol: "A$", numeric: "036" },
+  { code: "CNY", name: "Chinese Yuan", symbol: "¥", numeric: "156" },
+  { code: "SEK", name: "Zweedse Kroon", symbol: "kr", numeric: "752" },
+  { code: "NZD", name: "Nieuw-Zeelandse Dollar", symbol: "NZ$", numeric: "554" },
 ];
 
-const TRANSACTION_TYPES = ["storting", "opname", "betaling", "factuur", "restitutie"] as const;
+const TRANSACTION_TYPES = ["storting", "opname", "betaling", "factuur", "restitutie", "overschrijving", "incasso", "salaris", "rente", "dividend"] as const;
 
 const ACCOUNT_NAMES = [
   "Spaarrekening",
@@ -26,6 +31,11 @@ const ACCOUNT_NAMES = [
   "Zakelijke Rekening",
   "Creditcard",
   "Beleggingsportefeuille",
+  "Gezamenlijke Rekening",
+  "Pensioenrekening",
+  "Kinderrekening",
+  "Lopend Krediet",
+  "Hypotheek"
 ] as const;
 
 const TRANSACTION_DESCRIPTIONS = [
@@ -35,13 +45,22 @@ const TRANSACTION_DESCRIPTIONS = [
   "Online winkelen",
   "Tankstation",
   "Restaurant rekening",
+  "Abonnement",
+  "Koffiebar",
+  "Verzekeringspremie",
+  "Energiebelasting",
+  "Kledingwinkel",
+  "Sportschool",
+  "Streamingdienst",
+  "Apotheek",
+  "Boekwinkel"
 ] as const;
 
-const BANK_CODES = ["ABNA", "INGB", "RABO", "SNSB", "TRIO"] as const;
+const BANK_CODES = ["ABNA", "INGB", "RABO", "SNSB", "TRIO", "KNAB", "BUNQ", "ASNB", "AEGO", "NNBA"] as const;
 
-const BIC_LOCATIONS = ["2U", "33", "88"] as const;
+const BIC_LOCATIONS = ["2U", "33", "88", "2A", "9A", "21"] as const;
 
-const CARD_ISSUERS = ["Visa", "Mastercard", "American Express", "Discover"] as const;
+const CARD_ISSUERS = ["Visa", "Mastercard", "American Express", "Discover", "Maestro", "Diners Club", "JCB"] as const;
 
 const HEX_CHARS = "0123456789abcdef".split("") as [string, ...string[]];
 const ALNUM_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789".split("") as [string, ...string[]];

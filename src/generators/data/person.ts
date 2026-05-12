@@ -6,105 +6,32 @@ import { sentence } from "./word.js";
 // ---------------------------------------------------------------------------
 
 const FIRST_NAMES_MALE = [
-  "Jan",
-  "Piet",
-  "Klaas",
-  "Hans",
-  "Dirk",
-  "Erik",
-  "Tom",
-  "Sven",
-  "Luc",
-  "Bas",
-  "Thijs",
-  "Bram",
-  "Luuk",
-  "Lars",
-  "Stijn",
-  "Gijs",
-  "Sem",
-  "Daan",
-  "Finn",
-  "Willem",
+  "Jan", "Piet", "Klaas", "Hans", "Dirk", "Erik", "Tom", "Sven", "Luc", "Bas", "Thijs", "Bram", "Luuk", "Lars", "Stijn", "Gijs", "Sem", "Daan", "Finn", "Willem",
+  "Milan", "Levi", "Lucas", "Noah", "Jesse", "Max", "Ruben", "Mees", "Sam", "Guus", "Julian", "Tim", "Koen", "Teun", "Jens", "Hugo", "Roel", "Floris", "Joris", "Mark"
 ] as const;
 
 const FIRST_NAMES_FEMALE = [
-  "Marie",
-  "Anna",
-  "Lisa",
-  "Emma",
-  "Sara",
-  "Lena",
-  "Nora",
-  "Eva",
-  "Julia",
-  "Inge",
-  "Lieke",
-  "Noa",
-  "Lotte",
-  "Fleur",
-  "Tess",
-  "Mila",
-  "Sanne",
-  "Sophie",
-  "Roos",
-  "Isa",
+  "Marie", "Anna", "Lisa", "Emma", "Sara", "Lena", "Nora", "Eva", "Julia", "Inge", "Lieke", "Noa", "Lotte", "Fleur", "Tess", "Mila", "Sanne", "Sophie", "Roos", "Isa",
+  "Zoë", "Evi", "Maud", "Lynn", "Yara", "Liv", "Sarah", "Nina", "Suze", "Fenny", "Sofie", "Fenna", "Bo", "Luna", "Feline", "Milou", "Lauren", "Vera", "Anne", "Laura"
 ] as const;
 
 const FIRST_NAMES_ALL = [...FIRST_NAMES_MALE, ...FIRST_NAMES_FEMALE] as const;
 
 const LAST_NAMES = [
-  "de Vries",
-  "Janssen",
-  "Bakker",
-  "Visser",
-  "Smit",
-  "Meijer",
-  "Peters",
-  "van den Berg",
-  "Dekker",
-  "Vermeer",
-  "Brouwer",
-  "Hendriks",
-  "Kuiper",
-  "Willems",
-  "van der Linden",
-  "Mulder",
-  "de Jong",
-  "de Groot",
-  "Bos",
-  "Vos",
-  "van Dijk",
-  "Postma",
-  "Dijkstra",
+  "de Vries", "Janssen", "Bakker", "Visser", "Smit", "Meijer", "Peters", "van den Berg", "Dekker", "Vermeer", "Brouwer", "Hendriks", "Kuiper", "Willems", "van der Linden", "Mulder", "de Jong", "de Groot", "Bos", "Vos", "van Dijk", "Postma", "Dijkstra",
+  "Veenstra", "Zijlstra", "Hoekstra", "Jansen", "Peeters", "Jacobs", "Maas", "Hermans", "Willemse", "Gerritsen", "Smits", "van de Ven", "van der Heijden", "Evers", "Kuipers", "Prins", "Timmermans", "Verhoeven", "van Dongen", "Schouten"
 ] as const;
 
 const JOB_TITLES = [
-  "Ontwikkelaar",
-  "Ingenieur",
-  "Manager",
-  "Ontwerper",
-  "Architect",
-  "Consultant",
-  "Specialist",
-  "Analist",
-  "Coördinator",
+  "Ontwikkelaar", "Ingenieur", "Manager", "Ontwerper", "Architect", "Consultant", "Specialist", "Analist", "Coördinator",
+  "Directeur", "Uitvoerder", "Adviseur", "Onderzoeker", "Beheerder", "Inspecteur", "Docent", "Redacteur", "Medewerker"
 ] as const;
 const JOB_AREAS = [
-  "Techniek",
-  "Product",
-  "Ontwerp",
-  "Data",
-  "Beveiliging",
-  "Marketing",
-  "Verkoop",
-  "Financiën",
-  "Operations",
-  "Juridisch",
-  "HR",
+  "Techniek", "Product", "Ontwerp", "Data", "Beveiliging", "Marketing", "Verkoop", "Financiën", "Operations", "Juridisch", "HR",
+  "Klantenservice", "Logistiek", "Communicatie", "R&D", "Kwaliteitszorg", "Inkoop", "Administratie"
 ] as const;
-const JOB_TYPES = ["Lead", "Senior", "Junior", "Hoofd", "Assistent", "Directeur"] as const;
-const JOB_DESCRIPTORS = ["Innovatief", "Globaal", "Centraal", "Direct", "Strategisch"] as const;
+const JOB_TYPES = ["Lead", "Senior", "Junior", "Hoofd", "Assistent", "Directeur", "Stagiair", "Interim", "Freelance", "Trainee"] as const;
+const JOB_DESCRIPTORS = ["Innovatief", "Globaal", "Centraal", "Direct", "Strategisch", "Operationeel", "Dynamisch", "Regionaal", "Internationaal", "Corporate"] as const;
 
 const PREFIXES_MALE = ["Dhr.", "Dr.", "Prof."] as const;
 const PREFIXES_FEMALE = ["Mevr.", "Dr.", "Prof."] as const;

@@ -18,6 +18,18 @@ const MANUFACTURERS = [
   "Hyundai",
   "Kia",
   "Mazda",
+  "Peugeot",
+  "Renault",
+  "Citroën",
+  "Fiat",
+  "Nissan",
+  "Chevrolet",
+  "Subaru",
+  "Lexus",
+  "Jaguar",
+  "Land Rover",
+  "Jeep",
+  "Mini",
 ] as const;
 const VEHICLE_TYPES = [
   "Sedan",
@@ -28,6 +40,12 @@ const VEHICLE_TYPES = [
   "Bestelwagen",
   "Vrachtwagen",
   "Elektrisch",
+  "Minivan",
+  "Pick-up",
+  "Stationwagen",
+  "Crossover",
+  "Camper",
+  "Sportwagen",
 ] as const;
 const COLORS = [
   "Rood",
@@ -40,8 +58,17 @@ const COLORS = [
   "Geel",
   "Oranje",
   "Donkerblauw",
+  "Bordeauxrood",
+  "Lichtblauw",
+  "Donkergroen",
+  "Paars",
+  "Roze",
+  "Bruin",
+  "Goud",
+  "Brons",
+  "Matzwart",
 ] as const;
-const FUELS = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof"] as const;
+const FUELS = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof", "LPG", "CNG", "PHEV"] as const;
 
 const MODELS = [
   "Model 3",
@@ -57,8 +84,27 @@ const MODELS = [
   "Ioniq 5",
   "EV6",
   "CX-5",
+  "Mustang",
+  "Focus",
+  "Yaris",
+  "Clio",
+  "208",
+  "500",
+  "Qashqai",
+  "Tucson",
+  "Sportage",
+  "Octavia",
+  "Leon",
+  "Astra",
+  "Corsa",
+  "Megane",
+  "Passat",
+  "Tiguan",
+  "Model Y",
+  "Model S",
+  "Model X",
 ] as const;
-const BICYCLE_BRANDS = ["Gazelle", "Batavus", "VanMoof", "Giant", "Specialized", "Trek"] as const;
+const BICYCLE_BRANDS = ["Gazelle", "Batavus", "VanMoof", "Giant", "Specialized", "Trek", "Cortina", "Stella", "Koga", "Sparta", "Pegasus", "Canyon", "Cube"] as const;
 
 const VIN_CHARS = "0123456789ABCDEFGHJKLMNPRSTUVWXYZ".split("") as [string, ...string[]];
 const VRM_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("") as [string, ...string[]];

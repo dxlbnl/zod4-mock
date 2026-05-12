@@ -25,3 +25,7 @@ Copy-pasteable solutions: ad-hoc generation, invoicing domain, document corpus, 
 ### [Zod v4 Schema Coverage](zod4-schema-coverage.md)
 
 Which Zod v4 schema types and validators are supported for mock data generation.
+
+### [Better Data Generation](better-gen/index.md)
+
+Experimental plan to improve generators (localization, markov chains, performance).

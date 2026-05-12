@@ -6,40 +6,19 @@ import { adjective, noun } from "./word.js";
 // ---------------------------------------------------------------------------
 
 const DEPARTMENTS = [
-  "Elektronica",
-  "Kleding",
-  "Huis",
-  "Tuin",
-  "Speelgoed",
-  "Boeken",
-  "Beauty",
-  "Auto",
-  "Sport",
-  "Gezondheid",
+  "Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty", "Auto", "Sport", "Gezondheid",
+  "Schoenen", "Sieraden", "Horloges", "Muziek", "Films", "Gereedschap", "Dierenbenodigdheden", "Baby",
+  "Kantoorartikelen", "Levensmiddelen"
 ] as const;
 const MATERIALS = [
-  "Hout",
-  "Metaal",
-  "Plastic",
-  "Glas",
-  "Stof",
-  "Steen",
-  "Leer",
-  "Keramiek",
+  "Hout", "Metaal", "Plastic", "Glas", "Stof", "Steen", "Leer", "Keramiek",
+  "Katoen", "Wol", "Zijde", "Rubber", "Brons", "Koper", "Goud", "Zilver",
+  "Platinum", "Papier", "Karton", "Bamboe"
 ] as const;
 const PRODUCT_ADJECTIVES = [
-  "Klein",
-  "Ergonomisch",
-  "Rustiek",
-  "Intelligent",
-  "Prachtig",
-  "Ongelooflijk",
-  "Praktisch",
-  "Handgemaakt",
-  "Generiek",
-  "Verfijnd",
-  "Merkloos",
-  "Lekker",
+  "Klein", "Ergonomisch", "Rustiek", "Intelligent", "Prachtig", "Ongelooflijk", "Praktisch", "Handgemaakt",
+  "Generiek", "Verfijnd", "Merkloos", "Lekker", "Modern", "Klassiek", "Innovatief", "Duurzaam",
+  "Gerecycled", "Stijlvol", "Minimalistisch", "Robuust", "Luxe", "Goedkoop"
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -6,19 +6,13 @@ import { noun } from "./word.js";
 // Datasets
 // ---------------------------------------------------------------------------
 
-export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev"] as const;
-const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co"] as const;
-const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss"] as const;
-const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] as const;
-export const EMOJIS = ["😀", "😂", "🚀", "🔥", "🌈", "💻", "✨", "🍕", "🍔", "🍦"] as const;
+export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev", "website.com", "portal.net", "app.io", "service.co", "company.nl", "platform.dev", "startup.ai", "blog.me"] as const;
+const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"] as const;
+const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"] as const;
+const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"] as const;
+export const EMOJIS = ["😀", "😂", "🚀", "🔥", "🌈", "💻", "✨", "🍕", "🍔", "🍦", "🎉", "❤️", "👍", "💡", "🤔", "🙌", "😎", "💯", "✅", "🌟", "🐱", "🐶", "🌺", "🌍", "🚗", "📱", "🎧", "⚽", "🏖️", "🍷"] as const;
 
-const EXAMPLE_SUFFIXES = ["com", "net", "org", "nl"] as const;
-
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
-] as const;
+const EXAMPLE_SUFFIXES = ["com", "net", "org", "nl", "io", "eu"] as const;
 
 const HTTP_STATUS_CODES = [200, 201, 204, 400, 401, 403, 404, 500, 502, 503] as const;
 
@@ -83,7 +77,29 @@ export function url(prng: Prng): string {
 }
 
 export function userAgent(prng: Prng): string {
-  return prng.pick(USER_AGENTS);
+  const os = prng.pick([
+    `Windows NT ${prng.pick(["10.0", "11.0", "6.3", "6.2", "6.1"])}`,
+    `Macintosh; Intel Mac OS X 10_${prng.int(10, 15)}_${prng.int(0, 9)}`,
+    `Macintosh; ARM Mac OS X 13_${prng.int(0, 5)}_${prng.int(0, 2)}`,
+    `X11; Linux x86_64`,
+    `X11; Ubuntu; Linux x86_64`,
+    `iPhone; CPU iPhone OS ${prng.int(14, 18)}_${prng.int(0, 5)} like Mac OS X`,
+    `iPad; CPU OS ${prng.int(14, 18)}_${prng.int(0, 5)} like Mac OS X`,
+    `Linux; Android ${prng.int(10, 14)}; SM-G${prng.int(900, 999)}B`
+  ]);
+  const webkitVersion = `${prng.int(537, 605)}.${prng.int(1, 36)}`;
+  const chromeVersion = `${prng.int(90, 130)}.0.${prng.int(4000, 6000)}.${prng.int(100, 200)}`;
+  const firefoxVersion = `${prng.int(90, 120)}.0`;
+  const safariVersion = `${prng.int(14, 17)}.${prng.int(0, 5)}`;
+  
+  const browsers = [
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion}`,
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Version/${safariVersion} Safari/${webkitVersion}`,
+    `Gecko/20100101 Firefox/${firefoxVersion}`,
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Mobile Safari/${webkitVersion}`,
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion} Edg/${chromeVersion}`
+  ];
+  return `Mozilla/5.0 (${os}) ${prng.pick(browsers)}`;
 }
 
 export function ipv4(prng: Prng): string {
