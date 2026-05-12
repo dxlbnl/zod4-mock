@@ -1,6 +1,16 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
 import { firstName, lastName } from "./person.js";
 import { noun } from "./word.js";
+import { siblingString } from "./sibling.js";
+
+/** Strip diacritics and keep only a-z. */
+function ascii(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
 
 // ---------------------------------------------------------------------------
 // Datasets
@@ -42,22 +52,64 @@ export function domainName(prng: Prng): string {
   return `${domainWord(prng)}.${domainSuffix(prng)}`;
 }
 
-export function username(prng: Prng): string {
-  const fn = firstName(prng).toLowerCase();
-  const ln = lastName(prng).toLowerCase().replace(/\s/g, "");
-  return prng.random() < 0.5 ? `${fn}.${ln}` : `${fn}${prng.int(10, 99)}`;
+export function username(prng: Prng, ctx?: GeneratorContext): string {
+  const nick  = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const first = siblingString(ctx, "firstName", "first_name", "voornaam", "forename");
+  const last  = siblingString(ctx, "lastName", "last_name", "achternaam", "surname");
+
+  if (nick) {
+    const base = ascii(nick);
+    if (base.length >= 2) return prng.random() < 0.4 ? `${base}${prng.int(10, 99)}` : base;
+  }
+  if (first ?? last) {
+    const f = ascii(first ?? "");
+    const l = ascii((last ?? "").split(" ").at(-1) ?? "");
+    const base = f + l || ascii(first ?? last ?? "");
+    if (base.length >= 2) return prng.random() < 0.5 ? `${base}${prng.int(10, 99)}` : base;
+  }
+  const fn = ascii(firstName(prng));
+  const ln = ascii(lastName(prng).split(" ").at(-1) ?? "");
+  return prng.random() < 0.5 ? `${fn}${ln}` : `${fn}${prng.int(10, 99)}`;
 }
 
-export function displayName(prng: Prng): string {
+export function displayName(prng: Prng, ctx?: GeneratorContext): string {
+  const first = siblingString(ctx, "firstName", "voornaam", "forename");
+  const last  = siblingString(ctx, "lastName", "achternaam", "surname");
+  if (first && last) return `${first} ${last}`;
+  if (first) return first;
+  if (last) return last;
   return `${firstName(prng)} ${lastName(prng)}`;
 }
 
-export function email(prng: Prng): string {
+export function email(prng: Prng, ctx?: GeneratorContext): string {
+  const domain = () => DOMAINS[prng.int(0, DOMAINS.length - 1)]!;
+
+  const nick    = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const first   = siblingString(ctx, "firstName", "first_name", "voornaam");
+  const last    = siblingString(ctx, "lastName", "last_name", "achternaam");
+  const company = siblingString(ctx, "company", "companyName", "company_name", "bedrijf");
+
+  if (nick) {
+    const local = ascii(nick);
+    if (local.length >= 2) return `${local}@${domain()}`;
+  }
+  if (first ?? last) {
+    const f = ascii(first ?? "");
+    const l = ascii((last ?? "").split(" ").at(-1) ?? "");
+    const local = [f, l].filter(Boolean).join(".");
+    if (local.length >= 2) return `${local}@${domain()}`;
+  }
+  if (company) {
+    const prefix = prng.pick(["info", "contact", "hello", "support"] as const);
+    const slug = ascii(company.split(" ")[0]!);
+    const d = slug.length >= 3 ? `${slug}.nl` : domain();
+    return `${prefix}@${d}`;
+  }
   return `${username(prng)}@${domainName(prng)}`;
 }
 
-export function exampleEmail(prng: Prng): string {
-  return `${username(prng)}@voorbeeld.${prng.pick(EXAMPLE_SUFFIXES)}`;
+export function exampleEmail(prng: Prng, ctx?: GeneratorContext): string {
+  return `${username(prng, ctx)}@voorbeeld.${prng.pick(EXAMPLE_SUFFIXES)}`;
 }
 
 export function emoji(prng: Prng): string {

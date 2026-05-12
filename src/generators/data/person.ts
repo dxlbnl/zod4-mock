@@ -1,5 +1,6 @@
 import type { Prng, GeneratorContext } from "../../types.js";
 import { sentence } from "./word.js";
+import { siblingString } from "./sibling.js";
 
 // ---------------------------------------------------------------------------
 // Datasets
@@ -68,11 +69,8 @@ export type Gender = "male" | "female" | "neutral" | string;
 function extractGender(gOrCtx?: Gender | GeneratorContext): "male" | "female" | "neutral" {
   if (!gOrCtx) return "neutral";
   if (typeof gOrCtx === "object") {
-    // gOrCtx is GeneratorContext — Gender is a string, so this branch is for ctx only
     const ctx: GeneratorContext = gOrCtx;
-    if (!ctx.current) return "neutral";
-    const g = (ctx.current["gender"] ?? ctx.current["geslacht"]) as string | undefined;
-    return normalizeGender(g);
+    return normalizeGender(siblingString(ctx, "gender", "geslacht", "sex", "sekse"));
   }
   return normalizeGender(gOrCtx);
 }

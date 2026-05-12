@@ -61,6 +61,8 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     email: data.internet.email as PrngGen,
     example_email: data.internet.exampleEmail as PrngGen,
     username: data.internet.username as PrngGen,
+    displayname: data.internet.displayName as PrngGen,
+    display_name: data.internet.displayName as PrngGen,
     password: (p) => data.string.nanoid(p, 16),
     url: data.internet.url as PrngGen,
     website: data.internet.url as PrngGen,
