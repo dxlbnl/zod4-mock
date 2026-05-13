@@ -1,0 +1,39 @@
+{
+  "name": "@zod4-mock/locale-names",
+  "version": "0.1.0",
+  "description": "Pre-trained Markov name models by cultural origin for zod4-mock locales",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./groups/dutch": {
+      "types": "./src/groups/dutch/index.ts",
+      "import": "./src/groups/dutch/index.ts"
+    },
+    "./groups/arabic": {
+      "types": "./src/groups/arabic/index.ts",
+      "import": "./src/groups/arabic/index.ts"
+    },
+    "./groups/turkish": {
+      "types": "./src/groups/turkish/index.ts",
+      "import": "./src/groups/turkish/index.ts"
+    },
+    "./groups/frisian": {
+      "types": "./src/groups/frisian/index.ts",
+      "import": "./src/groups/frisian/index.ts"
+    },
+    "./groups/english": {
+      "types": "./src/groups/english/index.ts",
+      "import": "./src/groups/english/index.ts"
+    }
+  },
+  "scripts": {
+    "fetch-data": "tsx scripts/fetch-data.ts",
+    "train": "tsx scripts/train.ts",
+    "verify": "tsx scripts/verify.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "zod4-mock": "workspace:*"
+  }
+}

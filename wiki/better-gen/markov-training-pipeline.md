@@ -147,13 +147,109 @@ At generation time: `r = prng.random()`, binary-search the CDF for the first val
 
 Add `pnpm train-markov` and `pnpm verify-markov` as convenience scripts in `package.json`.
 
+## Tuning Guide: Diagnosing Bad Output
+
+Run `pnpm verify` and look for these failure modes. Each has a specific cause and fix.
+
+---
+
+### Failure: words are too long ("Risharoumas", "Rencorviccol")
+
+**Cause A — corpus pollution.** The training corpus contains very long entries (compound words, multi-part names) that teach the model long n-gram chains are valid. Check:
+```bash
+awk '{ print length, $0 }' data/training/first-names-male.txt | sort -rn | head -20
+```
+If you see entries > 10 chars ("Soerinderpersad", "Shailinderkumar"), those are poisoning the bigram table.
+
+**Fix: filter the corpus by length before training.** Add a `maxWordLen` option to the train call:
+```typescript
+await trainMarkov({ ..., maxWordLen: 10 });  // drop any entry > 10 chars
+```
+Inside `train-markov.ts`, apply this after deduplication:
+```typescript
+.filter(w => w.length <= (opts.maxWordLen ?? Infinity))
+```
+
+**Cause B — no length steering in the sampler.** `sampleMarkov` follows the raw CDF until `maxLen`. For diverse corpora many states have low `$` probability — the sampler just runs to the wall.
+
+**Fix: add a length-bias check in `sampleMarkov`.** After the word exceeds a soft threshold, apply a progressive early-stop probability before the CDF draw:
+```typescript
+// After the word reaches softMax, probability of stopping grows linearly to 1 at maxLen
+const softMax = Math.floor(maxLen * 0.6);   // e.g. 6 if maxLen=10
+if (word.length >= minLen && word.length >= softMax) {
+  const stopProb = (word.length - softMax) / (maxLen - softMax);
+  if (prng.random() < stopProb) break;
+}
+```
+At `softMax` the stop probability is 0%; at `maxLen-1` it reaches ~90%. This produces a natural length distribution rather than a hard wall.
+
+---
+
+### Failure: compound names ("Lisameria", "Carrinichka")
+
+**Cause: the model merges two distinct names.** With order-2, "sa" → "m" is a valid transition from many names (Lisa**s**a → Maria). The model chains them. This is an order-2 fundamental limitation.
+
+**Fix: train with order 3.** Trigrams are far more path-specific. The sequence `isa` → `r` would require an actual trigram `isar` present in training, which almost never appears at a name boundary.
+
+```typescript
+await trainMarkov({ ..., order: 3 });
+```
+
+Order-3 increases state count from ~600 to ~3,000–6,000 for a typical name corpus, but on 25k+ training entries that's well-supported. Bundle size impact is modest.
+
+**Fix also: corpus size reduction.** 25,143 unique names is too many. This includes historical Dutch names, very rare names, and names from many linguistic origins — all contributing bigrams that cross-connect in unexpected ways. A curated list of the top 1,000–3,000 most common Dutch first names produces much cleaner output. If the source data has frequency counts, filter by frequency rather than arbitrary truncation.
+
+---
+
+### Failure: all nouns start with the same prefix ("Aang", "Aanvoerekvoe", "Aanslaankt")
+
+**Cause: corpus dominated by compound words.** Dutch compound nouns starting with `aan-`, `be-`, `ge-`, `ver-` etc. each appear once, but collectively they overwhelm the starting bigrams. If 30% of training nouns start with `aan`, the model starts 30% of generated nouns with `aan`.
+
+**Fix: strip compound words from the noun corpus.** Remove any word starting with a known Dutch compound prefix before training:
+```typescript
+const COMPOUND_PREFIXES = ["aan", "be", "ge", "her", "ont", "over", "ver", "uit", "in"];
+const filtered = words.filter(w => !COMPOUND_PREFIXES.some(p => w.startsWith(p)));
+```
+
+Or, more robustly: filter to words appearing with high frequency in common Dutch text, discarding rare compound forms entirely.
+
+---
+
+### Failure: short names keep appearing ("Win", "Ger", "Ber")
+
+**Cause: the corpus contains very short entries.** The training data may include nicknames, initials, or abbreviated forms (e.g. "a", "aa", "aad").
+
+**Fix: filter by minimum length** in the train script:
+```typescript
+.filter(w => w.length >= (opts.minWordLen ?? 1))
+```
+For first names set `minWordLen: 3`. For nouns, `minWordLen: 4`.
+
+The sampler's `minLen` parameter handles *generation* — but if the model was trained on short entries, it still learns high `$` probability at length 2–3, producing many short outputs even when `minLen` is set higher (since it resets and tries again, sometimes re-entering the same short path).
+
+---
+
+## Recommended Parameters per Model Type
+
+| Model type | `order` | `maxWordLen` (corpus filter) | `minWordLen` (corpus filter) | `maxLen` (sampler) | `softMax` (sampler) |
+|------------|:-------:|:----------------------------:|:----------------------------:|:-------------------:|:--------------------:|
+| First names | 3 | 10 | 3 | 10 | 6 |
+| Last names | 2 | 12 | 3 | 12 | 7 |
+| Nouns | 2 | 8 | 4 | 8 | 5 |
+| Adjectives | 2 | 10 | 4 | 10 | 6 |
+| Verbs | 2 | 10 | 3 | 10 | 6 |
+
+The sampler parameters (`maxLen`, `softMax`) should be passed per call-site, not stored in the model — they are generation preferences, not corpus properties.
+
+---
+
 ## When to Retrain
 
 - When adding a new locale
 - When the training corpus source releases a new version (annually for SSA names)
-- When output quality degrades (verify with `verify-markov.ts` samples)
+- When output quality degrades (verify with `pnpm verify`)
 
-Retrain, review the `verify-markov.ts` output, then commit the regenerated model file.
+Retrain, review the output, then commit the regenerated model file.
 
 ---
 

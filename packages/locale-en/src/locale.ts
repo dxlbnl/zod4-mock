@@ -1,8 +1,6 @@
 import type { LocaleData } from "../../../src/locales/types.js";
 import type { Prng } from "../../../src/types.js";
-import { enFirstNamesMaleModel } from "./models/first-names-male.js";
-import { enFirstNamesFemaleModel } from "./models/first-names-female.js";
-import { enLastNamesModel } from "./models/last-names.js";
+import { englishMaleModel, englishFemaleModel, englishLastNamesModel } from "@zod4-mock/locale-names/groups/english";
 import { enNounsModel } from "./models/nouns.js";
 import { enAdjectivesModel } from "./models/adjectives.js";
 
@@ -10,9 +8,9 @@ export const en: LocaleData = {
   id: "en",
 
   person: {
-    firstNamesMaleModel:   enFirstNamesMaleModel,
-    firstNamesFemaleModel: enFirstNamesFemaleModel,
-    lastNamesModel:        enLastNamesModel,
+    firstNamesMale:   [{ model: englishMaleModel,       weight: 100 }],
+    firstNamesFemale: [{ model: englishFemaleModel,     weight: 100 }],
+    lastNames:        [{ model: englishLastNamesModel,  weight: 100 }],
     prefixes: {
       male:    ["Mr.", "Dr.", "Prof."],
       female:  ["Ms.", "Mrs.", "Dr.", "Prof."],

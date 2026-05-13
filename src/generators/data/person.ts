@@ -1,6 +1,6 @@
 import type { Prng, GeneratorContext } from "../../types.js";
 import { siblingString } from "./sibling.js";
-import { sampleMarkov } from "./markov/sample.js";
+import { sampleWeighted } from "./markov/sample.js";
 import { en } from "../../locales/en.js";
 
 // ---------------------------------------------------------------------------
@@ -62,15 +62,30 @@ export function firstName(prng: Prng, genderOrCtx?: Gender | GeneratorContext): 
   const ctx = typeof genderOrCtx === "object" ? genderOrCtx : undefined;
   const g = extractGender(genderOrCtx);
   const locale = ctx?.locale ?? en;
-  if (g === "male")   return sampleMarkov(prng, locale.person.firstNamesMaleModel);
-  if (g === "female") return sampleMarkov(prng, locale.person.firstNamesFemaleModel);
+  if (g === "male")   return sampleWeighted(prng, locale.person.firstNamesMale);
+  if (g === "female") return sampleWeighted(prng, locale.person.firstNamesFemale);
   return prng.random() < 0.5
-    ? sampleMarkov(prng, locale.person.firstNamesMaleModel)
-    : sampleMarkov(prng, locale.person.firstNamesFemaleModel);
+    ? sampleWeighted(prng, locale.person.firstNamesMale)
+    : sampleWeighted(prng, locale.person.firstNamesFemale);
 }
 
 export function lastName(prng: Prng, ctx?: GeneratorContext): string {
-  return sampleMarkov(prng, (ctx?.locale ?? en).person.lastNamesModel);
+  const locale = ctx?.locale ?? en;
+  const stem = sampleWeighted(prng, locale.person.lastNames);
+  const pfxList = locale.person.lastNamePrefixes;
+  if (!pfxList || pfxList.length === 0) return stem;
+  // Weight "no prefix" at 100, then select proportionally
+  const prefixTotal = pfxList.reduce((s, p) => s + p.weight, 0);
+  const r = prng.random() * (prefixTotal + 100);
+  if (r >= prefixTotal) return stem;
+  let cum = 0;
+  for (const { prefix: pfx, weight } of pfxList) {
+    cum += weight;
+    // Capitalize prefix for standalone use ("De Jong"); formatFullName can
+    // lowercase it for full-name context ("Jan de Jong").
+    if (r < cum) return `${pfx.charAt(0).toUpperCase() + pfx.slice(1)} ${stem}`;
+  }
+  return stem;
 }
 
 export function middleName(prng: Prng, genderOrCtx?: Gender | GeneratorContext): string {

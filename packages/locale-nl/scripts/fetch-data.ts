@@ -40,8 +40,10 @@ try {
     "https://raw.githubusercontent.com/open-nl-data/dutch-names-dataset/main/firstnames.json",
   );
 
-  const male   = names.filter((n) => n.Mannen  > 5).map((n) => n.Voornaam.toLowerCase());
-  const female = names.filter((n) => n.Vrouwen > 5).map((n) => n.Voornaam.toLowerCase());
+  // Threshold > 100 selects the Dutch-core corpus (~2k–4k names) and discards
+  // low-frequency multicultural entries that pollute the Markov model.
+  const male   = names.filter((n) => n.Mannen  > 100).map((n) => n.Voornaam.toLowerCase());
+  const female = names.filter((n) => n.Vrouwen > 100).map((n) => n.Voornaam.toLowerCase());
 
   // Keep only simple Latin-alphabet names the Markov trainer handles
   const clean = (list: string[]) =>

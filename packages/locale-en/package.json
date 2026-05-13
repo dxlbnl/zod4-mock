@@ -15,6 +15,9 @@
     "train": "tsx scripts/train.ts",
     "verify": "tsx scripts/verify.ts"
   },
+  "dependencies": {
+    "@zod4-mock/locale-names": "workspace:*"
+  },
   "devDependencies": {
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

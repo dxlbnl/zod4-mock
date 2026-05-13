@@ -31,6 +31,10 @@ export interface TrainOptions {
   name: string;
   order?: number;
   prior?: number;
+  /** Minimum word length to include in training corpus (inclusive). Default: 1 */
+  minWordLen?: number;
+  /** Maximum word length to include in training corpus (inclusive). Default: Infinity */
+  maxWordLen?: number;
   /** Import path for the MarkovModel type in emitted files. Default: "zod4-mock" */
   typeImport?: string;
 }
@@ -120,7 +124,12 @@ ${tableEntries},
 // ---------------------------------------------------------------------------
 
 export async function trainMarkov(opts: TrainOptions): Promise<void> {
-  const { input, output, name, order = 2, prior = 0.01, typeImport = "zod4-mock" } = opts;
+  const {
+    input, output, name,
+    order = 2, prior = 0.01,
+    minWordLen = 1, maxWordLen = Infinity,
+    typeImport = "zod4-mock",
+  } = opts;
 
   const raw = readFileSync(input, "utf8");
   const words = raw
@@ -128,10 +137,11 @@ export async function trainMarkov(opts: TrainOptions): Promise<void> {
     .map((l) => l.trim())
     .filter((l) => l.length > 0 && !l.startsWith("#"))
     .map((l) => l.toLowerCase())
-    .filter((w) => /^[a-z]+$/.test(w));
+    .filter((w) => /^[a-z]+$/.test(w))
+    .filter((w) => w.length >= minWordLen && w.length <= maxWordLen);
 
   const unique = [...new Set(words)];
-  console.log(`Training on ${unique.length} unique words (order=${order}, prior=${prior}) …`);
+  console.log(`Training on ${unique.length} unique words (order=${order}, prior=${prior}, len=${minWordLen}–${maxWordLen === Infinity ? "∞" : maxWordLen}) …`);
 
   const { chars, table } = train(unique, order, prior);
   const src = emit(name, order, prior, chars, table, typeImport);
@@ -155,17 +165,24 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const input  = get("--input");
   const output = get("--output");
   const name   = get("--name");
-  const order  = Number(get("--order")  ?? "2");
-  const prior  = Number(get("--prior")  ?? "0.01");
+  const order  = Number(get("--order")   ?? "2");
+  const prior  = Number(get("--prior")   ?? "0.01");
+  const minWordLen = get("--min-len") ? Number(get("--min-len")) : undefined;
+  const maxWordLen = get("--max-len") ? Number(get("--max-len")) : undefined;
   const typeImport = get("--type-import") ?? "zod4-mock";
 
   if (!input || !output || !name) {
     console.error(
       "Usage: npx tsx scripts/train-markov.ts " +
-      "--input <file> --output <file> --name <identifier> [--order N] [--prior P] [--type-import <pkg>]",
+      "--input <file> --output <file> --name <identifier> " +
+      "[--order N] [--prior P] [--min-len N] [--max-len N] [--type-import <pkg>]",
     );
     process.exit(1);
   }
 
-  await trainMarkov({ input, output, name, order, prior, typeImport });
+  await trainMarkov({
+    input, output, name, order, prior, typeImport,
+    ...(minWordLen !== undefined && { minWordLen }),
+    ...(maxWordLen !== undefined && { maxWordLen }),
+  });
 }

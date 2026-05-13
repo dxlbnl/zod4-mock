@@ -1,18 +1,43 @@
-import type { LocaleData } from "../../../src/locales/types.js";
+import type { LocaleData, LastNamePrefix } from "../../../src/locales/types.js";
 import type { Prng } from "../../../src/types.js";
-import { nlFirstNamesMaleModel } from "./models/first-names-male.js";
-import { nlFirstNamesFemaleModel } from "./models/first-names-female.js";
-import { nlLastNamesModel } from "./models/last-names.js";
+import { dutchMaleModel, dutchFemaleModel, dutchLastNamesModel } from "@zod4-mock/locale-names/groups/dutch";
+import { arabicMaleModel, arabicFemaleModel }     from "@zod4-mock/locale-names/groups/arabic";
+import { turkishMaleModel, turkishFemaleModel }   from "@zod4-mock/locale-names/groups/turkish";
+import { frisianMaleModel, frisianFemaleModel }   from "@zod4-mock/locale-names/groups/frisian";
 import { nlNounsModel } from "./models/nouns.js";
 import { nlAdjectivesModel } from "./models/adjectives.js";
 
+// Approximate name-origin distribution in the Dutch population:
+//   ~68% Dutch-origin, ~12% Arabic, ~6% Turkish, ~2% Frisian, ~12% other (not modelled yet)
+// Weights are proportional; only modelled origins are included.
 export const nl: LocaleData = {
   id: "nl",
 
   person: {
-    firstNamesMaleModel:   nlFirstNamesMaleModel,
-    firstNamesFemaleModel: nlFirstNamesFemaleModel,
-    lastNamesModel:        nlLastNamesModel,
+    firstNamesMale: [
+      { model: dutchMaleModel,    weight: 68 },
+      { model: arabicMaleModel,   weight: 12 },
+      { model: turkishMaleModel,  weight:  6 },
+      { model: frisianMaleModel,  weight:  2 },
+    ],
+    firstNamesFemale: [
+      { model: dutchFemaleModel,   weight: 68 },
+      { model: arabicFemaleModel,  weight: 12 },
+      { model: turkishFemaleModel, weight:  6 },
+      { model: frisianFemaleModel, weight:  2 },
+    ],
+    lastNames: [{ model: dutchLastNamesModel, weight: 100 }],
+    // Tussenvoegsels — ~35% of Dutch surnames carry one. Weights are relative to
+    // each other; "no prefix" is implicitly given a weight of 100.
+    lastNamePrefixes: [
+      { prefix: "de",      weight: 15 },
+      { prefix: "van",     weight: 12 },
+      { prefix: "van der", weight:  5 },
+      { prefix: "van den", weight:  4 },
+      { prefix: "van de",  weight:  2 },
+      { prefix: "ten",     weight:  1 },
+      { prefix: "ter",     weight:  1 },
+    ] satisfies readonly LastNamePrefix[],
     prefixes: {
       male:    ["Dhr.", "Dr.", "Prof."],
       female:  ["Mevr.", "Dr.", "Prof."],
@@ -20,7 +45,8 @@ export const nl: LocaleData = {
     },
     suffixes: ["Jr.", "Sr.", "III"],
     genders:  ["Man", "Vrouw", "Non-binair", "Anders"],
-    formatFullName: (first, last) => `${first} ${last}`,
+    // Lowercase the tussenvoegsel in full names: "Jan de Jong" not "Jan De Jong"
+    formatFullName: (first, last) => `${first} ${last.charAt(0).toLowerCase() + last.slice(1)}`,
   },
 
   address: {

@@ -21,8 +21,8 @@ describe("extend()", () => {
     const custom = extend(en, { person: { genders: ["Male", "Female", "Robot"] } });
     expect(custom.person.genders).toEqual(["Male", "Female", "Robot"]);
     expect(custom.person.prefixes).toBe(en.person.prefixes);
-    expect(custom.person.firstNamesMaleModel).toBe(en.person.firstNamesMaleModel);
-    expect(custom.person.lastNamesModel).toBe(en.person.lastNamesModel);
+    expect(custom.person.firstNamesMale).toBe(en.person.firstNamesMale);
+    expect(custom.person.lastNames).toBe(en.person.lastNames);
     expect(custom.person.suffixes).toBe(en.person.suffixes);
   });
 
@@ -63,13 +63,13 @@ describe("extend()", () => {
     const mixed = extend(en, {
       id: "en-nl-names",
       person: {
-        firstNamesMaleModel: nl.person.firstNamesMaleModel,
-        firstNamesFemaleModel: nl.person.firstNamesFemaleModel,
-        lastNamesModel: nl.person.lastNamesModel,
+        firstNamesMale:   nl.person.firstNamesMale,
+        firstNamesFemale: nl.person.firstNamesFemale,
+        lastNames:        nl.person.lastNames,
       },
     });
     expect(mixed.id).toBe("en-nl-names");
-    expect(mixed.person.firstNamesMaleModel).toBe(nl.person.firstNamesMaleModel);
+    expect(mixed.person.firstNamesMale).toBe(nl.person.firstNamesMale);
     expect(mixed.person.genders).toBe(en.person.genders); // en genders preserved
     expect(mixed.word).toEqual(en.word);                  // en words preserved
   });

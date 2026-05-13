@@ -5,7 +5,9 @@
       "Bash(pnpm test *)",
       "Bash(pnpm typecheck *)",
       "Bash(pnpm play *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(curl -sI \"https://raw.githubusercontent.com/dominictarr/random-name/master/first-names.txt\")",
+      "Bash(curl -sI \"https://raw.githubusercontent.com/philipperemy/name-dataset/master/names_dataset/first_names_by_country/US.txt\")"
     ]
   }
 }

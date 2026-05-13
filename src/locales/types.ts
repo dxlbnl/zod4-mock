@@ -11,13 +11,35 @@ export interface MarkovModel {
   table: Record<string, number[]>;
 }
 
+/** A cultural-origin model paired with its relative sampling weight. */
+export interface NameOriginSet {
+  model: MarkovModel;
+  /** Relative probability weight — does not need to sum to 100. */
+  weight: number;
+}
+
+/** A surname prefix (tussenvoegsel) with its relative sampling weight. */
+export interface LastNamePrefix {
+  prefix: string;
+  weight: number;
+}
+
 export interface LocaleData {
   id: string;
 
   person: {
-    firstNamesMaleModel: MarkovModel;
-    firstNamesFemaleModel: MarkovModel;
-    lastNamesModel: MarkovModel;
+    /** Weighted list of cultural-origin models for male first names. */
+    firstNamesMale: readonly NameOriginSet[];
+    /** Weighted list of cultural-origin models for female first names. */
+    firstNamesFemale: readonly NameOriginSet[];
+    /** Weighted list of cultural-origin models for last names. */
+    lastNames: readonly NameOriginSet[];
+    /**
+     * Optional surname prefixes (e.g. Dutch tussenvoegsels like "de", "van der").
+     * When present, a prefix is prepended with probability proportional to the
+     * sum of weights vs. a "no prefix" weight of 100.
+     */
+    lastNamePrefixes?: readonly LastNamePrefix[];
     prefixes: { male: readonly string[]; female: readonly string[]; neutral: readonly string[] };
     suffixes: readonly string[];
     genders: readonly string[];

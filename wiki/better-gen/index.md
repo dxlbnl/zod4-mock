@@ -38,7 +38,10 @@ This section documents the architectural plan to improve `zod4-mock` generators 
     Using delimited strings to improve V8 parse times — scoped to large static lists that will never be tree-shaken.
 
 ### API Surface & Composition
-11. **[Sibling-Aware Generation](sibling-awareness.md)**
+11. **[Name Origin Distribution](name-origin-distribution.md)**
+    Train separate Markov models per cultural-linguistic origin (Dutch, Arabic, German, French, Frisian…) and let the locale define weighted sampling probabilities. Solves the corpus-pollution problem where a single registry model produces "Risharoumas"-style output by mixing incompatible bigrams. Covers per-locale origin tables, corpus sourcing, model sharing, the weighted sampler, and bundle size analysis.
+
+12. **[Sibling-Aware Generation](sibling-awareness.md)**
     Fields can read already-generated sibling values from the same object via `ctx.current`. Covers the ordering constraint, the gender → Markov model question (two separate chains), a `siblingString()` lookup helper, and a full catalogue of worthwhile sibling relationships — including manufacturer → model coherence and creditCardIssuer → card number prefix.
 
 12. **[Generator Reuse & Composition](generator-reuse.md)**
