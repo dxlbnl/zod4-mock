@@ -16,7 +16,7 @@ Items are ordered by implementation priority within each pillar.
 ## Speed & Efficiency
 
 - [x] **PRNG → SFC32** — replace Mulberry32 with SFC32 for better statistical distribution and a vastly larger period; seeds change (breaking) ([prng-batching.md](prng-batching.md))
-- [x] **PRNG `bytes(n)`** — exposes bulk byte generation (4 bytes per SFC32 tick); uuid, nanoid, hexadecimal, alphanumeric, colorHex, jwt all refactored to use it ([prng-batching.md](prng-batching.md))
+- [x] **PRNG `bytes(n)`** — `prng.bytes(n)` is implemented; `generateUuid` and `generateNanoid` in both schema and data layers now use it ([prng-batching.md](prng-batching.md))
 - [x] **Array batching** — `generateZodArray` pre-computes field base seeds once (O(F) hashes) and derives per-element seeds via `splitmix32` XOR; no string allocations per element; `Prng.seed` exposed to enable this ([batch-generation.md](batch-generation.md))
 - [~] **Key matching trie** — deferred: exact-match lookup is already O(1) (plain object property access in V8); pattern fallback has only 5–8 rules; revisit if key map exceeds 300 entries ([key-matching.md](key-matching.md))
 

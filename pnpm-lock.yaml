@@ -11,6 +11,9 @@ importers:
       '@zod4-mock/locale-en':
         specifier: workspace:*
         version: link:packages/locale-en
+      '@zod4-mock/locale-names':
+        specifier: workspace:*
+        version: link:packages/locale-names
       '@zod4-mock/locale-nl':
         specifier: workspace:*
         version: link:packages/locale-nl

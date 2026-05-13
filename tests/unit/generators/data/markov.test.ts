@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { sampleMarkov } from "../../../../src/generators/data/markov/sample.js";
 import type { MarkovModel } from "../../../../src/locales/types.js";
 import { enFirstNamesMaleModel, enFirstNamesFemaleModel, enLastNamesModel, enNounsModel } from "@zod4-mock/locale-en";
-import { nlNounsModel, nlFirstNamesMaleModel } from "@zod4-mock/locale-nl";
+import { nlNounsModel } from "@zod4-mock/locale-nl";
+import { dutchMaleModel } from "@zod4-mock/locale-names/groups/dutch";
 import { createPrng } from "../../../../src/prng.js";
 
 function prng(seed = 42) {
@@ -79,7 +80,7 @@ describe("sampleMarkov", () => {
 
     it("en and nl male first-name models produce different names for the same seeds", () => {
       const en = Array.from({ length: 20 }, (_, i) => sampleMarkov(prng(i), enFirstNamesMaleModel));
-      const nl = Array.from({ length: 20 }, (_, i) => sampleMarkov(prng(i), nlFirstNamesMaleModel));
+      const nl = Array.from({ length: 20 }, (_, i) => sampleMarkov(prng(i), dutchMaleModel));
       expect(en).not.toEqual(nl);
     });
   });

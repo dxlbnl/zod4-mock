@@ -615,12 +615,23 @@ Each section is replaced as a whole — deep merging within a section is not per
 The interface every locale must satisfy. Key sections:
 
 ```ts
+interface NameOriginSet {
+  model: MarkovModel;
+  weight: number;        // relative probability weight (need not sum to 100)
+}
+
+interface LastNamePrefix {
+  prefix: string;        // e.g. "de", "van der"
+  weight: number;        // relative weight vs. implicit "no prefix" weight of 100
+}
+
 interface LocaleData {
   id: string;
   person: {
-    firstNamesMaleModel: MarkovModel;   // trained model for male first names
-    firstNamesFemaleModel: MarkovModel; // trained model for female first names
-    lastNamesModel: MarkovModel;        // trained model for surnames
+    firstNamesMale:   readonly NameOriginSet[];  // weighted cultural-origin models
+    firstNamesFemale: readonly NameOriginSet[];
+    lastNames:        readonly NameOriginSet[];
+    lastNamePrefixes?: readonly LastNamePrefix[]; // e.g. Dutch tussenvoegsels
     prefixes: { male: string[]; female: string[]; neutral: string[] };
     suffixes: string[];
     genders: string[];
@@ -638,6 +649,10 @@ interface LocaleData {
   finance:  { bankCodes: string[]; formatIban: (prng, bank) => string };
 }
 ```
+
+`firstNamesMale`, `firstNamesFemale`, and `lastNames` accept an array of `NameOriginSet` entries. `sampleWeighted(prng, sets)` picks an origin proportionally to weights, then samples from that model. This enables realistic demographic distributions — e.g., the `nl` locale mixes Dutch (68%), Arabic (12%), Turkish (6%), and Frisian (2%) models.
+
+`lastNamePrefixes` is optional. When present, `lastName()` prepends a prefix with probability `prefixWeightTotal / (prefixWeightTotal + 100)`, capitalised for standalone use. `formatFullName` in locales that have tussenvoegsels should lowercase the first character of the last name (Dutch convention: "Jan de Jong" not "Jan De Jong").
 
 ### `MarkovModel`
 

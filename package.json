@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "@zod4-mock/locale-en": "workspace:*",
+    "@zod4-mock/locale-names": "workspace:*",
     "@zod4-mock/locale-nl": "workspace:*"
   },
   "devDependencies": {

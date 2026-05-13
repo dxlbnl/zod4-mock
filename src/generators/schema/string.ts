@@ -17,10 +17,11 @@ function pad4(n: number): string {
 }
 
 function generateUuid(prng: GeneratorContext["prng"]): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = prng.int(0, 15);
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  const b = prng.bytes(16);
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const hex = Array.from(b, (v) => v!.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 function generateEmail(prng: GeneratorContext["prng"]): string {
@@ -62,7 +63,10 @@ function generateUlid(prng: GeneratorContext["prng"]): string {
 }
 
 function generateNanoid(prng: GeneratorContext["prng"]): string {
-  return randomFrom(URL_SAFE, 21, prng);
+  const bytes = prng.bytes(21);
+  let id = "";
+  for (const byte of bytes) id += URL_SAFE[byte & 0x3f]!;
+  return id;
 }
 
 function generateBase64(prng: GeneratorContext["prng"]): string {
