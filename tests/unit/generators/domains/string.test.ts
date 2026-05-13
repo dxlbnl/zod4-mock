@@ -4,6 +4,7 @@ import { createPrng } from "../../../../src/prng.js";
 import { generateFromSchema } from "../../../../src/generators/schema/router.js";
 import { SchemaRegistry } from "../../../../src/registry.js";
 import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
+import { en } from "../../../../src/locales/en.js";
 
 const EMPTY_GEN = {} as BoundGenerators;
 
@@ -24,6 +25,7 @@ function ctx(seed = 42): GeneratorContext {
       return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
     },
     recursionLimit: 5,
+    locale: en,
   };
   return c;
 }

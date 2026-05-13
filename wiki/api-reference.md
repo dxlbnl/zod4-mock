@@ -31,6 +31,11 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 | `SchemaKeyMap`         | type      | Per-schema key generator map (typed)             |
 | `GenerateOptions`      | type      | Options for `generate()` and `world.generate()`  |
 | `DeepPartial`          | type      | Recursive optional type                          |
+| `en`                   | object    | Default English locale                           |
+| `nl`                   | object    | Dutch locale                                     |
+| `extend`               | function  | Shallow-per-section locale override helper       |
+| `LocaleData`           | type      | Pluggable locale interface                       |
+| `MarkovModel`          | type      | Trained n-gram model for word/name generation    |
 
 ---
 
@@ -82,6 +87,14 @@ interface WorldOptions {
 **`defaultArrayLength`** — fallback `[min, max]` when a `z.array()` schema has no `.min()`, `.max()`, or `.length()` constraint. Default `[1, 5]`.
 
 **`generators`** — custom key-based generators applied to every schema in the world. Keys are matched case-insensitively. See [`KeyGenerator`](#keygenerator) below.
+
+**`locale`** — active locale used by name and word generators. Defaults to `en` (English). Supply `nl` for Dutch, or build a custom locale with `extend`:
+
+```ts
+import { createWorld, nl } from "zod4-mock";
+
+const world = createWorld({ seed: 42, locale: nl });
+```
 
 ---
 
@@ -369,6 +382,8 @@ matchers: {
 
 **`current`** — holds the partial sibling-field values accumulated so far for the current object. This is useful for cross-field consistency (e.g., matching a first name's gender to a sibling `gender` field).
 
+**`locale`** — the active locale. Generators that are locale-aware read names, words, and format strings from this object. Use `ctx.locale` in custom matchers if you need locale-specific data.
+
 ```ts
 matchers: {
   gender:    (ctx) => ctx.prng.pick(["male", "female"]),
@@ -561,3 +576,78 @@ interface GenerateOptions<T> {
 ```
 
 `seed` is only used by the module-level `generate()` function; it is ignored by `world.generate()` (use `createWorld({ seed })` instead).
+
+---
+
+## Localization
+
+### `en` / `nl`
+
+Pre-built locales. `en` (English) is the default. Pass to `createWorld` via `locale`:
+
+```ts
+import { createWorld, nl } from "zod4-mock";
+
+const world = createWorld({ seed: 1, locale: nl });
+```
+
+### `extend(base, overrides)`
+
+Creates a locale by shallow-merging individual sections:
+
+```ts
+import { extend, en } from "zod4-mock";
+
+const myLocale = extend(en, {
+  address: {
+    ...en.address,
+    cities: ["London", "Manchester", "Edinburgh"],
+    countryCode: "GB",
+    phonePrefix: "+44",
+  },
+});
+```
+
+Each section is replaced as a whole — deep merging within a section is not performed.
+
+### `LocaleData`
+
+The interface every locale must satisfy. Key sections:
+
+```ts
+interface LocaleData {
+  id: string;
+  person: {
+    firstNamesMaleModel: MarkovModel;   // trained model for male first names
+    firstNamesFemaleModel: MarkovModel; // trained model for female first names
+    lastNamesModel: MarkovModel;        // trained model for surnames
+    prefixes: { male: string[]; female: string[]; neutral: string[] };
+    suffixes: string[];
+    genders: string[];
+    formatFullName: (first: string, last: string) => string;
+  };
+  word: {
+    nounModel: MarkovModel;
+    adjectiveModel: MarkovModel;
+    articles: string[];
+    // ... closed-class word lists
+  };
+  address: { cities: string[]; states: string[]; /* ... */ };
+  commerce: { departments: string[]; /* ... */ };
+  company:  { prefixes: string[]; /* ... */ };
+  finance:  { bankCodes: string[]; formatIban: (prng, bank) => string };
+}
+```
+
+### `MarkovModel`
+
+```ts
+interface MarkovModel {
+  order: number;            // n-gram order (2 = bigram)
+  prior: number;            // Dirichlet smoothing (e.g. 0.01)
+  chars: string;            // alphabet + "$" end-of-word sentinel
+  table: Record<string, number[]>; // n-gram state → CDF weights
+}
+```
+
+Models are trained offline (see `scripts/train-markov.ts` in Commit 2) and committed as TypeScript files. The runtime `sampleMarkov(prng, model)` function performs binary-search CDF sampling.

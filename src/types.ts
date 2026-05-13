@@ -5,6 +5,8 @@
 
 import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
+import type { LocaleData } from "./locales/types.js";
+export type { LocaleData, MarkovModel } from "./locales/types.js";
 
 // ---------------------------------------------------------------------------
 // PRNG
@@ -87,6 +89,11 @@ export interface GeneratorContext<T = any> {
    * Maximum recursion depth.
    */
   readonly recursionLimit: number;
+  /**
+   * Active locale, used by generators for locale-specific data (names, words, etc.).
+   * Defaults to `en` when created via `createWorld()`.
+   */
+  readonly locale: LocaleData;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +160,8 @@ export interface WorldOptions {
   readonly defaultArrayLength?: readonly [number, number];
   readonly generators?: Record<string, KeyGenerator>;
   readonly recursionLimit?: number;
+  /** Override the default English locale. Import `nl` from `zod4-mock` for Dutch, or supply your own. */
+  readonly locale?: LocaleData;
 }
 
 // ---------------------------------------------------------------------------

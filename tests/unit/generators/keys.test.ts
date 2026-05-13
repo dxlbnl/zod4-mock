@@ -9,7 +9,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
-import { generators, createWorld, createPrng } from "../../../src/index.js";
+import { generators, createWorld, createPrng, en } from "../../../src/index.js";
 import { generateFromSchema } from "../../../src/generators/schema/router.js";
 import type {
   BoundGenerators,
@@ -48,6 +48,7 @@ function makeCtx(seed = 42): GeneratorContext {
     recursionLimit: 5,
     optionalProbability: 0.2,
     current: {},
+    locale: en,
   };
   return ctx;
 }

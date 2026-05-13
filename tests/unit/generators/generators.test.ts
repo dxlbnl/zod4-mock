@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { generateFromSchema, generateFromKey, createPrng } from "../../../src/index.js";
+import { generateFromSchema, generateFromKey, createPrng, en } from "../../../src/index.js";
 import type { BoundGenerators, GeneratorContext, Registry } from "../../../src/index.js";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +51,7 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
     },
     recursionLimit: 5,
     current: {},
+    locale: en,
   };
   return ctx;
 }

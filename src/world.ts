@@ -41,6 +41,7 @@ import { generateFromKey } from "./generators/index.js";
 import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def.js";
 import { deepMerge } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
+import { en } from "./locales/en.js";
 
 // ---------------------------------------------------------------------------
 // Internal schema registration record
@@ -312,6 +313,7 @@ export class WorldImpl implements World {
       },
       recursionLimit: this.options.recursionLimit ?? 5,
       current: (current ?? {}) as Partial<any>,
+      locale: this.options.locale ?? en,
     };
   }
 

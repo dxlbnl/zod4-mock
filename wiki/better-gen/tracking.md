@@ -26,7 +26,7 @@ Items are ordered by implementation priority within each pillar.
 
 - [x] **Sibling awareness** — add `ctx.current` map so a field generator can read already-generated sibling values (e.g. `firstName` driving gendered output, `jobTitle`/`jobArea` driving `bio`, `creditCardIssuer` driving BIN prefix) ([sibling-awareness.md](sibling-awareness.md))
 - [x] **Generator reuse fixes** — `url()` uses curated path segments; `domainWord()` uses tech/company vocab; `company.name()` has tech-style formats; new `system.ts` (platform, browser, semver, fileName, filePath, mimeType) and `color.ts` (colorName, colorHex, colorRgb, colorHsl) modules; all wired into key map ([generator-reuse.md](generator-reuse.md))
-- [ ] **Localization** — pluggable `LocaleData` interface replacing hardcoded Dutch/English strings; English becomes default ⚠️ breaking ([localization.md](localization.md))
+- [~] **Localization** — pluggable `LocaleData` interface replacing hardcoded Dutch/English strings; English becomes default ⚠️ breaking; Commit 1 done (type system + world wiring, zero output change); Commits 2–4 (training pipeline, corpus integration, test updates) pending ([localization.md](localization.md))
 - [ ] **Markov word generation** — replace phoneme combinatorics with Order-2 Markov models trained per locale; open-class words (nouns, verbs, adjectives) only ([word-generation.md](word-generation.md))
 - [ ] **Markov character entropy** — character-level Markov chains for synthetic string fields not covered by key heuristics ([algorithmic-entropy.md](algorithmic-entropy.md))
 - [ ] **Markov training pipeline** — `train-markov.ts` / `verify-markov.ts` CLI tooling for building and inspecting locale models ([markov-training-pipeline.md](markov-training-pipeline.md))
