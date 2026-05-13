@@ -44,9 +44,11 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     name: data.person.fullName as PrngGen,
     prefix: data.person.prefix as PrngGen,
     suffix: data.person.suffix as PrngGen,
-    bio: (p, _ctx, schema) => {
+    bio: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      let result = data.person.bio(p, ctx);
+      while (result.length < min) result += " " + data.person.bio(p, ctx);
+      return result.length > max ? result.slice(0, max) : result;
     },
     gender: data.person.gender as PrngGen,
     sex: data.person.sex as PrngGen,
@@ -109,8 +111,10 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
       const { min } = resolveStringLength(schema, 10, 10);
       return data.finance.accountNumber(p, min);
     },
-    creditcard: data.finance.creditCardNumber as PrngGen,
-    credit_card: data.finance.creditCardNumber as PrngGen,
+    creditcard: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    credit_card: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    creditcardnumber: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    credit_card_number: (p, ctx) => data.finance.creditCardNumber(p, ctx),
     currency: data.finance.currencyCode as PrngGen,
     currencycode: data.finance.currencyCode as PrngGen,
     currency_code: data.finance.currencyCode as PrngGen,

@@ -1,5 +1,4 @@
 import type { Prng, GeneratorContext } from "../../types.js";
-import { sentence } from "./word.js";
 import { siblingString } from "./sibling.js";
 
 // ---------------------------------------------------------------------------
@@ -151,6 +150,21 @@ export function zodiacSign(prng: Prng): string {
   return prng.pick(ZODIAC_SIGNS);
 }
 
-export function bio(prng: Prng): string {
-  return sentence(prng);
+export function bio(prng: Prng, ctx?: GeneratorContext): string {
+  const title = siblingString(ctx, "jobTitle", "job_title", "jobtitle", "functie");
+  const area  = siblingString(ctx, "jobArea",  "job_area",  "jobarea",  "afdeling");
+  const type  = siblingString(ctx, "jobType",  "job_type",  "jobtype");
+
+  const t  = (title ?? jobTitle(prng)).toLowerCase();
+  const a  = (area  ?? jobArea(prng)).toLowerCase();
+  const ty = type?.toLowerCase() ?? "";
+
+  const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const templates: [() => string, ...Array<() => string>] = [
+    () => cap(`${ty ? ty + " " : ""}${t} gespecialiseerd in ${a}.`),
+    () => `Werkzaam als ${ty ? ty + " " : ""}${t} in ${a}.`,
+    () => cap(`${ty ? ty + " " : ""}${t} met passie voor ${a}.`),
+  ];
+  return prng.pick(templates)();
 }

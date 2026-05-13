@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { createWorld } from "../../../../src/index.js";
+import { createWorld, createPrng, generators } from "../../../../src/index.js";
 
 describe("Sibling-aware internet generators", () => {
   describe("username", () => {
@@ -80,5 +80,55 @@ describe("Sibling-aware internet generators", () => {
       const d = createWorld({ seed: 1 }).generate(S).displayName;
       expect(d.split(" ").length).toBeGreaterThanOrEqual(2);
     });
+  });
+});
+
+describe("bio with job siblings", () => {
+  it("bio incorporates jobTitle and jobArea when available", () => {
+    const S = z.object({ jobTitle: z.string(), jobArea: z.string(), bio: z.string() });
+    const result = createWorld({ seed: 1 }).generate(S);
+    const t = result.jobTitle.toLowerCase().replace(/[^a-z]/g, "");
+    const a = result.jobArea.toLowerCase().replace(/[^a-z]/g, "");
+    expect(result.bio.toLowerCase().replace(/[^a-z]/g, "")).toContain(t);
+    expect(result.bio.toLowerCase().replace(/[^a-z]/g, "")).toContain(a);
+  });
+
+  it("bio ends with a period when no siblings", () => {
+    const S = z.object({ bio: z.string() });
+    const bio = createWorld({ seed: 1 }).generate(S).bio;
+    expect(bio.length).toBeGreaterThan(10);
+    expect(bio).toMatch(/\.$/);
+  });
+});
+
+describe("creditCardNumber with issuer sibling", () => {
+  it("Visa card starts with 4", () => {
+    const S = z.object({ creditCardIssuer: z.literal("Visa"), creditCardNumber: z.string() });
+    expect(createWorld({ seed: 1 }).generate(S).creditCardNumber).toMatch(/^4/);
+  });
+
+  it("Mastercard starts with 5[1-5]", () => {
+    const S = z.object({ creditCardIssuer: z.literal("Mastercard"), creditCardNumber: z.string() });
+    expect(createWorld({ seed: 1 }).generate(S).creditCardNumber).toMatch(/^5[1-5]/);
+  });
+
+  it("American Express is formatted 4-6-5", () => {
+    const S = z.object({ creditCardIssuer: z.literal("American Express"), creditCardNumber: z.string() });
+    const n = createWorld({ seed: 1 }).generate(S).creditCardNumber;
+    expect(n).toMatch(/^3[47]\d{2}-\d{6}-\d{5}$/);
+  });
+
+  it("fallback produces a Visa-style 16-digit card when no issuer sibling", () => {
+    const S = z.object({ creditCardNumber: z.string() });
+    expect(createWorld({ seed: 1 }).generate(S).creditCardNumber).toMatch(/^4\d{3}-\d{4}-\d{4}-\d{4}$/);
+  });
+});
+
+describe("jwt encoding", () => {
+  it("jwt segments use base64url characters only", () => {
+    const j = generators.internet.jwt(createPrng(1));
+    for (const seg of j.split(".")) {
+      expect(seg).toMatch(/^[A-Za-z0-9\-_]+$/);
+    }
   });
 });

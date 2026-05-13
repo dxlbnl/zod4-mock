@@ -1,4 +1,5 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
+import { siblingString } from "./sibling.js";
 
 // ---------------------------------------------------------------------------
 // Datasets
@@ -120,9 +121,34 @@ export function bic(prng: Prng): string {
   return `${bank}${country}${location}XXX`;
 }
 
-export function creditCardNumber(prng: Prng): string {
-  const segments = Array.from({ length: 4 }, () => prng.int(1000, 9999));
-  return segments.join("-");
+type BinSpec = { prefixes: readonly [string, ...string[]]; digits: number };
+
+const CARD_BINS: Readonly<Record<string, BinSpec>> = {
+  "Visa":             { prefixes: ["4"],                           digits: 16 },
+  "Mastercard":       { prefixes: ["51","52","53","54","55"],      digits: 16 },
+  "American Express": { prefixes: ["34","37"],                     digits: 15 },
+  "Discover":         { prefixes: ["6011"],                        digits: 16 },
+  "Maestro":          { prefixes: ["5018","6304","6759","6761"],   digits: 16 },
+  "Diners Club":      { prefixes: ["36"],                          digits: 14 },
+  "JCB":              { prefixes: ["3528","3540","3560","3589"],   digits: 16 },
+};
+
+function formatCardDigits(digits: string): string {
+  if (digits.length === 15) return `${digits.slice(0,4)}-${digits.slice(4,10)}-${digits.slice(10)}`;
+  if (digits.length === 14) return `${digits.slice(0,4)}-${digits.slice(4,10)}-${digits.slice(10)}`;
+  return `${digits.slice(0,4)}-${digits.slice(4,8)}-${digits.slice(8,12)}-${digits.slice(12)}`;
+}
+
+export function creditCardNumber(prng: Prng, ctx?: GeneratorContext): string {
+  const issuer = siblingString(ctx, "creditCardIssuer", "credit_card_issuer", "cardIssuer", "issuer", "kaarttype");
+  const spec = issuer !== undefined ? CARD_BINS[issuer] : undefined;
+  if (spec) {
+    const prefix = prng.pick(spec.prefixes);
+    const rest = Array.from({ length: spec.digits - prefix.length }, () => prng.int(0, 9)).join("");
+    return formatCardDigits(prefix + rest);
+  }
+  const digits = "4" + Array.from({ length: 15 }, () => prng.int(0, 9)).join("");
+  return formatCardDigits(digits);
 }
 
 export function creditCardCVV(prng: Prng): string {

@@ -17,6 +17,7 @@ function ascii(s: string): string {
 // ---------------------------------------------------------------------------
 
 export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev", "website.com", "portal.net", "app.io", "service.co", "company.nl", "platform.dev", "startup.ai", "blog.me"] as const;
+const B64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"] as const;
 const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"] as const;
 const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"] as const;
@@ -187,8 +188,7 @@ export function jwtAlgorithm(prng: Prng): string {
 }
 
 export function jwt(prng: Prng): string {
-  // Just return random alphanumeric segments to simulate a JWT structure
   const segment = (len: number) =>
-    Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
+    Array.from({ length: len }, () => B64URL[prng.int(0, 63)]!).join("");
   return `${segment(36)}.${segment(64)}.${segment(42)}`;
 }
