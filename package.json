@@ -54,8 +54,12 @@
     "validate": "pnpm check:all && pnpm test:all && pnpm lint:all && pnpm fmt:check",
     "play": "vitest run --config vitest.playground.config.ts",
     "play:watch": "vitest --config vitest.playground.config.ts",
-    "train-markov": "tsx scripts/train-markov.ts",
-    "verify-markov": "tsx scripts/verify-markov.ts"
+    "fetch-data": "pnpm -r --filter './packages/*' fetch-data",
+    "train-all": "pnpm -r --filter './packages/*' train"
+  },
+  "dependencies": {
+    "@zod4-mock/locale-en": "workspace:*",
+    "@zod4-mock/locale-nl": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.1",

@@ -1,12 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { sampleMarkov } from "../../../../src/generators/data/markov/sample.js";
 import type { MarkovModel } from "../../../../src/locales/types.js";
-import { enFirstNamesMaleModel } from "../../../../src/generators/data/markov/en-first-names-male.js";
-import { enFirstNamesFemaleModel } from "../../../../src/generators/data/markov/en-first-names-female.js";
-import { enLastNamesModel } from "../../../../src/generators/data/markov/en-last-names.js";
-import { enNounsModel } from "../../../../src/generators/data/markov/en-nouns.js";
-import { nlNounsModel } from "../../../../src/generators/data/markov/nl-nouns.js";
-import { nlFirstNamesMaleModel } from "../../../../src/generators/data/markov/nl-first-names-male.js";
+import { enFirstNamesMaleModel, enFirstNamesFemaleModel, enLastNamesModel, enNounsModel } from "@zod4-mock/locale-en";
+import { nlNounsModel, nlFirstNamesMaleModel } from "@zod4-mock/locale-nl";
 import { createPrng } from "../../../../src/prng.js";
 
 function prng(seed = 42) {

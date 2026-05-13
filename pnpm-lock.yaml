@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@zod4-mock/locale-en':
+        specifier: workspace:*
+        version: link:packages/locale-en
+      '@zod4-mock/locale-nl':
+        specifier: workspace:*
+        version: link:packages/locale-nl
     devDependencies:
       '@types/node':
         specifier: ^25.6.1
@@ -35,6 +42,30 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+
+  packages/locale-en:
+    devDependencies:
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      zod4-mock:
+        specifier: workspace:*
+        version: link:../..
+
+  packages/locale-nl:
+    devDependencies:
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      zod4-mock:
+        specifier: workspace:*
+        version: link:../..
 
   playground:
     dependencies:

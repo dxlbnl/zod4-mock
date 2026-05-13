@@ -1,0 +1,23 @@
+{
+  "name": "@zod4-mock/locale-en",
+  "version": "0.3.0",
+  "description": "English locale for zod4-mock",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "fetch-data": "tsx scripts/fetch-data.ts",
+    "train": "tsx scripts/train.ts",
+    "verify": "tsx scripts/verify.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "zod4-mock": "workspace:*"
+  }
+}

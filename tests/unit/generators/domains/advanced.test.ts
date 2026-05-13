@@ -97,7 +97,7 @@ describe("schema/advanced", () => {
         def: {
           type: "union",
           discriminator: "type",
-          optionsMap: new Map([["a", optA], ["b", optB]]),
+          optionsMap: new Map([["a", optA], ["b", optB]] as unknown as [string, ZodTypeAny][]),
         },
       },
     } as unknown as ZodTypeAny;
@@ -180,7 +180,9 @@ describe("schema/advanced", () => {
   });
 
   it("z.record with object-type key serializes key with JSON.stringify", () => {
-    const schema = z.record(z.object({ n: z.number() }), z.string());
+    const schema = {
+      _zod: { def: { type: "record", keyType: z.object({ n: z.number() }), valueType: z.string() } },
+    } as unknown as ZodTypeAny;
     const val = generateFromSchema(schema, ctx()) as Record<string, string>;
     const keys = Object.keys(val);
     expect(keys.length).toBeGreaterThan(0);

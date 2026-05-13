@@ -1,4 +1,4 @@
-import type { MarkovModel } from "../../../locales/types.js";
+import type { MarkovModel } from "../../../../src/locales/types.js";
 
 export const enNounsModel: MarkovModel = {
   order: 2,
