@@ -1,6 +1,7 @@
 import type { ZodTypeAny } from "zod";
-import type { GeneratorContext } from "../../types.js";
+import type { GeneratorContext, Prng } from "../../types.js";
 import { def, checks, applyModifiers } from "./zod-def.js";
+import { createPrng, fnv1a, splitmix32 } from "../../prng.js";
 
 export function resolveArrayLength(
   schema: ZodTypeAny,
@@ -22,10 +23,45 @@ export function resolveArrayLength(
   return prng.int(Math.min(min, max), Math.max(min, max));
 }
 
+// Pre-computes per-field base seeds once for a ZodObject inner schema, then
+// derives per-element field seeds via XOR+splitmix — no string allocation per element.
+function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: number): Prng {
+  const inner = createPrng(elementSeed);
+  return {
+    seed: elementSeed,
+    random: () => inner.random(),
+    int:    (min, max) => inner.int(min, max),
+    pick:   (items) => inner.pick(items),
+    bytes:  (n) => inner.bytes(n),
+    fork(key: string): Prng {
+      const base = baseSeeds[key];
+      return base !== undefined
+        ? createPrng(base ^ elementSeed)
+        : createPrng(fnv1a(`${elementSeed}:${key}`));
+    },
+  };
+}
+
 export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unknown[] {
   const d = def(schema);
-  const [defMin, defMax] = [1, 5];
-  const length = resolveArrayLength(schema, defMin, defMax, ctx.prng);
+  const length = resolveArrayLength(schema, 1, 5, ctx.prng);
+
+  const innerDef = def(d.element!);
+  if (innerDef.type === "object" && innerDef.shape) {
+    const parentSeed = ctx.prng.seed;
+    const baseSeeds: Record<string, number> = {};
+    for (const f of Object.keys(innerDef.shape)) {
+      baseSeeds[f] = fnv1a(`${parentSeed}:${f}`);
+    }
+    return Array.from({ length }, (_, i) => {
+      const elementSeed = splitmix32(parentSeed ^ (i + 1));
+      return ctx.generate(d.element!, {
+        prng: createBatchElementPrng(baseSeeds, elementSeed),
+        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+      });
+    });
+  }
+
   return Array.from({ length }, (_, i) =>
     ctx.generate(d.element!, {
       prng: ctx.prng.fork(`el-${i}`),

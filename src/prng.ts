@@ -17,7 +17,7 @@
 import type { Prng } from "./types.js";
 
 /** FNV-1a 32-bit hash over a UTF-16 string, returns an unsigned 32-bit integer. */
-function fnv1a(str: string): number {
+export function fnv1a(str: string): number {
   let hash = 2166136261;
   for (let i = 0; i < str.length; i++) {
     hash ^= str.charCodeAt(i);
@@ -26,8 +26,17 @@ function fnv1a(str: string): number {
   return hash;
 }
 
+/** One step of splitmix32 — avalanches all 32 bits. Used for integer seed mixing. */
+export function splitmix32(s: number): number {
+  s = Math.imul(s ^ (s >>> 15), s | 1) >>> 0;
+  s = (s ^ (s + Math.imul(s ^ (s >>> 7), s | 61))) >>> 0;
+  return (s ^ (s >>> 14)) >>> 0;
+}
+
 /**
- * Expands one 32-bit seed into four via splitmix32, used to initialise SFC32.
+ * Expands one 32-bit seed into four via the splitmix state machine.
+ * Note: the state advances to the intermediate value after each step, not to
+ * the return value — this is intentional and must not be changed.
  */
 function seedToSfc32(seed: number): [number, number, number, number] {
   let s = seed >>> 0;
@@ -66,6 +75,8 @@ export function createPrng(seed: number): Prng {
   const rand = sfc32(...seedToSfc32(seed));
 
   const prng: Prng = {
+    seed,
+
     random() {
       return rand();
     },

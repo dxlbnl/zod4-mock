@@ -11,6 +11,7 @@ import type { createPrng } from "./prng.js";
 // ---------------------------------------------------------------------------
 
 export interface Prng {
+  readonly seed: number;
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;

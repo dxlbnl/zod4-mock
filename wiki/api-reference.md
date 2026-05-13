@@ -386,6 +386,7 @@ matchers: {
 
 ```ts
 interface Prng {
+  readonly seed: number;
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
@@ -393,6 +394,10 @@ interface Prng {
   bytes(n: number): Uint8Array;
 }
 ```
+
+### `.seed`
+
+The raw 32-bit unsigned integer seed this PRNG was initialised with. Useful for debugging seed chains and for building optimized batch derivation on top of `fork`.
 
 ### `.random()`
 
