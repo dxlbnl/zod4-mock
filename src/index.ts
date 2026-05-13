@@ -4,7 +4,11 @@
 
 export { createWorld } from "./world.js";
 export { createPrng, fieldSeed } from "./prng.js";
-export { generateFromSchema, generateFromKey, data } from "./generators/index.js";
+export {
+  generateFromSchema,
+  generateFromKey,
+  data,
+} from "./generators/index.js";
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
 export { en } from "./locales/en.js";
@@ -32,6 +36,7 @@ export function generate<TSchema extends z.ZodTypeAny>(
   options?: GenerateOptions<z.infer<TSchema>>,
 ): z.infer<TSchema> {
   const worldOptions: WorldOptions = {
+    ...options,
     ...(options?.seed !== undefined && { seed: options.seed }),
     ...(options?.optionalProbability !== undefined && {
       optionalProbability: options.optionalProbability,
@@ -39,7 +44,9 @@ export function generate<TSchema extends z.ZodTypeAny>(
     ...(options?.defaultArrayLength !== undefined && {
       defaultArrayLength: options.defaultArrayLength,
     }),
-    ...(options?.recursionLimit !== undefined && { recursionLimit: options.recursionLimit }),
+    ...(options?.recursionLimit !== undefined && {
+      recursionLimit: options.recursionLimit,
+    }),
   };
 
   const world = createWorld(worldOptions);
