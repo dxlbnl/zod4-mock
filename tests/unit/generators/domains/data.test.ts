@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import { createPrng } from "../../../../src/prng.js";
+import * as color from "../../../../src/generators/data/color.js";
 import * as commerce from "../../../../src/generators/data/commerce.js";
 import * as company from "../../../../src/generators/data/company.js";
 import * as date from "../../../../src/generators/data/date.js";
@@ -12,6 +13,7 @@ import * as finance from "../../../../src/generators/data/finance.js";
 import * as internet from "../../../../src/generators/data/internet.js";
 import * as location from "../../../../src/generators/data/location.js";
 import * as phone from "../../../../src/generators/data/phone.js";
+import * as system from "../../../../src/generators/data/system.js";
 import * as vehicle from "../../../../src/generators/data/vehicle.js";
 import * as word from "../../../../src/generators/data/word.js";
 import { toBase64 } from "../../../../src/utils/encoding.js";
@@ -612,5 +614,88 @@ describe("generators/data/word — additional coverage", () => {
     const s = word.sample(prng());
     expect(typeof s).toBe("string");
     expect(s.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// system
+// ---------------------------------------------------------------------------
+
+describe("generators/data/system", () => {
+  it("platform returns a known platform string", () => {
+    const platforms = ["windows", "macos", "linux", "ios", "android"];
+    expect(platforms).toContain(system.platform(prng()));
+  });
+
+  it("browser returns a known browser string", () => {
+    const browsers = ["chrome", "firefox", "safari", "edge"];
+    expect(browsers).toContain(system.browser(prng()));
+  });
+
+  it("semver returns a semver-shaped string", () => {
+    expect(system.semver(prng())).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("fileExtension returns a lowercase extension without dot", () => {
+    expect(system.fileExtension(prng())).toMatch(/^[a-z]+$/);
+  });
+
+  it("mimeType returns a valid mime type string", () => {
+    expect(system.mimeType(prng())).toMatch(/^[a-z]+\/[a-z]+$/);
+  });
+
+  it("fileName returns name with extension", () => {
+    expect(system.fileName(prng())).toMatch(/^[a-z_]+_\d+\.[a-z]+$/);
+  });
+
+  it("filePath starts with slash and contains a filename", () => {
+    const p = system.filePath(prng());
+    expect(p).toMatch(/^\//);
+    expect(p).toContain(".");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// color
+// ---------------------------------------------------------------------------
+
+describe("generators/data/color", () => {
+  it("colorName returns a lowercase word", () => {
+    expect(color.colorName(prng())).toMatch(/^[a-z]+$/);
+  });
+
+  it("colorHex returns a 7-char hex string", () => {
+    expect(color.colorHex(prng())).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("colorRgb returns an rgb(...) string", () => {
+    expect(color.colorRgb(prng())).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
+  });
+
+  it("colorHsl returns an hsl(...) string", () => {
+    expect(color.colorHsl(prng())).toMatch(/^hsl\(\d+, \d+%, \d+%\)$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// internet — urlPath and domainWord improvements
+// ---------------------------------------------------------------------------
+
+describe("generators/data/internet — urlPath and domainWord", () => {
+  it("urlPath returns a known path segment", () => {
+    const paths = ["products", "dashboard", "profile", "settings", "articles",
+      "docs", "api", "blog", "about", "contact", "search", "help",
+      "orders", "invoices", "reports", "users", "admin", "status"];
+    expect(paths).toContain(internet.urlPath(prng()));
+  });
+
+  it("domainWord returns only lowercase alphanumeric characters", () => {
+    expect(internet.domainWord(prng())).toMatch(/^[a-z0-9]+$/);
+  });
+
+  it("url path segment is a recognizable word", () => {
+    const u = internet.url(prng());
+    const path = u.split("/").at(-1)!;
+    expect(path).toMatch(/^[a-z]+$/);
   });
 });

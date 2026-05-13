@@ -1,5 +1,6 @@
 import type { Prng } from "../../types.js";
 import { lastName } from "./person.js";
+import { TECH_WORDS } from "./word.js";
 
 // ---------------------------------------------------------------------------
 // Datasets
@@ -144,7 +145,7 @@ const COMPANY_SUFFIXES = [
   "Logistics",
   "Digital",
 ] as const;
-const COMPANY_PREFIXES = [
+export const COMPANY_PREFIXES = [
   "Globaal",
   "Quantum",
   "Cyber",
@@ -172,6 +173,11 @@ export function name(prng: Prng): string {
     () => `${lastName(prng)} & ${lastName(prng)}`,
     () => `${prng.pick(COMPANY_PREFIXES)} ${lastName(prng)}`,
     () => `${lastName(prng)} Systemen`,
+    () => {
+      const w = prng.pick(TECH_WORDS);
+      return `${w.charAt(0).toUpperCase() + w.slice(1)} ${prng.pick(COMPANY_SUFFIXES)}`;
+    },
+    () => `${prng.pick(COMPANY_PREFIXES)}${prng.pick(COMPANY_SUFFIXES)}`,
   ];
   return prng.pick(formats)();
 }

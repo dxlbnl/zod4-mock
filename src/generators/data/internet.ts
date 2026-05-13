@@ -1,6 +1,7 @@
 import type { Prng, GeneratorContext } from "../../types.js";
 import { firstName, lastName } from "./person.js";
-import { noun } from "./word.js";
+import { noun, TECH_WORDS } from "./word.js";
+import { COMPANY_PREFIXES } from "./company.js";
 import { siblingString } from "./sibling.js";
 
 /** Strip diacritics and keep only a-z. */
@@ -43,10 +44,21 @@ export function domainSuffix(prng: Prng): string {
   return prng.pick(DOMAIN_SUFFIXES);
 }
 
+const URL_PATHS = [
+  "products", "dashboard", "profile", "settings", "articles",
+  "docs", "api", "blog", "about", "contact", "search", "help",
+  "orders", "invoices", "reports", "users", "admin", "status",
+] as const;
+
 export function domainWord(prng: Prng): string {
-  return noun(prng)
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+  const strategy = prng.int(0, 2);
+  if (strategy === 0) return prng.pick(TECH_WORDS);
+  if (strategy === 1) return prng.pick(COMPANY_PREFIXES).toLowerCase();
+  return noun(prng).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function urlPath(prng: Prng): string {
+  return prng.pick(URL_PATHS);
 }
 
 export function domainName(prng: Prng): string {
@@ -126,7 +138,7 @@ export function protocol(prng: Prng): string {
 }
 
 export function url(prng: Prng): string {
-  return `https://${domainName(prng)}/${domainWord(prng)}`;
+  return `https://${domainName(prng)}/${urlPath(prng)}`;
 }
 
 export function userAgent(prng: Prng): string {

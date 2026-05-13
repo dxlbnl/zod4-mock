@@ -25,7 +25,7 @@ Items are ordered by implementation priority within each pillar.
 ## Data & Realism
 
 - [x] **Sibling awareness** — add `ctx.current` map so a field generator can read already-generated sibling values (e.g. `firstName` driving gendered output, `jobTitle`/`jobArea` driving `bio`, `creditCardIssuer` driving BIN prefix) ([sibling-awareness.md](sibling-awareness.md))
-- [~] **Generator reuse fixes** — fix weak spots: `url()` path, `userAgent()` OS/browser data, `company.name()` tech format, vehicle color still pending; `bio()` job context and `jwt()` encoding done ([generator-reuse.md](generator-reuse.md))
+- [x] **Generator reuse fixes** — `url()` uses curated path segments; `domainWord()` uses tech/company vocab; `company.name()` has tech-style formats; new `system.ts` (platform, browser, semver, fileName, filePath, mimeType) and `color.ts` (colorName, colorHex, colorRgb, colorHsl) modules; all wired into key map ([generator-reuse.md](generator-reuse.md))
 - [ ] **New `system.ts` module** — OS, browser, file path, file-extension generators ([generator-reuse.md](generator-reuse.md), [methods-inventory.md](methods-inventory.md))
 - [ ] **New `color.ts` module** — CSS color names, hex, rgb generators ([generator-reuse.md](generator-reuse.md), [methods-inventory.md](methods-inventory.md))
 - [ ] **Localization** — pluggable `LocaleData` interface replacing hardcoded Dutch/English strings; English becomes default ⚠️ breaking ([localization.md](localization.md))
