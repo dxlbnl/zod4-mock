@@ -83,6 +83,19 @@ export function createPrng(seed: number): Prng {
       // the parent's state, so the child is fully independent.
       return createPrng(fnv1a(`${seed}:${key}`));
     },
+
+    bytes(n) {
+      // Each rand() call produces 32 random bits; extract 4 bytes per call.
+      const arr = new Uint8Array(n);
+      for (let i = 0; i < n; i += 4) {
+        const u = (rand() * 4294967296) >>> 0;
+        arr[i] = u & 0xff;
+        if (i + 1 < n) arr[i + 1] = (u >>> 8) & 0xff;
+        if (i + 2 < n) arr[i + 2] = (u >>> 16) & 0xff;
+        if (i + 3 < n) arr[i + 3] = (u >>> 24) & 0xff;
+      }
+      return arr;
+    },
   };
 
   return prng;

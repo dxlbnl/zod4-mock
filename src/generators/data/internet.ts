@@ -200,7 +200,7 @@ export function jwtAlgorithm(prng: Prng): string {
 }
 
 export function jwt(prng: Prng): string {
-  const segment = (len: number) =>
-    Array.from({ length: len }, () => B64URL[prng.int(0, 63)]!).join("");
-  return `${segment(36)}.${segment(64)}.${segment(42)}`;
+  // B64URL has 64 chars — mask with 0x3F for zero-bias byte→index mapping
+  const seg = (b: Uint8Array) => Array.from(b, (v) => B64URL[v! & 0x3f]!).join("");
+  return `${seg(prng.bytes(36))}.${seg(prng.bytes(64))}.${seg(prng.bytes(42))}`;
 }

@@ -15,6 +15,7 @@ export interface Prng {
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
   fork(key: string): Prng;
+  bytes(n: number): Uint8Array;
 }
 
 // ---------------------------------------------------------------------------

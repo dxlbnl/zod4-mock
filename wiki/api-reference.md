@@ -390,6 +390,7 @@ interface Prng {
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
   fork(key: string): Prng;
+  bytes(n: number): Uint8Array;
 }
 ```
 
@@ -411,6 +412,16 @@ Derives a new, fully independent PRNG from a deterministic string key. The paren
 
 ```ts
 const childPrng = ctx.prng.fork("my-subfield");
+```
+
+### `.bytes(n)`
+
+Returns a `Uint8Array` of `n` random bytes. Internally extracts 4 bytes per SFC32 iteration, so one call is far cheaper than `n` individual `int()` calls. Useful for bulk generation:
+
+```ts
+// Uniform mapping into a 64-char alphabet (zero bias when alphabet size is power-of-2)
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const token = Array.from(ctx.prng.bytes(32), (v) => B64[v & 0x3f]!).join("");
 ```
 
 ---

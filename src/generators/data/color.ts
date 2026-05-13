@@ -20,7 +20,8 @@ export function colorName(prng: Prng): string {
 }
 
 export function colorHex(prng: Prng): string {
-  return "#" + Array.from({ length: 6 }, () => prng.int(0, 15).toString(16)).join("");
+  const [r, g, b] = prng.bytes(3);
+  return "#" + [r!, g!, b!].map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
 export function colorRgb(prng: Prng): string {
