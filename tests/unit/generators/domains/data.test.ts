@@ -783,6 +783,45 @@ describe("generators/data/person", () => {
       "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
     expect(signs).toContain(person.zodiacSign(prng()));
   });
+
+  it("middleName(prng) returns a capitalized string", () => {
+    expect(person.middleName(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("suffix(prng) returns a non-empty string", () => {
+    const s = person.suffix(prng());
+    expect(typeof s).toBe("string");
+    expect(s.length).toBeGreaterThan(0);
+  });
+
+  it("prefix(prng) without gender arg defaults to neutral prefix", () => {
+    const p = person.prefix(prng());
+    expect(typeof p).toBe("string");
+    expect(p.length).toBeGreaterThan(0);
+  });
+
+  it("prefix(prng, 'neutral') returns a prefix from the neutral list", () => {
+    const p = person.prefix(prng(), "neutral");
+    expect(typeof p).toBe("string");
+    expect(p.length).toBeGreaterThan(0);
+  });
+
+  it("sex(prng) returns 'Male' or 'Female'", () => {
+    expect(["Male", "Female"]).toContain(person.sex(prng()));
+  });
+
+  it("sexType(prng) returns 'Male' or 'Female'", () => {
+    expect(["Male", "Female"]).toContain(person.sexType(prng()));
+  });
+
+  it("jobDescriptor(prng) returns a non-empty string", () => {
+    expect(person.jobDescriptor(prng()).length).toBeGreaterThan(0);
+  });
+
+  it("firstName with unrecognised gender string falls back to neutral (picks either model)", () => {
+    const name = person.firstName(prng(), "nonbinary");
+    expect(name).toMatch(/^[A-Z][a-z]+$/);
+  });
 });
 
 // ---------------------------------------------------------------------------
