@@ -1,15 +1,17 @@
-import type { LocaleData, MarkovModel } from "./types.js";
-
-// Placeholder model — replaced by trained models in Commit 3.
-const STUB: MarkovModel = { order: 2, prior: 0.01, chars: "abcdefghijklmnopqrstuvwxyz$", table: {} };
+import type { LocaleData } from "./types.js";
+import { nlFirstNamesMaleModel } from "../generators/data/markov/nl-first-names-male.js";
+import { nlFirstNamesFemaleModel } from "../generators/data/markov/nl-first-names-female.js";
+import { nlLastNamesModel } from "../generators/data/markov/nl-last-names.js";
+import { nlNounsModel } from "../generators/data/markov/nl-nouns.js";
+import { nlAdjectivesModel } from "../generators/data/markov/nl-adjectives.js";
 
 export const nl: LocaleData = {
   id: "nl",
 
   person: {
-    firstNamesMaleModel:   STUB,
-    firstNamesFemaleModel: STUB,
-    lastNamesModel:        STUB,
+    firstNamesMaleModel:   nlFirstNamesMaleModel,
+    firstNamesFemaleModel: nlFirstNamesFemaleModel,
+    lastNamesModel:        nlLastNamesModel,
     prefixes: {
       male:    ["Dhr.", "Dr.", "Prof."],
       female:  ["Mevr.", "Dr.", "Prof."],
@@ -104,8 +106,8 @@ export const nl: LocaleData = {
   },
 
   word: {
-    nounModel:      STUB,
-    adjectiveModel: STUB,
+    nounModel:      nlNounsModel,
+    adjectiveModel: nlAdjectivesModel,
     articles:      ["de", "het", "een"],
     prepositions:  ["in", "op", "van", "voor", "met", "naar", "door", "uit"],
     conjunctions:  ["en", "of", "maar", "want", "omdat"],

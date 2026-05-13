@@ -10,9 +10,9 @@ import * as data from "./index.js";
  * then clips to `maxLen`. Used by bio/description-type key generators so
  * they produce naturally fitting text rather than x-padded strings.
  */
-function generateTextToLength(prng: Prng, minLen: number, maxLen: number): string {
-  let result = data.word.sentence(prng);
-  while (result.length < minLen) result += " " + data.word.sentence(prng);
+function generateTextToLength(prng: Prng, ctx: GeneratorContext | undefined, minLen: number, maxLen: number): string {
+  let result = data.word.sentence(prng, ctx);
+  while (result.length < minLen) result += " " + data.word.sentence(prng, ctx);
   return result.length > maxLen ? result.slice(0, maxLen) : result;
 }
 
@@ -200,45 +200,45 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 
     // Word/Text
     word: data.word.noun as PrngGen,
-    text: (p, _ctx, schema) => {
+    text: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    description: (p, _ctx, schema) => {
+    description: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    note: (p, _ctx, schema) => {
+    note: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    summary: (p, _ctx, schema) => {
+    summary: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    comment: (p, _ctx, schema) => {
+    comment: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    body: (p, _ctx, schema) => {
+    body: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    content: (p, _ctx, schema) => {
+    content: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    message: (p, _ctx, schema) => {
+    message: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    omschrijving: (p, _ctx, schema) => {
+    omschrijving: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
-    bericht: (p, _ctx, schema) => {
+    bericht: (p, ctx, schema) => {
       const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, min, max);
+      return generateTextToLength(p, ctx, min, max);
     },
 
     // Dutch names

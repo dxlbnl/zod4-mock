@@ -1,242 +1,121 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
+import { sampleMarkov } from "./markov/sample.js";
+import { en } from "../../locales/en.js";
 
 // ---------------------------------------------------------------------------
-// Dutch-flavored Syllables (Phonemes)
-// ---------------------------------------------------------------------------
-
-const ONSETS = [
-  "b",
-  "d",
-  "f",
-  "g",
-  "h",
-  "k",
-  "l",
-  "m",
-  "n",
-  "p",
-  "r",
-  "s",
-  "t",
-  "v",
-  "w",
-  "z",
-  "sch",
-  "st",
-  "sp",
-  "tr",
-  "kr",
-  "pl",
-  "bl",
-  "fl",
-  "sl",
-] as const;
-const NUCLEI = [
-  "a",
-  "e",
-  "i",
-  "o",
-  "u",
-  "aa",
-  "ee",
-  "oo",
-  "uu",
-  "ie",
-  "oe",
-  "eu",
-  "ui",
-  "ou",
-  "ei",
-  "ij",
-] as const;
-const CODAS = [
-  "k",
-  "l",
-  "m",
-  "n",
-  "p",
-  "r",
-  "s",
-  "t",
-  "ng",
-  "nk",
-  "nt",
-  "rt",
-  "st",
-  "cht",
-] as const;
-
-// ---------------------------------------------------------------------------
-// Glue Words (Structural)
-// ---------------------------------------------------------------------------
-
-const ARTICLES = ["de", "het", "een"] as const;
-const PRONOUNS = ["hij", "zij", "wij", "ik"] as const;
-const PREPOSITIONS = ["in", "op", "van", "voor", "met", "naar", "door", "uit"] as const;
-const VERBS = ["is", "heeft", "gaat", "doet", "maakt", "zegt", "ziet", "komt", "wordt"] as const;
-const VERBS_PLURAL = [
-  "zijn",
-  "hebben",
-  "gaan",
-  "doen",
-  "maken",
-  "zeggen",
-  "zien",
-  "komen",
-  "worden",
-] as const;
-const CONJUNCTIONS = ["en", "of", "maar", "want", "omdat"] as const;
-const INTERJECTIONS = ["hé", "oh", "ja", "nee", "wouw", "ah"] as const;
-const ADVERBS = ["snel", "vaak", "altijd", "nooit", "nu", "dan", "hier", "daar"] as const;
-
-// ---------------------------------------------------------------------------
-// English/Technical Wordlist
+// English/Technical Wordlist — kept for internet.ts and company.ts
 // ---------------------------------------------------------------------------
 
 export const TECH_WORDS = [
-  "alpha",
-  "bravo",
-  "charlie",
-  "delta",
-  "echo",
-  "foxtrot",
-  "golf",
-  "hotel",
-  "india",
-  "juliet",
-  "kilo",
-  "lima",
-  "mike",
-  "november",
-  "oscar",
-  "papa",
-  "quebec",
-  "romeo",
-  "sierra",
-  "tango",
-  "uniform",
-  "victor",
-  "whiskey",
-  "xray",
-  "yankee",
-  "zulu",
-  "apple",
-  "banana",
-  "cherry",
-  "data",
-  "engine",
-  "frame",
-  "graph",
-  "handle",
-  "image",
-  "journey",
-  "kernel",
-  "layer",
-  "module",
-  "network",
+  "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel",
+  "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa",
+  "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whiskey",
+  "xray", "yankee", "zulu", "apple", "banana", "cherry", "data", "engine",
+  "frame", "graph", "handle", "image", "journey", "kernel", "layer",
+  "module", "network",
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Single Word Generators
+// Helpers
 // ---------------------------------------------------------------------------
 
-/** Generates a Dutch-sounding nonsense word. */
-export function noun(prng: Prng): string {
-  const syllables = prng.random() < 0.4 ? 1 : 2;
-  return generatePseudoWord(prng, syllables);
+function locPick(prng: Prng, arr: readonly string[]): string {
+  return arr.length > 0 ? arr[Math.floor(prng.random() * arr.length)]! : "";
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ---------------------------------------------------------------------------
+// Open-class word generators (Markov-sampled, locale-aware)
+// ---------------------------------------------------------------------------
+
+/** Samples a noun from the active locale's Markov model. */
+export function noun(prng: Prng, ctx?: GeneratorContext): string {
+  return sampleMarkov(prng, (ctx?.locale ?? en).word.nounModel);
 }
 
 /** Alias for noun. */
 export const word = noun;
 
-/** Generates a Dutch-sounding adjective (often ends in -e). */
-export function adjective(prng: Prng): string {
-  const word = generatePseudoWord(prng, 1);
-  return prng.random() < 0.8 ? word + "e" : word;
+/** Samples an adjective from the active locale's Markov model. */
+export function adjective(prng: Prng, ctx?: GeneratorContext): string {
+  return sampleMarkov(prng, (ctx?.locale ?? en).word.adjectiveModel);
 }
 
-export function verb(prng: Prng): string {
-  return prng.pick(VERBS);
+// ---------------------------------------------------------------------------
+// Closed-class word generators (locale arrays)
+// ---------------------------------------------------------------------------
+
+export function verb(prng: Prng, ctx?: GeneratorContext): string {
+  return locPick(prng, (ctx?.locale ?? en).word.verbs);
 }
 
-export function adverb(prng: Prng): string {
-  return prng.pick(ADVERBS);
+export function adverb(prng: Prng, ctx?: GeneratorContext): string {
+  return locPick(prng, (ctx?.locale ?? en).word.adverbs);
 }
 
-export function conjunction(prng: Prng): string {
-  return prng.pick(CONJUNCTIONS);
+export function conjunction(prng: Prng, ctx?: GeneratorContext): string {
+  return locPick(prng, (ctx?.locale ?? en).word.conjunctions);
 }
 
-export function interjection(prng: Prng): string {
-  return prng.pick(INTERJECTIONS);
+export function interjection(prng: Prng, ctx?: GeneratorContext): string {
+  return locPick(prng, (ctx?.locale ?? en).word.interjections);
 }
 
-export function preposition(prng: Prng): string {
-  return prng.pick(PREPOSITIONS);
+export function preposition(prng: Prng, ctx?: GeneratorContext): string {
+  return locPick(prng, (ctx?.locale ?? en).word.prepositions);
 }
 
 // ---------------------------------------------------------------------------
 // Multi-word / Structural Generators
 // ---------------------------------------------------------------------------
 
-/** Generates a list of random pseudo-words. */
-export function words(prng: Prng, count = 3): string {
-  return Array.from({ length: count }, () => noun(prng)).join(" ");
+/** Generates a list of space-separated nouns. */
+export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
+  return Array.from({ length: count }, () => noun(prng, ctx)).join(" ");
 }
 
-/** Generates a grammatically structured pseudo-sentence. */
-export function sentence(prng: Prng): string {
+/** Generates a grammatically structured sentence using the active locale. */
+export function sentence(prng: Prng, ctx?: GeneratorContext): string {
+  const loc = (ctx?.locale ?? en).word;
+  const art  = (): string => locPick(prng, loc.articles);
+  const pron = (): string => locPick(prng, loc.pronouns);
+  const pre  = (): string => locPick(prng, loc.prepositions);
+  const vrb  = (): string => locPick(prng, loc.verbs);
+  const vrbp = (): string => locPick(prng, loc.verbsPlural);
+  const conj = (): string => locPick(prng, loc.conjunctions);
+  const adj  = (): string => adjective(prng, ctx);
+  const n    = (): string => noun(prng, ctx);
+
   const templates: [() => string, ...(() => string)[]] = [
     // [Article] [Adjective] [Noun] [Verb] [Preposition] [Article] [Noun]
-    () =>
-      `${capitalize(prng.pick(ARTICLES))} ${adjective(prng)} ${noun(prng)} ${prng.pick(VERBS)} ${prng.pick(PREPOSITIONS)} ${prng.pick(ARTICLES)} ${noun(prng)}.`,
+    () => `${cap(art())} ${adj()} ${n()} ${vrb()} ${pre()} ${art()} ${n()}.`,
     // [Pronoun] [Verb] [Article] [Adjective] [Noun]
-    () =>
-      `${capitalize(prng.pick(PRONOUNS))} ${prng.pick(VERBS)} ${prng.pick(ARTICLES)} ${adjective(prng)} ${noun(prng)}.`,
+    () => `${cap(pron())} ${vrb()} ${art()} ${adj()} ${n()}.`,
     // [Preposition] [Article] [Noun] [Verb] [Pronoun] [Article] [Noun]
-    () =>
-      `${capitalize(prng.pick(PREPOSITIONS))} ${prng.pick(ARTICLES)} ${noun(prng)} ${prng.pick(VERBS)} ${prng.pick(PRONOUNS)} ${prng.pick(ARTICLES)} ${noun(prng)}.`,
+    () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pron()} ${art()} ${n()}.`,
     // [Article] [Noun] [Verb] [Adjective] [Preposition] [Noun]
-    () =>
-      `${capitalize(prng.pick(ARTICLES))} ${noun(prng)} ${prng.pick(VERBS)} ${adjective(prng)} ${prng.pick(PREPOSITIONS)} ${noun(prng)}.`,
-    // [Article] [Noun] en [Article] [Noun] [VerbPlural] [Preposition] [Article] [Noun]
-    () =>
-      `${capitalize(prng.pick(ARTICLES))} ${noun(prng)} en ${prng.pick(ARTICLES)} ${noun(prng)} ${prng.pick(VERBS_PLURAL)} ${prng.pick(PREPOSITIONS)} ${prng.pick(ARTICLES)} ${noun(prng)}.`,
+    () => `${cap(art())} ${n()} ${vrb()} ${adj()} ${pre()} ${n()}.`,
+    // [Article] [Noun] [Conj] [Article] [Noun] [VerbPlural] [Preposition] [Article] [Noun]
+    () => `${cap(art())} ${n()} ${conj()} ${art()} ${n()} ${vrbp()} ${pre()} ${art()} ${n()}.`,
   ];
 
   let res = prng.pick(templates)();
   // Ensure a reasonable minimum length (e.g. 15 chars) to pass schema constraints like min(10)
   while (res.length < 15) {
-    res = res.replace(".", ` ${prng.pick(CONJUNCTIONS)} ${noun(prng)}.`);
+    res = res.replace(".", ` ${conj()} ${n()}.`);
   }
   return res;
 }
 
-/** Generates a paragraph of structured pseudo-sentences. */
-export function paragraph(prng: Prng, sentenceCount = 3): string {
-  return Array.from({ length: sentenceCount }, () => sentence(prng)).join(" ");
+/** Generates a paragraph of structured sentences. */
+export function paragraph(prng: Prng, sentenceCount = 3, ctx?: GeneratorContext): string {
+  return Array.from({ length: sentenceCount }, () => sentence(prng, ctx)).join(" ");
 }
 
 /** Alias for sentence or short paragraph. */
-export function sample(prng: Prng): string {
-  return prng.random() < 0.5 ? sentence(prng) : paragraph(prng, 2);
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function generatePseudoWord(prng: Prng, syllables: number): string {
-  let word = "";
-  for (let i = 0; i < syllables; i++) {
-    const onset = prng.random() < 0.8 ? prng.pick(ONSETS) : "";
-    const nucleus = prng.pick(NUCLEI);
-    const coda = prng.random() < 0.6 ? prng.pick(CODAS) : "";
-    word += onset + nucleus + coda;
-  }
-  return word;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+export function sample(prng: Prng, ctx?: GeneratorContext): string {
+  return prng.random() < 0.5 ? sentence(prng, ctx) : paragraph(prng, 2, ctx);
 }

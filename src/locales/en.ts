@@ -1,15 +1,17 @@
-import type { LocaleData, MarkovModel } from "./types.js";
-
-// Placeholder model — replaced by trained models in Commit 3.
-const STUB: MarkovModel = { order: 2, prior: 0.01, chars: "abcdefghijklmnopqrstuvwxyz$", table: {} };
+import type { LocaleData } from "./types.js";
+import { enFirstNamesMaleModel } from "../generators/data/markov/en-first-names-male.js";
+import { enFirstNamesFemaleModel } from "../generators/data/markov/en-first-names-female.js";
+import { enLastNamesModel } from "../generators/data/markov/en-last-names.js";
+import { enNounsModel } from "../generators/data/markov/en-nouns.js";
+import { enAdjectivesModel } from "../generators/data/markov/en-adjectives.js";
 
 export const en: LocaleData = {
   id: "en",
 
   person: {
-    firstNamesMaleModel:   STUB,
-    firstNamesFemaleModel: STUB,
-    lastNamesModel:        STUB,
+    firstNamesMaleModel:   enFirstNamesMaleModel,
+    firstNamesFemaleModel: enFirstNamesFemaleModel,
+    lastNamesModel:        enLastNamesModel,
     prefixes: {
       male:    ["Mr.", "Dr.", "Prof."],
       female:  ["Ms.", "Mrs.", "Dr.", "Prof."],
@@ -115,8 +117,8 @@ export const en: LocaleData = {
   },
 
   word: {
-    nounModel:      STUB,
-    adjectiveModel: STUB,
+    nounModel:      enNounsModel,
+    adjectiveModel: enAdjectivesModel,
     articles:      ["the", "a", "an"],
     prepositions:  ["in", "on", "at", "for", "with", "of", "to", "from", "by", "about"],
     conjunctions:  ["and", "or", "but", "because", "so", "yet"],
