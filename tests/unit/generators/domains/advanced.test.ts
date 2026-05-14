@@ -8,7 +8,7 @@ import {
 } from "../../../../src/generators/schema/router.js";
 import { SchemaRegistry } from "../../../../src/registry.js";
 import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
-import { en } from "../../../../src/locales/en.js";
+import { en } from "@zod4-mock/locale-en";
 
 const EMPTY_GEN = {} as BoundGenerators;
 

@@ -16,7 +16,7 @@
 
 import { createPrng } from "../src/prng.js";
 import { sampleMarkov } from "../src/generators/data/markov/sample.js";
-import type { MarkovModel } from "../src/locales/types.js";
+import type { MarkovModel } from "@zod4-mock/locale-core";
 import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------

@@ -11,9 +11,7 @@ export {
 } from "./generators/index.js";
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
-export { en } from "./locales/en.js";
-export { nl } from "./locales/nl.js";
-export { extend } from "./locales/extend.js";
+export { extend } from "@zod4-mock/locale-core";
 
 import { z } from "zod";
 import type { GenerateOptions, WorldOptions } from "./types.js";
@@ -93,4 +91,7 @@ export type {
   // Localization
   LocaleData,
   MarkovModel,
+  NameOriginSet,
+  LastNamePrefix,
+  Currency,
 } from "./types.js";

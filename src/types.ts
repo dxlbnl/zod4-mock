@@ -5,21 +5,15 @@
 
 import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
-import type { LocaleData } from "./locales/types.js";
-export type { LocaleData, MarkovModel } from "./locales/types.js";
-
-// ---------------------------------------------------------------------------
-// PRNG
-// ---------------------------------------------------------------------------
-
-export interface Prng {
-  readonly seed: number;
-  random(): number;
-  int(min: number, max: number): number;
-  pick<T>(items: readonly [T, ...T[]]): T;
-  fork(key: string): Prng;
-  bytes(n: number): Uint8Array;
-}
+import type { LocaleData, Prng } from "@zod4-mock/locale-core";
+export type {
+  LocaleData,
+  MarkovModel,
+  NameOriginSet,
+  LastNamePrefix,
+  Currency,
+  Prng,
+} from "@zod4-mock/locale-core";
 
 // ---------------------------------------------------------------------------
 // Registry — schema-reference based

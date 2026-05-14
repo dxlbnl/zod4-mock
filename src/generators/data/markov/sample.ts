@@ -1,5 +1,5 @@
 import type { Prng } from "../../../types.js";
-import type { MarkovModel, NameOriginSet } from "../../../locales/types.js";
+import type { MarkovModel, NameOriginSet } from "@zod4-mock/locale-core";
 
 // Four or more consecutive consonants never appear in real names across any
 // of the supported locales — used to reject Markov dead-end cascades.

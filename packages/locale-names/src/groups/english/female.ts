@@ -1,4 +1,4 @@
-import type { MarkovModel } from "zod4-mock";
+import type { MarkovModel } from "@zod4-mock/locale-core";
 
 export const englishFemaleModel: MarkovModel = {
   order: 3,

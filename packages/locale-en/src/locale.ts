@@ -1,8 +1,9 @@
-import type { LocaleData } from "../../../src/locales/types.js";
-import type { Prng } from "../../../src/types.js";
+import type { LocaleData, Prng } from "@zod4-mock/locale-core";
 import { englishMaleModel, englishFemaleModel, englishLastNamesModel } from "@zod4-mock/locale-names/groups/english";
 import { enNounsModel } from "./models/nouns.js";
 import { enAdjectivesModel } from "./models/adjectives.js";
+
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 export const en: LocaleData = {
   id: "en",
@@ -18,7 +19,30 @@ export const en: LocaleData = {
     },
     suffixes: ["Jr.", "Sr.", "III", "IV", "Esq."],
     genders:  ["Male", "Female", "Non-binary", "Other"],
+    jobTitles: [
+      "Developer", "Engineer", "Manager", "Designer", "Architect", "Consultant",
+      "Specialist", "Analyst", "Coordinator", "Director", "Executive", "Advisor",
+      "Researcher", "Administrator", "Inspector", "Instructor", "Editor", "Associate",
+    ],
+    jobAreas: [
+      "Engineering", "Product", "Design", "Data", "Security", "Marketing", "Sales",
+      "Finance", "Operations", "Legal", "HR", "Customer Service", "Logistics",
+      "Communications", "R&D", "Quality Assurance", "Procurement", "Administration",
+    ],
+    jobTypes: ["Lead", "Senior", "Junior", "Head", "Assistant", "Director", "Intern", "Interim", "Freelance", "Trainee"],
+    jobDescriptors: ["Innovative", "Global", "Central", "Direct", "Strategic", "Operational", "Dynamic", "Regional", "International", "Corporate"],
     formatFullName: (first, last) => `${first} ${last}`,
+    formatBio: (prng, { jobTitle, jobArea, jobType }) => {
+      const t  = jobTitle.toLowerCase();
+      const a  = jobArea.toLowerCase();
+      const ty = jobType ? jobType.toLowerCase() + " " : "";
+      const templates = [
+        () => cap(`${ty}${t} specializing in ${a}.`),
+        () => `Working as ${ty}${t} in ${a}.`,
+        () => cap(`${ty}${t} with a passion for ${a}.`),
+      ] as const;
+      return templates[prng.int(0, templates.length - 1)]!();
+    },
   },
 
   address: {
@@ -48,6 +72,29 @@ export const en: LocaleData = {
       "Sweden", "Norway", "Denmark", "Finland", "Ireland",
       "New Zealand", "Austria", "Belgium", "Portugal", "Spain",
     ],
+    countryCodes: ["US", "CA", "GB", "AU", "DE", "FR", "JP", "KR", "NL", "CH", "SE", "NO", "DK", "FI", "IE", "NZ", "AT", "BE", "PT", "ES"],
+    continents: ["Africa", "Antarctica", "Asia", "Europe", "North America", "Oceania", "South America"],
+    languages: ["English", "Spanish", "French", "German", "Mandarin", "Japanese", "Korean", "Portuguese", "Italian", "Dutch"],
+    streetNames: [
+      "Oak", "Maple", "Pine", "Cedar", "Elm", "Birch", "Willow", "Chestnut",
+      "Main", "Park", "First", "Second", "Third", "Fourth", "Fifth",
+      "Washington", "Lincoln", "Jefferson", "Madison", "Adams", "Jackson",
+      "Lake", "Hill", "River", "Spring", "Sunset", "Highland", "Forest", "Meadow",
+      "Church", "School", "Mill", "Market", "Center", "North", "South", "East", "West",
+      "King", "Queen", "Prince", "Royal", "Crown", "Liberty", "Union", "Franklin",
+    ],
+    streetSuffixes: ["St", "Ave", "Blvd", "Dr", "Rd", "Ln", "Way", "Ct", "Pl", "Pkwy"],
+    cityPrefixes: ["New ", "Old ", "North ", "South ", "East ", "West ", "Saint ", "Mount "],
+    cityCores: ["ville", "town", "burg", "field", "ford", "port", "wood", "haven", "ridge", "view"],
+    buildingNumberSuffixes: ["", "", "", "A", "B", "C"],
+    timeZones: [
+      "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+      "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Amsterdam",
+      "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney", "UTC",
+    ],
+    directions: ["North", "East", "South", "West", "Northeast", "Southeast", "Southwest", "Northwest"],
+    cardinalDirections: ["North", "East", "South", "West"],
+    ordinalDirections: ["Northeast", "Southeast", "Southwest", "Northwest"],
     streetFormats: [
       (num, name) => `${num} ${name} St`,
       (num, name) => `${num} ${name} Ave`,
@@ -55,8 +102,8 @@ export const en: LocaleData = {
       (num, name) => `${num} ${name} Dr`,
       (num, name) => `${num} ${name} Rd`,
     ],
-    zipFormat: (prng: Prng) =>
-      `${prng.int(10000, 99999)}`,
+    zipFormat: (prng: Prng) => `${prng.int(10000, 99999)}`,
+    secondaryAddressFormat: (n) => `Apt ${n}`,
     phonePrefix: "+1",
     ibanPrefix:  "US",
     countryCode: "US",
@@ -81,6 +128,10 @@ export const en: LocaleData = {
     ],
     currencyCode: "USD",
     formatPrice: (amount) => `$${amount.toFixed(2)}`,
+    formatProductName: (adjective, material, noun) =>
+      `${adjective} ${material.toLowerCase()} ${noun}`,
+    formatProductDescription: ({ productName, adjective, noun, department }) =>
+      `${productName}: ${adjective.toLowerCase()} ${noun} for your ${department.toLowerCase()} needs.`,
   },
 
   company: {
@@ -111,8 +162,23 @@ export const en: LocaleData = {
       "facilitate", "automate", "integrate", "synchronize", "accelerate",
       "visualize", "pioneer", "catalyze",
     ],
+    catchPhraseAdjectives: [
+      "Customer-focused", "Layered", "Upgradable", "Compatible", "High-quality",
+      "Forward-thinking", "Versatile", "Reliable", "Secure", "Accessible",
+      "Groundbreaking", "Exclusive", "Superior", "Essential", "Fundamental", "Indispensable",
+    ],
+    catchPhraseDescriptors: [
+      "optimal", "24/7", "modular", "monitored", "logistical",
+      "directional", "streamlined", "automated", "personalized", "transparent",
+      "flexible", "scalable", "error-free", "integrated", "decentralized", "virtual",
+    ],
+    catchPhraseNouns: [
+      "capacity", "utilization", "interface", "contingency", "projection",
+      "success", "efficiency", "quality", "security", "growth",
+      "performance", "ROI", "engagement", "productivity", "flexibility", "innovation",
+    ],
     formatBuzzPhrase: (verb, adj, noun) =>
-      `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${adj.toLowerCase()} ${noun.toLowerCase()}`,
+      `${cap(verb)} ${adj.toLowerCase()} ${noun.toLowerCase()}`,
   },
 
   word: {
@@ -130,7 +196,63 @@ export const en: LocaleData = {
 
   finance: {
     bankCodes: ["BOFA", "CITI", "JPMC", "WELL", "HSBC", "USBA", "CHBU", "TDBA", "BANA", "FNMA"],
+    bicLocations: ["33", "44", "55", "66", "77"],
+    currencies: [
+      { code: "USD", name: "US Dollar",          symbol: "$",   numeric: "840" },
+      { code: "EUR", name: "Euro",               symbol: "€",   numeric: "978" },
+      { code: "GBP", name: "British Pound",      symbol: "£",   numeric: "826" },
+      { code: "JPY", name: "Japanese Yen",       symbol: "¥",   numeric: "392" },
+      { code: "CHF", name: "Swiss Franc",        symbol: "CHF", numeric: "756" },
+      { code: "CAD", name: "Canadian Dollar",    symbol: "C$",  numeric: "124" },
+      { code: "AUD", name: "Australian Dollar",  symbol: "A$",  numeric: "036" },
+      { code: "CNY", name: "Chinese Yuan",       symbol: "¥",   numeric: "156" },
+      { code: "SEK", name: "Swedish Krona",      symbol: "kr",  numeric: "752" },
+      { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$", numeric: "554" },
+    ],
+    accountNames: [
+      "Savings", "Checking", "Business", "Credit Card",
+      "Investment Portfolio", "Joint Account", "Retirement",
+      "Kids Account", "Line of Credit", "Mortgage",
+    ],
+    transactionTypes: ["deposit", "withdrawal", "payment", "invoice", "refund", "transfer", "direct debit", "salary", "interest", "dividend"],
+    transactionDescriptions: [
+      "Grocery store", "Monthly rent", "Salary", "Online shopping",
+      "Gas station", "Restaurant bill", "Subscription", "Coffee shop",
+      "Insurance premium", "Utility bill", "Clothing store", "Gym",
+      "Streaming service", "Pharmacy", "Bookstore",
+    ],
     formatIban: (prng: Prng, bankCode: string) =>
       `US${prng.int(10, 99)}${bankCode}${Array.from({ length: 10 }, () => prng.int(0, 9)).join("")}`,
+  },
+
+  date: {
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    weekdaysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    timeZones: ["UTC", "America/New_York", "Europe/London", "Europe/Paris", "Europe/Berlin", "Asia/Tokyo"],
+  },
+
+  color: {
+    names: [
+      "red", "blue", "green", "yellow", "orange", "purple",
+      "pink", "black", "white", "gray", "brown", "cyan",
+      "magenta", "lime", "indigo", "violet", "teal", "coral",
+      "crimson", "gold", "silver", "navy", "olive", "maroon",
+    ],
+  },
+
+  phone: {
+    mobilePrefix: "+1",
+    landlinePrefixes: ["212", "213", "312", "415", "617", "713", "202", "404"],
+    formatMobile: (prng: Prng) => {
+      const num = Array.from({ length: 10 }, () => prng.int(0, 9)).join("");
+      return `(${num.slice(0, 3)}) ${num.slice(3, 6)}-${num.slice(6)}`;
+    },
+    formatLandline: (prng: Prng) => {
+      const area = ["212", "213", "312", "415", "617", "713", "202", "404"][prng.int(0, 7)]!;
+      const num = Array.from({ length: 7 }, () => prng.int(0, 9)).join("");
+      return `(${area}) ${num.slice(0, 3)}-${num.slice(3)}`;
+    },
   },
 };

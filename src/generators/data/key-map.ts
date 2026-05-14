@@ -129,13 +129,13 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     upc: data.commerce.upc as PrngGen,
     department: data.commerce.department as PrngGen,
     material: data.commerce.productMaterial as PrngGen,
-    price: (p, _ctx, schema) => {
+    price: (p, ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 500);
-      return data.commerce.price(p, min, max);
+      return data.commerce.price(p, min, max, ctx);
     },
-    prijs: (p, _ctx, schema) => {
+    prijs: (p, ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 500);
-      return data.commerce.price(p, min, max);
+      return data.commerce.price(p, min, max, ctx);
     },
     sku: (p) => `${p.pick(LETTERS)}${p.pick(LETTERS)}-${p.int(1000, 9999)}`,
 

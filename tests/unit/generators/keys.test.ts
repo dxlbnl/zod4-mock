@@ -9,7 +9,8 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
-import { generators, createWorld, createPrng, en } from "../../../src/index.js";
+import { generators, createWorld, createPrng } from "../../../src/index.js";
+import { en } from "@zod4-mock/locale-en";
 import { generateFromSchema } from "../../../src/generators/schema/router.js";
 import type {
   BoundGenerators,
@@ -774,16 +775,16 @@ describe("DEFAULT_KEY_MAP — finance string keys", () => {
     expect(v).toMatch(/^\d{4}-\d/);
   });
 
-  it("price (string schema) produces a Dutch-formatted price string", () => {
+  it("price (string schema) produces a locale-formatted price string", () => {
     const v = generateFromKey("price", z.string(), makeCtx()) as string;
     expect(typeof v).toBe("string");
-    expect(v).toMatch(/^\d+,\d{2}$/);
+    expect(v).toMatch(/^\$\d+\.\d{2}$/);
   });
 
-  it("prijs (string schema) produces a Dutch-formatted price string", () => {
+  it("prijs (string schema) produces a locale-formatted price string", () => {
     const v = generateFromKey("prijs", z.string(), makeCtx()) as string;
     expect(typeof v).toBe("string");
-    expect(v).toMatch(/^\d+,\d{2}$/);
+    expect(v).toMatch(/^\$\d+\.\d{2}$/);
   });
 
   it("sku key produces an AB-NNNN formatted SKU", () => {

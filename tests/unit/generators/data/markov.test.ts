@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { sampleMarkov } from "../../../../src/generators/data/markov/sample.js";
-import type { MarkovModel } from "../../../../src/locales/types.js";
+import type { MarkovModel } from "@zod4-mock/locale-core";
 import { enFirstNamesMaleModel, enFirstNamesFemaleModel, enLastNamesModel, enNounsModel } from "@zod4-mock/locale-en";
 import { nlNounsModel } from "@zod4-mock/locale-nl";
 import { dutchMaleModel } from "@zod4-mock/locale-names/groups/dutch";

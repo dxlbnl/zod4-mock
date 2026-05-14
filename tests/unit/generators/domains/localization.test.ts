@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { generators, createPrng, createWorld, nl } from "../../../../src/index.js";
+import { generators, createPrng, createWorld } from "../../../../src/index.js";
+import type { GeneratorContext } from "../../../../src/index.js";
+import { nl } from "@zod4-mock/locale-nl";
+
+const nlCtx = { locale: nl } as unknown as GeneratorContext;
 
 describe("Localization", () => {
   const prng = createPrng(123);
@@ -23,44 +27,44 @@ describe("Localization", () => {
     });
   });
 
-  describe("Location Generators", () => {
+  describe("Location Generators (nl locale)", () => {
     it("generates Dutch cities", () => {
-      const cities = Array.from({ length: 20 }, () => generators.location.city(prng));
+      const cities = Array.from({ length: 20 }, () => generators.location.city(prng, nlCtx));
       const dutchCities = ["Amsterdam", "Rotterdam", "Utrecht", "Den Haag", "Eindhoven"];
       expect(cities.some((c) => dutchCities.includes(c))).toBe(true);
     });
 
     it("generates Dutch postal codes (1234 AB format)", () => {
-      const pc = generators.location.postalCode(prng);
+      const pc = generators.location.zipCode(prng, nlCtx);
       expect(pc).toMatch(/^[1-9][0-9]{3} [A-Z]{2}$/);
     });
   });
 
-  describe("Phone Generators", () => {
+  describe("Phone Generators (nl locale)", () => {
     it("generates Dutch phone numbers (06-... or 010-...)", () => {
-      const phone = generators.phone.number(prng);
+      const phone = generators.phone.number(prng, nlCtx);
       expect(phone).toMatch(/^0[1-9][0-9]?-/);
     });
   });
 
-  describe("Commerce & Finance Generators", () => {
+  describe("Commerce & Finance Generators (nl locale)", () => {
     it("generates Dutch department names", () => {
       const ALL_DUTCH_DEPARTMENTS = [
         "Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty",
         "Auto", "Sport", "Gezondheid", "Schoenen", "Sieraden", "Horloges", "Muziek",
         "Films", "Gereedschap", "Dierenbenodigdheden", "Baby", "Kantoorartikelen", "Levensmiddelen",
       ];
-      const dept = generators.commerce.department(prng);
+      const dept = generators.commerce.department(prng, nlCtx);
       expect(ALL_DUTCH_DEPARTMENTS).toContain(dept);
     });
 
     it("generates prices with Dutch comma decimal separator", () => {
-      const p = generators.commerce.price(prng);
-      expect(p).toMatch(/^[0-9]+,[0-9]{2}$/);
+      const p = generators.commerce.price(prng, 1, 1000, nlCtx);
+      expect(p).toMatch(/^€[0-9]+,[0-9]{2}$/);
     });
 
     it("generates Dutch transaction types", () => {
-      const tt = generators.finance.transactionType(prng);
+      const tt = generators.finance.transactionType(prng, nlCtx);
       const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie", "overschrijving", "incasso", "salaris", "rente", "dividend"];
       expect(dutchTTs).toContain(tt);
     });

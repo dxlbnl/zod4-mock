@@ -35,7 +35,7 @@ export interface TrainOptions {
   minWordLen?: number;
   /** Maximum word length to include in training corpus (inclusive). Default: Infinity */
   maxWordLen?: number;
-  /** Import path for the MarkovModel type in emitted files. Default: "zod4-mock" */
+  /** Import path for the MarkovModel type in emitted files. Default: "@zod4-mock/locale-core" */
   typeImport?: string;
 }
 
@@ -128,7 +128,7 @@ export async function trainMarkov(opts: TrainOptions): Promise<void> {
     input, output, name,
     order = 2, prior = 0.01,
     minWordLen = 1, maxWordLen = Infinity,
-    typeImport = "zod4-mock",
+    typeImport = "@zod4-mock/locale-core",
   } = opts;
 
   const raw = readFileSync(input, "utf8");
@@ -169,7 +169,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const prior  = Number(get("--prior")   ?? "0.01");
   const minWordLen = get("--min-len") ? Number(get("--min-len")) : undefined;
   const maxWordLen = get("--max-len") ? Number(get("--max-len")) : undefined;
-  const typeImport = get("--type-import") ?? "zod4-mock";
+  const typeImport = get("--type-import") ?? "@zod4-mock/locale-core";
 
   if (!input || !output || !name) {
     console.error(

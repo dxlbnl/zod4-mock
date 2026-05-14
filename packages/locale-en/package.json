@@ -4,23 +4,29 @@
   "description": "English locale for zod4-mock",
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm run build",
     "fetch-data": "tsx scripts/fetch-data.ts",
     "train": "tsx scripts/train.ts",
     "verify": "tsx scripts/verify.ts"
   },
   "dependencies": {
+    "@zod4-mock/locale-core": "workspace:*",
     "@zod4-mock/locale-names": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "zod4-mock": "workspace:*"
+    "typescript": "^6.0.3"
   }
 }

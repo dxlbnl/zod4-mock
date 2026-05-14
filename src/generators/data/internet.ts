@@ -1,7 +1,7 @@
 import type { Prng, GeneratorContext } from "../../types.js";
 import { firstName, lastName } from "./person.js";
 import { noun, TECH_WORDS } from "./word.js";
-import { COMPANY_PREFIXES } from "./company.js";
+import { defaultLocale } from "../../default-locale.js";
 import { siblingString } from "./sibling.js";
 
 /** Strip diacritics and keep only a-z. */
@@ -50,11 +50,15 @@ const URL_PATHS = [
   "orders", "invoices", "reports", "users", "admin", "status",
 ] as const;
 
-export function domainWord(prng: Prng): string {
+export function domainWord(prng: Prng, ctx?: GeneratorContext): string {
+  const locale = ctx?.locale ?? defaultLocale;
   const strategy = prng.int(0, 2);
   if (strategy === 0) return prng.pick(TECH_WORDS);
-  if (strategy === 1) return prng.pick(COMPANY_PREFIXES).toLowerCase();
-  return noun(prng).toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (strategy === 1) {
+    const prefixes = locale.company.prefixes;
+    return prefixes[prng.int(0, prefixes.length - 1)]!.toLowerCase();
+  }
+  return noun(prng, ctx).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 export function urlPath(prng: Prng): string {

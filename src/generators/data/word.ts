@@ -1,6 +1,6 @@
 import type { Prng, GeneratorContext } from "../../types.js";
 import { sampleMarkov } from "./markov/sample.js";
-import { en } from "../../locales/en.js";
+import { defaultLocale } from "../../default-locale.js";
 
 // ---------------------------------------------------------------------------
 // English/Technical Wordlist — kept for internet.ts and company.ts
@@ -31,17 +31,26 @@ function cap(s: string): string {
 // Open-class word generators (Markov-sampled, locale-aware)
 // ---------------------------------------------------------------------------
 
-/** Samples a noun from the active locale's Markov model. */
+/**
+ * Samples a noun from the active locale — uses the Markov model when present,
+ * otherwise falls back to the locale's plain `nouns` array. Output is always
+ * capitalized for consistency between Markov and array-based locales.
+ */
 export function noun(prng: Prng, ctx?: GeneratorContext): string {
-  return sampleMarkov(prng, (ctx?.locale ?? en).word.nounModel);
+  const w = (ctx?.locale ?? defaultLocale).word;
+  return w.nounModel ? sampleMarkov(prng, w.nounModel) : cap(locPick(prng, w.nouns ?? []));
 }
 
 /** Alias for noun. */
 export const word = noun;
 
-/** Samples an adjective from the active locale's Markov model. */
+/**
+ * Samples an adjective from the active locale — Markov model when present,
+ * otherwise the locale's plain `adjectives` array. Output is always capitalized.
+ */
 export function adjective(prng: Prng, ctx?: GeneratorContext): string {
-  return sampleMarkov(prng, (ctx?.locale ?? en).word.adjectiveModel);
+  const w = (ctx?.locale ?? defaultLocale).word;
+  return w.adjectiveModel ? sampleMarkov(prng, w.adjectiveModel) : cap(locPick(prng, w.adjectives ?? []));
 }
 
 // ---------------------------------------------------------------------------
@@ -49,23 +58,23 @@ export function adjective(prng: Prng, ctx?: GeneratorContext): string {
 // ---------------------------------------------------------------------------
 
 export function verb(prng: Prng, ctx?: GeneratorContext): string {
-  return locPick(prng, (ctx?.locale ?? en).word.verbs);
+  return locPick(prng, (ctx?.locale ?? defaultLocale).word.verbs);
 }
 
 export function adverb(prng: Prng, ctx?: GeneratorContext): string {
-  return locPick(prng, (ctx?.locale ?? en).word.adverbs);
+  return locPick(prng, (ctx?.locale ?? defaultLocale).word.adverbs);
 }
 
 export function conjunction(prng: Prng, ctx?: GeneratorContext): string {
-  return locPick(prng, (ctx?.locale ?? en).word.conjunctions);
+  return locPick(prng, (ctx?.locale ?? defaultLocale).word.conjunctions);
 }
 
 export function interjection(prng: Prng, ctx?: GeneratorContext): string {
-  return locPick(prng, (ctx?.locale ?? en).word.interjections);
+  return locPick(prng, (ctx?.locale ?? defaultLocale).word.interjections);
 }
 
 export function preposition(prng: Prng, ctx?: GeneratorContext): string {
-  return locPick(prng, (ctx?.locale ?? en).word.prepositions);
+  return locPick(prng, (ctx?.locale ?? defaultLocale).word.prepositions);
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +88,7 @@ export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
 
 /** Generates a grammatically structured sentence using the active locale. */
 export function sentence(prng: Prng, ctx?: GeneratorContext): string {
-  const loc = (ctx?.locale ?? en).word;
+  const loc = (ctx?.locale ?? defaultLocale).word;
   const art  = (): string => locPick(prng, loc.articles);
   const pron = (): string => locPick(prng, loc.pronouns);
   const pre  = (): string => locPick(prng, loc.prepositions);

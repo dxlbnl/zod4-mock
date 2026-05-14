@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { extend } from "../../../src/locales/extend.js";
-import { en } from "../../../src/locales/en.js";
-import { nl } from "../../../src/locales/nl.js";
+import { extend } from "@zod4-mock/locale-core";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
 
 describe("extend()", () => {
   it("returns a locale with the new id", () => {
@@ -63,9 +63,9 @@ describe("extend()", () => {
     const mixed = extend(en, {
       id: "en-nl-names",
       person: {
-        firstNamesMale:   nl.person.firstNamesMale,
-        firstNamesFemale: nl.person.firstNamesFemale,
-        lastNames:        nl.person.lastNames,
+        firstNamesMale:   nl.person.firstNamesMale!,
+        firstNamesFemale: nl.person.firstNamesFemale!,
+        lastNames:        nl.person.lastNames!,
       },
     });
     expect(mixed.id).toBe("en-nl-names");

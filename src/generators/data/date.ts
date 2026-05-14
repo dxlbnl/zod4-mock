@@ -1,46 +1,12 @@
-import type { Prng } from "../../types.js";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+import type { Prng, GeneratorContext } from "../../types.js";
+import { defaultLocale } from "../../default-locale.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_YEAR = 365 * MS_PER_DAY;
 
-const MONTHS = [
-  "Januari",
-  "Februari",
-  "Maart",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Augustus",
-  "September",
-  "Oktober",
-  "November",
-  "December",
-] as const;
-const WEEKDAYS = [
-  "Maandag",
-  "Dinsdag",
-  "Woensdag",
-  "Donderdag",
-  "Vrijdag",
-  "Zaterdag",
-  "Zondag",
-] as const;
-const TIME_ZONES = [
-  "UTC",
-  "Europe/Amsterdam",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Berlin",
-] as const;
-
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
+function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
+  return arr[Math.floor(prng.random() * arr.length)] as T;
+}
 
 export function anytime(prng: Prng): Date {
   const start = new Date("2000-01-01").getTime();
@@ -91,14 +57,14 @@ export function birthdate(prng: Prng, minAge = 18, maxAge = 80): Date {
   return new Date(start + prng.random() * (end - start));
 }
 
-export function month(prng: Prng): string {
-  return prng.pick(MONTHS);
+export function month(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).date.months);
 }
 
-export function weekday(prng: Prng): string {
-  return prng.pick(WEEKDAYS);
+export function weekday(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).date.weekdays);
 }
 
-export function timeZone(prng: Prng): string {
-  return prng.pick(TIME_ZONES);
+export function timeZone(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).date.timeZones);
 }

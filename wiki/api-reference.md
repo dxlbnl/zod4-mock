@@ -31,11 +31,15 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 | `SchemaKeyMap`         | type      | Per-schema key generator map (typed)             |
 | `GenerateOptions`      | type      | Options for `generate()` and `world.generate()`  |
 | `DeepPartial`          | type      | Recursive optional type                          |
-| `en`                   | object    | Default English locale                           |
-| `nl`                   | object    | Dutch locale                                     |
 | `extend`               | function  | Shallow-per-section locale override helper       |
 | `LocaleData`           | type      | Pluggable locale interface                       |
 | `MarkovModel`          | type      | Trained n-gram model for word/name generation    |
+| `NameOriginSet`        | type      | A Markov name model + its sampling weight        |
+| `LastNamePrefix`       | type      | A surname prefix (tussenvoegsel) + its weight    |
+| `Currency`             | type      | `{ code, name, symbol, numeric }`                |
+
+The `en` and `nl` locales are **not** exported from `zod4-mock`. They live in
+separate, opt-in workspace packages — see [Localization](#localization).
 
 ---
 
@@ -88,12 +92,16 @@ interface WorldOptions {
 
 **`generators`** — custom key-based generators applied to every schema in the world. Keys are matched case-insensitively. See [`KeyGenerator`](#keygenerator) below.
 
-**`locale`** — active locale used by name and word generators. Defaults to `en` (English). Supply `nl` for Dutch, or build a custom locale with `extend`:
+**`locale`** — active locale used by name and word generators. When omitted, a built-in **minimal English locale** is used (small curated word/name lists, no Markov generation). For realistic, Markov-generated data install a full locale package and pass it explicitly:
 
 ```ts
-import { createWorld, nl } from "zod4-mock";
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
 
-const world = createWorld({ seed: 42, locale: nl });
+createWorld({ seed: 42 });              // minimal English default
+createWorld({ seed: 42, locale: en });  // full English (Markov)
+createWorld({ seed: 42, locale: nl });  // Dutch (Markov)
 ```
 
 ---
@@ -581,22 +589,48 @@ interface GenerateOptions<T> {
 
 ## Localization
 
+Locale data and types live in separate workspace packages, not in `zod4-mock`
+itself. This keeps the core library small and lets consumers install only the
+locales they need.
+
+| Package                  | Contents                                                              |
+| ------------------------ | --------------------------------------------------------------------- |
+| `@zod4-mock/locale-core` | `LocaleData`, `MarkovModel`, `Currency`, etc. types + `extend()`       |
+| `@zod4-mock/locale-en`   | Full English locale (`en`) with Markov-trained name & word models     |
+| `@zod4-mock/locale-nl`   | Full Dutch locale (`nl`) with Markov-trained models                   |
+| `@zod4-mock/locale-names`| Pre-trained Markov name models by cultural origin (shared dependency) |
+
+The `zod4-mock` package re-exports `extend` and the locale types for
+convenience, but **not** `en` or `nl` — import those from their packages.
+
+### Default locale
+
+When `createWorld()` is called without a `locale`, a built-in **minimal English
+locale** is used. It has small curated word and name lists and does **not** use
+Markov generation — output is plain (`"John Smith"`, `"Section"`) rather than
+realistically varied. Install `@zod4-mock/locale-en` and pass `en` for the full
+Markov-backed experience.
+
 ### `en` / `nl`
 
-Pre-built locales. `en` (English) is the default. Pass to `createWorld` via `locale`:
+Pre-built locales, imported from their own packages:
 
 ```ts
-import { createWorld, nl } from "zod4-mock";
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
 
 const world = createWorld({ seed: 1, locale: nl });
 ```
 
 ### `extend(base, overrides)`
 
-Creates a locale by shallow-merging individual sections:
+Creates a locale by shallow-merging individual sections. Re-exported from
+`zod4-mock`, or import directly from `@zod4-mock/locale-core`:
 
 ```ts
-import { extend, en } from "zod4-mock";
+import { extend } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
 
 const myLocale = extend(en, {
   address: {
@@ -612,7 +646,7 @@ Each section is replaced as a whole — deep merging within a section is not per
 
 ### `LocaleData`
 
-The interface every locale must satisfy. Key sections:
+The interface every locale must satisfy (defined in `@zod4-mock/locale-core`). Key sections:
 
 ```ts
 interface NameOriginSet {
@@ -625,30 +659,71 @@ interface LastNamePrefix {
   weight: number;        // relative weight vs. implicit "no prefix" weight of 100
 }
 
+interface Currency {
+  code: string;          // "USD"
+  name: string;          // "US Dollar"
+  symbol: string;        // "$"
+  numeric: string;       // "840"
+}
+
 interface LocaleData {
   id: string;
   person: {
-    firstNamesMale:   readonly NameOriginSet[];  // weighted cultural-origin models
-    firstNamesFemale: readonly NameOriginSet[];
-    lastNames:        readonly NameOriginSet[];
+    // Markov-based names (full locales) — OR simple arrays (minimal locales).
+    firstNamesMale?:   readonly NameOriginSet[];
+    firstNamesFemale?: readonly NameOriginSet[];
+    lastNames?:        readonly NameOriginSet[];
+    simpleFirstNamesMale?:   readonly string[];
+    simpleFirstNamesFemale?: readonly string[];
+    simpleLastNames?:        readonly string[];
     lastNamePrefixes?: readonly LastNamePrefix[]; // e.g. Dutch tussenvoegsels
     prefixes: { male: string[]; female: string[]; neutral: string[] };
     suffixes: string[];
     genders: string[];
+    jobTitles: string[]; jobAreas: string[]; jobTypes: string[]; jobDescriptors: string[];
     formatFullName: (first: string, last: string) => string;
+    formatBio: (prng, parts: { jobTitle; jobArea; jobType }) => string;
   };
   word: {
-    nounModel: MarkovModel;
-    adjectiveModel: MarkovModel;
-    articles: string[];
-    // ... closed-class word lists
+    nounModel?: MarkovModel;       // Markov — OR the `nouns` array below
+    adjectiveModel?: MarkovModel;
+    nouns?: readonly string[];
+    adjectives?: readonly string[];
+    articles: string[]; /* ... other closed-class word lists */
   };
-  address: { cities: string[]; states: string[]; /* ... */ };
-  commerce: { departments: string[]; /* ... */ };
-  company:  { prefixes: string[]; /* ... */ };
-  finance:  { bankCodes: string[]; formatIban: (prng, bank) => string };
+  address: {
+    cities; states; countries; countryCodes; continents; languages;
+    streetNames; streetSuffixes; cityPrefixes; cityCores;
+    buildingNumberSuffixes; timeZones; directions;
+    cardinalDirections; ordinalDirections;
+    streetFormats; zipFormat; secondaryAddressFormat;
+    phonePrefix; ibanPrefix; countryCode;
+  };
+  commerce: {
+    departments; materials; productAdjectives; currencyCode;
+    formatPrice; formatProductName; formatProductDescription;
+  };
+  company: {
+    prefixes; suffixes; buzzAdjectives; buzzNouns; buzzVerbLemmas;
+    catchPhraseAdjectives; catchPhraseDescriptors; catchPhraseNouns;
+    formatBuzzPhrase;
+  };
+  finance: {
+    bankCodes; bicLocations; currencies: readonly Currency[];
+    accountNames; transactionTypes; transactionDescriptions; formatIban;
+  };
+  date:  { months; monthsShort; weekdays; weekdaysShort; timeZones };
+  color: { names: readonly string[] };
+  phone: { mobilePrefix; landlinePrefixes; formatMobile; formatLandline };
 }
 ```
+
+**Markov vs. simple locales.** A locale supplies either Markov models
+(`firstNamesMale`, `nounModel`, …) or plain string arrays
+(`simpleFirstNamesMale`, `nouns`, …). Generators prefer the Markov model when
+present and fall back to the array otherwise. Full locale packages
+(`@zod4-mock/locale-en`, `@zod4-mock/locale-nl`) ship Markov models; the
+built-in default locale ships only the simple arrays.
 
 `firstNamesMale`, `firstNamesFemale`, and `lastNames` accept an array of `NameOriginSet` entries. `sampleWeighted(prng, sets)` picks an origin proportionally to weights, then samples from that model. This enables realistic demographic distributions — e.g., the `nl` locale mixes Dutch (68%), Arabic (12%), Turkish (6%), and Frisian (2%) models.
 

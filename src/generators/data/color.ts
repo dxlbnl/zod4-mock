@@ -1,22 +1,12 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
+import { defaultLocale } from "../../default-locale.js";
 
-// ---------------------------------------------------------------------------
-// Datasets
-// ---------------------------------------------------------------------------
+function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
+  return arr[Math.floor(prng.random() * arr.length)] as T;
+}
 
-const COLOR_NAMES = [
-  "red", "blue", "green", "yellow", "orange", "purple",
-  "pink", "black", "white", "gray", "brown", "cyan",
-  "magenta", "lime", "indigo", "violet", "teal", "coral",
-  "crimson", "gold", "silver", "navy", "olive", "maroon",
-] as const;
-
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
-
-export function colorName(prng: Prng): string {
-  return prng.pick(COLOR_NAMES);
+export function colorName(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).color.names);
 }
 
 export function colorHex(prng: Prng): string {

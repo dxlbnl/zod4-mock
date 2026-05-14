@@ -19,8 +19,7 @@ import * as vehicle from "../../../../src/generators/data/vehicle.js";
 import * as word from "../../../../src/generators/data/word.js";
 import { toBase64 } from "../../../../src/utils/encoding.js";
 import type { GeneratorContext } from "../../../../src/types.js";
-import { en } from "../../../../src/locales/en.js";
-import { nl } from "../../../../src/locales/nl.js";
+import { nl } from "@zod4-mock/locale-nl";
 
 function prng(seed = 42) {
   return createPrng(seed);
@@ -85,12 +84,12 @@ describe("generators/data/commerce", () => {
   it("price returns a formatted price string", () => {
     const p = commerce.price(prng());
     expect(typeof p).toBe("string");
-    expect(p).toMatch(/^\d+,\d{2}$/);
+    expect(p).toMatch(/^\$\d+\.\d{2}$/);
   });
 
   it("price respects min/max arguments", () => {
     for (let seed = 0; seed < 10; seed++) {
-      const p = parseFloat(commerce.price(prng(seed), 10, 20).replace(",", "."));
+      const p = parseFloat(commerce.price(prng(seed), 10, 20).replace("$", ""));
       expect(p).toBeGreaterThanOrEqual(10);
       expect(p).toBeLessThanOrEqual(20);
     }
@@ -286,8 +285,8 @@ describe("generators/data/finance", () => {
     expect(typeof finance.transactionDescription(prng())).toBe("string");
   });
 
-  it("iban returns a Dutch IBAN starting with NL", () => {
-    expect(finance.iban(prng())).toMatch(/^NL\d{2}[A-Z]{4}\d{10}$/);
+  it("iban returns an IBAN using the default locale prefix", () => {
+    expect(finance.iban(prng())).toMatch(/^US\d{2}[A-Z]{4}\d{10}$/);
   });
 
   it("bic returns a string", () => {
@@ -450,8 +449,8 @@ describe("generators/data/location", () => {
 
   it("buildingNumber generates suffix variant across seeds", () => {
     const numbers = Array.from({ length: 30 }, (_, i) => location.buildingNumber(prng(i)));
-    // ~10% chance of suffix — at least one should have a letter suffix over 30 seeds
-    const hasSuffix = numbers.some((n) => /[a-z]/.test(n));
+    // a fraction carry a letter suffix — at least one should over 30 seeds
+    const hasSuffix = numbers.some((n) => /[A-Za-z]/.test(n));
     expect(hasSuffix).toBe(true);
   });
 
@@ -459,12 +458,12 @@ describe("generators/data/location", () => {
     expect(typeof location.streetAddress(prng())).toBe("string");
   });
 
-  it("secondaryAddress returns 'Appartement NNN'", () => {
-    expect(location.secondaryAddress(prng())).toMatch(/^Appartement \d+$/);
+  it("secondaryAddress returns 'Apt NNN'", () => {
+    expect(location.secondaryAddress(prng())).toMatch(/^Apt \d+$/);
   });
 
-  it("zipCode matches Dutch format (1234 AB)", () => {
-    expect(location.zipCode(prng())).toMatch(/^\d{4} [A-Z]{2}$/);
+  it("zipCode matches the default locale format (5-digit)", () => {
+    expect(location.zipCode(prng())).toMatch(/^\d{5}$/);
   });
 
   it("city returns a non-empty string", () => {
@@ -521,12 +520,12 @@ describe("generators/data/location", () => {
   });
 
   it("cardinalDirection returns one of 4 directions", () => {
-    const dirs = ["Noord", "Oost", "Zuid", "West"];
+    const dirs = ["North", "East", "South", "West"];
     expect(dirs).toContain(location.cardinalDirection(prng()));
   });
 
   it("ordinalDirection returns one of 4 diagonal directions", () => {
-    const dirs = ["Noordoost", "Zuidoost", "Zuidwest", "Noordwest"];
+    const dirs = ["Northeast", "Southeast", "Southwest", "Northwest"];
     expect(dirs).toContain(location.ordinalDirection(prng()));
   });
 });
@@ -540,12 +539,10 @@ describe("generators/data/phone", () => {
     expect(phone.number(prng()).length).toBeGreaterThan(0);
   });
 
-  it("number generates both mobile (06-) and landline formats", () => {
+  it("number generates phone-number strings across seeds", () => {
     const numbers = Array.from({ length: 30 }, (_, i) => phone.number(prng(i)));
-    const mobile = numbers.filter((n) => n.startsWith("06-"));
-    const landline = numbers.filter((n) => !n.startsWith("06-"));
-    expect(mobile.length).toBeGreaterThan(0);
-    expect(landline.length).toBeGreaterThan(0);
+    expect(numbers.every((n) => /\d/.test(n))).toBe(true);
+    expect(new Set(numbers).size).toBeGreaterThan(1);
   });
 
   it("imei returns a 15-digit string", () => {

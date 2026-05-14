@@ -1,4 +1,4 @@
-import type { MarkovModel } from "../../../../src/locales/types.js";
+import type { MarkovModel } from "@zod4-mock/locale-core";
 
 export const enNounsModel: MarkovModel = {
   order: 2,
