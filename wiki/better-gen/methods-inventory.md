@@ -52,7 +52,7 @@ The generation strategy column describes the _source_ of the output, not the imp
 | `ip()` | ✅ | → `ipv4` |
 | `port()` | ✅ | Algorithmic: `prng.int(1, 65535)` |
 | `mac()` | ✅ | Algorithmic: 6 × hex byte |
-| `userAgent()` | 🔧 | Compose: `platform()` + `browser()` from new `system` module |
+| `userAgent()` | ✅ | Composes OS + browser version strings inline |
 | `httpMethod()` | ✅ | Locale list |
 | `httpStatusCode()` | ✅ | Fixed list of common codes |
 | `httpStatusText()` | ❌ | Map from `httpStatusCode`: 200 → "OK", 404 → "Not Found"… |
@@ -228,30 +228,29 @@ The generation strategy column describes the _source_ of the output, not the imp
 
 ---
 
-## `color` — new module
+## `color` — implemented (`src/generators/data/color.ts`)
 
 | Method | Status | Generation strategy |
 |--------|:------:|-------------------|
-| `colorHex()` | ❌ | Algorithmic: `#` + `prng.bytes(3)` as 6-char hex |
-| `colorRgb()` | ❌ | Algorithmic: `rgb(${r}, ${g}, ${b})` from 3 bytes |
-| `colorHsl()` | ❌ | Algorithmic: `hsl(${hue}, ${sat}%, ${light}%)` |
-| `colorName()` | ❌ | Fixed list of CSS named colors (~50 common ones) |
+| `colorHex()` | ✅ | Algorithmic: `#` + `prng.bytes(3)` as 6-char hex |
+| `colorRgb()` | ✅ | Algorithmic: `rgb(${r}, ${g}, ${b})` from 3 bytes |
+| `colorHsl()` | ✅ | Algorithmic: `hsl(${hue}, ${sat}%, ${light}%)` |
+| `colorName()` | ✅ | Reads from `locale.color.names` |
 
 ---
 
-## `system` — new module
+## `system` — implemented (`src/generators/data/system.ts`)
 
 | Method | Status | Generation strategy |
 |--------|:------:|-------------------|
-| `platform()` | ❌ | Fixed list: "windows" \| "macos" \| "linux" \| "ios" \| "android" |
-| `browser()` | ❌ | Fixed list: "chrome" \| "firefox" \| "safari" \| "edge" |
-| `userAgent()` | ❌ | Move from `internet.ts`; compose with `platform()` + `browser()` |
-| `fileExtension(type?)` | ❌ | Fixed list by category: image, document, video, code, archive |
-| `mimeType()` | ❌ | Map from `fileExtension`: `"pdf"` → `"application/pdf"` |
-| `fileName()` | ❌ | Compose: `noun` + `.` + `fileExtension` |
-| `filePath()` | ❌ | Compose: `directoryPath` + `/` + `fileName` |
-| `directoryPath()` | ❌ | Locale list of common path roots + `noun` subdirectory |
-| `semver()` | ❌ | Algorithmic: `${major}.${minor}.${patch}` with optional pre-release |
+| `platform()` | ✅ | Fixed list: "windows" \| "macos" \| "linux" \| "ios" \| "android" |
+| `browser()` | ✅ | Fixed list: "chrome" \| "firefox" \| "safari" \| "edge" |
+| `userAgent()` | ✅ | Lives in `internet.ts`; composes OS string + browser version |
+| `fileExtension(type?)` | ✅ | Fixed list by category |
+| `mimeType()` | ✅ | Map from `fileExtension` |
+| `fileName()` | ✅ | Compose: `noun` + `.` + `fileExtension` |
+| `filePath()` | ✅ | Compose: directory + `/` + `fileName` |
+| `semver()` | ✅ | Algorithmic: `${major}.${minor}.${patch}` |
 
 ---
 

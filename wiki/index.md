@@ -28,4 +28,4 @@ Which Zod v4 schema types and validators are supported for mock data generation.
 
 ### [Better Data Generation](better-gen/index.md)
 
-Experimental plan to improve generators (localization, markov chains, performance).
+Design notes and status tracking for the generator overhaul — localization, Markov chains, PRNG improvements, batching, and more. Most pillars are implemented; see [tracking.md](better-gen/tracking.md) for the live status.

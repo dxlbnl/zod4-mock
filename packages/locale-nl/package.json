@@ -1,6 +1,6 @@
 {
   "name": "@zod4-mock/locale-nl",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Dutch locale for zod4-mock",
   "type": "module",
   "sideEffects": false,
@@ -16,7 +16,6 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "pnpm run build",
     "fetch-data": "tsx scripts/fetch-data.ts",
     "train": "tsx scripts/train.ts",
     "verify": "tsx scripts/verify.ts"

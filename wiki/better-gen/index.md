@@ -2,6 +2,8 @@
 
 This section documents the architectural plan to improve `zod4-mock` generators — making them faster, more realistic, smaller, and fully localizable. The goal is to beat `faker-js` across all three dimensions: **runtime speed**, **bundle size**, and **data quality**.
 
+> 📌 **Status:** Most pillars below are now implemented (SFC32 PRNG, `prng.bytes()`, array batching, sibling awareness, generator reuse, Markov word/name generation, training pipeline, localization with workspace packages, constraint-aware key generators). See [tracking.md](tracking.md) for per-pillar status. The individual pages are preserved as design rationale; where reality diverged from the original proposal, an "Implemented" note at the top of the page reflects the as-built state.
+
 ## Core Pillars
 
 ### Data & Realism

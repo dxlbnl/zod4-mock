@@ -21,9 +21,11 @@ One world = one seed = one deterministic dataset. All schemas registered on a wo
 | Option                | Type                           | Default      | Description                                                     |
 | --------------------- | ------------------------------ | ------------ | --------------------------------------------------------------- |
 | `seed`                | `number`                       | _(required)_ | Master seed. Same seed → same output.                           |
+| `locale`              | `LocaleData`                   | minimal `en` | Active locale. Defaults to a built-in minimal English locale; import a richer one from `@zod4-mock/locale-en` / `@zod4-mock/locale-nl`. See [Localization](#localization). |
 | `optionalProbability` | `number`                       | `0.2`        | Chance that `z.optional()` / `z.nullable()` fields are omitted. |
 | `defaultArrayLength`  | `[number, number]`             | `[1, 5]`     | Fallback array length when no `.min()` / `.max()` is set.       |
 | `generators`          | `Record<string, KeyGenerator>` | `{}`         | Custom key-based generators applied globally.                   |
+| `recursionLimit`      | `number`                       | `8`          | Max depth for self-referential / recursive schemas.             |
 
 ---
 
@@ -165,11 +167,46 @@ const person = world.generate(PersonSchema);
 
 Two guarantees make generation stable:
 
-**Same seed → same output.** The PRNG is deterministic (Mulberry32). Rebuild the world with the same seed and the same builder chain; you get byte-identical data.
+**Same seed → same output.** The PRNG is deterministic (SFC32). Rebuild the world with the same seed and the same builder chain; you get byte-identical data.
 
 **Per-field seeding.** Each field gets an independent PRNG derived from `hash(worldSeed + schemaId + fieldPath)`. Adding or removing a field from a schema does **not** disturb the values of other fields. The `lastName` of instance #1 has the same value before and after you add a `middleName` field.
 
 This means you can add fields to schemas mid-project without invalidating existing test snapshots.
+
+---
+
+## Localization
+
+A **locale** decides what data the generators draw from — names, words, currencies, date formats, address shapes, phone formats, and so on. The world carries a single locale; all generators read from it.
+
+`zod4-mock` ships a **built-in minimal English locale** that's used when you don't pass `locale`. It has small curated word/name arrays — enough to be valid, deliberately not realistic. Output looks like `"John Smith"`, `"Section"`, `"$128.94"`.
+
+For realistic output, install a locale package and pass it to `createWorld`:
+
+```ts
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";       // Markov-trained English
+import { nl } from "@zod4-mock/locale-nl";       // Markov-trained Dutch
+
+createWorld({ seed: 42, locale: en });
+createWorld({ seed: 42, locale: nl });
+```
+
+A locale is a plain `LocaleData` object — sections for `person`, `address`, `commerce`, `company`, `word`, `finance`, `date`, `color`, `phone`. Locales can supply either Markov models (`firstNamesMale`, `nounModel`) or plain arrays (`simpleFirstNamesMale`, `nouns`); generators prefer the model when present.
+
+For variants, use `extend()` (re-exported from `zod4-mock`):
+
+```ts
+import { createWorld, extend } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+
+const enGB = extend(en, {
+  address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },
+  commerce: { ...en.commerce, formatPrice: (n) => `£${n.toFixed(2)}` },
+});
+```
+
+See the [API reference](api-reference.md#localization) for the full `LocaleData` interface.
 
 ---
 

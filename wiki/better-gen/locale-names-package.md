@@ -1,5 +1,7 @@
 # The `locale-names` Package
 
+> ✅ **Implemented as `@zod4-mock/locale-names`.** As-built ships **5 cultural groups** — `arabic`, `dutch`, `english`, `frisian`, `turkish`. The 13-group package tree shown below is the long-term roadmap; the other groups are stubs/planned. Real exports use a `Model` suffix (e.g. `dutchMaleModel`, not `dutchMale`). The code snippets below have been updated to the real export names.
+
 ## Concept
 
 A shared workspace package that contains pre-trained Markov models for every significant cultural name group — Dutch, German, French, Arabic, Turkish, Frisian, Scandinavian, Slavic, and more. Each locale package (`locale-nl`, `locale-de`, `locale-fr`, …) imports only the cultural groups it needs and assembles them with locale-specific weights. Models that are not imported are tree-shaken away.
@@ -61,35 +63,26 @@ Each `src/groups/dutch/male.ts` exports a single `MarkovModel` constant. Nothing
 ## How Locale Packages Import From It
 
 ```typescript
-// packages/locale-nl/src/index.ts
-import { dutchMale, dutchFemale, dutchLastNames }         from "@zod4-mock/locale-names/groups/dutch";
-import { arabicMale, arabicFemale, arabicLastNames }       from "@zod4-mock/locale-names/groups/arabic";
-import { turkishMale, turkishFemale, turkishLastNames }    from "@zod4-mock/locale-names/groups/turkish";
-import { englishMale, englishFemale, englishLastNames }    from "@zod4-mock/locale-names/groups/english";
-import { frenchMale, frenchFemale, frenchLastNames }       from "@zod4-mock/locale-names/groups/french";
-import { germanMale, germanFemale, germanLastNames }       from "@zod4-mock/locale-names/groups/german";
-import { frisianMale, frisianFemale }                      from "@zod4-mock/locale-names/groups/frisian";
+// packages/locale-nl/src/locale.ts (as-built — 5 groups shipped, 7 originally planned)
+import { dutchMaleModel,   dutchFemaleModel,   dutchLastNamesModel }   from "@zod4-mock/locale-names/groups/dutch";
+import { arabicMaleModel,  arabicFemaleModel }                          from "@zod4-mock/locale-names/groups/arabic";
+import { turkishMaleModel, turkishFemaleModel }                         from "@zod4-mock/locale-names/groups/turkish";
+import { frisianMaleModel, frisianFemaleModel }                         from "@zod4-mock/locale-names/groups/frisian";
+// french, german groups are planned — see roadmap below
 
 export const nl: LocaleData = {
   person: {
     firstNamesMale: [
-      { model: dutchMale,    weight: 68 },
-      { model: arabicMale,   weight: 12 },
-      { model: turkishMale,  weight:  6 },
-      { model: englishMale,  weight:  5 },
-      { model: frenchMale,   weight:  4 },
-      { model: germanMale,   weight:  3 },
-      { model: frisianMale,  weight:  2 },
+      { model: dutchMaleModel,    weight: 68 },
+      { model: arabicMaleModel,   weight: 12 },
+      { model: turkishMaleModel,  weight:  6 },
+      { model: frisianMaleModel,  weight:  2 },
     ],
     firstNamesFemale: [ /* same groups, different weights */ ],
     lastNames: [
-      { model: dutchLastNames,   weight: 72 },
-      { model: arabicLastNames,  weight: 10 },
-      { model: turkishLastNames, weight:  6 },
-      { model: englishLastNames, weight:  5 },
-      { model: frenchLastNames,  weight:  4 },
-      { model: germanLastNames,  weight:  3 },
+      { model: dutchLastNamesModel, weight: 100 },   // only Dutch surnames trained as of v0.x
     ],
+    // ...
   },
 };
 ```

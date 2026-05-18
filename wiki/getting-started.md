@@ -155,6 +155,42 @@ const invoice = world.generate(InvoiceSchema, {
 
 ---
 
+## Step 7 — Localize the output (optional)
+
+By default, generators draw from a **minimal built-in English locale** — short curated name/word lists, no Markov generation. Output looks like `"John Smith"` and `"$128.94"`. For realistic, Markov-generated data or a different language, install a locale package and pass it via `locale`:
+
+```bash
+npm install @zod4-mock/locale-en        # rich English
+npm install @zod4-mock/locale-nl        # Dutch (Markov names, € prices, tussenvoegsels)
+```
+
+```ts
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
+
+const enWorld = createWorld({ seed: 42, locale: en });
+const nlWorld = createWorld({ seed: 42, locale: nl });
+```
+
+Locales are plain objects implementing the `LocaleData` interface — every section (names, words, currencies, addresses, phone formats, …) is overridable. For variants like British English or `nl-BE`, use the `extend()` helper:
+
+```ts
+import { createWorld, extend } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+
+const enGB = extend(en, {
+  address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },
+  commerce: { ...en.commerce, formatPrice: (n) => `£${n.toFixed(2)}` },
+});
+
+createWorld({ seed: 1, locale: enGB });
+```
+
+See [Localization in the API reference](api-reference.md#localization) for the full interface, and [better-gen/localization](better-gen/localization.md) for the design rationale.
+
+---
+
 ## Where to go next
 
 - **[Concepts](concepts.md)** — how the world, registry, and generation pipeline work

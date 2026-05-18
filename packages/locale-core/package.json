@@ -1,6 +1,6 @@
 {
   "name": "@zod4-mock/locale-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared locale types and the extend() utility for zod4-mock locales",
   "type": "module",
   "sideEffects": false,
@@ -15,8 +15,7 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm run build"
+    "build": "tsup"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

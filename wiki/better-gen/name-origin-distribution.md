@@ -21,7 +21,7 @@ The fix isn't to filter to one "pure" set — that throws away legitimate divers
 Each origin is trained as an independent, linguistically homogeneous Markov model. The locale provides an array of `(model, weight)` pairs. At generation time, a weighted pick selects which origin pool to sample from.
 
 ```typescript
-// src/locales/types.ts
+// @zod4-mock/locale-core
 interface NameOriginSet {
   model:  MarkovModel;
   weight: number;   // relative probability — does not need to sum to 100
@@ -29,9 +29,10 @@ interface NameOriginSet {
 
 interface LocaleData {
   person: {
-    firstNamesMale:   NameOriginSet[];
-    firstNamesFemale: NameOriginSet[];
-    lastNames:        NameOriginSet[];
+    firstNamesMale?:   readonly NameOriginSet[];   // Markov path (full locales)
+    firstNamesFemale?: readonly NameOriginSet[];
+    lastNames?:        readonly NameOriginSet[];
+    // ... or simpleFirstNamesMale: string[] etc. for non-Markov locales
   };
 }
 ```
@@ -39,7 +40,7 @@ interface LocaleData {
 The `nl` locale definition:
 
 ```typescript
-// packages/locale-nl/src/index.ts
+// packages/locale-nl/src/locale.ts
 export const nl: LocaleData = {
   person: {
     firstNamesMale: [
@@ -70,34 +71,29 @@ The weights reflect the actual demographic distribution of names in Dutch databa
 
 ## Model Sharing Across Locales
 
-The same origin models are imported by multiple locale packages. The `germanMaleModel` is used in both `nl` and `de` — just with very different weights.
+The same cultural-origin Markov models can be reused by any locale that draws from that population. As-built, they live in a **shared workspace package** — `@zod4-mock/locale-names` — and each locale package depends on it and assembles its own `LocaleData` with locale-specific weights. See [The `locale-names` Package](locale-names-package.md) for the full design.
 
 ```
 packages/
-  locale-nl/
+  locale-names/                          # shared Markov models, one per cultural group
     src/
-      models/          # models trained specifically for Dutch registry data
-        dutch-male.ts
-        arabic-male.ts
-        turkish-male.ts
-        frisian-male.ts
-      index.ts         # assembles the locale with weights
-  locale-de/
-    src/
-      models/
-        german-male.ts
-        dutch-male.ts    # separate corpus, German-registered Dutch-origin names
-      index.ts
-  locale-fr/
-    src/
-      models/
-        french-male.ts
-        breton-male.ts
-        alsatian-male.ts
-      index.ts
+      groups/
+        dutch/    male.ts  female.ts  last-names.ts
+        arabic/   male.ts  female.ts
+        turkish/  male.ts  female.ts
+        frisian/  male.ts  female.ts
+        english/  male.ts  female.ts  last-names.ts
+
+  locale-nl/                             # picks groups, assigns weights
+    src/locale.ts → import { dutchMaleModel, arabicMaleModel, ... }
+                     from "@zod4-mock/locale-names/groups/dutch"
+
+  locale-en/                             # different group, single-origin
+    src/locale.ts → import { englishMaleModel, ... }
+                     from "@zod4-mock/locale-names/groups/english"
 ```
 
-Each locale package is responsible for sourcing and training the corpus subsets relevant to it. There is no shared model package — `dutch-male.ts` in `locale-nl` and `dutch-male.ts` in `locale-de` may come from different source datasets and have different frequency profiles.
+The shared-package approach means `dutchMaleModel` is trained once and reused by any locale that needs Dutch-origin names. Tree-shaking applies per sub-path export, so a consumer who only installs `@zod4-mock/locale-en` never pays for the Turkish or Arabic models.
 
 ---
 
