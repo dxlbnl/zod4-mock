@@ -10,6 +10,8 @@ export interface Prng {
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
+  shuffle<T>(items: readonly T[]): T[];
+  sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
   bytes(n: number): Uint8Array;
 }

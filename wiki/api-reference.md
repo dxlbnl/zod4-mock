@@ -413,6 +413,8 @@ interface Prng {
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
+  shuffle<T>(items: readonly T[]): T[];
+  sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
   bytes(n: number): Uint8Array;
 }
@@ -433,6 +435,20 @@ Returns an integer in [min, max] inclusive.
 ### `.pick(items)`
 
 Returns one element from a non-empty tuple (requires at least one element at the type level).
+
+### `.shuffle(items)`
+
+Returns a new array containing the same elements in a deterministic random order (Fisher-Yates). Does not mutate the input. An empty array returns an empty array.
+
+### `.sample(items, count)`
+
+Returns `count` distinct elements drawn at random from `items`, as a new array. Equivalent to `shuffle(items).slice(0, count)`. If `count` exceeds `items.length` it is clamped (you get all items, shuffled); negative counts yield an empty array.
+
+```ts
+matchers: {
+  assignees: (ctx) => ctx.prng.sample(ctx.registry.all(userSchema), ctx.prng.int(2, 4)),
+}
+```
 
 ### `.fork(key)`
 

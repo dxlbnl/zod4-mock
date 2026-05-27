@@ -32,6 +32,8 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
     random: () => inner.random(),
     int:    (min, max) => inner.int(min, max),
     pick:   (items) => inner.pick(items),
+    shuffle: (items) => inner.shuffle(items),
+    sample:  (items, count) => inner.sample(items, count),
     bytes:  (n) => inner.bytes(n),
     fork(key: string): Prng {
       const base = baseSeeds[key];

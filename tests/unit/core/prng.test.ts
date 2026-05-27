@@ -67,6 +67,65 @@ describe("createPrng", () => {
     expect(seen).toContain("z");
   });
 
+  describe("shuffle()", () => {
+    it("is deterministic: same seed produces the same order", () => {
+      const items = [1, 2, 3, 4, 5, 6, 7, 8];
+      const a = createPrng(42).shuffle(items);
+      const b = createPrng(42).shuffle(items);
+      expect(a).toEqual(b);
+    });
+
+    it("is a permutation: same length and same elements", () => {
+      const items = ["a", "b", "c", "d", "e"];
+      const result = createPrng(7).shuffle(items);
+      expect(result).toHaveLength(items.length);
+      expect([...result].sort()).toEqual([...items].sort());
+    });
+
+    it("does not mutate the input array", () => {
+      const items = [1, 2, 3, 4, 5];
+      const copy = [...items];
+      createPrng(3).shuffle(items);
+      expect(items).toEqual(copy);
+    });
+
+    it("handles empty and single-element arrays", () => {
+      const prng = createPrng(1);
+      expect(prng.shuffle([])).toEqual([]);
+      expect(prng.shuffle(["x"])).toEqual(["x"]);
+    });
+  });
+
+  describe("sample()", () => {
+    it("returns exactly `count` distinct elements drawn from the input", () => {
+      const items = [10, 20, 30, 40, 50, 60];
+      const result = createPrng(42).sample(items, 3);
+      expect(result).toHaveLength(3);
+      expect(new Set(result).size).toBe(3);
+      for (const v of result) expect(items).toContain(v);
+    });
+
+    it("is deterministic: same seed produces the same sample", () => {
+      const items = ["a", "b", "c", "d", "e", "f"];
+      const a = createPrng(99).sample(items, 4);
+      const b = createPrng(99).sample(items, 4);
+      expect(a).toEqual(b);
+    });
+
+    it("clamps count greater than the array length to the array length", () => {
+      const items = [1, 2, 3];
+      const result = createPrng(5).sample(items, 10);
+      expect(result).toHaveLength(3);
+      expect([...result].sort((x, y) => x - y)).toEqual([1, 2, 3]);
+    });
+
+    it("returns an empty array for zero or negative counts", () => {
+      const prng = createPrng(5);
+      expect(prng.sample([1, 2, 3], 0)).toEqual([]);
+      expect(prng.sample([1, 2, 3], -2)).toEqual([]);
+    });
+  });
+
   describe("fork()", () => {
     it("produces the same sequence for the same key and parent seed", () => {
       const child1 = createPrng(42).fork("fieldA");

@@ -89,6 +89,23 @@ export function createPrng(seed: number): Prng {
       return items[Math.floor(rand() * items.length)]!;
     },
 
+    shuffle(items) {
+      const result = items.slice();
+      // Fisher-Yates: walk from the end, swap each element with a random
+      // earlier-or-equal index. Deterministic for a given PRNG state.
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [result[i], result[j]] = [result[j]!, result[i]!];
+      }
+      return result;
+    },
+
+    sample(items, count) {
+      // Clamp count into [0, items.length] — forgiving for matcher authors.
+      const n = Math.max(0, Math.min(count, items.length));
+      return prng.shuffle(items).slice(0, n);
+    },
+
     fork(key) {
       // Derive a child seed from the parent seed + key; does NOT consume
       // the parent's state, so the child is fully independent.
