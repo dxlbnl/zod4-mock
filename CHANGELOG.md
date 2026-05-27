@@ -1,5 +1,11 @@
 # zod4-mock
 
+## 0.6.1
+
+### Patch Changes
+
+- Re-ship `registry.find`, `ctx.related.many`, and `world.get`. These landed in source for 0.6.0 but were missing from the published 0.6.0 tarball, which was built from a stale `dist/`. 0.6.1 publishes them for real. A `prepublishOnly` build step now guards against publishing a stale build.
+
 ## 0.6.0
 
 ### Minor Changes

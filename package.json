@@ -1,6 +1,6 @@
 {
   "name": "zod4-mock",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Deterministic, schema-driven mock data generator for Zod v4",
   "keywords": [
     "deterministic",
@@ -58,7 +58,8 @@
     "train-all": "pnpm -r --filter './packages/*' train",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build:all && changeset publish"
+    "release": "pnpm build:all && changeset publish",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@zod4-mock/locale-core": "workspace:*"
