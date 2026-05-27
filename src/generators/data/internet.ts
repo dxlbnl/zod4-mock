@@ -1,12 +1,24 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
 import { firstName, lastName } from "./person.js";
-import { noun } from "./word.js";
+import { noun, TECH_WORDS } from "./word.js";
+import { defaultLocale } from "../../default-locale.js";
+import { siblingString } from "./sibling.js";
+
+/** Strip diacritics and keep only a-z. */
+function ascii(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
 
 // ---------------------------------------------------------------------------
 // Datasets
 // ---------------------------------------------------------------------------
 
 export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev", "website.com", "portal.net", "app.io", "service.co", "company.nl", "platform.dev", "startup.ai", "blog.me"] as const;
+const B64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"] as const;
 const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"] as const;
 const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"] as const;
@@ -32,32 +44,89 @@ export function domainSuffix(prng: Prng): string {
   return prng.pick(DOMAIN_SUFFIXES);
 }
 
-export function domainWord(prng: Prng): string {
-  return noun(prng)
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+const URL_PATHS = [
+  "products", "dashboard", "profile", "settings", "articles",
+  "docs", "api", "blog", "about", "contact", "search", "help",
+  "orders", "invoices", "reports", "users", "admin", "status",
+] as const;
+
+export function domainWord(prng: Prng, ctx?: GeneratorContext): string {
+  const locale = ctx?.locale ?? defaultLocale;
+  const strategy = prng.int(0, 2);
+  if (strategy === 0) return prng.pick(TECH_WORDS);
+  if (strategy === 1) {
+    const prefixes = locale.company.prefixes;
+    return prefixes[prng.int(0, prefixes.length - 1)]!.toLowerCase();
+  }
+  return noun(prng, ctx).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function urlPath(prng: Prng): string {
+  return prng.pick(URL_PATHS);
 }
 
 export function domainName(prng: Prng): string {
   return `${domainWord(prng)}.${domainSuffix(prng)}`;
 }
 
-export function username(prng: Prng): string {
-  const fn = firstName(prng).toLowerCase();
-  const ln = lastName(prng).toLowerCase().replace(/\s/g, "");
-  return prng.random() < 0.5 ? `${fn}.${ln}` : `${fn}${prng.int(10, 99)}`;
+export function username(prng: Prng, ctx?: GeneratorContext): string {
+  const nick  = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const first = siblingString(ctx, "firstName", "first_name", "voornaam", "forename");
+  const last  = siblingString(ctx, "lastName", "last_name", "achternaam", "surname");
+
+  if (nick) {
+    const base = ascii(nick);
+    if (base.length >= 2) return prng.random() < 0.4 ? `${base}${prng.int(10, 99)}` : base;
+  }
+  if (first ?? last) {
+    const f = ascii(first ?? "");
+    const l = ascii((last ?? "").split(" ").at(-1) ?? "");
+    const base = f + l || ascii(first ?? last ?? "");
+    if (base.length >= 2) return prng.random() < 0.5 ? `${base}${prng.int(10, 99)}` : base;
+  }
+  const fn = ascii(firstName(prng));
+  const ln = ascii(lastName(prng).split(" ").at(-1) ?? "");
+  return prng.random() < 0.5 ? `${fn}${ln}` : `${fn}${prng.int(10, 99)}`;
 }
 
-export function displayName(prng: Prng): string {
+export function displayName(prng: Prng, ctx?: GeneratorContext): string {
+  const first = siblingString(ctx, "firstName", "voornaam", "forename");
+  const last  = siblingString(ctx, "lastName", "achternaam", "surname");
+  if (first && last) return `${first} ${last}`;
+  if (first) return first;
+  if (last) return last;
   return `${firstName(prng)} ${lastName(prng)}`;
 }
 
-export function email(prng: Prng): string {
+export function email(prng: Prng, ctx?: GeneratorContext): string {
+  const domain = () => DOMAINS[prng.int(0, DOMAINS.length - 1)]!;
+
+  const nick    = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const first   = siblingString(ctx, "firstName", "first_name", "voornaam");
+  const last    = siblingString(ctx, "lastName", "last_name", "achternaam");
+  const company = siblingString(ctx, "company", "companyName", "company_name", "bedrijf");
+
+  if (nick) {
+    const local = ascii(nick);
+    if (local.length >= 2) return `${local}@${domain()}`;
+  }
+  if (first ?? last) {
+    const f = ascii(first ?? "");
+    const l = ascii((last ?? "").split(" ").at(-1) ?? "");
+    const local = [f, l].filter(Boolean).join(".");
+    if (local.length >= 2) return `${local}@${domain()}`;
+  }
+  if (company) {
+    const prefix = prng.pick(["info", "contact", "hello", "support"] as const);
+    const slug = ascii(company.split(" ")[0]!);
+    const d = slug.length >= 3 ? `${slug}.nl` : domain();
+    return `${prefix}@${d}`;
+  }
   return `${username(prng)}@${domainName(prng)}`;
 }
 
-export function exampleEmail(prng: Prng): string {
-  return `${username(prng)}@voorbeeld.${prng.pick(EXAMPLE_SUFFIXES)}`;
+export function exampleEmail(prng: Prng, ctx?: GeneratorContext): string {
+  return `${username(prng, ctx)}@voorbeeld.${prng.pick(EXAMPLE_SUFFIXES)}`;
 }
 
 export function emoji(prng: Prng): string {
@@ -73,7 +142,7 @@ export function protocol(prng: Prng): string {
 }
 
 export function url(prng: Prng): string {
-  return `https://${domainName(prng)}/${domainWord(prng)}`;
+  return `https://${domainName(prng)}/${urlPath(prng)}`;
 }
 
 export function userAgent(prng: Prng): string {
@@ -92,12 +161,12 @@ export function userAgent(prng: Prng): string {
   const firefoxVersion = `${prng.int(90, 120)}.0`;
   const safariVersion = `${prng.int(14, 17)}.${prng.int(0, 5)}`;
   
-  const browsers = [
+  const browsers: [string, ...string[]] = [
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion}`,
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Version/${safariVersion} Safari/${webkitVersion}`,
     `Gecko/20100101 Firefox/${firefoxVersion}`,
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Mobile Safari/${webkitVersion}`,
-    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion} Edg/${chromeVersion}`
+    `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion} Edg/${chromeVersion}`,
   ];
   return `Mozilla/5.0 (${os}) ${prng.pick(browsers)}`;
 }
@@ -135,8 +204,7 @@ export function jwtAlgorithm(prng: Prng): string {
 }
 
 export function jwt(prng: Prng): string {
-  // Just return random alphanumeric segments to simulate a JWT structure
-  const segment = (len: number) =>
-    Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
-  return `${segment(36)}.${segment(64)}.${segment(42)}`;
+  // B64URL has 64 chars — mask with 0x3F for zero-bias byte→index mapping
+  const seg = (b: Uint8Array) => Array.from(b, (v) => B64URL[v! & 0x3f]!).join("");
+  return `${seg(prng.bytes(36))}.${seg(prng.bytes(64))}.${seg(prng.bytes(42))}`;
 }

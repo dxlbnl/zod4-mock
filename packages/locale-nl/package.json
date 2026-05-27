@@ -1,0 +1,31 @@
+{
+  "name": "@zod4-mock/locale-nl",
+  "version": "0.4.0",
+  "description": "Dutch locale for zod4-mock",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "fetch-data": "tsx scripts/fetch-data.ts",
+    "train": "tsx scripts/train.ts",
+    "verify": "tsx scripts/verify.ts"
+  },
+  "dependencies": {
+    "@zod4-mock/locale-core": "workspace:*",
+    "@zod4-mock/locale-names": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

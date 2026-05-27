@@ -8,6 +8,22 @@ const print = (label: string, data: unknown) => {
   console.log(JSON.stringify(data, null, 2));
 };
 
+import { nl } from "./src/locales/nl";
+describe.only("names", () => {
+  const schema = z.object({
+    gender: z.string(),
+    firstname: z.string().min(50),
+    lastname: z.string(),
+  });
+
+  print(
+    "names",
+    generate(schema.array().length(30), { locale: nl }).map((o) =>
+      Object.values(o).join(" "),
+    ),
+  );
+});
+
 // ---------------------------------------------------------
 // 1. Zero-Config & Advanced Types
 // ---------------------------------------------------------
@@ -25,7 +41,7 @@ const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("signup"), userId: z.string().uuid() }),
 ]);
 
-describe.only("Zero-Config & Advanced Types", () => {
+describe("Zero-Config & Advanced Types", () => {
   it("Generates realistic data and complex unions without any configuration", () => {
     print("Zero-Config User", generate(UserSchema));
     print("Zero-Config Action", generate(ActionSchema));
@@ -114,7 +130,9 @@ describe("Business Logic & Registry Lookups", () => {
       matchers: {
         customerId: (ctx) => ctx.registry.pick(UserSchema).id,
         totalCents: (ctx) => {
-          return (ctx.current.quantity ?? 1) * (ctx.current.unitPriceCents ?? 1);
+          return (
+            (ctx.current.quantity ?? 1) * (ctx.current.unitPriceCents ?? 1)
+          );
         },
       },
     });
@@ -159,7 +177,8 @@ describe("Relational Graphs & Derived Schemas", () => {
         from: UserSchema,
         matchers: {
           id: (ctx) => ctx.source.id,
-          displayName: (ctx) => `${ctx.source.firstName} ${ctx.source.lastName[0]}.`,
+          displayName: (ctx) =>
+            `${ctx.source.firstName} ${ctx.source.lastName[0]}.`,
         },
       });
 
@@ -215,7 +234,10 @@ describe("The 'Tweak' Kit", () => {
     const world = createWorld({ seed: 42, optionalProbability: 1 });
 
     print("Sparse Task", world.generate(TaskSchema));
-    print("Overridden Task", world.generate(TaskSchema, { overrides: { title: "FIXED" } }));
+    print(
+      "Overridden Task",
+      world.generate(TaskSchema, { overrides: { title: "FIXED" } }),
+    );
   });
 });
 
@@ -245,7 +267,9 @@ describe("Simple Benchmark", () => {
     const duration = end - start;
     console.log(`Total Time: ${duration.toFixed(2)}ms`);
     console.log(`Avg Latency: ${(duration / iterations).toFixed(4)}ms/op`);
-    console.log(`Throughput: ${(1000 / (duration / iterations)).toFixed(0)} ops/sec`);
+    console.log(
+      `Throughput: ${(1000 / (duration / iterations)).toFixed(0)} ops/sec`,
+    );
   });
 });
 
@@ -299,6 +323,8 @@ describe("Speed Test", () => {
     console.log(`\n[Zero-Config (Fresh World per call)]`);
     console.log(`Total: ${totalZero.toFixed(2)}ms`);
     console.log(`Avg:   ${perOpZero.toFixed(4)}ms/op`);
-    console.log(`Penalty: ${((perOpZero / perOp - 1) * 100).toFixed(1)}% slower than reused world`);
+    console.log(
+      `Penalty: ${((perOpZero / perOp - 1) * 100).toFixed(1)}% slower than reused world`,
+    );
   });
 });

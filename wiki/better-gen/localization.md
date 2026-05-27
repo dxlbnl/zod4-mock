@@ -1,5 +1,7 @@
 # Localization Architecture
 
+> ✅ **Implemented.** The locale system described here is live. `src/locales/*` no longer exists — locale types and the `extend()` helper live in [`@zod4-mock/locale-core`](locale-names-package.md), `en` ships in `@zod4-mock/locale-en`, `nl` in `@zod4-mock/locale-nl`, and shared name models in `@zod4-mock/locale-names`. The canonical `LocaleData` interface is in [api-reference.md](../api-reference.md#localedata). This page is preserved as design rationale; the snippets below have been updated to the as-built API.
+
 ## The Problem: Structural Locale Leaks
 
 Currently, `zod4-mock` hardcodes Dutch data directly into the generator files. The leak goes beyond string arrays — locale bleeds into combinatorial logic and formatting:
@@ -38,99 +40,67 @@ export function productName(prng: Prng, ctx: GeneratorContext): string {
 ```
 
 ```typescript
-// locales/en.ts
+// packages/locale-en/src/locale.ts
 export const en: LocaleData = {
   commerce: {
-    adjectives: ["Small", "Ergonomic", "Rustic", "Intelligent", "Gorgeous"],
-    materials:  ["Steel", "Wooden", "Concrete", "Plastic", "Granite"],
-    formatProductName: (_prng, adj, mat, noun) => `${adj} ${mat} ${noun}`,
-    formatPrice: (amount) => `$${amount.toFixed(2)}`,
+    productAdjectives: ["Small", "Ergonomic", "Rustic", "Intelligent", "Gorgeous"],
+    materials:         ["Steel", "Wood", "Concrete", "Plastic", "Granite"],
+    formatProductName: (adj, mat, noun) => `${adj} ${mat.toLowerCase()} ${noun}`,
+    formatPrice:       (amount) => `$${amount.toFixed(2)}`,
+    // ...
   },
-}
+};
 
-// locales/nl.ts
+// packages/locale-nl/src/locale.ts
 export const nl: LocaleData = {
   commerce: {
-    adjectives: ["Klein", "Ergonomisch", "Rustiek", "Intelligent", "Prachtig"],
-    materials:  ["Hout", "Metaal", "Plastic", "Glas", "Stof"],
-    formatProductName: (_prng, adj, mat, noun) =>
-      `${adj} ${mat.toLowerCase()}en ${noun}`,      // Dutch adjectivization
+    productAdjectives: ["Klein", "Ergonomisch", "Rustiek", "Intelligent", "Prachtig"],
+    materials:         ["Hout", "Metaal", "Plastic", "Glas", "Stof"],
+    formatProductName: (adj, mat, noun) =>
+      `${adj} ${mat.toLowerCase()}en ${noun}`,         // Dutch adjectivization
     formatPrice: (amount) =>
-      `€${amount.toFixed(2).replace(".", ",")}`,    // European decimal
+      `€${amount.toFixed(2).replace(".", ",")}`,       // European decimal
+    // ...
   },
-}
+};
 ```
 
 ## Full `LocaleData` Interface Scope
 
-The interface must cover every domain where locale-specific logic exists. A minimal first pass:
+The interface covers every domain where locale-specific logic exists. The as-built shape spans nine sections:
 
 ```typescript
+// Canonical definition: packages/locale-core/src/types.ts
 interface LocaleData {
-  person: {
-    firstNames:     string[];
-    lastNames:      string[];
-    prefixes:       string[];
-    suffixes:       string[];
-    genders:        string[];
-    formatFullName: (prng: Prng, first: string, last: string) => string;
-    formatPrefix:   (prefix: string, name: string) => string;
-  };
-  address: {
-    streetFormats:  Array<(number: number, name: string) => string>;
-    cities:         string[];
-    states:         string[];
-    zipFormats:     Array<(prng: Prng) => string>;
-    countryCode:    string;   // e.g. "NL", "US"
-    phonePrefix:    string;   // e.g. "+31", "+1"
-    ibanPrefix:     string;   // e.g. "NL", "GB"
-  };
-  commerce: {
-    adjectives:          string[];
-    materials:           string[];
-    departments:         string[];
-    formatProductName:   (prng: Prng, adj: string, mat: string, noun: string) => string;
-    formatPrice:         (amount: number) => string;
-    currencyCode:        string;
-  };
-  company: {
-    prefixes:       string[];
-    suffixes:       string[];
-    buzzAdjectives: string[];
-    buzzNouns:      string[];
-    buzzVerbs:      string[];
-    formatBuzzPhrase: (prng: Prng, verb: string, adj: string, noun: string) => string;
-  };
-  word: {
-    // Markov models for open-class words (see word-generation.md)
-    nounModel:      MarkovModel;
-    adjectiveModel: MarkovModel;
-    verbModel:      MarkovModel;
-    // Real word lists for closed-class words
-    articles:       string[];
-    prepositions:   string[];
-    conjunctions:   string[];
-    pronouns:       string[];
-  };
-  finance: {
-    currencies:     Array<{ code: string; symbol: string }>;
-    bankCodes:      string[];
-    ibanFormat:     (prng: Prng, prefix: string) => string;
-  };
+  id: string;
+  person:   { /* Markov names OR simple* arrays · prefixes · suffixes · jobs · formatFullName · formatBio · lastNamePrefixes · genders */ };
+  address:  { /* cities · states · countries · countryCodes · streetNames · streetFormats · zipFormat · phonePrefix · ibanPrefix · countryCode · etc. */ };
+  commerce: { /* departments · materials · productAdjectives · formatPrice · formatProductName · formatProductDescription · currencyCode */ };
+  company:  { /* prefixes · suffixes · buzzAdjectives · buzzNouns · buzzVerbLemmas · catchPhrase* · formatBuzzPhrase */ };
+  word:     { /* nounModel? / adjectiveModel? OR nouns / adjectives · articles · prepositions · ... */ };
+  finance:  { /* bankCodes · bicLocations · currencies (Currency[]) · accountNames · transactionTypes · formatIban */ };
+  date:     { /* months · monthsShort · weekdays · weekdaysShort · timeZones */ };
+  color:    { /* names */ };
+  phone:    { /* mobilePrefix · landlinePrefixes · formatMobile · formatLandline */ };
 }
 ```
+
+A locale may supply either Markov models (`firstNamesMale: NameOriginSet[]`, `nounModel: MarkovModel`) or plain string arrays (`simpleFirstNamesMale: string[]`, `nouns: string[]`); generators prefer the Markov model when present and fall back to the array otherwise. The built-in default locale (`src/default-locale.ts`) ships only the simple arrays; `@zod4-mock/locale-en` and `@zod4-mock/locale-nl` ship Markov-backed models.
+
+For the full, type-accurate interface (every field, every signature), see **[api-reference.md → LocaleData](../api-reference.md#localedata)**.
 
 ## Locale Inheritance
 
 Many locales share most of their data (e.g., `nl-BE` differs from `nl` only in `address.phonePrefix` and `address.ibanPrefix`). An `extend` helper avoids duplication:
 
 ```typescript
-// locales/nl-be.ts
-import { nl } from './nl.js';
-import { extend } from './extend.js';
+// e.g. a user-defined nl-BE locale
+import { extend } from "zod4-mock";                  // re-exported from @zod4-mock/locale-core
+import { nl } from "@zod4-mock/locale-nl";
 
 export const nlBE = extend(nl, {
   address: {
+    ...nl.address,
     phonePrefix: "+32",
     ibanPrefix:  "BE",
     countryCode: "BE",
@@ -148,20 +118,20 @@ export const nlBE = extend(nl, {
 // Before (implicit Dutch)
 const world = createWorld();
 
-// After (explicit Dutch)
-import { nl } from 'zod4-mock/locales/nl';
+// After (explicit Dutch — install @zod4-mock/locale-nl)
+import { nl } from "@zod4-mock/locale-nl";
 const world = createWorld({ locale: nl });
 ```
 
-This is a breaking change requiring a major version bump. Existing Dutch-first users must add the `locale: nl` option.
+This was a breaking change shipped with the major version bump. Existing Dutch-first users must install `@zod4-mock/locale-nl` and add the `locale: nl` option.
 
 ## User API
 
-Users import only the locales they need — unused locales are tree-shaken automatically:
+Users install only the locales they need — each is its own package, so unused locales are never downloaded:
 
 ```typescript
-import { createWorld } from 'zod4-mock';
-import { nl } from 'zod4-mock/locales/nl';
+import { createWorld } from "zod4-mock";
+import { nl } from "@zod4-mock/locale-nl";
 
 const world = createWorld({ locale: nl });
 ```

@@ -1,72 +1,94 @@
 import { describe, it, expect } from "vitest";
-import { generators, createPrng } from "../../../../src/index.js";
+import { z } from "zod";
+import { generators, createPrng, createWorld } from "../../../../src/index.js";
+import type { GeneratorContext } from "../../../../src/index.js";
+import { nl } from "@zod4-mock/locale-nl";
 
-describe("Dutch Localization Verification", () => {
+const nlCtx = { locale: nl } as unknown as GeneratorContext;
+
+describe("Localization", () => {
   const prng = createPrng(123);
 
-  describe("Person Generators", () => {
-    it("generates Dutch first names", () => {
-      const names = Array.from({ length: 50 }, () => generators.person.firstName(prng));
-      const dutchFirstNames = ["Jan", "Piet", "Klaas", "Hans", "Dirk", "Marie", "Anna", "Lisa"];
-      expect(names.some((n) => dutchFirstNames.includes(n))).toBe(true);
+  describe("Person Generators (nl locale)", () => {
+    it("generates first names with nl locale", () => {
+      const world = createWorld({ seed: 123, locale: nl });
+      const schema = z.object({ voornaam: z.string() });
+      const names = Array.from({ length: 20 }, () => world.generate(schema).voornaam);
+      expect(names.every((n) => typeof n === "string" && n.length >= 2)).toBe(true);
+      expect(names.every((n) => /^[A-Z]/.test(n))).toBe(true);
     });
 
-    it("generates Dutch last names (including 'van de' etc.)", () => {
-      const names = Array.from({ length: 50 }, () => generators.person.lastName(prng));
-      expect(names.some((n) => n.includes("van") || n.includes("de") || n.includes("den"))).toBe(
-        true,
-      );
+    it("generates last names with nl locale", () => {
+      const world = createWorld({ seed: 123, locale: nl });
+      const schema = z.object({ achternaam: z.string() });
+      const names = Array.from({ length: 20 }, () => world.generate(schema).achternaam);
+      expect(names.every((n) => typeof n === "string" && n.length >= 2)).toBe(true);
+      expect(names.every((n) => /^[A-Z]/.test(n))).toBe(true);
     });
   });
 
-  describe("Location Generators", () => {
+  describe("Location Generators (nl locale)", () => {
     it("generates Dutch cities", () => {
-      const cities = Array.from({ length: 20 }, () => generators.location.city(prng));
+      const cities = Array.from({ length: 20 }, () => generators.location.city(prng, nlCtx));
       const dutchCities = ["Amsterdam", "Rotterdam", "Utrecht", "Den Haag", "Eindhoven"];
       expect(cities.some((c) => dutchCities.includes(c))).toBe(true);
     });
 
     it("generates Dutch postal codes (1234 AB format)", () => {
-      const pc = generators.location.postalCode(prng);
+      const pc = generators.location.zipCode(prng, nlCtx);
       expect(pc).toMatch(/^[1-9][0-9]{3} [A-Z]{2}$/);
     });
   });
 
-  describe("Phone Generators", () => {
+  describe("Phone Generators (nl locale)", () => {
     it("generates Dutch phone numbers (06-... or 010-...)", () => {
-      const phone = generators.phone.number(prng);
-      // Matches 06-... or 0xx-...
+      const phone = generators.phone.number(prng, nlCtx);
       expect(phone).toMatch(/^0[1-9][0-9]?-/);
     });
   });
 
-  describe("Commerce & Finance Generators", () => {
+  describe("Commerce & Finance Generators (nl locale)", () => {
     it("generates Dutch department names", () => {
-      const dept = generators.commerce.department(prng);
-      const dutchDepts = [
-        "Elektronica",
-        "Kleding",
-        "Huis",
-        "Tuin",
-        "Speelgoed",
-        "Boeken",
-        "Beauty",
-        "Auto",
-        "Sport",
-        "Gezondheid",
+      const ALL_DUTCH_DEPARTMENTS = [
+        "Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty",
+        "Auto", "Sport", "Gezondheid", "Schoenen", "Sieraden", "Horloges", "Muziek",
+        "Films", "Gereedschap", "Dierenbenodigdheden", "Baby", "Kantoorartikelen", "Levensmiddelen",
       ];
-      expect(dutchDepts).toContain(dept);
+      const dept = generators.commerce.department(prng, nlCtx);
+      expect(ALL_DUTCH_DEPARTMENTS).toContain(dept);
     });
 
     it("generates prices with Dutch comma decimal separator", () => {
-      const p = generators.commerce.price(prng);
-      expect(p).toMatch(/^[0-9]+,[0-9]{2}$/);
+      const p = generators.commerce.price(prng, 1, 1000, nlCtx);
+      expect(p).toMatch(/^€[0-9]+,[0-9]{2}$/);
     });
 
     it("generates Dutch transaction types", () => {
-      const tt = generators.finance.transactionType(prng);
-      const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie"];
+      const tt = generators.finance.transactionType(prng, nlCtx);
+      const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie", "overschrijving", "incasso", "salaris", "rente", "dividend"];
       expect(dutchTTs).toContain(tt);
+    });
+  });
+
+  describe("Locale Switching", () => {
+    it("default world uses English locale for first names", () => {
+      const schema = z.object({ firstName: z.string() });
+      const names = Array.from({ length: 10 }, (_, seed) =>
+        createWorld({ seed }).generate(schema).firstName,
+      );
+      expect(names.every((n) => typeof n === "string" && n.length >= 2)).toBe(true);
+      expect(names.every((n) => /^[A-Z]/.test(n))).toBe(true);
+    });
+
+    it("nl locale produces different names than default en locale", () => {
+      const schema = z.object({ voornaam: z.string() });
+      const enNames = Array.from({ length: 10 }, (_, seed) =>
+        createWorld({ seed }).generate(schema).voornaam,
+      );
+      const nlNames = Array.from({ length: 10 }, (_, seed) =>
+        createWorld({ seed, locale: nl }).generate(schema).voornaam,
+      );
+      expect(enNames).not.toEqual(nlNames);
     });
   });
 });

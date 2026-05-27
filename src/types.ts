@@ -5,17 +5,15 @@
 
 import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
-
-// ---------------------------------------------------------------------------
-// PRNG
-// ---------------------------------------------------------------------------
-
-export interface Prng {
-  random(): number;
-  int(min: number, max: number): number;
-  pick<T>(items: readonly [T, ...T[]]): T;
-  fork(key: string): Prng;
-}
+import type { LocaleData, Prng } from "@zod4-mock/locale-core";
+export type {
+  LocaleData,
+  MarkovModel,
+  NameOriginSet,
+  LastNamePrefix,
+  Currency,
+  Prng,
+} from "@zod4-mock/locale-core";
 
 // ---------------------------------------------------------------------------
 // Registry — schema-reference based
@@ -28,14 +26,19 @@ export interface Registry {
   store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
   all<T extends ZodTypeAny>(schema: T): input<T>[];
   pick<T extends ZodTypeAny>(schema: T): input<T>;
-  filter<T extends ZodTypeAny>(schema: T, predicate: (item: input<T>) => boolean): input<T>[];
+  filter<T extends ZodTypeAny>(
+    schema: T,
+    predicate: (item: input<T>) => boolean,
+  ): input<T>[];
   count(schema: ZodTypeAny): number;
 }
 
 import type * as gen from "./generators/data/index.js";
 
 type BoundModule<T> = {
-  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R ? (...args: P) => R : T[K];
+  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
+    ? (...args: P) => R
+    : T[K];
 };
 
 export type CoreGenerators = {
@@ -80,11 +83,19 @@ export interface GeneratorContext<T = any> {
   /**
    * Generates a value using the full world engine (honoring matchers and registry).
    */
-  generate<S extends ZodTypeAny>(schema: S, options?: GenerateOptions<z.infer<S>>): z.infer<S>;
+  generate<S extends ZodTypeAny>(
+    schema: S,
+    options?: GenerateOptions<z.infer<S>>,
+  ): z.infer<S>;
   /**
    * Maximum recursion depth.
    */
   readonly recursionLimit: number;
+  /**
+   * Active locale, used by generators for locale-specific data (names, words, etc.).
+   * Defaults to `en` when created via `createWorld()`.
+   */
+  readonly locale: LocaleData;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +120,10 @@ export type MatcherCtx<
 // KeyGenerator: custom field-name generator
 // ---------------------------------------------------------------------------
 
-export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
+export type KeyGenerator<T = unknown> = (
+  schema: ZodTypeAny,
+  ctx: GeneratorContext,
+) => T;
 
 // ---------------------------------------------------------------------------
 // SchemaKeyMap: per-schema key overrides
@@ -123,7 +137,9 @@ export type SchemaKeyMap<TSchema extends ZodTypeAny> = {
 // Deep partial (for overrides)
 // ---------------------------------------------------------------------------
 
-export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+export type DeepPartial<T> = T extends object
+  ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T;
 
 // ---------------------------------------------------------------------------
 // generate() options
@@ -139,6 +155,7 @@ export interface GenerateOptions<T> {
   readonly source?: any;
   readonly fieldPath?: string;
   readonly prng?: ReturnType<typeof createPrng>;
+  readonly locale?: LocaleData;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +168,8 @@ export interface WorldOptions {
   readonly defaultArrayLength?: readonly [number, number];
   readonly generators?: Record<string, KeyGenerator>;
   readonly recursionLimit?: number;
+  /** Override the default English locale. Import `nl` from `zod4-mock` for Dutch, or supply your own. */
+  readonly locale?: LocaleData;
 }
 
 // ---------------------------------------------------------------------------

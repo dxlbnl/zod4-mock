@@ -4,6 +4,7 @@ import { createPrng } from "../../../../src/prng.js";
 import { generateFromSchema } from "../../../../src/generators/schema/router.js";
 import { SchemaRegistry } from "../../../../src/registry.js";
 import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
+import { en } from "@zod4-mock/locale-en";
 
 const EMPTY_GEN = {} as BoundGenerators;
 
@@ -24,9 +25,44 @@ function ctx(seed = 42): GeneratorContext {
       return generateFromSchema(s, { ...this, ...o }) as z.infer<S>;
     },
     recursionLimit: 5,
+    locale: en,
   };
   return c;
 }
+
+describe("batch array generation (ZodObject elements)", () => {
+  const UserSchema = z.object({ name: z.string(), age: z.number() });
+
+  it("produces a deterministic array with the same seed", () => {
+    const a = ctx(42).generate(z.array(UserSchema).length(10));
+    const b = ctx(42).generate(z.array(UserSchema).length(10));
+    expect(a).toEqual(b);
+  });
+
+  it("elements differ from each other", () => {
+    const arr = ctx(42).generate(z.array(UserSchema).length(5)) as Array<{ name: string }>;
+    expect(new Set(arr.map((u) => u.name)).size).toBeGreaterThan(1);
+  });
+
+  it("batch array has correct shape", () => {
+    const arr = ctx(42).generate(z.array(UserSchema).length(20)) as Array<{
+      name: string;
+      age: number;
+    }>;
+    expect(arr).toHaveLength(20);
+    for (const u of arr) {
+      expect(typeof u.name).toBe("string");
+      expect(typeof u.age).toBe("number");
+    }
+  });
+
+  it("large array (1000 elements) is deterministic", () => {
+    const BigSchema = z.object({ id: z.string(), val: z.number(), label: z.string() });
+    const a = ctx(1).generate(z.array(BigSchema).length(1000));
+    const b = ctx(1).generate(z.array(BigSchema).length(1000));
+    expect(a).toEqual(b);
+  });
+});
 
 describe("schema/collection", () => {
   it("generates arrays", () => {

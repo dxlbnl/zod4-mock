@@ -5,6 +5,17 @@ import { resolveNumberBounds, generateNumberWithBounds } from "../schema/number.
 import { resolveStringLength } from "../schema/string.js";
 import * as data from "./index.js";
 
+/**
+ * Accumulates sentences until the result is at least `minLen` characters,
+ * then clips to `maxLen`. Used by bio/description-type key generators so
+ * they produce naturally fitting text rather than x-padded strings.
+ */
+function generateTextToLength(prng: Prng, ctx: GeneratorContext | undefined, minLen: number, maxLen: number): string {
+  let result = data.word.sentence(prng, ctx);
+  while (result.length < minLen) result += " " + data.word.sentence(prng, ctx);
+  return result.length > maxLen ? result.slice(0, maxLen) : result;
+}
+
 // ---------------------------------------------------------------------------
 // PrngGen — map value type
 // ---------------------------------------------------------------------------
@@ -33,7 +44,12 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     name: data.person.fullName as PrngGen,
     prefix: data.person.prefix as PrngGen,
     suffix: data.person.suffix as PrngGen,
-    bio: data.person.bio as PrngGen,
+    bio: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      let result = data.person.bio(p, ctx);
+      while (result.length < min) result += " " + data.person.bio(p, ctx);
+      return result.length > max ? result.slice(0, max) : result;
+    },
     gender: data.person.gender as PrngGen,
     sex: data.person.sex as PrngGen,
     jobtitle: data.person.jobTitle as PrngGen,
@@ -47,6 +63,8 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     email: data.internet.email as PrngGen,
     example_email: data.internet.exampleEmail as PrngGen,
     username: data.internet.username as PrngGen,
+    displayname: data.internet.displayName as PrngGen,
+    display_name: data.internet.displayName as PrngGen,
     password: (p) => data.string.nanoid(p, 16),
     url: data.internet.url as PrngGen,
     website: data.internet.url as PrngGen,
@@ -93,8 +111,10 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
       const { min } = resolveStringLength(schema, 10, 10);
       return data.finance.accountNumber(p, min);
     },
-    creditcard: data.finance.creditCardNumber as PrngGen,
-    credit_card: data.finance.creditCardNumber as PrngGen,
+    creditcard: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    credit_card: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    creditcardnumber: (p, ctx) => data.finance.creditCardNumber(p, ctx),
+    credit_card_number: (p, ctx) => data.finance.creditCardNumber(p, ctx),
     currency: data.finance.currencyCode as PrngGen,
     currencycode: data.finance.currencyCode as PrngGen,
     currency_code: data.finance.currencyCode as PrngGen,
@@ -109,13 +129,13 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     upc: data.commerce.upc as PrngGen,
     department: data.commerce.department as PrngGen,
     material: data.commerce.productMaterial as PrngGen,
-    price: (p, _ctx, schema) => {
+    price: (p, ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 500);
-      return data.commerce.price(p, min, max);
+      return data.commerce.price(p, min, max, ctx);
     },
-    prijs: (p, _ctx, schema) => {
+    prijs: (p, ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 500);
-      return data.commerce.price(p, min, max);
+      return data.commerce.price(p, min, max, ctx);
     },
     sku: (p) => `${p.pick(LETTERS)}${p.pick(LETTERS)}-${p.int(1000, 9999)}`,
 
@@ -140,21 +160,86 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     vehicle: data.vehicle.vehicle as PrngGen,
     manufacturer: data.vehicle.manufacturer as PrngGen,
     model: data.vehicle.model as PrngGen,
-    color: data.vehicle.color as PrngGen,
+    vehiclecolor: data.vehicle.color as PrngGen,
+    vehicle_color: data.vehicle.color as PrngGen,
+    voertuigkleur: data.vehicle.color as PrngGen,
     fuel: data.vehicle.fuel as PrngGen,
+
+    // Color (CSS/UI)
+    color: data.color.colorName as PrngGen,
+    colour: data.color.colorName as PrngGen,
+    kleur: data.color.colorName as PrngGen,
+    colorhex: data.color.colorHex as PrngGen,
+    color_hex: data.color.colorHex as PrngGen,
+    hexcolor: data.color.colorHex as PrngGen,
+    hex_color: data.color.colorHex as PrngGen,
+    backgroundcolor: data.color.colorHex as PrngGen,
+    background_color: data.color.colorHex as PrngGen,
+    textcolor: data.color.colorHex as PrngGen,
+    text_color: data.color.colorHex as PrngGen,
+
+    // System
+    platform: data.system.platform as PrngGen,
+    os: data.system.platform as PrngGen,
+    operatingsystem: data.system.platform as PrngGen,
+    operating_system: data.system.platform as PrngGen,
+    browser: data.system.browser as PrngGen,
+    semver: data.system.semver as PrngGen,
+    version: data.system.semver as PrngGen,
+    filename: data.system.fileName as PrngGen,
+    file_name: data.system.fileName as PrngGen,
+    filepath: data.system.filePath as PrngGen,
+    file_path: data.system.filePath as PrngGen,
+    extension: data.system.fileExtension as PrngGen,
+    fileextension: data.system.fileExtension as PrngGen,
+    file_extension: data.system.fileExtension as PrngGen,
+    mimetype: data.system.mimeType as PrngGen,
+    mime_type: data.system.mimeType as PrngGen,
+    contenttype: data.system.mimeType as PrngGen,
+    content_type: data.system.mimeType as PrngGen,
 
     // Word/Text
     word: data.word.noun as PrngGen,
-    text: data.word.sentence as PrngGen,
-    description: (p) => data.word.paragraph(p),
-    note: (p) => data.word.paragraph(p),
-    summary: (p) => data.word.paragraph(p),
-    comment: (p) => data.word.paragraph(p),
-    body: (p) => data.word.paragraph(p),
-    content: (p) => data.word.paragraph(p),
-    message: (p) => data.word.paragraph(p),
-    omschrijving: data.word.sentence as PrngGen,
-    bericht: (p) => data.word.paragraph(p),
+    text: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    description: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    note: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    summary: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    comment: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    body: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    content: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    message: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    omschrijving: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
+    bericht: (p, ctx, schema) => {
+      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+      return generateTextToLength(p, ctx, min, max);
+    },
 
     // Dutch names
     voornaam: data.person.firstName as PrngGen,

@@ -9,65 +9,28 @@ describe("Person Gender-Aware Generation", () => {
 
   describe("Standalone Generators", () => {
     it("firstName picks male names for 'male' gender", () => {
-      // Check a few to be sure
       const names = Array.from({ length: 10 }, () => firstName(prng, "male"));
-      names.forEach((n) => {
-        expect([
-          "Jan",
-          "Piet",
-          "Klaas",
-          "Hans",
-          "Dirk",
-          "Erik",
-          "Tom",
-          "Sven",
-          "Luc",
-          "Bas",
-          "Thijs",
-          "Bram",
-          "Luuk",
-          "Lars",
-          "Stijn",
-          "Gijs",
-          "Sem",
-          "Daan",
-          "Finn",
-          "Willem",
-        ]).toContain(n);
-      });
+      for (const n of names) {
+        expect(n).toMatch(/^[A-Z][a-z]+$/);
+      }
     });
 
     it("firstName picks female names for 'female' gender", () => {
       const names = Array.from({ length: 10 }, () => firstName(prng, "female"));
-      names.forEach((n) => {
-        expect([
-          "Marie",
-          "Anna",
-          "Lisa",
-          "Emma",
-          "Sara",
-          "Lena",
-          "Nora",
-          "Eva",
-          "Julia",
-          "Inge",
-          "Lieke",
-          "Noa",
-          "Lotte",
-          "Fleur",
-          "Tess",
-          "Mila",
-          "Sanne",
-          "Sophie",
-          "Roos",
-          "Isa",
-        ]).toContain(n);
-      });
+      for (const n of names) {
+        expect(n).toMatch(/^[A-Z][a-z]+$/);
+      }
     });
 
     it("prefix matches gender", () => {
-      expect(["Dhr.", "Dr.", "Prof.", "Ing."]).toContain(prefix(prng, "male"));
-      expect(["Mevr.", "Dr.", "Prof.", "Ing."]).toContain(prefix(prng, "female"));
+      expect(["Mr.", "Dr.", "Prof."]).toContain(prefix(prng, "male"));
+      expect(["Ms.", "Mrs.", "Dr.", "Prof."]).toContain(prefix(prng, "female"));
+    });
+
+    it("male and female firstName use different models (different output across seeds)", () => {
+      const maleNames = Array.from({ length: 20 }, (_, i) => firstName(createPrng(i), "male"));
+      const femaleNames = Array.from({ length: 20 }, (_, i) => firstName(createPrng(i), "female"));
+      expect(maleNames).not.toEqual(femaleNames);
     });
   });
 
@@ -79,56 +42,9 @@ describe("Person Gender-Aware Generation", () => {
         firstName: z.string(),
       });
 
-      // Generate multiple times to ensure consistency
       for (let i = 0; i < 20; i++) {
         const result = world.generate(schema) as { gender: string; firstName: string };
-        if (result.gender === "man") {
-          expect([
-            "Jan",
-            "Piet",
-            "Klaas",
-            "Hans",
-            "Dirk",
-            "Erik",
-            "Tom",
-            "Sven",
-            "Luc",
-            "Bas",
-            "Thijs",
-            "Bram",
-            "Luuk",
-            "Lars",
-            "Stijn",
-            "Gijs",
-            "Sem",
-            "Daan",
-            "Finn",
-            "Willem",
-          ]).toContain(result.firstName);
-        } else {
-          expect([
-            "Marie",
-            "Anna",
-            "Lisa",
-            "Emma",
-            "Sara",
-            "Lena",
-            "Nora",
-            "Eva",
-            "Julia",
-            "Inge",
-            "Lieke",
-            "Noa",
-            "Lotte",
-            "Fleur",
-            "Tess",
-            "Mila",
-            "Sanne",
-            "Sophie",
-            "Roos",
-            "Isa",
-          ]).toContain(result.firstName);
-        }
+        expect(result.firstName).toMatch(/^[A-Z][a-z]+$/);
       }
     });
 
@@ -140,15 +56,7 @@ describe("Person Gender-Aware Generation", () => {
       });
 
       const result = world.generate(schema) as { geslacht: string; voornaam: string };
-      if (result.geslacht === "man") {
-        expect(result.voornaam).toMatch(
-          /^(Jan|Piet|Klaas|Hans|Dirk|Erik|Tom|Sven|Luc|Bas|Thijs|Bram|Luuk|Lars|Stijn|Gijs|Sem|Daan|Finn|Willem)$/,
-        );
-      } else {
-        expect(result.voornaam).toMatch(
-          /^(Marie|Anna|Lisa|Emma|Sara|Lena|Nora|Eva|Julia|Inge|Lieke|Noa|Lotte|Fleur|Tess|Mila|Sanne|Sophie|Roos|Isa)$/,
-        );
-      }
+      expect(result.voornaam).toMatch(/^[A-Z][a-z]+$/);
     });
   });
 });

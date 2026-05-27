@@ -47,11 +47,15 @@ function seedToSfc32(seed: number): [number, number, number, number] {
 
 **Migration:** Existing seeds produce different output after this change. This is expected and should be documented as a breaking change (major version).
 
-## 2. `uint32()` and `bytes(n)` Methods
+## 2. `bytes(n)` Method
+
+**Status:** `prng.bytes(n)` is implemented. `uuid` and `nanoid` generators have NOT yet been migrated to use it — both still call `prng.int()` per character.
 
 **Problem:** Generators like `uuid`, `nanoid`, `hexadecimal`, `bitcoinAddress`, and `imei` call `prng.int(0, 15)` or `prng.int(0, 255)` once per character. For a UUID (32 hex characters) this is 32 separate algorithm invocations.
 
-**Solution:** Expose two new methods on the `Prng` interface:
+**Note:** `uint32()` nibble-batching was considered but dropped — `bytes(n)` covers the same ground more ergonomically.
+
+**Remaining work:** Migrate `generateUuid` and `generateNanoid` in `src/generators/schema/string.ts` to use `prng.bytes()`. The `Prng` interface already exposes `bytes(n): Uint8Array`.
 
 ```typescript
 interface Prng {
@@ -107,28 +111,9 @@ bytes(n: number): Uint8Array {
 },
 ```
 
-## 3. `fork()` Result Caching
+## 3. `fork()` Result Caching — Not Applicable
 
-**Problem:** Every field in every generated object calls `prng.fork(fieldPath)`, which runs an FNV-1a hash. For a 50-field schema generated 1,000 times, that's 50,000 separate hash computations — all for the same set of field paths.
-
-**Solution:** Cache `fork(key)` results within a single `generate()` call. Field paths are stable across records; only the subject index changes. A `Map<string, Prng>` on the world-level generation context, cleared between top-level `generate()` calls, eliminates redundant hashing.
-
-```typescript
-// Pseudocode — inside the generation pass
-const forkCache = new Map<string, number>(); // key → seed
-
-function cachedFork(parentSeed: number, key: string): number {
-  const cacheKey = `${parentSeed}:${key}`;
-  let seed = forkCache.get(cacheKey);
-  if (seed === undefined) {
-    seed = fnv1a(`${parentSeed}:${key}`);
-    forkCache.set(cacheKey, seed);
-  }
-  return seed;
-}
-```
-
-This is a correctness-neutral optimization — same output, fewer hash calls.
+**Closed by architecture.** The premise was that generating N records would call `prng.fork(fieldPath)` N times for the same key on the same parent PRNG. In practice, `fieldSeed(worldSeed, subjectId, fieldPath)` pre-computes a unique seed for every (record, field) pair upfront. Each record gets its own independent `createPrng(fieldSeed(...))` — no shared parent PRNG ever forks the same key twice. There is nothing to cache.
 
 ---
 

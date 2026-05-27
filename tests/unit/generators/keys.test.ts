@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
 import { generators, createWorld, createPrng } from "../../../src/index.js";
+import { en } from "@zod4-mock/locale-en";
 import { generateFromSchema } from "../../../src/generators/schema/router.js";
 import type {
   BoundGenerators,
@@ -48,6 +49,7 @@ function makeCtx(seed = 42): GeneratorContext {
     recursionLimit: 5,
     optionalProbability: 0.2,
     current: {},
+    locale: en,
   };
   return ctx;
 }
@@ -725,5 +727,137 @@ describe("DEFAULT_KEY_PATTERNS", () => {
   it("heuristics work through modifiers like .readonly()", () => {
     const v = generateFromKey("createdAt", z.number().readonly(), makeCtx());
     expect(typeof v).toBe("number");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DEFAULT_KEY_MAP — finance and commerce string keys
+// ---------------------------------------------------------------------------
+
+describe("DEFAULT_KEY_MAP — finance string keys", () => {
+  it("password key produces a 16-character string", () => {
+    const v = generateFromKey("password", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v.length).toBe(16);
+  });
+
+  it("accountnumber key produces a 10-digit numeric string", () => {
+    const v = generateFromKey("accountnumber", z.string(), makeCtx()) as string;
+    expect(v).toMatch(/^\d{10}$/);
+  });
+
+  it("account_number key is an alias of accountnumber", () => {
+    const v = generateFromKey("account_number", z.string(), makeCtx()) as string;
+    expect(v).toMatch(/^\d{10}$/);
+  });
+
+  it("creditcard key produces a formatted card number", () => {
+    const v = generateFromKey("creditcard", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\d{4}-\d/);
+  });
+
+  it("credit_card key produces a formatted card number", () => {
+    const v = generateFromKey("credit_card", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\d{4}-\d/);
+  });
+
+  it("creditcardnumber key is an alias for credit card", () => {
+    const v = generateFromKey("creditcardnumber", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\d{4}-\d/);
+  });
+
+  it("credit_card_number key is an alias for credit card", () => {
+    const v = generateFromKey("credit_card_number", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\d{4}-\d/);
+  });
+
+  it("price (string schema) produces a locale-formatted price string", () => {
+    const v = generateFromKey("price", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\$\d+\.\d{2}$/);
+  });
+
+  it("prijs (string schema) produces a locale-formatted price string", () => {
+    const v = generateFromKey("prijs", z.string(), makeCtx()) as string;
+    expect(typeof v).toBe("string");
+    expect(v).toMatch(/^\$\d+\.\d{2}$/);
+  });
+
+  it("sku key produces an AB-NNNN formatted SKU", () => {
+    const v = generateFromKey("sku", z.string(), makeCtx()) as string;
+    expect(v).toMatch(/^[A-Z]{2}-\d{4}$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DEFAULT_KEY_MAP — text/content string keys
+// ---------------------------------------------------------------------------
+
+describe("DEFAULT_KEY_MAP — text and content string keys", () => {
+  const textKeys = ["text", "note", "summary", "comment", "body", "content", "message", "omschrijving", "bericht"];
+
+  for (const key of textKeys) {
+    it(`${key} key produces a non-empty string`, () => {
+      const v = generateFromKey(key, z.string(), makeCtx()) as string;
+      expect(typeof v).toBe("string");
+      expect(v.length).toBeGreaterThan(0);
+    });
+  }
+
+  it("text key produces a sentence-like string (ends with period)", () => {
+    const v = generateFromKey("text", z.string(), makeCtx()) as string;
+    expect(v.endsWith(".")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DEFAULT_KEY_MAP — number domain keys
+// ---------------------------------------------------------------------------
+
+describe("DEFAULT_KEY_MAP — number domain keys", () => {
+  it("amount key produces a number in [1, 10000]", () => {
+    const v = generateFromKey("amount", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(10000);
+  });
+
+  it("bedrag key produces a number in [1, 10000]", () => {
+    const v = generateFromKey("bedrag", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(10000);
+  });
+
+  it("price (number schema) produces a number in [1, 500]", () => {
+    const v = generateFromKey("price", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(500);
+  });
+
+  it("prijs (number schema) produces a number in [1, 500]", () => {
+    const v = generateFromKey("prijs", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(500);
+  });
+
+  it("year key produces a number in [1970, 2030]", () => {
+    const v = generateFromKey("year", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1970);
+    expect(v).toBeLessThanOrEqual(2030);
+  });
+
+  it("year key produces an integer when schema is z.number().int()", () => {
+    const v = generateFromKey("year", z.number().int(), makeCtx()) as number;
+    expect(Number.isInteger(v)).toBe(true);
+    expect(v).toBeGreaterThanOrEqual(1970);
+    expect(v).toBeLessThanOrEqual(2030);
   });
 });

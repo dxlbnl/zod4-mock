@@ -31,6 +31,15 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 | `SchemaKeyMap`         | type      | Per-schema key generator map (typed)             |
 | `GenerateOptions`      | type      | Options for `generate()` and `world.generate()`  |
 | `DeepPartial`          | type      | Recursive optional type                          |
+| `extend`               | function  | Shallow-per-section locale override helper       |
+| `LocaleData`           | type      | Pluggable locale interface                       |
+| `MarkovModel`          | type      | Trained n-gram model for word/name generation    |
+| `NameOriginSet`        | type      | A Markov name model + its sampling weight        |
+| `LastNamePrefix`       | type      | A surname prefix (tussenvoegsel) + its weight    |
+| `Currency`             | type      | `{ code, name, symbol, numeric }`                |
+
+The `en` and `nl` locales are **not** exported from `zod4-mock`. They live in
+separate, opt-in workspace packages — see [Localization](#localization).
 
 ---
 
@@ -82,6 +91,18 @@ interface WorldOptions {
 **`defaultArrayLength`** — fallback `[min, max]` when a `z.array()` schema has no `.min()`, `.max()`, or `.length()` constraint. Default `[1, 5]`.
 
 **`generators`** — custom key-based generators applied to every schema in the world. Keys are matched case-insensitively. See [`KeyGenerator`](#keygenerator) below.
+
+**`locale`** — active locale used by name and word generators. When omitted, a built-in **minimal English locale** is used (small curated word/name lists, no Markov generation). For realistic, Markov-generated data install a full locale package and pass it explicitly:
+
+```ts
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
+
+createWorld({ seed: 42 });              // minimal English default
+createWorld({ seed: 42, locale: en });  // full English (Markov)
+createWorld({ seed: 42, locale: nl });  // Dutch (Markov)
+```
 
 ---
 
@@ -369,6 +390,8 @@ matchers: {
 
 **`current`** — holds the partial sibling-field values accumulated so far for the current object. This is useful for cross-field consistency (e.g., matching a first name's gender to a sibling `gender` field).
 
+**`locale`** — the active locale. Generators that are locale-aware read names, words, and format strings from this object. Use `ctx.locale` in custom matchers if you need locale-specific data.
+
 ```ts
 matchers: {
   gender:    (ctx) => ctx.prng.pick(["male", "female"]),
@@ -386,12 +409,20 @@ matchers: {
 
 ```ts
 interface Prng {
+  readonly seed: number;
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
+  shuffle<T>(items: readonly T[]): T[];
+  sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
+  bytes(n: number): Uint8Array;
 }
 ```
+
+### `.seed`
+
+The raw 32-bit unsigned integer seed this PRNG was initialised with. Useful for debugging seed chains and for building optimized batch derivation on top of `fork`.
 
 ### `.random()`
 
@@ -405,12 +436,36 @@ Returns an integer in [min, max] inclusive.
 
 Returns one element from a non-empty tuple (requires at least one element at the type level).
 
+### `.shuffle(items)`
+
+Returns a new array containing the same elements in a deterministic random order (Fisher-Yates). Does not mutate the input. An empty array returns an empty array.
+
+### `.sample(items, count)`
+
+Returns `count` distinct elements drawn at random from `items`, as a new array. Equivalent to `shuffle(items).slice(0, count)`. If `count` exceeds `items.length` it is clamped (you get all items, shuffled); negative counts yield an empty array.
+
+```ts
+matchers: {
+  assignees: (ctx) => ctx.prng.sample(ctx.registry.all(userSchema), ctx.prng.int(2, 4)),
+}
+```
+
 ### `.fork(key)`
 
 Derives a new, fully independent PRNG from a deterministic string key. The parent PRNG's state is **not consumed** — calling `fork` twice with the same key returns equivalent PRNGs.
 
 ```ts
 const childPrng = ctx.prng.fork("my-subfield");
+```
+
+### `.bytes(n)`
+
+Returns a `Uint8Array` of `n` random bytes. Internally extracts 4 bytes per SFC32 iteration, so one call is far cheaper than `n` individual `int()` calls. Useful for bulk generation:
+
+```ts
+// Uniform mapping into a 64-char alphabet (zero bias when alphabet size is power-of-2)
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const token = Array.from(ctx.prng.bytes(32), (v) => B64[v & 0x3f]!).join("");
 ```
 
 ---
@@ -545,3 +600,160 @@ interface GenerateOptions<T> {
 ```
 
 `seed` is only used by the module-level `generate()` function; it is ignored by `world.generate()` (use `createWorld({ seed })` instead).
+
+---
+
+## Localization
+
+Locale data and types live in separate workspace packages, not in `zod4-mock`
+itself. This keeps the core library small and lets consumers install only the
+locales they need.
+
+| Package                  | Contents                                                              |
+| ------------------------ | --------------------------------------------------------------------- |
+| `@zod4-mock/locale-core` | `LocaleData`, `MarkovModel`, `Currency`, etc. types + `extend()`       |
+| `@zod4-mock/locale-en`   | Full English locale (`en`) with Markov-trained name & word models     |
+| `@zod4-mock/locale-nl`   | Full Dutch locale (`nl`) with Markov-trained models                   |
+| `@zod4-mock/locale-names`| Pre-trained Markov name models by cultural origin (shared dependency) |
+
+The `zod4-mock` package re-exports `extend` and the locale types for
+convenience, but **not** `en` or `nl` — import those from their packages.
+
+### Default locale
+
+When `createWorld()` is called without a `locale`, a built-in **minimal English
+locale** is used. It has small curated word and name lists and does **not** use
+Markov generation — output is plain (`"John Smith"`, `"Section"`) rather than
+realistically varied. Install `@zod4-mock/locale-en` and pass `en` for the full
+Markov-backed experience.
+
+### `en` / `nl`
+
+Pre-built locales, imported from their own packages:
+
+```ts
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
+
+const world = createWorld({ seed: 1, locale: nl });
+```
+
+### `extend(base, overrides)`
+
+Creates a locale by shallow-merging individual sections. Re-exported from
+`zod4-mock`, or import directly from `@zod4-mock/locale-core`:
+
+```ts
+import { extend } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+
+const myLocale = extend(en, {
+  address: {
+    ...en.address,
+    cities: ["London", "Manchester", "Edinburgh"],
+    countryCode: "GB",
+    phonePrefix: "+44",
+  },
+});
+```
+
+Each section is replaced as a whole — deep merging within a section is not performed.
+
+### `LocaleData`
+
+The interface every locale must satisfy (defined in `@zod4-mock/locale-core`). Key sections:
+
+```ts
+interface NameOriginSet {
+  model: MarkovModel;
+  weight: number;        // relative probability weight (need not sum to 100)
+}
+
+interface LastNamePrefix {
+  prefix: string;        // e.g. "de", "van der"
+  weight: number;        // relative weight vs. implicit "no prefix" weight of 100
+}
+
+interface Currency {
+  code: string;          // "USD"
+  name: string;          // "US Dollar"
+  symbol: string;        // "$"
+  numeric: string;       // "840"
+}
+
+interface LocaleData {
+  id: string;
+  person: {
+    // Markov-based names (full locales) — OR simple arrays (minimal locales).
+    firstNamesMale?:   readonly NameOriginSet[];
+    firstNamesFemale?: readonly NameOriginSet[];
+    lastNames?:        readonly NameOriginSet[];
+    simpleFirstNamesMale?:   readonly string[];
+    simpleFirstNamesFemale?: readonly string[];
+    simpleLastNames?:        readonly string[];
+    lastNamePrefixes?: readonly LastNamePrefix[]; // e.g. Dutch tussenvoegsels
+    prefixes: { male: string[]; female: string[]; neutral: string[] };
+    suffixes: string[];
+    genders: string[];
+    jobTitles: string[]; jobAreas: string[]; jobTypes: string[]; jobDescriptors: string[];
+    formatFullName: (first: string, last: string) => string;
+    formatBio: (prng, parts: { jobTitle; jobArea; jobType }) => string;
+  };
+  word: {
+    nounModel?: MarkovModel;       // Markov — OR the `nouns` array below
+    adjectiveModel?: MarkovModel;
+    nouns?: readonly string[];
+    adjectives?: readonly string[];
+    articles: string[]; /* ... other closed-class word lists */
+  };
+  address: {
+    cities; states; countries; countryCodes; continents; languages;
+    streetNames; streetSuffixes; cityPrefixes; cityCores;
+    buildingNumberSuffixes; timeZones; directions;
+    cardinalDirections; ordinalDirections;
+    streetFormats; zipFormat; secondaryAddressFormat;
+    phonePrefix; ibanPrefix; countryCode;
+  };
+  commerce: {
+    departments; materials; productAdjectives; currencyCode;
+    formatPrice; formatProductName; formatProductDescription;
+  };
+  company: {
+    prefixes; suffixes; buzzAdjectives; buzzNouns; buzzVerbLemmas;
+    catchPhraseAdjectives; catchPhraseDescriptors; catchPhraseNouns;
+    formatBuzzPhrase;
+  };
+  finance: {
+    bankCodes; bicLocations; currencies: readonly Currency[];
+    accountNames; transactionTypes; transactionDescriptions; formatIban;
+  };
+  date:  { months; monthsShort; weekdays; weekdaysShort; timeZones };
+  color: { names: readonly string[] };
+  phone: { mobilePrefix; landlinePrefixes; formatMobile; formatLandline };
+}
+```
+
+**Markov vs. simple locales.** A locale supplies either Markov models
+(`firstNamesMale`, `nounModel`, …) or plain string arrays
+(`simpleFirstNamesMale`, `nouns`, …). Generators prefer the Markov model when
+present and fall back to the array otherwise. Full locale packages
+(`@zod4-mock/locale-en`, `@zod4-mock/locale-nl`) ship Markov models; the
+built-in default locale ships only the simple arrays.
+
+`firstNamesMale`, `firstNamesFemale`, and `lastNames` accept an array of `NameOriginSet` entries. `sampleWeighted(prng, sets)` picks an origin proportionally to weights, then samples from that model. This enables realistic demographic distributions — e.g., the `nl` locale mixes Dutch (68%), Arabic (12%), Turkish (6%), and Frisian (2%) models.
+
+`lastNamePrefixes` is optional. When present, `lastName()` prepends a prefix with probability `prefixWeightTotal / (prefixWeightTotal + 100)`, capitalised for standalone use. `formatFullName` in locales that have tussenvoegsels should lowercase the first character of the last name (Dutch convention: "Jan de Jong" not "Jan De Jong").
+
+### `MarkovModel`
+
+```ts
+interface MarkovModel {
+  order: number;            // n-gram order (2 = bigram)
+  prior: number;            // Dirichlet smoothing (e.g. 0.01)
+  chars: string;            // alphabet + "$" end-of-word sentinel
+  table: Record<string, number[]>; // n-gram state → CDF weights
+}
+```
+
+Models are trained offline (see `scripts/train-markov.ts` in Commit 2) and committed as TypeScript files. The runtime `sampleMarkov(prng, model)` function performs binary-search CDF sampling.

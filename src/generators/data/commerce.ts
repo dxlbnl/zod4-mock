@@ -1,56 +1,49 @@
-import type { Prng } from "../../types.js";
+import type { Prng, GeneratorContext } from "../../types.js";
 import { adjective, noun } from "./word.js";
+import { defaultLocale } from "../../default-locale.js";
 
-// ---------------------------------------------------------------------------
-// Datasets
-// ---------------------------------------------------------------------------
-
-const DEPARTMENTS = [
-  "Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty", "Auto", "Sport", "Gezondheid",
-  "Schoenen", "Sieraden", "Horloges", "Muziek", "Films", "Gereedschap", "Dierenbenodigdheden", "Baby",
-  "Kantoorartikelen", "Levensmiddelen"
-] as const;
-const MATERIALS = [
-  "Hout", "Metaal", "Plastic", "Glas", "Stof", "Steen", "Leer", "Keramiek",
-  "Katoen", "Wol", "Zijde", "Rubber", "Brons", "Koper", "Goud", "Zilver",
-  "Platinum", "Papier", "Karton", "Bamboe"
-] as const;
-const PRODUCT_ADJECTIVES = [
-  "Klein", "Ergonomisch", "Rustiek", "Intelligent", "Prachtig", "Ongelooflijk", "Praktisch", "Handgemaakt",
-  "Generiek", "Verfijnd", "Merkloos", "Lekker", "Modern", "Klassiek", "Innovatief", "Duurzaam",
-  "Gerecycled", "Stijlvol", "Minimalistisch", "Robuust", "Luxe", "Goedkoop"
-] as const;
-
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
-
-export function department(prng: Prng): string {
-  return prng.pick(DEPARTMENTS);
+function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
+  return arr[Math.floor(prng.random() * arr.length)] as T;
 }
 
-export function productAdjective(prng: Prng): string {
-  return prng.pick(PRODUCT_ADJECTIVES);
+export function department(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).commerce.departments);
 }
 
-export function productMaterial(prng: Prng): string {
-  return prng.pick(MATERIALS);
+export function productAdjective(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).commerce.productAdjectives);
 }
 
-export function productName(prng: Prng): string {
-  return `${productAdjective(prng)} ${productMaterial(prng).toLowerCase()}en ${noun(prng)}`;
+export function productMaterial(prng: Prng, ctx?: GeneratorContext): string {
+  return pick(prng, (ctx?.locale ?? defaultLocale).commerce.materials);
 }
 
-export function product(prng: Prng): string {
-  return productName(prng);
+export function productName(prng: Prng, ctx?: GeneratorContext): string {
+  const locale = ctx?.locale ?? defaultLocale;
+  return locale.commerce.formatProductName(
+    productAdjective(prng, ctx),
+    productMaterial(prng, ctx),
+    noun(prng, ctx),
+  );
 }
 
-export function productDescription(prng: Prng): string {
-  return `${productName(prng)}: ${adjective(prng)} ${noun(prng)} voor je ${department(prng).toLowerCase()} behoeften.`;
+export function product(prng: Prng, ctx?: GeneratorContext): string {
+  return productName(prng, ctx);
 }
 
-export function price(prng: Prng, min = 1, max = 1000): string {
-  return (prng.random() * (max - min) + min).toFixed(2).replace(".", ",");
+export function productDescription(prng: Prng, ctx?: GeneratorContext): string {
+  const locale = ctx?.locale ?? defaultLocale;
+  return locale.commerce.formatProductDescription({
+    productName: productName(prng, ctx),
+    adjective: adjective(prng, ctx),
+    noun: noun(prng, ctx),
+    department: department(prng, ctx),
+  });
+}
+
+export function price(prng: Prng, min = 1, max = 1000, ctx?: GeneratorContext): string {
+  const amount = prng.random() * (max - min) + min;
+  return (ctx?.locale ?? defaultLocale).commerce.formatPrice(amount);
 }
 
 export function isbn(prng: Prng): string {

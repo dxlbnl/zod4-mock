@@ -1,87 +1,73 @@
-# Batch Generation API
+# Array Batch Generation
 
 ## The Problem
 
-Generating 10,000 mock records with the current API requires calling `world.generate(schema)` 10,000 times. Each call is fully independent — it re-hashes the same field paths from scratch.
+Generating an array of N objects with the current API calls `generate(innerSchema)` N times inside the `ZodArray` handler. Each iteration independently calls `fieldSeed(worldSeed, subjectId, fieldPath)` for every field — building and hashing the full key string from scratch.
 
-The cost is in `fieldSeed()`, which builds and hashes the string `"worldSeed:subjectId:fieldPath"` for every field of every record:
+For a 50-field inner schema with an array of 1,000 elements, that's 50,000 FNV-1a hash calls where the `worldSeed` and `fieldPath` components are stable across all iterations.
+
+## The Solution: Transparent Array Batching
+
+No new API method is needed. `generate(z.array(Schema).length(N))` **is** the batch call — the optimization is an implementation detail of the `ZodArray` generator in `src/generators/schema/collection.ts`.
+
+Before the element loop, pre-compute a base seed for each field path in the inner schema once. For each element, derive that element's field seed cheaply via XOR with a hash of the element index:
 
 ```typescript
-// Executed 50,000 times for a 50-field schema × 1,000 records
-function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number {
-  return fnv1a(`${worldSeed}:${subjectId}:${fieldPath}`);
+// Inside the ZodArray generator — pseudocode
+
+// Pre-compute once per array (O(F) hashes, where F = number of fields)
+const baseSeeds = precomputeFieldSeeds(worldSeed, innerSchema);
+// { "firstName": 0xABCD1234, "email": 0xDEADBEEF, ... }
+
+// Per element: O(1), no string construction
+function elementFieldSeed(baseSeed: number, elementIndex: number): number {
+  return baseSeed ^ splitmix32(elementIndex);
+}
+
+// Generate elements
+const result = [];
+for (let i = 0; i < count; i++) {
+  result.push(generateRecord(innerSchema, baseSeeds, i));
 }
 ```
 
-The `worldSeed` and `fieldPath` components are stable — only `subjectId` changes between records. Yet we re-hash the whole string every time.
+`precomputeFieldSeeds` traverses the inner schema once, hashing `"worldSeed:fieldPath"` for each leaf field. For all subsequent elements, each field's seed is a single XOR and a cheap integer hash — no string allocation.
 
-## The Proposal: `generateBatch(schema, n)`
+### Nested Arrays
 
-A dedicated batch API pre-computes per-field base seeds once and derives per-record values cheaply:
+The optimization applies recursively. When `precomputeFieldSeeds` encounters a `ZodArray` node while traversing, it recurses into that array's inner schema, using a fixed index range to generate paths like `items[0].price`, `items[1].price`, etc.:
 
-```typescript
-interface World {
-  // Existing
-  generate<T>(schema: ZodType<T>, options?: GenerateOptions<T>): T;
+- Fixed-length arrays (`z.array(...).length(N)`) — use the schema's declared length.
+- Variable-length arrays — use `defaultArrayLength` as the pre-computation bound (the same length the element loop will use).
 
-  // New
-  generateBatch<T>(
-    schema: ZodType<T>,
-    count: number,
-    options?: GenerateOptions<T>,
-  ): T[];
-}
-```
+### No API Change
 
-### Incremental Seeding Strategy
-
-For a given field path, the per-record seed is derived from the base field seed XOR'd with the record index:
+The caller sees no difference:
 
 ```typescript
-// Pre-compute once per batch
-const baseSeeds = precomputeFieldSeeds(worldSeed, schema);
-// baseSeeds = { "firstName": 0xABCD1234, "email": 0xDEADBEEF, ... }
-
-// Per record: fast, no string construction
-function recordFieldSeed(baseSeed: number, recordIndex: number): number {
-  // XOR with a hash of the index to avoid trivial patterns
-  return baseSeed ^ splitmix32(recordIndex);
-}
+// These are equivalent — the second just benefits from the optimization
+const users = generate(z.array(UserSchema));          // small array
+const bulk  = generate(z.array(UserSchema).length(1000)); // batch path
 ```
-
-`precomputeFieldSeeds` traverses the schema once, collecting all field paths. It hashes `"worldSeed:fieldPath"` for each — a one-time cost. Then for each record, deriving a field's seed is a single XOR and a cheap integer hash.
-
-### `precomputeFieldSeeds`
-
-```typescript
-function precomputeFieldSeeds(
-  worldSeed: number,
-  schema: ZodType,
-): Map<string, number> {
-  const seeds = new Map<string, number>();
-  traverseSchema(schema, (fieldPath) => {
-    seeds.set(fieldPath, fnv1a(`${worldSeed}:${fieldPath}`));
-  });
-  return seeds;
-}
-```
-
-This traversal runs in O(F) where F = number of fields. For all subsequent records, seed derivation is O(1) per field.
 
 ## Expected Impact
 
-For a 50-field schema generating 1,000 records:
+For a 50-field inner schema generating an array of 1,000 elements:
 
-| Approach | FNV-1a calls | String allocations |
-|----------|:-----------:|:-----------------:|
-| Current (`generate()` × 1000) | 50,000 | 50,000 |
-| `generateBatch(schema, 1000)` | 50 + 1,000 cheap XORs | 50 |
-
-The exact speedup depends on field count and schema complexity, but for bulk test-data generation (seeding databases, generating fixtures) this is a meaningful improvement.
+| Approach | FNV-1a hash calls | String allocations |
+|----------|:-----------------:|:-----------------:|
+| Current (50,000 independent `fieldSeed` calls) | 50,000 | 50,000 |
+| Array batching (pre-compute + XOR) | 50 + 1,000 XORs | 50 |
 
 ## Determinism Guarantee
 
-The batch API must produce the same result as calling `generate()` N times sequentially with incremented subject IDs. This is the correctness invariant to test: `generateBatch(schema, N)` equals `Array.from({ length: N }, (_, i) => generate(schema, { subjectIndex: i }))`.
+The batched path must produce identical output to the current unbatched path. The invariant to test:
+
+```typescript
+const batched   = generate(z.array(UserSchema).length(N));
+const sequential = Array.from({ length: N }, (_, i) => generate(UserSchema, { subjectIndex: i }));
+expect(batched).toEqual(sequential);
+```
 
 ---
 

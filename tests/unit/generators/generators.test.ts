@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { generateFromSchema, generateFromKey, createPrng } from "../../../src/index.js";
 import type { BoundGenerators, GeneratorContext, Registry } from "../../../src/index.js";
+import { en } from "@zod4-mock/locale-en";
 
 // ---------------------------------------------------------------------------
 // Minimal stub registry for isolated generator tests
@@ -51,6 +52,7 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
     },
     recursionLimit: 5,
     current: {},
+    locale: en,
   };
   return ctx;
 }

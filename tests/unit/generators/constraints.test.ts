@@ -121,6 +121,34 @@ describe("Comprehensive Heuristic Constraints & Modifiers", () => {
     });
   });
 
+  describe("Text Heuristics (bio, description, note, etc.)", () => {
+    it("bio respects .min() with natural sentence output (no x-padding)", () => {
+      const Schema = z.object({ bio: z.string().min(150) });
+      const result = createWorld({ seed: 1 }).generate(Schema);
+      expect(result.bio.length).toBeGreaterThanOrEqual(150);
+      expect(result.bio).not.toMatch(/x{5}/); // no ugly padding
+    });
+
+    it("bio respects .max()", () => {
+      const Schema = z.object({ bio: z.string().max(80) });
+      const result = createWorld({ seed: 1 }).generate(Schema);
+      expect(result.bio.length).toBeLessThanOrEqual(80);
+    });
+
+    it("description respects .min() with natural sentence output", () => {
+      const Schema = z.object({ description: z.string().min(200) });
+      const result = createWorld({ seed: 1 }).generate(Schema);
+      expect(result.description.length).toBeGreaterThanOrEqual(200);
+      expect(result.description).not.toMatch(/x{5}/);
+    });
+
+    it("description respects .max()", () => {
+      const Schema = z.object({ description: z.string().max(50) });
+      const result = createWorld({ seed: 1 }).generate(Schema);
+      expect(result.description.length).toBeLessThanOrEqual(50);
+    });
+  });
+
   describe("Data Centralization (Regressions)", () => {
     it("should have TECH_WORDS in generators.word", () => {
       expect(generators.word.TECH_WORDS).toBeDefined();

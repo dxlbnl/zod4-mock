@@ -1,0 +1,23 @@
+{
+  "name": "@zod4-mock/locale-core",
+  "version": "0.2.0",
+  "description": "Shared locale types and the extend() utility for zod4-mock locales",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

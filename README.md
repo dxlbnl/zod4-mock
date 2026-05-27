@@ -19,7 +19,7 @@ const user = generate(
     createdAt: z.date(),
   }),
 );
-// → { id: "3f2d…", firstName: "Jan", email: "j.bakker@…", role: "user", createdAt: Date }
+// → { id: "3f2d…", firstName: "John", email: "john.smith42@…", role: "user", createdAt: Date }
 ```
 
 No setup, no seed, no configuration. Field names drive the values — `firstName` gets a first name, `email` gets a valid email address, `id` gets a UUID.
@@ -123,6 +123,27 @@ const world = createWorld({ seed: 42 })
 const person = world.generate(PersonSchema);
 ```
 
+## Localization
+
+Out of the box, `zod4-mock` produces simple English data — short curated name/word lists, no extras to install. For realistic, Markov-generated output (or a different language), install a locale package and pass it to `createWorld`:
+
+```bash
+npm install @zod4-mock/locale-en      # rich English (Markov names + words)
+npm install @zod4-mock/locale-nl      # Dutch (Markov names, tussenvoegsels, € prices)
+```
+
+```ts
+import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
+
+createWorld({ seed: 42 });              // built-in minimal English
+createWorld({ seed: 42, locale: en });  // full English, Markov-generated
+createWorld({ seed: 42, locale: nl });  // Dutch
+```
+
+Build custom locales by overriding individual sections with `extend()` — see the [API reference](wiki/api-reference.md#localization).
+
 ## Features
 
 - **Zero-config** — `generate(schema)` works with no setup, no imports beyond the schema
@@ -132,6 +153,7 @@ const person = world.generate(PersonSchema);
 - **Composable** — nested schemas automatically use their registered matchers
 - **Relational** — cross-schema ID consistency without any manual wiring
 - **`ctx.gen`** — full generator library (person, internet, location, finance, commerce, …) pre-wired to the PRNG inside matchers
+- **Localizable** — built-in minimal English default; opt-in Markov-backed locales (`@zod4-mock/locale-en`, `@zod4-mock/locale-nl`) and `extend()` helper for variants
 - **Per-field seeding** — adding or removing schema fields never disturbs values of other fields
 - **Zod v4 native** — built against `zod@^4`
 

@@ -5,16 +5,21 @@
 
 import { describe, it, expect } from "vitest";
 import { createPrng } from "../../../../src/prng.js";
+import * as color from "../../../../src/generators/data/color.js";
 import * as commerce from "../../../../src/generators/data/commerce.js";
 import * as company from "../../../../src/generators/data/company.js";
 import * as date from "../../../../src/generators/data/date.js";
 import * as finance from "../../../../src/generators/data/finance.js";
 import * as internet from "../../../../src/generators/data/internet.js";
 import * as location from "../../../../src/generators/data/location.js";
+import * as person from "../../../../src/generators/data/person.js";
 import * as phone from "../../../../src/generators/data/phone.js";
+import * as system from "../../../../src/generators/data/system.js";
 import * as vehicle from "../../../../src/generators/data/vehicle.js";
 import * as word from "../../../../src/generators/data/word.js";
 import { toBase64 } from "../../../../src/utils/encoding.js";
+import type { GeneratorContext } from "../../../../src/types.js";
+import { nl } from "@zod4-mock/locale-nl";
 
 function prng(seed = 42) {
   return createPrng(seed);
@@ -79,12 +84,12 @@ describe("generators/data/commerce", () => {
   it("price returns a formatted price string", () => {
     const p = commerce.price(prng());
     expect(typeof p).toBe("string");
-    expect(p).toMatch(/^\d+,\d{2}$/);
+    expect(p).toMatch(/^\$\d+\.\d{2}$/);
   });
 
   it("price respects min/max arguments", () => {
     for (let seed = 0; seed < 10; seed++) {
-      const p = parseFloat(commerce.price(prng(seed), 10, 20).replace(",", "."));
+      const p = parseFloat(commerce.price(prng(seed), 10, 20).replace("$", ""));
       expect(p).toBeGreaterThanOrEqual(10);
       expect(p).toBeLessThanOrEqual(20);
     }
@@ -280,8 +285,8 @@ describe("generators/data/finance", () => {
     expect(typeof finance.transactionDescription(prng())).toBe("string");
   });
 
-  it("iban returns a Dutch IBAN starting with NL", () => {
-    expect(finance.iban(prng())).toMatch(/^NL\d{2}[A-Z]{4}\d{10}$/);
+  it("iban returns an IBAN using the default locale prefix", () => {
+    expect(finance.iban(prng())).toMatch(/^US\d{2}[A-Z]{4}\d{10}$/);
   });
 
   it("bic returns a string", () => {
@@ -299,7 +304,7 @@ describe("generators/data/finance", () => {
   });
 
   it("creditCardIssuer returns a known issuer name", () => {
-    const issuers = ["Visa", "Mastercard", "American Express", "Discover"];
+    const issuers = ["Visa", "Mastercard", "American Express", "Discover", "Maestro", "Diners Club", "JCB"];
     expect(issuers).toContain(finance.creditCardIssuer(prng()));
   });
 
@@ -330,7 +335,7 @@ describe("generators/data/finance", () => {
 
 describe("generators/data/internet", () => {
   it("domainSuffix returns a known TLD", () => {
-    const tlds = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co"];
+    const tlds = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"];
     expect(tlds).toContain(internet.domainSuffix(prng()));
   });
 
@@ -376,7 +381,7 @@ describe("generators/data/internet", () => {
   });
 
   it("protocol returns a known protocol", () => {
-    const protos = ["http", "https", "ftp", "ssh", "ws", "wss"];
+    const protos = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"];
     expect(protos).toContain(internet.protocol(prng()));
   });
 
@@ -411,7 +416,7 @@ describe("generators/data/internet", () => {
   });
 
   it("httpMethod returns a known method", () => {
-    const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+    const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"];
     expect(methods).toContain(internet.httpMethod(prng()));
   });
 
@@ -444,8 +449,8 @@ describe("generators/data/location", () => {
 
   it("buildingNumber generates suffix variant across seeds", () => {
     const numbers = Array.from({ length: 30 }, (_, i) => location.buildingNumber(prng(i)));
-    // ~10% chance of suffix — at least one should have a letter suffix over 30 seeds
-    const hasSuffix = numbers.some((n) => /[a-z]/.test(n));
+    // a fraction carry a letter suffix — at least one should over 30 seeds
+    const hasSuffix = numbers.some((n) => /[A-Za-z]/.test(n));
     expect(hasSuffix).toBe(true);
   });
 
@@ -453,12 +458,12 @@ describe("generators/data/location", () => {
     expect(typeof location.streetAddress(prng())).toBe("string");
   });
 
-  it("secondaryAddress returns 'Appartement NNN'", () => {
-    expect(location.secondaryAddress(prng())).toMatch(/^Appartement \d+$/);
+  it("secondaryAddress returns 'Apt NNN'", () => {
+    expect(location.secondaryAddress(prng())).toMatch(/^Apt \d+$/);
   });
 
-  it("zipCode matches Dutch format (1234 AB)", () => {
-    expect(location.zipCode(prng())).toMatch(/^\d{4} [A-Z]{2}$/);
+  it("zipCode matches the default locale format (5-digit)", () => {
+    expect(location.zipCode(prng())).toMatch(/^\d{5}$/);
   });
 
   it("city returns a non-empty string", () => {
@@ -515,12 +520,12 @@ describe("generators/data/location", () => {
   });
 
   it("cardinalDirection returns one of 4 directions", () => {
-    const dirs = ["Noord", "Oost", "Zuid", "West"];
+    const dirs = ["North", "East", "South", "West"];
     expect(dirs).toContain(location.cardinalDirection(prng()));
   });
 
   it("ordinalDirection returns one of 4 diagonal directions", () => {
-    const dirs = ["Noordoost", "Zuidoost", "Zuidwest", "Noordwest"];
+    const dirs = ["Northeast", "Southeast", "Southwest", "Northwest"];
     expect(dirs).toContain(location.ordinalDirection(prng()));
   });
 });
@@ -534,12 +539,10 @@ describe("generators/data/phone", () => {
     expect(phone.number(prng()).length).toBeGreaterThan(0);
   });
 
-  it("number generates both mobile (06-) and landline formats", () => {
+  it("number generates phone-number strings across seeds", () => {
     const numbers = Array.from({ length: 30 }, (_, i) => phone.number(prng(i)));
-    const mobile = numbers.filter((n) => n.startsWith("06-"));
-    const landline = numbers.filter((n) => !n.startsWith("06-"));
-    expect(mobile.length).toBeGreaterThan(0);
-    expect(landline.length).toBeGreaterThan(0);
+    expect(numbers.every((n) => /\d/.test(n))).toBe(true);
+    expect(new Set(numbers).size).toBeGreaterThan(1);
   });
 
   it("imei returns a 15-digit string", () => {
@@ -574,7 +577,7 @@ describe("generators/data/vehicle", () => {
   });
 
   it("fuel returns a fuel type", () => {
-    const fuels = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof"];
+    const fuels = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof", "LPG", "CNG", "PHEV"];
     expect(fuels).toContain(vehicle.fuel(prng()));
   });
 
@@ -612,5 +615,267 @@ describe("generators/data/word — additional coverage", () => {
     const s = word.sample(prng());
     expect(typeof s).toBe("string");
     expect(s.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// system
+// ---------------------------------------------------------------------------
+
+describe("generators/data/system", () => {
+  it("platform returns a known platform string", () => {
+    const platforms = ["windows", "macos", "linux", "ios", "android"];
+    expect(platforms).toContain(system.platform(prng()));
+  });
+
+  it("browser returns a known browser string", () => {
+    const browsers = ["chrome", "firefox", "safari", "edge"];
+    expect(browsers).toContain(system.browser(prng()));
+  });
+
+  it("semver returns a semver-shaped string", () => {
+    expect(system.semver(prng())).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("fileExtension returns a lowercase extension without dot", () => {
+    expect(system.fileExtension(prng())).toMatch(/^[a-z]+$/);
+  });
+
+  it("mimeType returns a valid mime type string", () => {
+    expect(system.mimeType(prng())).toMatch(/^[a-z]+\/[a-z]+$/);
+  });
+
+  it("fileName returns name with extension", () => {
+    expect(system.fileName(prng())).toMatch(/^[a-z_]+_\d+\.[a-z]+$/);
+  });
+
+  it("filePath starts with slash and contains a filename", () => {
+    const p = system.filePath(prng());
+    expect(p).toMatch(/^\//);
+    expect(p).toContain(".");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// color
+// ---------------------------------------------------------------------------
+
+describe("generators/data/color", () => {
+  it("colorName returns a lowercase word", () => {
+    expect(color.colorName(prng())).toMatch(/^[a-z]+$/);
+  });
+
+  it("colorHex returns a 7-char hex string", () => {
+    expect(color.colorHex(prng())).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("colorRgb returns an rgb(...) string", () => {
+    expect(color.colorRgb(prng())).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
+  });
+
+  it("colorHsl returns an hsl(...) string", () => {
+    expect(color.colorHsl(prng())).toMatch(/^hsl\(\d+, \d+%, \d+%\)$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// internet — urlPath and domainWord improvements
+// ---------------------------------------------------------------------------
+
+describe("generators/data/internet — urlPath and domainWord", () => {
+  it("urlPath returns a known path segment", () => {
+    const paths = ["products", "dashboard", "profile", "settings", "articles",
+      "docs", "api", "blog", "about", "contact", "search", "help",
+      "orders", "invoices", "reports", "users", "admin", "status"];
+    expect(paths).toContain(internet.urlPath(prng()));
+  });
+
+  it("domainWord returns only lowercase alphanumeric characters", () => {
+    expect(internet.domainWord(prng())).toMatch(/^[a-z0-9]+$/);
+  });
+
+  it("url path segment is a recognizable word", () => {
+    const u = internet.url(prng());
+    const path = u.split("/").at(-1)!;
+    expect(path).toMatch(/^[a-z]+$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// person
+// ---------------------------------------------------------------------------
+
+describe("generators/data/person", () => {
+  it("firstName(prng) returns a capitalized string (English default)", () => {
+    expect(person.firstName(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("firstName('male') returns a capitalized string", () => {
+    expect(person.firstName(prng(), "male")).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("firstName('female') returns a capitalized string", () => {
+    expect(person.firstName(prng(), "female")).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("male and female firstName use different models (differ across seeds)", () => {
+    const male   = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), "male"));
+    const female = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), "female"));
+    expect(male).not.toEqual(female);
+  });
+
+  it("firstName with nl locale uses nl model (differs from en default)", () => {
+    const nlCtx = { locale: nl } as unknown as GeneratorContext;
+    const enNames = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i)));
+    const nlNames = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), nlCtx));
+    expect(enNames).not.toEqual(nlNames);
+  });
+
+  it("lastName(prng) returns a capitalized string", () => {
+    expect(person.lastName(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("lastName with nl locale uses nl model (differs from en default)", () => {
+    const nlCtx = { locale: nl } as unknown as GeneratorContext;
+    const enNames = Array.from({ length: 20 }, (_, i) => person.lastName(prng(i)));
+    const nlNames = Array.from({ length: 20 }, (_, i) => person.lastName(prng(i), nlCtx));
+    expect(enNames).not.toEqual(nlNames);
+  });
+
+  it("fullName(prng) returns 'FirstName LastName' format", () => {
+    const name = person.fullName(prng());
+    const parts = name.split(" ");
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toMatch(/^[A-Z][a-z]+$/);
+    expect(parts[1]).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("prefix('male') returns an English male prefix", () => {
+    expect(["Mr.", "Dr.", "Prof."]).toContain(person.prefix(prng(), "male"));
+  });
+
+  it("prefix('female') returns an English female prefix", () => {
+    expect(["Ms.", "Mrs.", "Dr.", "Prof."]).toContain(person.prefix(prng(), "female"));
+  });
+
+  it("gender(prng) returns a non-empty string", () => {
+    expect(person.gender(prng()).length).toBeGreaterThan(0);
+  });
+
+  it("bio(prng) returns a non-empty sentence-like string", () => {
+    const b = person.bio(prng());
+    expect(typeof b).toBe("string");
+    expect(b.length).toBeGreaterThan(10);
+    expect(b.endsWith(".")).toBe(true);
+  });
+
+  it("jobTitle, jobArea, jobType return non-empty strings", () => {
+    expect(person.jobTitle(prng()).length).toBeGreaterThan(0);
+    expect(person.jobArea(prng()).length).toBeGreaterThan(0);
+    expect(person.jobType(prng()).length).toBeGreaterThan(0);
+  });
+
+  it("zodiacSign returns one of the 12 signs", () => {
+    const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+      "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+    expect(signs).toContain(person.zodiacSign(prng()));
+  });
+
+  it("middleName(prng) returns a capitalized string", () => {
+    expect(person.middleName(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("suffix(prng) returns a non-empty string", () => {
+    const s = person.suffix(prng());
+    expect(typeof s).toBe("string");
+    expect(s.length).toBeGreaterThan(0);
+  });
+
+  it("prefix(prng) without gender arg defaults to neutral prefix", () => {
+    const p = person.prefix(prng());
+    expect(typeof p).toBe("string");
+    expect(p.length).toBeGreaterThan(0);
+  });
+
+  it("prefix(prng, 'neutral') returns a prefix from the neutral list", () => {
+    const p = person.prefix(prng(), "neutral");
+    expect(typeof p).toBe("string");
+    expect(p.length).toBeGreaterThan(0);
+  });
+
+  it("sex(prng) returns 'Male' or 'Female'", () => {
+    expect(["Male", "Female"]).toContain(person.sex(prng()));
+  });
+
+  it("sexType(prng) returns 'Male' or 'Female'", () => {
+    expect(["Male", "Female"]).toContain(person.sexType(prng()));
+  });
+
+  it("jobDescriptor(prng) returns a non-empty string", () => {
+    expect(person.jobDescriptor(prng()).length).toBeGreaterThan(0);
+  });
+
+  it("firstName with unrecognised gender string falls back to neutral (picks either model)", () => {
+    const name = person.firstName(prng(), "nonbinary");
+    expect(name).toMatch(/^[A-Z][a-z]+$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// word — locale-aware generators
+// ---------------------------------------------------------------------------
+
+describe("generators/data/word — locale-aware generators", () => {
+  it("noun(prng) returns a capitalized word (English default)", () => {
+    expect(word.noun(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("adjective(prng) returns a capitalized word (English default)", () => {
+    expect(word.adjective(prng())).toMatch(/^[A-Z][a-z]+$/);
+  });
+
+  it("noun with nl locale uses nl model (differs from en default)", () => {
+    const nlCtx = { locale: nl } as unknown as GeneratorContext;
+    const enNouns = Array.from({ length: 20 }, (_, i) => word.noun(prng(i)));
+    const nlNouns = Array.from({ length: 20 }, (_, i) => word.noun(prng(i), nlCtx));
+    expect(enNouns).not.toEqual(nlNouns);
+  });
+
+  it("adjective with nl locale uses nl model (differs from en default)", () => {
+    const nlCtx = { locale: nl } as unknown as GeneratorContext;
+    const enAdjs = Array.from({ length: 20 }, (_, i) => word.adjective(prng(i)));
+    const nlAdjs = Array.from({ length: 20 }, (_, i) => word.adjective(prng(i), nlCtx));
+    expect(enAdjs).not.toEqual(nlAdjs);
+  });
+
+  it("sentence(prng) ends with a period and is at least 15 chars", () => {
+    const s = word.sentence(prng());
+    expect(s.endsWith(".")).toBe(true);
+    expect(s.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it("sentence produces variety across seeds (uses random template selection)", () => {
+    const sentences = Array.from({ length: 20 }, (_, i) => word.sentence(prng(i)));
+    expect(new Set(sentences).size).toBeGreaterThan(5);
+  });
+
+  it("words(prng, n) returns exactly n space-separated tokens", () => {
+    const w = word.words(prng(), 4);
+    expect(w.split(" ")).toHaveLength(4);
+  });
+
+  it("paragraph(prng, n) contains n sentences joined by spaces", () => {
+    const p = word.paragraph(prng(), 3);
+    // Each sentence ends with '.'; paragraph joins them with ' '
+    const dotCount = (p.match(/\./g) ?? []).length;
+    expect(dotCount).toBeGreaterThanOrEqual(3);
+  });
+
+  it("verb, adverb, conjunction, interjection, preposition return non-empty strings", () => {
+    expect(word.verb(prng()).length).toBeGreaterThan(0);
+    expect(word.adverb(prng()).length).toBeGreaterThan(0);
+    expect(word.conjunction(prng()).length).toBeGreaterThan(0);
+    expect(word.interjection(prng()).length).toBeGreaterThan(0);
+    expect(word.preposition(prng()).length).toBeGreaterThan(0);
   });
 });
