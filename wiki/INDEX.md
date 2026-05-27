@@ -27,6 +27,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/](specs/) | One detailed spec page per feature/bug. See `specs/README.md`. |
 | [specs/B4-registry-find.md](specs/B4-registry-find.md) | B4 — `registry.find()` single-record predicate lookup. |
 | [specs/B5-related-many.md](specs/B5-related-many.md) | B5 — `ctx.related.many(name, count)` one-to-many relation picks in matchers. |
+| [specs/B6-world-get-find-or-create.md](specs/B6-world-get-find-or-create.md) | B6 — `world.get(schema, predicate)` find-an-existing-record-or-generate-one. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,

@@ -281,6 +281,25 @@ export interface World {
   ): z.infer<TSchema>;
 
   /**
+   * Find an existing stored record matching `predicate`, or generate one.
+   *
+   * Search the registry for the first stored record (insertion order) for which
+   * every key in `predicate` matches the record's value — shallow keys by value,
+   * nested-object values by deep equality. If one is found it is returned by
+   * reference. Otherwise a new record is generated via the `generate` overrides
+   * path with `predicate` supplied as `overrides` (so the predicate wins over
+   * matchers), stored in the registry for `schema`, and returned.
+   *
+   * An absent or empty predicate matches everything: returns the first stored
+   * record if any exist, else generates-and-stores one. Deterministic for a
+   * given seed and idempotent for a repeated predicate.
+   */
+  get<TSchema extends ZodTypeAny>(
+    schema: TSchema,
+    predicate?: Partial<input<TSchema>>,
+  ): input<TSchema>;
+
+  /**
    * Pre-generate `count` instances of the schema and store them in the registry.
    * Returns `this` for fluent chaining.
    */

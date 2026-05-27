@@ -267,6 +267,34 @@ Pre-generates `count` instances of the schema and stores them in the registry. R
 const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 3); // 3 persons in registry before any generate()
 ```
 
+### `.get(schema, predicate?)`
+
+```ts
+get<TSchema extends ZodTypeAny>(
+  schema: TSchema,
+  predicate?: Partial<input<TSchema>>,
+): input<TSchema>
+```
+
+Find-or-create: returns the first stored record (registry **insertion order**) for which **every** key in `predicate` matches, comparing shallow keys by value and nested-object values by **deep equality**. On a miss, it generates a new record via `generate` with `predicate` supplied as `overrides` (so the **predicate wins** over matchers and key/schema generators on conflicting keys), stores it in the registry for `schema`, and returns it. The found record is returned **by reference** (the same instance held in the registry).
+
+`get` is **deterministic** for a given seed and call sequence and **idempotent** for a repeated predicate: the first call generates-and-stores, and the second resolves via the find path and returns the same instance.
+
+The `predicate` is optional. An **absent** (`get(schema)`) or **empty** (`get(schema, {})`) predicate behaves identically and matches everything: it returns the first stored record if any exist, otherwise generates-and-stores one.
+
+For a function-style, no-create lookup use [`registry.find(schema, fn)`](#findtschema-predicate) instead.
+
+```ts
+// MSW handler: the same mocked product every time /products/:sku is hit
+http.get("/products/:sku", ({ params }) =>
+  HttpResponse.json(world.get(productSchema, { sku: params.sku as string })),
+);
+
+const a = world.get(productSchema, { sku: "WIDGET-42" });
+const b = world.get(productSchema, { sku: "WIDGET-42" });
+// a === b — same instance from the registry
+```
+
 ### `.registry`
 
 ```ts

@@ -39,7 +39,7 @@ import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
 import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def.js";
-import { deepMerge } from "./utils/merge.js";
+import { deepMerge, deepEqual } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 import { defaultLocale } from "./default-locale.js";
 
@@ -237,6 +237,48 @@ export class WorldImpl implements World {
     }
 
     return this.generateSingleItem(schema, options as GenerateOptions<unknown>) as z.infer<TSchema>;
+  }
+
+  // -------------------------------------------------------------------------
+  // get — find an existing matching record, or generate-and-store one
+  // -------------------------------------------------------------------------
+
+  get<TSchema extends ZodTypeAny>(
+    schema: TSchema,
+    predicate?: Partial<input<TSchema>>,
+  ): input<TSchema> {
+    const pred = (predicate ?? {}) as Record<string, unknown>;
+    const keys = Object.keys(pred);
+    const matches = (item: input<TSchema>): boolean => {
+      const record = item as Record<string, unknown>;
+      return keys.every((k) => deepEqual(record[k], pred[k]));
+    };
+
+    const existing = this.registry.find(schema, matches);
+    if (existing !== undefined) return existing;
+
+    const created = this.generate(
+      schema,
+      predicate
+        ? ({ overrides: predicate } as GenerateOptions<z.infer<TSchema>>)
+        : undefined,
+    ) as input<TSchema>;
+
+    const isRegistered =
+      this.findPrimaryRegs(schema).length > 0 || this.findDerivedRegs(schema).length > 0;
+
+    if (!isRegistered) {
+      // `generate` does not store ad-hoc, unregistered schemas — store the
+      // created record ourselves so a later `find`/`get` can discover it.
+      this.registry.store(schema, created);
+      return created;
+    }
+
+    // Registered schemas are stored by `generate`, but the instance it returns
+    // is a post-merge copy distinct from the one in the registry. Return the
+    // stored instance so subsequent `get` calls resolve by reference.
+    const stored = this.registry.find(schema, matches);
+    return stored ?? created;
   }
 
   // -------------------------------------------------------------------------

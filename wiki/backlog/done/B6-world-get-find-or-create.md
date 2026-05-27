@@ -5,6 +5,7 @@ type: feature
 priority: medium
 flags: [review]
 created: 2026-05-27
+spec: wiki/specs/B6-world-get-find-or-create.md
 ---
 
 ## Description
