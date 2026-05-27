@@ -53,7 +53,7 @@ The UX makes the library's "smart defaults" feel predictable rather than mysteri
 
 - **Search Lab**: A "Try a key name" input.
 - **Live Matching**: As you type `postal`, the UI highlights the `zipcode` heuristic and shows a sample result.
-- **Source Link**: For every match, a link takes the user to the [Key Heuristics Wiki](../../wiki/key-heuristics.md) to see the full implementation logic.
+- **Source Link**: For every match, a link takes the user to the [Key Heuristics docs](../../docs/key-heuristics.md) to see the full implementation logic.
 
 ### 🎨 Visual Language
 

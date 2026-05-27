@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir   = join(__dirname, "../data/training");
 const modelsDir = join(__dirname, "../src/models");
 
-// Parameters follow the recommendations in wiki/better-gen/markov-training-pipeline.md
+// Parameters follow the recommendations in wiki/research/better-gen/markov-training-pipeline.md
 const models = [
   { input: "first-names-male.txt",   output: "first-names-male.ts",   name: "nlFirstNamesMaleModel",   order: 3, minWordLen: 3, maxWordLen: 10 },
   { input: "first-names-female.txt", output: "first-names-female.ts", name: "nlFirstNamesFemaleModel", order: 3, minWordLen: 3, maxWordLen: 10 },

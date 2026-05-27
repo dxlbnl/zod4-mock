@@ -388,6 +388,24 @@ matchers: {
 }
 ```
 
+**Self-referential relations** — a relation may point at the same schema being generated (e.g. a category tree where each category's parent is another category). These are **not** auto-provisioned: doing so would re-enter the matcher and recurse forever. Instead the first record has no related instance and `ctx.related(name)` returns `undefined`; later records reference the earlier ones already generated. Guard the empty case in the matcher:
+
+```ts
+const categorySchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(2).max(40),
+  slug: z.string(),
+  parentId: z.uuid().nullable(), // → categorySchema.id (self)
+});
+
+world.withSchema(categorySchema, {
+  relations: { parent: categorySchema },
+  matchers: {
+    parentId: (ctx) => ctx.related("parent")?.id ?? null, // first record → null
+  },
+});
+```
+
 **`current`** — holds the partial sibling-field values accumulated so far for the current object. This is useful for cross-field consistency (e.g., matching a first name's gender to a sibling `gender` field).
 
 **`locale`** — the active locale. Generators that are locale-aware read names, words, and format strings from this object. Use `ctx.locale` in custom matchers if you need locale-specific data.

@@ -142,13 +142,13 @@ createWorld({ seed: 42, locale: en });  // full English, Markov-generated
 createWorld({ seed: 42, locale: nl });  // Dutch
 ```
 
-Build custom locales by overriding individual sections with `extend()` — see the [API reference](wiki/api-reference.md#localization).
+Build custom locales by overriding individual sections with `extend()` — see the [API reference](docs/api-reference.md#localization).
 
 ## Features
 
 - **Zero-config** — `generate(schema)` works with no setup, no imports beyond the schema
 - **Deterministic** — same seed → identical output on every run and every machine
-- **Field-name heuristics** — `email`, `firstName`, `createdAt`, `userId`, `street`, `iban`, `vin`, and [150+ more](wiki/key-heuristics.md) auto-generate realistic values
+- **Field-name heuristics** — `email`, `firstName`, `createdAt`, `userId`, `street`, `iban`, `vin`, and [150+ more](docs/key-heuristics.md) auto-generate realistic values
 - **Schema-driven** — respects `.min()`, `.max()`, `.email()`, `.uuid()`, `z.enum()`, `z.union()`, `z.optional()`, `z.discriminatedUnion()`, and more
 - **Composable** — nested schemas automatically use their registered matchers
 - **Relational** — cross-schema ID consistency without any manual wiring
@@ -159,11 +159,11 @@ Build custom locales by overriding individual sections with `extend()` — see t
 
 ## Documentation
 
-- [Getting Started](wiki/getting-started.md) — step-by-step tutorial
-- [Concepts](wiki/concepts.md) — world, schemas, relations, registry, determinism
-- [API Reference](wiki/api-reference.md) — complete reference for all exports
-- [Key-Based Field Heuristics](wiki/key-heuristics.md) — auto-generated values by field name
-- [Recipes](wiki/recipes.md) — copy-pasteable patterns for common scenarios
+- [Getting Started](docs/getting-started.md) — step-by-step tutorial
+- [Concepts](docs/concepts.md) — world, schemas, relations, registry, determinism
+- [API Reference](docs/api-reference.md) — complete reference for all exports
+- [Key-Based Field Heuristics](docs/key-heuristics.md) — auto-generated values by field name
+- [Recipes](docs/recipes.md) — copy-pasteable patterns for common scenarios
 
 ## License
 

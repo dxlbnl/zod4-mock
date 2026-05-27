@@ -339,16 +339,28 @@ export class WorldImpl implements World {
 
     if (!items) {
       if (this.registry.count(relSchema) === 0) {
+        // A self-referential relation (the schema relates to itself, e.g. a
+        // category whose parent is another category) must NOT auto-provision:
+        // generating a new record would re-enter this matcher with the
+        // registry still empty and recurse forever. Instead the first record
+        // simply has no related instance yet — later records reference the
+        // earlier ones already stored. The matcher handles the empty case
+        // (e.g. `ctx.related("parent")?.id ?? null`).
+        if (relSchema === reg.schema) {
+          this.relationPools.set(cacheKey, []);
+          return undefined as T;
+        }
         this.ensurePrimaryRecord(relSchema);
       }
       items = [...this.registry.all(relSchema)];
       this.relationPools.set(cacheKey, items);
     }
 
+    if (items.length === 0) return undefined as T;
+
     // Derive a stable per-relation PRNG so all fields in one record pick the same related entity.
     const relPrng = recordPrng.fork(`rel:${relName}`);
     const pickedIdx = relPrng.int(0, items.length - 1);
-    // console.log(`[resolveRelated] key=${cacheKey} pool=${items.length} picked=${pickedIdx}`);
     return items[pickedIdx]! as T;
   }
 

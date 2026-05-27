@@ -1,0 +1,89 @@
+# Codebase Map — `src/`
+
+A high-level orientation to the library source so work doesn't start with a blind
+search. End-user behavior docs live in `docs/`; this page is the *internal* layout.
+Paths are relative to the repo root.
+
+## Mental model
+
+Generation has **two axes**, tried in priority order per field (see the pipeline in
+`docs/concepts.md` / `CLAUDE.md`):
+
+1. **Matchers** — user functions from `world.withSchema(schema, { matchers })`.
+2. **Key-based ("data") generators** — keyed off the *field name* (`email`, `firstName`,
+   `iban`…). Produce realistic, domain-flavored values. Live in `src/generators/data/`.
+3. **Schema-based generators** — keyed off the *Zod type* (string/number/array/union…).
+   Produce constraint-valid values from introspection. Live in `src/generators/schema/`.
+4. `overrides` deep-merge, then `transform`.
+
+"Data" generators are `(prng, ctx?, schema?) => value` and are the public `generators.*`
+namespace. "Schema" generators are `(schema, ctx) => value` and drive the type fallback.
+
+## Entry & orchestration
+
+| File | Role |
+|------|------|
+| `src/index.ts` | Public API barrel. Exports `generate()` (zero-config one-shot), `createWorld`, the `generators` namespace, PRNG helpers, key-map constants, `extend`, and all public types. |
+| `src/world.ts` | **The engine.** `WorldImpl` / `createWorld`. Owns the per-field pipeline (`generateObjectFields`), array/derived/primary record generation, relation resolution (`resolveRelated`), context construction (`makeFieldCtx`), and registration modes (primary / derived `from:` / relational `relations:`). |
+| `src/types.ts` | All core interfaces: `World`, `GeneratorContext`, `MatcherCtx`, `SchemaOpts`, `Registry`, `WorldOptions`, `GenerateOptions`, key-map types. Re-exports locale types from `@zod4-mock/locale-core`. |
+
+## Determinism & state
+
+| File | Role |
+|------|------|
+| `src/prng.ts` | SFC32 PRNG + FNV-1a hash. `createPrng(seed)` → `{ random, int, pick, shuffle, sample, fork, bytes }`. `fork(key)` derives an independent child (no parent-state consumption). `fieldSeed(worldSeed, recordId, fieldPath)` gives per-field seeding so adding/removing a field doesn't disturb others. |
+| `src/registry.ts` | `SchemaRegistry` — in-memory `Map<schema, item[]>`. `store/all/pick/filter/count`. Keys are Zod schema *object references*. Backs relations and cross-API consistency. |
+
+## Zod v4 introspection (`src/generators/schema/`)
+
+| File | Role |
+|------|------|
+| `zod-def.ts` | The only place that touches Zod v4 internals (`schema._zod.def`, `check._zod.def`). `def()`, `checks()`, `unwrap()` (strip optional/nullable/default/readonly/catch/brand), `getLeafDef()`, `applyModifiers()` (post-fix string case/prefix/suffix/length + number int/multipleOf). |
+| `router.ts` | `generateFromSchema(schema, ctx)` — the big `switch` over `def.type` dispatching to the type generators; handles union/discriminated-union, optional/nullable, pipe/transform, intersection, default/catch, lazy, json, and `UnsupportedSchemaError` for custom/function/file. |
+| `string.ts` | String generation + format resolution (`generateZodString`, `generateTemplateLiteral`, `resolveStringLength`, low-level `generateString`). |
+| `number.ts` | Number/bigint with bounds (`generateZodNumber`, `generateZodBigInt`, `resolveNumberBounds`, `generateNumberWithBounds`). |
+| `date.ts` | `generateZodDate` (min/max date checks). |
+| `collection.ts` | `generateZodArray` (batched per-element seeding, min/max/length), `generateZodTuple/Record/Map/Set/Object`. |
+| `index.ts` | Re-exports `generateFromSchema`. |
+
+## Key-based data generators (`src/generators/data/`)
+
+Field-name → realistic value. Each module is a flat set of `(prng, ctx?) => value` fns.
+
+| File | Domain |
+|------|--------|
+| `key-map.ts` | **`DEFAULT_KEY_MAP` + `DEFAULT_KEY_PATTERNS`** — the ~165-entry field-name → generator table (exact keys + a few regex patterns), plus `generateFromKey`. The dispatch table the whole key axis hangs off. |
+| `person.ts` | names, gender/sex, jobTitle/area/type, bio, prefix/suffix. |
+| `internet.ts` | email, url, domain, username, IP/MAC, emoji, userAgent. |
+| `location.ts` | address parts, city, country, zip/postalCode, lat/long. |
+| `finance.ts` | iban, account, currency, credit-card (issuer→BIN). |
+| `commerce.ts` | product, price, department, SKU. |
+| `company.ts` | company name (tech-style formats), catchphrase. |
+| `phone.ts` | phone numbers. |
+| `vehicle.ts` | vin, make/model (manufacturer→model coherence). |
+| `system.ts` | platform, browser, semver, fileName/Path, mimeType. |
+| `color.ts` | colorName/Hex/Rgb/Hsl. |
+| `word.ts` | Markov-backed noun/adjective, `sentence`, `paragraph`; `TECH_WORDS`. |
+| `string.ts` | low-level string primitives (alphanumeric, etc.). |
+| `date.ts` | date key generators (createdAt/updatedAt/birthdate…). |
+| `sibling.ts` | sibling-aware helpers — read already-generated fields via `ctx.current` (e.g. firstName→gendered output, issuer→card prefix). |
+| `markov/sample.ts` | runtime Markov-chain sampler (traverses compiled transition tables from the locale). |
+| `index.ts` | Assembles the public `generators` namespace (note aliases: `internet.domain`, `location.postalCode`, `lorem.word`). |
+
+## Locale & utils
+
+| File | Role |
+|------|------|
+| `src/default-locale.ts` | The minimal, Markov-free English locale shipped with the core package — the fallback when no `locale` is passed. Richer locales are the `packages/locale-*` workspaces. |
+| `src/utils/merge.ts` | `deepMerge` — used for overrides and intersections. |
+| `src/utils/encoding.ts` | base64url / byte encoding helpers (uuid, nanoid, jwt). |
+
+## Tooling
+
+| File | Role |
+|------|------|
+| `scripts/train-markov.ts` | Build/train Markov models from corpora (the open-class word/name models). |
+| `scripts/verify-markov.ts` | Inspect/sample a trained model. |
+
+> Per-locale corpora and their own training scripts live in `packages/locale-*`. The
+> generator-overhaul design + status is in [`research/better-gen/`](research/better-gen/index.md).

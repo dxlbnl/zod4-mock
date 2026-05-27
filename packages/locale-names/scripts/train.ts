@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir   = join(__dirname, "../data/training");
 const srcDir    = join(__dirname, "../src/groups");
 
-// Parameters follow wiki/better-gen/markov-training-pipeline.md recommendations
+// Parameters follow wiki/research/better-gen/markov-training-pipeline.md recommendations
 const models = [
   // Dutch — Germanic Dutch, high-frequency core (> 100, minus classified origins)
   { group: "dutch",       file: "male",       name: "dutchMaleModel",          order: 3, minWordLen: 3, maxWordLen: 10 },

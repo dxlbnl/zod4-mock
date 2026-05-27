@@ -226,6 +226,61 @@ describe("multiple relations on the same schema", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Self-referential relations (B1)
+//
+// A schema may relate to itself — e.g. a category tree where each category's
+// parentId points at another category. Resolving the relation must not recurse
+// forever: the first record has no parent (null), and later records may point
+// at earlier ones. No record is ever its own parent.
+// ---------------------------------------------------------------------------
+
+describe("self-referential relations (B1)", () => {
+  const CategorySchema = z.object({
+    id: z.uuid(),
+    name: z.string().min(2).max(40),
+    slug: z.string(),
+    parentId: z.uuid().nullable(), // → CategorySchema.id (self)
+  });
+
+  function selfSetup() {
+    return createWorld({ seed: 7 }).withSchema(CategorySchema, {
+      relations: { parent: CategorySchema },
+      matchers: {
+        parentId: (ctx) => ctx.related("parent")?.id ?? null,
+      },
+    });
+  }
+
+  it("generates a single self-referential record without infinite recursion", () => {
+    const world = selfSetup();
+    expect(() => world.generate(CategorySchema)).not.toThrow();
+  });
+
+  it("the first/root record has a null parentId", () => {
+    const world = selfSetup();
+    const root = world.generate(CategorySchema);
+    expect(root.parentId).toBeNull();
+  });
+
+  it("generates a batch where every non-null parentId references an existing category", () => {
+    const world = selfSetup();
+    const cats = world.generate(z.array(CategorySchema).length(5));
+    const ids = new Set(cats.map((c) => c.id));
+    for (const c of cats) {
+      if (c.parentId !== null) expect(ids.has(c.parentId)).toBe(true);
+    }
+  });
+
+  it("no category is its own parent", () => {
+    const world = selfSetup();
+    const cats = world.generate(z.array(CategorySchema).length(5));
+    for (const c of cats) {
+      expect(c.parentId).not.toBe(c.id);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression Tests
 // ---------------------------------------------------------------------------
 

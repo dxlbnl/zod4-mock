@@ -78,6 +78,13 @@ export interface GeneratorContext<T = any> {
   /**
    * Resolves a related schema instance declared in the schema's `relations`.
    * Auto-provisions one if the registry is empty.
+   *
+   * Exception — **self-referential relations** (the relation points at the same
+   * schema being generated, e.g. a category whose parent is another category):
+   * these are not auto-provisioned (that would recurse forever). The first
+   * record has no related instance and `related()` returns `undefined`; later
+   * records reference earlier ones. Guard the empty case in the matcher, e.g.
+   * `ctx.related("parent")?.id ?? null`.
    */
   related<T = Record<string, unknown>>(relationName: string): T;
   /**

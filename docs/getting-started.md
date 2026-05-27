@@ -187,7 +187,7 @@ const enGB = extend(en, {
 createWorld({ seed: 1, locale: enGB });
 ```
 
-See [Localization in the API reference](api-reference.md#localization) for the full interface, and [better-gen/localization](better-gen/localization.md) for the design rationale.
+See [Localization in the API reference](api-reference.md#localization) for the full interface, and [better-gen/localization](../wiki/research/better-gen/localization.md) for the design rationale.
 
 ---
 

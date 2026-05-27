@@ -26,6 +26,6 @@ Copy-pasteable solutions: ad-hoc generation, invoicing domain, document corpus, 
 
 Which Zod v4 schema types and validators are supported for mock data generation.
 
-### [Better Data Generation](better-gen/index.md)
+### [Better Data Generation](../wiki/research/better-gen/index.md)
 
-Design notes and status tracking for the generator overhaul — localization, Markov chains, PRNG improvements, batching, and more. Most pillars are implemented; see [tracking.md](better-gen/tracking.md) for the live status.
+Design notes and status tracking for the generator overhaul — localization, Markov chains, PRNG improvements, batching, and more. Most pillars are implemented; see [tracking.md](../wiki/research/better-gen/tracking.md) for the live status. This research now lives in the project wiki under `wiki/research/better-gen/`.

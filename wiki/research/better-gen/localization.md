@@ -1,6 +1,6 @@
 # Localization Architecture
 
-> ✅ **Implemented.** The locale system described here is live. `src/locales/*` no longer exists — locale types and the `extend()` helper live in [`@zod4-mock/locale-core`](locale-names-package.md), `en` ships in `@zod4-mock/locale-en`, `nl` in `@zod4-mock/locale-nl`, and shared name models in `@zod4-mock/locale-names`. The canonical `LocaleData` interface is in [api-reference.md](../api-reference.md#localedata). This page is preserved as design rationale; the snippets below have been updated to the as-built API.
+> ✅ **Implemented.** The locale system described here is live. `src/locales/*` no longer exists — locale types and the `extend()` helper live in [`@zod4-mock/locale-core`](locale-names-package.md), `en` ships in `@zod4-mock/locale-en`, `nl` in `@zod4-mock/locale-nl`, and shared name models in `@zod4-mock/locale-names`. The canonical `LocaleData` interface is in [api-reference.md](../../../docs/api-reference.md#localedata). This page is preserved as design rationale; the snippets below have been updated to the as-built API.
 
 ## The Problem: Structural Locale Leaks
 
@@ -87,7 +87,7 @@ interface LocaleData {
 
 A locale may supply either Markov models (`firstNamesMale: NameOriginSet[]`, `nounModel: MarkovModel`) or plain string arrays (`simpleFirstNamesMale: string[]`, `nouns: string[]`); generators prefer the Markov model when present and fall back to the array otherwise. The built-in default locale (`src/default-locale.ts`) ships only the simple arrays; `@zod4-mock/locale-en` and `@zod4-mock/locale-nl` ship Markov-backed models.
 
-For the full, type-accurate interface (every field, every signature), see **[api-reference.md → LocaleData](../api-reference.md#localedata)**.
+For the full, type-accurate interface (every field, every signature), see **[api-reference.md → LocaleData](../../../docs/api-reference.md#localedata)**.
 
 ## Locale Inheritance
 
