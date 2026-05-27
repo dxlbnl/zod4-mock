@@ -89,8 +89,16 @@ export interface GeneratorContext<T = any> {
    * record has no related instance and `related()` returns `undefined`; later
    * records reference earlier ones. Guard the empty case in the matcher, e.g.
    * `ctx.related("parent")?.id ?? null`.
+   *
+   * `related.many(name, count)` resolves `count` distinct related records (a
+   * one-to-many pick), auto-provisioning the shortfall and returning a stable,
+   * record-scoped, deterministic set. Self-referential relations are not
+   * auto-provisioned, so `.many` returns at most the available distinct records.
    */
-  related<T = Record<string, unknown>>(relationName: string): T;
+  readonly related: {
+    <T = Record<string, unknown>>(relationName: string): T;
+    many<T = unknown>(relationName: string, count: number): T[];
+  };
   /**
    * Generates a value using the full world engine (honoring matchers and registry).
    */
@@ -123,8 +131,12 @@ export type MatcherCtx<
   TOutput = any,
 > = Omit<GeneratorContext<TOutput>, "related" | "source"> & {
   readonly source: TSource;
-  related<K extends keyof TRelations & string>(name: K): input<TRelations[K]>;
-  related(name: string): Record<string, unknown>;
+  readonly related: {
+    <K extends keyof TRelations & string>(name: K): input<TRelations[K]>;
+    (name: string): Record<string, unknown>;
+    many<K extends keyof TRelations & string>(name: K, count: number): input<TRelations[K]>[];
+    many<T = unknown>(name: string, count: number): T[];
+  };
 };
 
 // ---------------------------------------------------------------------------

@@ -281,6 +281,217 @@ describe("self-referential relations (B1)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// B5: ctx.related.many(name, count) — one-to-many relation picks
+//
+// `.many` picks `count` distinct related records, auto-provisioning a shortfall,
+// deterministically, and record-scoped (sibling matchers agree). See
+// wiki/specs/B5-related-many.md.
+// ---------------------------------------------------------------------------
+
+describe("B5: ctx.related.many", () => {
+  const UserSchema = z.object({
+    id: z.uuid(),
+    username: z.string(),
+  });
+
+  const CaseSchema = z.object({
+    caseId: z.uuid(),
+    users: z.array(UserSchema),
+    usernames: z.array(z.string()),
+  });
+
+  // World where `count` users are pre-populated and CaseSchema picks `pick` of them.
+  function caseSetup(seed: number, prePopulate: number, pick: number) {
+    const world = createWorld({ seed }).withSchema(UserSchema).withSchema(CaseSchema, {
+      relations: { users: UserSchema },
+      matchers: {
+        users: (ctx) => ctx.related.many("users", pick),
+        usernames: (ctx) => ctx.related.many("users", pick).map((u) => u.username),
+      },
+    });
+    if (prePopulate > 0) world.populate(UserSchema, prePopulate);
+    return world;
+  }
+
+  // -------------------------------------------------------------------------
+  // B5-R1
+  // -------------------------------------------------------------------------
+
+  it("B5-R1 / existing single-pick call still works", () => {
+    // Single-pick ctx.related(name) behavior must be unchanged by the addition.
+    const OwnerSchema = z.object({ personId: z.uuid(), name: z.string() });
+    const ThingSchema = z.object({ thingId: z.uuid(), ownerId: z.uuid() });
+
+    const world = createWorld({ seed: 3 })
+      .withSchema(OwnerSchema)
+      .withSchema(ThingSchema, {
+        relations: { owner: OwnerSchema },
+        matchers: { ownerId: (ctx) => ctx.related("owner").personId },
+      });
+
+    const thing = world.generate(ThingSchema);
+    const owner = world.registry.all(OwnerSchema)[0]!;
+    expect(thing.ownerId).toBe(owner.personId);
+  });
+
+  it("B5-R1 / .many is present and is a function", () => {
+    // Assert the observable presence of the new member from inside a matcher.
+    let manyType: string | undefined;
+    const world = createWorld({ seed: 1 }).withSchema(UserSchema).withSchema(CaseSchema, {
+      relations: { users: UserSchema },
+      matchers: {
+        users: (ctx) => {
+          manyType = typeof ctx.related.many;
+          return ctx.related.many("users", 1);
+        },
+      },
+    });
+    world.populate(UserSchema, 1);
+    world.generate(CaseSchema);
+    expect(manyType).toBe("function");
+  });
+
+  // -------------------------------------------------------------------------
+  // B5-R2
+  // -------------------------------------------------------------------------
+
+  it("B5-R2 / returns the requested number of distinct records", () => {
+    const world = caseSetup(1, 5, 3);
+    const c = world.generate(CaseSchema);
+    expect(c.users).toHaveLength(3);
+    // Pairwise distinct by reference.
+    expect(new Set(c.users)).toHaveProperty("size", 3);
+  });
+
+  it("B5-R2 / every returned record belongs to the relation schema", () => {
+    const world = caseSetup(1, 5, 3);
+    const c = world.generate(CaseSchema);
+    const stored = world.registry.all(UserSchema);
+    for (const u of c.users) {
+      expect(UserSchema.safeParse(u).success).toBe(true);
+      expect(stored).toContain(u);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // B5-R3
+  // -------------------------------------------------------------------------
+
+  it("B5-R3 / provisions from an empty registry", () => {
+    const world = caseSetup(1, 0, 3);
+    expect(world.registry.all(UserSchema)).toHaveLength(0);
+    const c = world.generate(CaseSchema);
+    expect(world.registry.all(UserSchema).length).toBeGreaterThanOrEqual(3);
+    expect(c.users).toHaveLength(3);
+    expect(new Set(c.users)).toHaveProperty("size", 3);
+    const stored = world.registry.all(UserSchema);
+    for (const u of c.users) expect(stored).toContain(u);
+  });
+
+  it("B5-R3 / tops up a partially-populated registry without replacing existing records", () => {
+    const world = caseSetup(1, 2, 4);
+    const originals = [...world.registry.all(UserSchema)];
+    expect(originals).toHaveLength(2);
+
+    const c = world.generate(CaseSchema);
+    expect(world.registry.all(UserSchema).length).toBeGreaterThanOrEqual(4);
+    expect(c.users).toHaveLength(4);
+    expect(new Set(c.users)).toHaveProperty("size", 4);
+
+    // The two original users are still present (provisioning adds, never replaces).
+    const stored = world.registry.all(UserSchema);
+    for (const o of originals) expect(stored).toContain(o);
+  });
+
+  // -------------------------------------------------------------------------
+  // B5-R4
+  // -------------------------------------------------------------------------
+
+  it("B5-R4 / same seed yields identical records in identical order", () => {
+    const c1 = caseSetup(1, 5, 3).generate(CaseSchema);
+    const c2 = caseSetup(1, 5, 3).generate(CaseSchema);
+    expect(c1.users.map((u) => u.id)).toEqual(c2.users.map((u) => u.id));
+    expect(c1.users).toEqual(c2.users);
+  });
+
+  // -------------------------------------------------------------------------
+  // B5-R5
+  // -------------------------------------------------------------------------
+
+  it("B5-R5 / sibling matchers see the same set in the same order", () => {
+    const world = caseSetup(1, 5, 3);
+    const c = world.generate(CaseSchema);
+    expect(c.usernames).toEqual(c.users.map((u) => u.username));
+  });
+
+  it("B5-R5 / result is stable even if the registry grows mid-record", () => {
+    const StableUserSchema = z.object({ id: z.string(), username: z.string() });
+    const StableCaseSchema = z.object({
+      caseId: z.uuid(),
+      usersA: z.array(StableUserSchema),
+      usersB: z.array(StableUserSchema),
+    });
+
+    const world = createWorld({ seed: 9 })
+      .withSchema(StableUserSchema)
+      .withSchema(StableCaseSchema, {
+        relations: { users: StableUserSchema },
+        matchers: {
+          usersA: (ctx) => {
+            const picked = ctx.related.many("users", 3);
+            // Simulate another matcher/process storing an extra user between the calls.
+            ctx.registry.store(StableUserSchema, { id: "extra", username: "extra" });
+            return picked;
+          },
+          usersB: (ctx) => ctx.related.many("users", 3),
+        },
+      });
+
+    world.populate(StableUserSchema, 5);
+    const c = world.generate(StableCaseSchema);
+
+    // Mid-record registry growth must not change the per-record snapshot.
+    expect(c.usersA.map((u) => u.id)).toEqual(c.usersB.map((u) => u.id));
+    expect(c.usersA).toEqual(c.usersB);
+  });
+
+  // -------------------------------------------------------------------------
+  // B5-R6
+  // -------------------------------------------------------------------------
+
+  it("B5-R6 / requesting more than available (self-referential) returns all distinct", () => {
+    // Self-referential relations are NOT auto-provisioned. With only 2 records
+    // existing, .many('parent', 5) must clamp to <= 2 distinct, not throw.
+    const CategorySchema = z.object({
+      id: z.uuid(),
+      name: z.string().min(2).max(40),
+      parents: z.array(z.object({ id: z.uuid() })).optional(),
+    });
+
+    const world = createWorld({ seed: 7 }).withSchema(CategorySchema, {
+      relations: { parent: CategorySchema },
+      matchers: {
+        parents: (ctx) => ctx.related.many("parent", 5),
+      },
+    });
+
+    // Pre-populate exactly 2 category records (no matcher recursion here as the
+    // self-reference guard skips auto-provision; populate stores plain records).
+    world.populate(CategorySchema, 2);
+    expect(world.registry.all(CategorySchema)).toHaveLength(2);
+
+    let result: { id: unknown }[] = [];
+    expect(() => {
+      const c = world.generate(CategorySchema);
+      result = (c.parents ?? []) as { id: unknown }[];
+    }).not.toThrow();
+
+    expect(result.length).toBeLessThanOrEqual(2);
+    expect(new Set(result).size).toBe(result.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression Tests
 // ---------------------------------------------------------------------------
 

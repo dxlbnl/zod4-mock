@@ -350,7 +350,10 @@ interface GeneratorContext<T = any> {
   readonly registry: Registry;
   readonly fieldPath: string;
   readonly optionalProbability?: number;
-  related<T = unknown>(relationName: string): T;
+  readonly related: {
+    <T = unknown>(relationName: string): T;
+    many<T = unknown>(relationName: string, count: number): T[];
+  };
 }
 ```
 
@@ -414,6 +417,19 @@ world.withSchema(categorySchema, {
   relations: { parent: categorySchema },
   matchers: {
     parentId: (ctx) => ctx.related("parent")?.id ?? null, // first record → null
+  },
+});
+```
+
+**`related.many(name, count)`** — resolves a **one-to-many** relation: returns `count` **distinct** records (no duplicates) drawn from the named relation's bucket. Like `related(name)`, it is **record-scoped** (repeated calls within one record — across sibling matchers — return the same records in the same order, even if the registry grows mid-record) and **deterministic** for a given seed. If the bucket holds fewer than `count` records, `.many` **auto-provisions** the shortfall via the same primary-generation path `related` uses, until at least `count` exist. Self-referential relations are **not** auto-provisioned (same guard as single `related`); when `count` exceeds what is available, `.many` **clamps** to all available distinct records rather than throwing.
+
+```ts
+world.withSchema(caseSchema, {
+  relations: { users: userSchema },
+  matchers: {
+    // Pick 2–4 distinct users; sibling matchers see the same set in the same order.
+    users:     (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)),
+    usernames: (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)).map((u) => u.username),
   },
 });
 ```

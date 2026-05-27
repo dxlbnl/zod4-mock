@@ -41,7 +41,9 @@ function makeCtx(seed = 42): GeneratorContext {
     source: undefined,
     registry: STUB_REGISTRY,
     fieldPath: "",
-    related: <T>(_: string) => ({}) as T,
+    related: Object.assign(<T>(_: string) => ({}) as T, {
+      many: <T>(_: string, __: number) => [] as T[],
+    }),
     generate<S extends z.ZodTypeAny>(s: S, o?: GenerateOptions<z.infer<S>>) {
       const depth = (o?.fieldPath ?? this.fieldPath).split(".").filter(Boolean).length;
       if (depth > this.recursionLimit) return null as any;

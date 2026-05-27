@@ -4,6 +4,7 @@ title: Add `ctx.related.many(name, count)` for one-to-many relations in matchers
 type: feature
 priority: medium
 flags: [review]
+spec: wiki/specs/B5-related-many.md
 created: 2026-05-27
 ---
 

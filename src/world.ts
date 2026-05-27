@@ -298,6 +298,10 @@ export class WorldImpl implements World {
     recordId: string,
     current?: Record<string, unknown>,
   ): GeneratorContext {
+    const related = (<T = Record<string, unknown>>(relName: string): T =>
+      this.resolveRelated<T>(reg, recordPrng, recordId, relName)) as GeneratorContext["related"];
+    related.many = <T = unknown>(relName: string, count: number): T[] =>
+      this.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
     return {
       prng: fieldPrng,
       gen: this.bindGenerators(fieldPrng),
@@ -305,8 +309,7 @@ export class WorldImpl implements World {
       registry: this.registry,
       fieldPath,
       optionalProbability: this.options.optionalProbability ?? 0.2,
-      related: <T = Record<string, unknown>>(relName: string): T =>
-        this.resolveRelated<T>(reg, recordPrng, recordId, relName),
+      related,
       generate: <S extends ZodTypeAny>(s: S, o?: GenerateOptions<z.infer<S>>): z.infer<S> => {
         const nextPath = o?.fieldPath ?? (o?.fieldPath === "" ? "" : fieldPath);
         return this.generate(s, { ...o, fieldPath: nextPath });
@@ -362,6 +365,44 @@ export class WorldImpl implements World {
     const relPrng = recordPrng.fork(`rel:${relName}`);
     const pickedIdx = relPrng.int(0, items.length - 1);
     return items[pickedIdx]! as T;
+  }
+
+  private resolveRelatedMany<T = unknown>(
+    reg: SchemaReg,
+    recordPrng: ReturnType<typeof createPrng>,
+    recordId: string,
+    relName: string,
+    count: number,
+  ): T[] {
+    const relSchema = reg.relations[relName];
+    if (!relSchema) {
+      throw new Error(
+        `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
+      );
+    }
+
+    const cacheKey = `${recordId}:${relName}:many`;
+    let items = this.relationPools.get(cacheKey);
+
+    if (!items) {
+      // Auto-provision the shortfall until at least `count` records exist —
+      // except for self-referential relations, which must not be provisioned
+      // (that would recurse forever; see resolveRelated's self-reference guard).
+      if (relSchema !== reg.schema) {
+        const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
+        while (this.registry.count(relSchema) < count) {
+          this.generateAndStorePrimary(relSchema, relReg);
+        }
+      }
+      items = [...this.registry.all(relSchema)];
+      this.relationPools.set(cacheKey, items);
+    }
+
+    // Derive a stable per-relation PRNG, distinct from single `related`'s fork,
+    // so the picks are deterministic and record-scoped. prng.sample clamps
+    // `count` into [0, items.length] and yields distinct, ordered records.
+    const relPrng = recordPrng.fork(`rel-many:${relName}`);
+    return relPrng.sample(items, count) as T[];
   }
 
   private ensurePrimaryRecord(schema: ZodTypeAny): void {
