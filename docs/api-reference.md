@@ -285,6 +285,7 @@ interface Registry {
   all<T = unknown>(schema: ZodTypeAny): T[];
   pick<T = unknown>(schema: ZodTypeAny): T;
   filter<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T[];
+  find<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T | undefined;
   count(schema: ZodTypeAny): number;
 }
 ```
@@ -319,6 +320,17 @@ Returns all stored items for `schema` satisfying `predicate`. Returns an empty a
 fileIds: (ctx) => ctx.registry
   .filter(FileSchema, (f) => f.ownerId === ctx.source.personId)
   .map((f) => f.fileId),
+```
+
+### `.find<T>(schema, predicate)`
+
+Returns the **first** stored item for `schema` satisfying `predicate`, in registry insertion order (the order `store` was called), matching `Array.prototype.find`. Returns `undefined` if none match or none are stored — never throws. A pure, non-mutating lookup that consumes no PRNG state.
+
+```ts
+createdBy: (ctx) => {
+  const admin = ctx.registry.find(UserSchema, (u) => u.username === "admin");
+  return admin?.username ?? "system";
+},
 ```
 
 ### `.count(schema)`

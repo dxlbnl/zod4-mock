@@ -35,6 +35,10 @@ export class SchemaRegistry implements Registry {
     return this.all<T>(schema).filter(predicate);
   }
 
+  find<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T | undefined {
+    return this.all<T>(schema).find(predicate);
+  }
+
   count(schema: ZodTypeAny): number {
     return (this.buckets.get(schema) ?? []).length;
   }

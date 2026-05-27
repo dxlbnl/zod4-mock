@@ -25,6 +25,7 @@ Every agent reads this page first, before doing anything else.
 | [decisions.md](decisions.md) | Append-only decision log (ADR-style). |
 | [progress.md](progress.md) | Append-only run journal — what the agents have done. |
 | [specs/](specs/) | One detailed spec page per feature/bug. See `specs/README.md`. |
+| [specs/B4-registry-find.md](specs/B4-registry-find.md) | B4 — `registry.find()` single-record predicate lookup. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,

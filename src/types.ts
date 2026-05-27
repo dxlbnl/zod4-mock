@@ -30,6 +30,10 @@ export interface Registry {
     schema: T,
     predicate: (item: input<T>) => boolean,
   ): input<T>[];
+  find<T extends ZodTypeAny>(
+    schema: T,
+    predicate: (item: input<T>) => boolean,
+  ): input<T> | undefined;
   count(schema: ZodTypeAny): number;
 }
 

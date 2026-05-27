@@ -24,6 +24,7 @@ const stubRegistry: Registry = {
     throw new Error("no items in stub registry");
   },
   filter: () => [],
+  find: () => undefined,
   count: () => 0,
 };
 

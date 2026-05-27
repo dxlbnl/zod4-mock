@@ -29,6 +29,7 @@ const STUB_REGISTRY: Registry = {
     throw new Error("stub registry: pick not supported");
   },
   filter: () => [],
+  find: () => undefined,
   count: () => 0,
 };
 
