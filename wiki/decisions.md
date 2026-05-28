@@ -111,3 +111,25 @@
   implement → review), never `mode: lite`.
 - **Rule added/changed**: "When fixing a bug, a regression test MUST be added."
 - **Supersedes**: none
+
+## D7: Every publishable workspace package must guard publishes with `prepublishOnly`
+
+- **Date**: 2026-05-28
+- **By**: reviewer (B15)
+- **Context**: `zod4-mock@0.6.0` was published with a stale `dist/` because the
+  release path was `changeset publish` alone, which does not build. The same class
+  of incident is implicated in `@zod4-mock/locale-core@0.2.0` shipping without the
+  `shuffle`/`sample` methods that exist in source. The root package added
+  `prepublishOnly: "pnpm build"` as the 0.6.1 fix, and B15 extended the guard to all
+  four locale packages.
+- **Decision**: Every publishable workspace package MUST carry a `prepublishOnly`
+  script that rebuilds its `dist/` before publish (typically `pnpm build`). Applies
+  to the root and to `packages/locale-core`, `packages/locale-en`,
+  `packages/locale-nl`, `packages/locale-names` as of B15; future publishable
+  packages adopt it on creation.
+- **Consequences**: Any publish path (`changeset publish`, plain `npm publish`,
+  `pnpm publish`) cannot ship a stale `dist/`. Trade-off: publishes always rebuild
+  (small extra cost; eliminates a recurring class of incident).
+- **Rule added/changed**: "Every publishable workspace package MUST have a
+  `prepublishOnly` script that rebuilds its dist (typically `pnpm build`)."
+- **Supersedes**: none

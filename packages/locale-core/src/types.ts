@@ -10,6 +10,7 @@ export interface Prng {
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
+  pick<T>(items: readonly T[]): T | undefined;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;

@@ -524,6 +524,7 @@ interface Prng {
   random(): number;
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
+  pick<T>(items: readonly T[]): T | undefined;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
@@ -545,7 +546,20 @@ Returns an integer in [min, max] inclusive.
 
 ### `.pick(items)`
 
-Returns one element from a non-empty tuple (requires at least one element at the type level).
+Two overloads, chosen by the input type:
+
+- **Non-empty tuple** — `pick<T>(items: readonly [T, ...T[]]): T`. When the input is a literal tuple known to be non-empty (e.g. `["a", "b", "c"] as const`), the return is the tuple-element union with **no `undefined`**.
+
+  ```ts
+  const v = ctx.prng.pick(["a", "b", "c"] as const); // v: "a" | "b" | "c"
+  ```
+
+- **Plain array** — `pick<T>(items: readonly T[]): T | undefined`. When the input is a plain `T[]` or `readonly T[]` (e.g. `Object.keys(...)`, a domain-config `string[]`), the return is `T | undefined`. An empty array returns `undefined` at runtime (the function never throws).
+
+  ```ts
+  const kinds: string[] = Object.keys(KIND_MAP);
+  const k = ctx.prng.pick(kinds); // k: string | undefined
+  ```
 
 ### `.shuffle(items)`
 

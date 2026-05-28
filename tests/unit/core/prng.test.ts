@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { createPrng, fieldSeed } from "../../../src/index.js";
+import type { Prng } from "../../../src/types.js";
 
 describe("createPrng", () => {
   it("is deterministic: same seed produces same sequence", () => {
@@ -65,6 +66,114 @@ describe("createPrng", () => {
     expect(seen).toContain("x");
     expect(seen).toContain("y");
     expect(seen).toContain("z");
+  });
+
+  // ----------------------------------------------------------------------
+  // B15: pick overload & shuffle/sample invariant
+  //
+  // Per wiki/specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md:
+  //   R1 — pick accepts `readonly T[]` and returns `T | undefined`; the existing
+  //        strict-tuple overload `readonly [T, ...T[]] -> T` remains.
+  //   R2 — shuffle/sample are pinned on the shared Prng interface (type-level).
+  //
+  // The "Additional deliverables" (prepublishOnly, doc comment, api-reference)
+  // are NOT covered by tests — they are reviewer-verified per the spec.
+  // ----------------------------------------------------------------------
+
+  describe("B15: pick overload & shuffle/sample invariant", () => {
+    // -- B15-R1 --------------------------------------------------------------
+
+    it("B15-R1 / pick accepts a plain string[] without a cast", () => {
+      // GIVEN: a plain string[] (no `as const`, no `[T, ...T[]]` cast).
+      // The variable annotation `: string[]` forces the type system to use
+      // the plain-array overload, NOT the strict-tuple overload.
+      const kinds: string[] = Object.keys({ a: 1, b: 2, c: 3 });
+      const p = createPrng(42);
+
+      // Today the interface only declares
+      //   pick<T>(items: readonly [T, ...T[]]): T;
+      // so this call site MUST fail `pnpm typecheck` (TS2345 — `string[]` is
+      // not assignable to `readonly [string, ...string[]]`). When the overload
+      // is added, the inferred return type becomes `string | undefined`.
+      const k: string | undefined = p.pick(kinds);
+      expect(kinds).toContain(k);
+    });
+
+    it("B15-R1 / pick on a plain readonly T[] returns T | undefined", () => {
+      // Pin: the inferred return type of pick(readonly T[]) MUST allow
+      // undefined. Today this also fails typecheck because the only overload
+      // demands a non-empty tuple.
+      const items: readonly string[] = ["alpha", "beta"];
+      const p = createPrng(1);
+      const v: string | undefined = p.pick(items);
+      expect(items).toContain(v);
+    });
+
+    it("B15-R1 / pick on an empty readonly T[] returns undefined (no throw, no null)", () => {
+      const empty: readonly string[] = [];
+      const p = createPrng(42);
+      // MUST NOT throw, MUST return undefined.
+      const result: string | undefined = p.pick(empty);
+      expect(result).toBeUndefined();
+    });
+
+    it("B15-R1 / non-empty plain array always returns one of its elements", () => {
+      const items: readonly number[] = [10, 20, 30];
+      for (let seed = 0; seed < 50; seed++) {
+        const v = createPrng(seed).pick(items);
+        expect(v).not.toBeUndefined();
+        expect(items).toContain(v);
+      }
+    });
+
+    it("B15-R1 / deterministic for the same seed under the plain-array overload", () => {
+      const items: readonly string[] = ["x", "y", "z"];
+      const a = createPrng(123).pick(items);
+      const b = createPrng(123).pick(items);
+      expect(a).toBe(b);
+    });
+
+    it("B15-R1 / strict-tuple overload still resolves: return type is T (non-undefined)", () => {
+      // Regression guard for the EXISTING strict-tuple overload. With `as const`,
+      // `items` is `readonly ["a", "b", "c"]`, so the strict-tuple overload MUST
+      // resolve first and the return type MUST be the tuple-element union with
+      // NO `| undefined`. The assignment `const v: "a" | "b" | "c" = ...` will
+      // fail typecheck if the new plain-array overload subsumes the tuple one
+      // (e.g. due to ordering — the strict-tuple overload MUST appear first).
+      const items = ["a", "b", "c"] as const;
+      const v: "a" | "b" | "c" = createPrng(7).pick(items);
+      expect(items).toContain(v);
+    });
+
+    // -- B15-R2 (type-level assignability pins) ------------------------------
+
+    it("B15-R2 / shuffle is pinned on the shared Prng interface", () => {
+      // Type-level pin: if `shuffle` is ever dropped from `Prng` or its
+      // signature weakened, this assignment fails `pnpm typecheck`. Both the
+      // type alias and the runtime assignment must type-check.
+      type _PinShuffle = <T>(items: readonly T[]) => T[];
+      const p: Prng = createPrng(1);
+      const _shuffle: _PinShuffle = p.shuffle;
+      expect(typeof _shuffle).toBe("function");
+    });
+
+    it("B15-R2 / sample is pinned on the shared Prng interface", () => {
+      // Type-level pin: if `sample` is ever dropped from `Prng` or its
+      // signature weakened, this assignment fails `pnpm typecheck`.
+      type _PinSample = <T>(items: readonly T[], count: number) => T[];
+      const p: Prng = createPrng(1);
+      const _sample: _PinSample = p.sample;
+      expect(typeof _sample).toBe("function");
+    });
+
+    it("B15-R2 / a Prng-typed runtime instance still exposes shuffle and sample", () => {
+      // Runtime sanity assignment matching the type-level pin above.
+      const p: Prng = createPrng(42);
+      const shuffled: number[] = p.shuffle([1, 2, 3]);
+      const sampled: number[] = p.sample([1, 2, 3], 2);
+      expect(shuffled).toHaveLength(3);
+      expect(sampled).toHaveLength(2);
+    });
   });
 
   describe("shuffle()", () => {

@@ -5,6 +5,7 @@ type: feature
 priority: medium
 flags: [review]
 created: 2026-05-28
+spec: wiki/specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md
 ---
 
 ## Description

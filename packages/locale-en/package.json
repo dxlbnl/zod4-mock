@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepublishOnly": "pnpm build",
     "fetch-data": "tsx scripts/fetch-data.ts",
     "train": "tsx scripts/train.ts",
     "verify": "tsx scripts/verify.ts"

@@ -86,7 +86,7 @@ export function createPrng(seed: number): Prng {
     },
 
     pick(items) {
-      return items[Math.floor(rand() * items.length)]!;
+      return items[Math.floor(rand() * items.length)];
     },
 
     shuffle(items) {
