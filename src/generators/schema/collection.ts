@@ -100,6 +100,26 @@ export function generateZodRecord(
   ctx: GeneratorContext,
 ): Record<string, unknown> {
   const d = def(schema);
+
+  // B17: finite-key path — when keyType is z.enum([...]), Zod v4 makes the
+  // record strict-keyed over the enum's member set, so emit exactly one entry
+  // per enum member in declared order. Per-key value PRNG is forked by index
+  // (`rv-${i}`) so appending an enum member only disturbs the new member's
+  // value (D4). Empty enum → {} naturally (loop body never runs).
+  const keyDef = def(d.keyType!);
+  if (keyDef.type === "enum") {
+    const enumValues = Object.values(keyDef.entries ?? {});
+    const result: Record<string, unknown> = {};
+    for (const [i, key] of enumValues.entries()) {
+      result[key] = ctx.generate(d.valueType!, {
+        prng: ctx.prng.fork(`rv-${i}`),
+        fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
+      });
+    }
+    return result;
+  }
+
+  // Open-key path (z.record(z.string()/z.number(), V)): unchanged byte-for-byte.
   const count = ctx.prng.int(2, 5);
   const result: Record<string, unknown> = {};
   for (let i = 0; i < count; i++) {

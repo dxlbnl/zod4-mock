@@ -182,7 +182,7 @@ These can be applied as methods on `z.string()` or as top-level `z.*()` shortcut
 | Variant                                   | Status | Notes |
 | ----------------------------------------- | ------ | ----- |
 | `z.record(valueSchema)`                   | ✅     |       |
-| `z.record(keySchema, valueSchema)`        | ✅     |       |
+| `z.record(keySchema, valueSchema)`        | ✅     | When `keySchema` is a finite-key type (`z.enum([...])`), the record is exhausted: one entry per enum member in declared order, so the output satisfies Zod's strict-key inferred type. Open-key `z.string()` / `z.number()` `keySchema`s keep the 2–5 random-key shape. |
 | `z.partialRecord(keySchema, valueSchema)` | ❌     |       |
 | `z.looseRecord()`                         | ❌     |       |
 

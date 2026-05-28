@@ -5,6 +5,7 @@ type: bug
 priority: medium
 flags: [review]
 created: 2026-05-28
+spec: wiki/specs/B17-record-enum-exhaustive-keys.md
 ---
 
 ## Description

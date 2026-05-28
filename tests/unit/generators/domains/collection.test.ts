@@ -5,6 +5,7 @@ import { generateFromSchema } from "../../../../src/generators/schema/router.js"
 import { SchemaRegistry } from "../../../../src/registry.js";
 import type { BoundGenerators, GenerateOptions, GeneratorContext } from "../../../../src/types.js";
 import { en } from "@zod4-mock/locale-en";
+import { generate, createWorld } from "../../../../src/index.js";
 
 const EMPTY_GEN = {} as BoundGenerators;
 
@@ -104,5 +105,136 @@ describe("schema/collection", () => {
     const keys = Object.keys(val);
     expect(keys.length).toBeGreaterThanOrEqual(2);
     expect(typeof val[keys[0]!]).toBe("number");
+  });
+
+  // -------------------------------------------------------------------------
+  // B17 — z.record(enum, V) should exhaust the enum's declared key set
+  //
+  // Bug: generateZodRecord unconditionally picks ctx.prng.int(2, 5) keys even
+  // when the keyType is a finite enum. The inferred type of
+  // `z.record(z.enum([...]), V)` is strict over the enum's members, so a random
+  // subset fails schema.parse() at the consumer. Spec: B17-R1, R4, R5, R6.
+  // -------------------------------------------------------------------------
+
+  it("B17-R1 / three-member enum produces all three keys, in declared order", () => {
+    const Status = z.enum(["PENDING", "IN_PROGRESS", "DONE"]);
+    const schema = z.record(Status, z.number());
+
+    const value = generate(schema, { seed: 1 }) as Record<string, number>;
+
+    // Declared order — not alphabetical, not insertion-order-by-random-pick.
+    expect(Object.keys(value)).toEqual(["PENDING", "IN_PROGRESS", "DONE"]);
+    expect(schema.safeParse(value).success).toBe(true);
+    for (const key of ["PENDING", "IN_PROGRESS", "DONE"]) {
+      expect(typeof value[key]).toBe("number");
+    }
+  });
+
+  it("B17-R1 / single-member enum produces a single entry", () => {
+    const One = z.enum(["ONLY"]);
+    const schema = z.record(One, z.string());
+
+    const value = generate(schema, { seed: 1 }) as Record<string, string>;
+
+    expect(Object.keys(value)).toEqual(["ONLY"]);
+    expect(schema.safeParse(value).success).toBe(true);
+  });
+
+  it("B17-R1 / empty enum produces {}", () => {
+    // An empty enum has no parse-time keys; the record must be {}.
+    // Zod's z.enum type requires a non-empty tuple; the spec deliberately
+    // covers the runtime empty case so we go through `unknown` rather than
+    // `any` (per the no-`any` rule in architecture.md).
+    const Empty = z.enum([] as unknown as [string, ...string[]]);
+    const schema = z.record(Empty, z.number());
+
+    const value = generate(schema, { seed: 1 }) as Record<string, number>;
+
+    expect(value).toEqual({});
+    expect(schema.safeParse(value).success).toBe(true);
+  });
+
+  it("B17-R4 / z.record(z.string(), z.number()) unchanged at a fixed seed", () => {
+    // Regression guard: the open-key path keeps today's 2–5 random-key behaviour.
+    // Two runs at the same seed must deep-equal; both runs must have 2–5 entries
+    // with string keys and number values.
+    const schema = z.record(z.string(), z.number());
+
+    const a = generate(schema, { seed: 1 }) as Record<string, number>;
+    const b = generate(schema, { seed: 1 }) as Record<string, number>;
+
+    expect(a).toEqual(b);
+    const keys = Object.keys(a);
+    expect(keys.length).toBeGreaterThanOrEqual(2);
+    expect(keys.length).toBeLessThanOrEqual(5);
+    for (const k of keys) {
+      expect(typeof k).toBe("string");
+      expect(typeof a[k]).toBe("number");
+    }
+  });
+
+  it("B17-R4 / z.record(z.number(), z.string()) unchanged at a fixed seed", () => {
+    // Regression guard: numeric open-key path also unchanged at a fixed seed.
+    const schema = z.record(z.number(), z.string());
+
+    const a = generate(schema, { seed: 1 }) as Record<string, string>;
+    const b = generate(schema, { seed: 1 }) as Record<string, string>;
+
+    expect(a).toEqual(b);
+    const keys = Object.keys(a);
+    expect(keys.length).toBeGreaterThanOrEqual(2);
+    expect(keys.length).toBeLessThanOrEqual(5);
+    for (const k of keys) {
+      expect(typeof a[k]).toBe("string");
+    }
+  });
+
+  it("B17-R5 / card repro — Status enum record, all three keys + safeParse green", () => {
+    // Mandatory regression test for the exact card repro (D6, GitHub issue #18).
+    // Both halves of the assertion must hold so this test fails if either the
+    // "all keys present" property or the "satisfies the strict-key inferred type"
+    // property ever regresses.
+    const Status = z.enum(["PENDING", "IN_PROGRESS", "DONE"]);
+    const schema = z.record(Status, z.number());
+
+    const value = generate(schema) as Record<string, number>;
+
+    // (a) — sorted to make the assertion stable regardless of declared-order
+    // assertion in B17-R1; a regression to "missing one key" fails this.
+    expect(Object.keys(value).sort()).toEqual(["DONE", "IN_PROGRESS", "PENDING"]);
+    // (b) — strict-key inferred type satisfied (every member present + value type).
+    expect(schema.safeParse(value).success).toBe(true);
+  });
+
+  it("B17-R6 / appending an enum member only disturbs the new member's value", () => {
+    // Per the spec, the per-key value PRNG is forked by entry index (`rv-${i}`).
+    // Iterating in declared order means appending 'C' at the end of the enum
+    // disturbs only C's value — A and B at index 0 and 1 are byte-identical
+    // across the two schemas at the same seed.
+    const E1 = z.enum(["A", "B"]);
+    const S1 = z.record(E1, z.number());
+    const E2 = z.enum(["A", "B", "C"]);
+    const S2 = z.record(E2, z.number());
+
+    const v1 = generate(S1, { seed: 1 }) as Record<string, number>;
+    const v2 = generate(S2, { seed: 1 }) as Record<string, number>;
+
+    expect(v1.A).toBe(v2.A);
+    expect(v1.B).toBe(v2.B);
+    expect(typeof v2.C).toBe("number");
+  });
+
+  it("B17-R6 / same enum and same seed produces identical output across runs", () => {
+    // Determinism: same enum, same seed, two independent worlds → identical output.
+    const Status = z.enum(["PENDING", "IN_PROGRESS", "DONE"]);
+    const schema = z.record(Status, z.number());
+
+    const w1 = createWorld({ seed: 42 });
+    const w2 = createWorld({ seed: 42 });
+
+    const v1 = w1.generate(schema) as Record<string, number>;
+    const v2 = w2.generate(schema) as Record<string, number>;
+
+    expect(v1).toEqual(v2);
   });
 });

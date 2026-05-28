@@ -218,4 +218,17 @@ it records the reason here AND states it in chat.
 - implementer: added isPlainObject predicate (`value is Record<string, unknown>`) to src/utils/merge.ts; replaced deepMerge's early-return clause with `!isPlainObject(source) || !isPlainObject(target)`; body Object.keys recursion unchanged; deepEqual untouched; no per-call-site guards added in src/world.ts (R3 satisfied via single-source change); added .changeset/b18-deepmerge-atomic.md (patch). GREEN: 974/974 tests, typecheck clean.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R5 met, 974/974 tests green, typecheck clean, no scope creep (src/world.ts diff empty, no test edits), D6 regression test pins exact card repro, D1 honored (no `any`; impl actually removed 2 existing casts via type predicate), D5 not triggered (deepMerge internal), changeset present (patch, closes #19), no new standing constraint (one-helper local choice, documented in spec)
-- result: done — commit pending (closes #19)
+- result: done — commit df963b6 (closes #19)
+
+## 2026-05-28 21:55 — B17: BUG — `z.record(enum, V)` should generate all enum keys, not a random subset
+- manager: start, track: bug (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B17-record-enum-exhaustive-keys.md (R1–R8). Three out-of-scope decisions: z.map(enum) Option (b) unchanged (iterable, not strict-key parsed), z.nativeEnum (router unsupported), literal-union (def-walk brittle). All 3 open questions resolved non-blocking. Docs target: docs/zod4-schema-coverage.md (not api-reference; no API change).
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: extended tests/unit/generators/domains/collection.test.ts with 7 B17 tests. RED: 4 fail (R1 three-member-declared-order, R1 empty-enum→{}, R5 card repro, R6 append preserves earlier values). PASS-as-guards: R4 string/number unchanged ×2, R6 seed determinism. STOP+REPORT: R1 single-member passes today by accident (loop picks 'ONLY' every iter → record dedups → `{ONLY:...}`); test still encodes spec correctly so kept as positive guard. Manager ruled: proceed.
+- manager: dispatch implementer
+- implementer: added finite-key branch to generateZodRecord (src/generators/schema/collection.ts) detecting `def(d.keyType).type === "enum"` via def() helper (D3); iterates `Object.values(keyDef.entries ?? {})` in declared order, forks `rv-${i}` per entry (D4); empty enum falls out to `{}`; open-key path verbatim (B17-R4 byte-identical). Updated docs/zod4-schema-coverage.md row 185 with finite-key Notes entry (B17-R7, D5). Added .changeset/b17-record-enum-exhaustive.md (patch). GREEN: 982/982 tests, typecheck clean.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R8 met, 982/982 tests green, typecheck clean, no scope creep (only src/generators/schema/collection.ts + docs + changeset touched; generateZodMap untouched, nativeEnum/literal-union/world.ts untouched), card-repro asserts both halves (sorted keys deep-equals + safeParse green), D1/D3/D4/D5/D6 honored, no new standing constraint
+- result: done — commit pending (closes #18)
