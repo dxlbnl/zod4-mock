@@ -180,6 +180,15 @@ export interface GenerateOptions<T> {
   readonly fieldPath?: string;
   readonly prng?: ReturnType<typeof createPrng>;
   readonly locale?: LocaleData;
+  /**
+   * When `false`, suppress the registry write for this `world.generate` call —
+   * useful for ephemeral generation (search-bucket envelopes, paginated
+   * responses, one-off fixtures). Propagates through nested generation so inner
+   * registered schemas are also not stored. Ignored by `world.get` (its create
+   * path must always store) and by `world.populate` (its purpose is to populate
+   * the registry). Default `true`.
+   */
+  readonly store?: boolean;
 }
 
 // ---------------------------------------------------------------------------

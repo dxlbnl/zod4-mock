@@ -109,6 +109,13 @@ export class WorldImpl implements World {
   private readonly relationPools: Map<string, unknown[]> = new Map();
   private readonly pendingCounts: Map<ZodTypeAny, number> = new Map();
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
+  /**
+   * Effective storage mode for the current outer `generate` call. When `false`,
+   * `generateAndStorePrimary` and `generateDerivedRecord` skip their
+   * `registry.store` side-effect. Propagates through nested recursion; scoped
+   * to the outer call via try/finally in `WorldImpl.generate`.
+   */
+  private effectiveStore = true;
 
   constructor(private readonly options: WorldOptions = {}) {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
@@ -169,12 +176,23 @@ export class WorldImpl implements World {
     count: number,
     factory?: (index: number) => GenerateOptions<z.infer<TSchema>>,
   ): this {
+    // B10-R6: `populate`'s contract is to write the registry. A factory return
+    // including `store: false` MUST be silently ignored — strip the field
+    // before threading the options into the generate helpers.
+    const factoryOpts = factory
+      ? (i: number): GenerateOptions<unknown> => {
+          const raw = factory(i) as GenerateOptions<unknown> & { store?: boolean };
+          const { store: _ignored, ...rest } = raw;
+          return rest;
+        }
+      : undefined;
+
     const primaryRegs = this.findPrimaryRegs(schema);
     const derivedRegs = this.findDerivedRegs(schema);
 
     if (primaryRegs.length > 0) {
       for (let i = 0; i < count; i++) {
-        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        const opts = factoryOpts ? factoryOpts(i) : undefined;
         this.generateAndStorePrimary(schema, primaryRegs[0]!, opts);
       }
     } else if (derivedRegs.length > 0) {
@@ -183,14 +201,14 @@ export class WorldImpl implements World {
       // Use the count to limit how many we derive, or derive from all if count is large
       const N = Math.min(count, sources.length);
       for (let i = 0; i < N; i++) {
-        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        const opts = factoryOpts ? factoryOpts(i) : undefined;
         const result = this.generateDerivedRecord(schema, reg, sources[i], i, opts);
         this.registry.store(schema, result as input<TSchema>);
       }
     } else {
       // Default to primary if not registered
       for (let i = 0; i < count; i++) {
-        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        const opts = factoryOpts ? factoryOpts(i) : undefined;
         this.generateAndStorePrimary(schema, null, opts);
       }
     }
@@ -205,45 +223,65 @@ export class WorldImpl implements World {
     schema: TSchema,
     options?: GenerateOptions<z.infer<TSchema>>,
   ): z.infer<TSchema> {
-    let current: ZodTypeAny = schema;
-    let d = def(current);
-    const outerWrappers: Array<"optional" | "nullable"> = [];
-
-    while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
-      outerWrappers.push(d.type);
-      current = d.innerType;
-      d = def(current);
+    // B10-R2/R4: scope the effective store mode to this outer call. When the
+    // caller passes `store: false`, this mode propagates through nested
+    // recursion (generateObjectFields / generateArray / ctx.generate which
+    // re-enters this method); restore the previous value on exit so a separate
+    // top-level call is unaffected.
+    const previousEffectiveStore = this.effectiveStore;
+    if (options?.store === false) {
+      this.effectiveStore = false;
+    } else if (options?.store === true) {
+      // B10-R5: explicit `store: true` overrides an inherited `store: false`
+      // (used by `world.get` to force storage on its create-path delegate call).
+      this.effectiveStore = true;
     }
+    try {
+      let current: ZodTypeAny = schema;
+      let d = def(current);
+      const outerWrappers: Array<"optional" | "nullable"> = [];
 
-    while (d.type === "lazy") {
-      let resolved = this.lazyCache.get(current);
-      if (!resolved) {
-        resolved = d.getter!();
-        this.lazyCache.set(current, resolved);
+      while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
+        outerWrappers.push(d.type);
+        current = d.innerType;
+        d = def(current);
       }
-      current = resolved;
-      d = def(current);
-    }
 
-    if (d.type === "array") {
-      if (outerWrappers.length > 0) {
-        const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
-        const optProb = this.options.optionalProbability ?? 0.2;
-        for (const wrapper of outerWrappers) {
-          if (prng.random() < optProb) {
-            this.generationCounter++;
-            return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+      while (d.type === "lazy") {
+        let resolved = this.lazyCache.get(current);
+        if (!resolved) {
+          resolved = d.getter!();
+          this.lazyCache.set(current, resolved);
+        }
+        current = resolved;
+        d = def(current);
+      }
+
+      if (d.type === "array") {
+        if (outerWrappers.length > 0) {
+          const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
+          const optProb = this.options.optionalProbability ?? 0.2;
+          for (const wrapper of outerWrappers) {
+            if (prng.random() < optProb) {
+              this.generationCounter++;
+              return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+            }
           }
         }
+        return this.generateArray(
+          d.element!,
+          current,
+          options as GenerateOptions<unknown[]> | undefined,
+        ) as z.infer<TSchema>;
       }
-      return this.generateArray(
-        d.element!,
-        current,
-        options as GenerateOptions<unknown[]> | undefined,
-      ) as z.infer<TSchema>;
-    }
 
-    return this.generateSingleItem(schema, options as GenerateOptions<unknown>) as z.infer<TSchema>;
+      return this.generateSingleItem(
+        schema,
+        options as GenerateOptions<unknown>,
+      ) as z.infer<TSchema>;
+    } finally {
+      this.effectiveStore = previousEffectiveStore;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -264,11 +302,14 @@ export class WorldImpl implements World {
     const existing = this.registry.find(schema, matches);
     if (existing !== undefined) return existing;
 
+    // B10-R5: `world.get`'s create path MUST always store regardless of any
+    // ambient store mode — its idempotence (B6-R7) requires the created record
+    // to be discoverable by a later find/get.
     const created = this.generate(
       schema,
       predicate
-        ? ({ overrides: predicate } as GenerateOptions<z.infer<TSchema>>)
-        : undefined,
+        ? ({ overrides: predicate, store: true } as GenerateOptions<z.infer<TSchema>>)
+        : ({ store: true } as GenerateOptions<z.infer<TSchema>>),
     );
 
     const isRegistered =
@@ -402,10 +443,19 @@ export class WorldImpl implements World {
           this.relationPools.set(cacheKey, []);
           return undefined as T;
         }
-        this.ensurePrimaryRecord(relSchema);
+        const provisioned = this.ensurePrimaryRecord(relSchema);
+        // B10-R4: when the outer call opted out of storage, the auto-provisioned
+        // record was NOT written to the registry. Use the in-memory value
+        // directly so the matcher still sees a related instance.
+        if (!this.effectiveStore && provisioned !== undefined) {
+          items = [provisioned];
+          this.relationPools.set(cacheKey, items);
+        }
       }
-      items = [...this.registry.all(relSchema)];
-      this.relationPools.set(cacheKey, items);
+      if (!items) {
+        items = [...this.registry.all(relSchema)];
+        this.relationPools.set(cacheKey, items);
+      }
     }
 
     if (items.length === 0) return undefined as T;
@@ -439,11 +489,25 @@ export class WorldImpl implements World {
       // (that would recurse forever; see resolveRelated's self-reference guard).
       if (relSchema !== reg.schema) {
         const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
-        while (this.registry.count(relSchema) < count) {
-          this.generateAndStorePrimary(relSchema, relReg);
+        if (!this.effectiveStore) {
+          // B10-R4: under `store: false`, the registry is not written; collect
+          // provisioned records directly into the pool so the matcher still
+          // sees them.
+          const pool: unknown[] = [...this.registry.all(relSchema)];
+          while (pool.length < count) {
+            const provisioned = this.generateAndStorePrimary(relSchema, relReg);
+            pool.push(provisioned);
+          }
+          items = pool;
+        } else {
+          while (this.registry.count(relSchema) < count) {
+            this.generateAndStorePrimary(relSchema, relReg);
+          }
         }
       }
-      items = [...this.registry.all(relSchema)];
+      if (!items) {
+        items = [...this.registry.all(relSchema)];
+      }
       this.relationPools.set(cacheKey, items);
     }
 
@@ -454,10 +518,10 @@ export class WorldImpl implements World {
     return relPrng.sample(items, count) as T[];
   }
 
-  private ensurePrimaryRecord(schema: ZodTypeAny): void {
-    if (this.registry.count(schema) > 0) return;
+  private ensurePrimaryRecord(schema: ZodTypeAny): unknown | undefined {
+    if (this.registry.count(schema) > 0) return undefined;
     const reg = this.findPrimaryRegs(schema)[0] ?? null;
-    this.generateAndStorePrimary(schema, reg);
+    return this.generateAndStorePrimary(schema, reg);
   }
 
   // -------------------------------------------------------------------------
@@ -491,7 +555,10 @@ export class WorldImpl implements World {
       if (options?.transform) {
         result = options.transform(result as input<ZodTypeAny>);
       }
-      this.registry.store(schema, result);
+      // B10-R2/R4: skip the registry write when the outer call opted out.
+      if (this.effectiveStore) {
+        this.registry.store(schema, result);
+      }
       return result;
     } finally {
       const currentPending = this.pendingCounts.get(schema) ?? 1;

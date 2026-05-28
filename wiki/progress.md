@@ -114,4 +114,17 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R7 met, 873 tests green, typecheck clean; transform-alignment scope expansion ACCEPTED (required by R3, internally consistent, safe). Recommend D8 standing constraint.
 - manager: promoted D8 to decisions.md + one-line Rule in architecture.md ("registry storage = generate's return value including transform")
+- result: done — commit 9b2a80a (closes #14)
+
+## 2026-05-28 — B10: Add an opt-out for registry storage on `world.generate`
+- manager: start, track: feature (unflagged)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B10-generate-store-opt-out.md (R1–R8); 2 non-blocking open questions resolved; D8 finding documented (makes B10-R5 mandatory — world.get must always store)
+- (manager pause: user requested backfill changesets for prior items; committed B7/B12/B14/B15 changesets as 3e99691; B10 in-flight resumes)
+- manager: spec-validation gate passed; no review flag → dispatch test-writer
+- test-writer: wrote tests/unit/core/generate-store-opt-out.test.ts (17 tests, R1–R7). RED: 11 TS errors (no `store` field) + 5 runtime fails (store-suppression and nested propagation missing); 6 regression-guard tests pass today as designed
+- manager: dispatch implementer
+- implementer: added store?: boolean to GenerateOptions (src/types.ts); per-call `effectiveStore` field on WorldImpl with try/finally push/pop in generate; gated registry.store in generateAndStorePrimary + resolveRelated/Many auto-provision pool; world.get forces store:true on its inner generate; populate strips factory's store field; docs + changeset added. GREEN: 890 tests, typecheck clean
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R8 met, 890 tests green, typecheck clean, re-entrancy + double-store-via-pool both ruled out, changeset present, no scope creep. effectiveStore is a local impl detail (no new standing constraint).
 - result: done — see commit below

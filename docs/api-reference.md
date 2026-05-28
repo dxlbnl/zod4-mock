@@ -248,12 +248,32 @@ interface GenerateOptions<T> {
   overrides?: DeepPartial<T>; // deep-merged after generation; arrays replaced
   transform?: (data: T) => T; // applied after overrides
   seed?: number; // only used by module-level generate()
+  store?: boolean; // default true; false suppresses the registry write
 }
 ```
 
 **`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`.
 
 **`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
+
+**`store`** — when `false`, the registry write that normally happens for a `withSchema`-registered schema is suppressed. The full pipeline (matchers, relations, key-based, schema-based, overrides, transform) still runs and the returned value is identical to a `store: true` call — only the side effect on `world.registry` is skipped. Propagates through nested generation: inner registered schemas reached via arrays, nested objects, or relation auto-provisioning are also not stored. Scoped to one outer `generate` call — a subsequent default `generate` writes normally. **Ignored** by `world.get` (its create path must always store — see [`.get`](#getschema-predicate)) and by `world.populate` (its purpose is to populate the registry — see [`.populate`](#populateschema-count-factory)).
+
+```ts
+// Search-bucket envelope: 10 inner items per request, registry stays clean.
+const SearchBucketSchema = z.object({
+  total: z.number().int(),
+  content: z.array(ItemSchema).length(10),
+});
+
+const world = createWorld({ seed: 1 })
+  .withSchema(ItemSchema)
+  .withSchema(SearchBucketSchema);
+
+http.get("/search", () =>
+  HttpResponse.json(world.generate(SearchBucketSchema, { store: false })),
+);
+// world.registry.count(ItemSchema) === 0  — even after many hits
+```
 
 ### `.populate(schema, count, factory?)`
 
@@ -298,6 +318,8 @@ world.populate(UserSchema, USER_PROFILES.length, (i) => ({
 
 The factory MUST be synchronous (matching `generate`'s contract) and SHOULD be pure: for a given world `seed`, the same sequence of `populate(schema, count, factory)` calls where `factory` returns the same `GenerateOptions` for the same `i` produces byte-identical registry contents across runs. A factory that reads/writes external state can break that guarantee by design.
 
+A factory return that includes `store: false` is **silently ignored** — `populate`'s purpose is to populate the registry, so every record produced lands in it regardless. Other factory fields (`overrides`, `transform`, …) still flow through as documented above.
+
 ### `.get(schema, predicate?)`
 
 ```ts
@@ -317,6 +339,8 @@ mirrors `z.coerce`.)
 Returns the first stored record (registry **insertion order**) for which **every** key in `predicate` matches, comparing shallow keys by value and nested-object values by **deep equality**. On a miss, it generates a new record via `generate` with `predicate` supplied as `overrides` (so the **predicate wins** over matchers and key/schema generators on conflicting keys), stores it in the registry for `schema`, and returns it. The found record is returned **by reference** (the same instance held in the registry).
 
 `get` is **deterministic** for a given seed and call sequence and **idempotent** for a repeated predicate: the first call generates-and-stores, and the second resolves via the find path and returns the same instance.
+
+The create path **always stores** — `get` ignores any ambient `store: false` from an enclosing call. This is required for idempotence: if the first call's record were not written to the registry, the second call could not discover it.
 
 The `predicate` is optional. An **absent** (`get(schema)`) or **empty** (`get(schema, {})`) predicate behaves identically and matches everything: it returns the first stored record if any exist, otherwise generates-and-stores one.
 
@@ -752,10 +776,13 @@ interface GenerateOptions<T> {
   readonly overrides?: DeepPartial<T>;
   readonly transform?: (data: T) => T;
   readonly seed?: number;
+  readonly store?: boolean; // default true
 }
 ```
 
 `seed` is only used by the module-level `generate()` function; it is ignored by `world.generate()` (use `createWorld({ seed })` instead).
+
+`store` (default `true`) suppresses the registry write for `world.generate` when set to `false`. The full pipeline still runs; only the side effect on `world.registry` is skipped, and the flag propagates through nested generation so inner registered schemas are also not stored. Ignored by `world.get` (its create path always stores) and by `world.populate` (its purpose is to populate the registry). See [`.generate`](#generateschema-options) for an example.
 
 ---
 
