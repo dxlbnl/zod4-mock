@@ -586,8 +586,10 @@ export class WorldImpl implements World {
       // 1. Matcher
       const matcher = reg.matchers[key];
       if (matcher) {
-        // Matchers can still be overridden by an explicit object override
-        result[key] = fieldOverride !== undefined ? fieldOverride : matcher(fieldCtx);
+        // Object overrides deep-merge on top of the matcher's value; step 0
+        // already handled primitive/null/array overrides eagerly.
+        const matched = matcher(fieldCtx);
+        result[key] = fieldOverride !== undefined ? deepMerge(matched, fieldOverride) : matched;
         continue;
       }
 
@@ -595,7 +597,8 @@ export class WorldImpl implements World {
       const keyMapFn =
         this.schemaKeyMaps.get(schema)?.[key] ?? this.schemaKeyMaps.get(current)?.[key];
       if (keyMapFn !== undefined) {
-        result[key] = fieldOverride !== undefined ? fieldOverride : keyMapFn(fieldCtx);
+        const mapped = keyMapFn(fieldCtx);
+        result[key] = fieldOverride !== undefined ? deepMerge(mapped, fieldOverride) : mapped;
         continue;
       }
 
@@ -637,9 +640,8 @@ export class WorldImpl implements World {
       // 4. Custom world-level key generator
       const customGen = this.customKeyGenerators.get(key.toLowerCase());
       if (customGen !== undefined) {
-        const val = customGen(innerSchema, fieldCtx);
-        result[key] =
-          fieldOverride !== undefined ? fieldOverride : applyModifiers(val, innerSchema);
+        const val = applyModifiers(customGen(innerSchema, fieldCtx), innerSchema);
+        result[key] = fieldOverride !== undefined ? deepMerge(val, fieldOverride) : val;
         continue;
       }
 

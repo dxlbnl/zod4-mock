@@ -28,6 +28,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B4-registry-find.md](specs/B4-registry-find.md) | B4 — `registry.find()` single-record predicate lookup. |
 | [specs/B5-related-many.md](specs/B5-related-many.md) | B5 — `ctx.related.many(name, count)` one-to-many relation picks in matchers. |
 | [specs/B6-world-get-find-or-create.md](specs/B6-world-get-find-or-create.md) | B6 — `world.get(schema, predicate)` find-an-existing-record-or-generate-one. |
+| [specs/B12-nested-override-skips-matcher.md](specs/B12-nested-override-skips-matcher.md) | B12 — BUG: nested-object overrides skip the matcher; deep-merge override on top of matcher result. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
