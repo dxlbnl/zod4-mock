@@ -274,6 +274,42 @@ export class WorldImpl implements World {
   }
 
   // -------------------------------------------------------------------------
+  // populateFrom
+  // -------------------------------------------------------------------------
+
+  populateFrom<TDerived extends ZodTypeAny, TSource extends ZodTypeAny>(
+    derivedSchema: TDerived,
+    sourceSchema: TSource,
+    predicate?: (item: z.infer<TSource>) => boolean,
+    factory?: (source: z.infer<TSource>) => GenerateOptions<z.infer<TDerived>>,
+  ): this {
+    // B13-R6: snapshot the source bucket at call start so mid-loop inserts
+    // (a matcher side-effect, an auto-provisioned source) do not extend the
+    // iteration of the current call.
+    const snapshot = [...this.registry.all(sourceSchema)];
+    // B13-R2: filter by predicate if present.
+    const sources = predicate ? snapshot.filter(predicate) : snapshot;
+
+    for (const source of sources) {
+      // B13-R8: strip any `store: false` returned by the factory — populateFrom
+      // always writes, mirroring populate's contract (B10-R6).
+      const factoryReturn = factory?.(source);
+      const { store: _ignored, ...rest } =
+        (factoryReturn ?? {}) as GenerateOptions<z.infer<TDerived>> & {
+          store?: boolean;
+        };
+      // B13-R4 idempotence: delegate to generate, which hits B8's per-pair
+      // upsert on a repeat call with the same source identity.
+      this.generate(derivedSchema, {
+        ...rest,
+        source,
+      } as GenerateOptions<z.infer<TDerived>>);
+    }
+
+    return this;
+  }
+
+  // -------------------------------------------------------------------------
   // generate
   // -------------------------------------------------------------------------
 

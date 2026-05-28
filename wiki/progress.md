@@ -158,4 +158,17 @@ it records the reason here AND states it in chat.
 - implementer: added RelationEntry<T> discriminated union (src/types.ts) + isZodSchema/normalizeRelationEntry helpers; updated withSchema to normalize entries at registration; resolveRelated/Many filter snapshot once on cache-miss; throw with named relation when empty filtered pool (self-ref exemption); B10 store:false in-memory pool also filtered; docs + changeset added. GREEN: 922 tests, typecheck clean.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R10 met, 922 tests green, typecheck clean, discriminator robust (uses _zod brand per D3), D9 neutrality verified (whereCalls === 8), B10 store:false interaction confirmed, no scope creep, no new standing constraint
+- result: done — commit 1a9603e (closes #11)
+
+## 2026-05-28 — B13: Add `world.populateFrom(derivedSchema, sourceSchema, predicate?)`
+- manager: start, track: feature (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B13-world-populate-from.md (R1–R11); 2 non-blocking open questions resolved (z.infer predicate; ad-hoc source schemas accepted)
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: wrote tests/unit/core/world-populate-from.test.ts (17 tests, R1–R9). RED: TS2551 ("populateFrom does not exist") at every call site + 17 runtime TypeErrors. All attributable to missing method on World/WorldImpl. R6 snapshot test uses matcher side-effect (store extra source mid-iteration). R4 pins reference equality across two calls (B8 upsert composition).
+- manager: dispatch implementer
+- implementer: added populateFrom to World interface (src/types.ts) + WorldImpl.populateFrom (src/world.ts): snapshot at entry, predicate-filter, per-source `this.generate(D, { source, ...factoryReturn })` (factory's `store` stripped), returns `this`. B8 upsert provides idempotence and determinism inherited via existing PRNG paths. Docs + changeset added. GREEN: 939 tests, typecheck clean.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R11 met, 939 tests green, typecheck clean, B8 composition verified (idempotence via upsert), snapshot semantics + factory-store-stripping confirmed, no scope creep, no new standing constraint
 - result: done — see commit below

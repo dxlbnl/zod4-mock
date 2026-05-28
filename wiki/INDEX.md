@@ -35,6 +35,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B12-nested-override-skips-matcher.md](specs/B12-nested-override-skips-matcher.md) | B12 — BUG: nested-object overrides skip the matcher; deep-merge override on top of matcher result. |
 | [specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md](specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md) | B15 — `Prng.pick` accepts `readonly T[]`; pin `shuffle`/`sample` on the shared interface + built artifact; add `prepublishOnly` guard to locale packages. |
 | [specs/B14-world-populate-factory.md](specs/B14-world-populate-factory.md) | B14 — `world.populate` accepts an optional per-record factory returning `GenerateOptions<TSchema>`; two-arg form unchanged. |
+| [specs/B13-world-populate-from.md](specs/B13-world-populate-from.md) | B13 — `world.populateFrom(derivedSchema, sourceSchema, predicate?, factory?)` iterates the source registry and calls `generate(D, { source })` per record; idempotent via B8. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,

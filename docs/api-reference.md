@@ -396,6 +396,71 @@ The factory MUST be synchronous (matching `generate`'s contract) and SHOULD be p
 
 A factory return that includes `store: false` is **silently ignored** — `populate`'s purpose is to populate the registry, so every record produced lands in it regardless. Other factory fields (`overrides`, `transform`, …) still flow through as documented above.
 
+### `.populateFrom(derivedSchema, sourceSchema, predicate?, factory?)`
+
+```ts
+populateFrom<TDerived extends ZodTypeAny, TSource extends ZodTypeAny>(
+  derivedSchema: TDerived,
+  sourceSchema: TSource,
+  predicate?: (item: z.infer<TSource>) => boolean,
+  factory?: (source: z.infer<TSource>) => GenerateOptions<z.infer<TDerived>>,
+): this
+```
+
+Iterates the source bucket and calls `world.generate(derivedSchema, { source: record })` once per source record (filtered by `predicate` if supplied). Returns `this` for fluent chaining — the natural counterpart to [`.populate`](#populateschema-count-factory) for **derived** schemas (those registered with `from:`).
+
+```ts
+const OrderSchema = z.object({
+  id: z.uuid(),
+  status: z.enum(["pending", "shipped", "cancelled"]),
+  amount: z.number(),
+});
+
+const ShippedOrderSummarySchema = z.object({
+  orderId: z.uuid(),
+  shippedAmount: z.number(),
+  label: z.string(),
+});
+
+const world = createWorld({ seed: 1 })
+  .withSchema(OrderSchema)
+  .withSchema(ShippedOrderSummarySchema, {
+    from: OrderSchema,
+    matchers: {
+      orderId: (ctx) => ctx.source.id,
+      shippedAmount: (ctx) => ctx.source.amount,
+    },
+  });
+
+world.populate(OrderSchema, 30);
+
+// One declarative line — populates a Summary per shipped order:
+world.populateFrom(
+  ShippedOrderSummarySchema,
+  OrderSchema,
+  (o) => o.status === "shipped",
+);
+```
+
+**`predicate`** — typed `(item: z.infer<TSource>) => boolean` (the **output** shape, matching registry reads and `relations.where`). Inside the body, source-record fields are typed exactly as Zod's inferred output — `z.coerce.date()` fields are `Date`, enum fields are the enum literal type, no cast required.
+
+**`factory`** — invoked once per surviving source record (after `predicate`), receiving the **source record itself** (`z.infer<TSource>`), and returns `GenerateOptions<TDerived>` (`overrides`, `transform`, `unique`, …). The return flows through the delegated `generate` call — `overrides` win over matchers and key/schema generators on conflicting keys, `transform` runs last. Distinct from [`.populate`](#populateschema-count-factory)'s factory, whose first argument is a numeric `index` — `populateFrom` is source-driven by design.
+
+```ts
+world.populateFrom(
+  ShippedOrderSummarySchema,
+  OrderSchema,
+  (o) => o.status === "shipped",
+  (source) => ({ overrides: { label: `summary-${source.id.slice(0, 6)}` } }),
+);
+```
+
+**Idempotence (B8 upsert).** Because `populateFrom` delegates to `world.generate(derivedSchema, { source })` per record, and that call is a per-`(derivedSchema, identity(source))` **upsert** by default, calling `populateFrom(...)` twice with the same arguments leaves the derived bucket **unchanged** after the first call — same record count, same references, same order. Re-running is safe (e.g. test setup or a dev server's re-init).
+
+**Snapshot semantics.** The source bucket is read **once** at the start of the call. Records added to it *during* the iteration — by a matcher's side effect or a transitive auto-provisioned source — are **not** picked up by the current call; they become visible to the **next** `populateFrom` call (the B8 upsert short-circuits the already-derived records on that next call, so only the newly-added sources produce new derived records).
+
+**Always writes.** Like `populate`, `populateFrom` has no `store: false` opt-out: a factory's `store: false` is silently stripped before the options reach the delegated `generate` call. Every derived record produced lands in the registry. (Use `world.generate(DerivedSchema, { source, store: false })` directly if you really want an ephemeral derived record.)
+
 ### `.get(schema, predicate?)`
 
 ```ts

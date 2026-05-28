@@ -349,6 +349,28 @@ export interface World {
     factory?: (index: number) => GenerateOptions<z.infer<TSchema>>,
   ): this;
 
+  /**
+   * Iterate the source bucket and call `world.generate(derivedSchema, { source })`
+   * once per source record (filtered by `predicate` if supplied). The optional
+   * `factory` receives the source record itself (`z.infer<TSource>`, contrast
+   * `populate`'s index-based factory) and returns `GenerateOptions<TDerived>`
+   * that flow through the delegated `generate` call.
+   *
+   * Idempotence comes from B8's per-`(derivedSchema, identity(source))` upsert:
+   * re-running `populateFrom` with the same arguments leaves the derived bucket
+   * unchanged. The source bucket is snapshotted at call start — mid-loop
+   * inserts to it are visible only to the next `populateFrom` call.
+   *
+   * Always writes (like `populate`): a factory return containing
+   * `store: false` is silently stripped. Returns `this` for fluent chaining.
+   */
+  populateFrom<TDerived extends ZodTypeAny, TSource extends ZodTypeAny>(
+    derivedSchema: TDerived,
+    sourceSchema: TSource,
+    predicate?: (item: z.infer<TSource>) => boolean,
+    factory?: (source: z.infer<TSource>) => GenerateOptions<z.infer<TDerived>>,
+  ): this;
+
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;
   /** Internal PRNG for testing and stability checks. */
