@@ -1,5 +1,34 @@
 # zod4-mock
 
+## 0.7.1
+
+### Patch Changes
+
+- da72b78: Fix: `z.record(z.enum([...]), V)` now emits one entry per enum member in declared order, so the generated value satisfies Zod's strict-key inferred type. Previously, `generateZodRecord` unconditionally picked 2–5 random keys regardless of the `keyType`, producing a random subset of the enum's members and silently failing `schema.parse(value)` at the consumer. Open-key `z.record(z.string(), V)` and `z.record(z.number(), V)` are unchanged (still 2–5 random keys, byte-identical at a fixed seed). `z.map`, `z.nativeEnum`, and literal-union key types are deliberately out of scope for this fix. (closes #18)
+
+  ```ts
+  const Status = z.enum(["PENDING", "IN_PROGRESS", "DONE"]);
+  const Counts = z.record(Status, z.number());
+
+  const value = generate(Counts);
+  // value === { PENDING: 42, IN_PROGRESS: 17, DONE: 99 }   (was: { PENDING: 42 })
+
+  Counts.parse(value); // ok    (was: ZodError — missing IN_PROGRESS, DONE)
+  ```
+
+- df963b6: Fix: `deepMerge` (the helper behind every `overrides` merge — the B12 in-step matcher / key-map / key-based branches, the per-element `generateArray` branch, and the `generateSingleItem` final-pass) no longer recurses into non-plain objects. Previously, overriding a `z.date()` (or `z.instanceof(Map)` / `Set` / `RegExp` / any class-instance) field returned `{}` because `Object.keys(new Date())` is `[]` and `{ ...new Date() }` is `{}`, silently dropping the value. `deepMerge` now treats any value whose prototype is not `Object.prototype` or `null` as a leaf and returns it verbatim by reference; plain-object literals and `Object.create(null)` dicts still merge key-by-key as before. (closes #19)
+
+  ```ts
+  const Event = z.object({ id: z.string(), at: z.date() });
+
+  const e = world.generate(Event, {
+    overrides: { id: "evt-1", at: new Date("2024-01-01T00:00:00Z") },
+  });
+
+  e.at instanceof Date; // true   (was: false — `e.at` was `{}`)
+  e.at.toISOString(); // "2024-01-01T00:00:00.000Z"
+  ```
+
 ## 0.7.0
 
 ### Minor Changes
