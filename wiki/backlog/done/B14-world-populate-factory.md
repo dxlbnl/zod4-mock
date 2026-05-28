@@ -5,6 +5,7 @@ type: feature
 priority: medium
 flags: []
 created: 2026-05-28
+spec: wiki/specs/B14-world-populate-factory.md
 ---
 
 ## Description

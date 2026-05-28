@@ -71,7 +71,7 @@ it records the reason here AND states it in chat.
 - implementer: edited src/world.ts generateObjectFields steps 1 (matcher), 2 (key-map), 4 (custom gen) to deepMerge object overrides in-step; reused src/utils/merge.ts deepMerge; no API/doc change. GREEN: 839 passed, typecheck clean
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R5 met (incl. card-repro regression per D6), 839 tests green, typecheck clean, no scope creep, no API/type/docs change, no new standing constraint
-- result: done — commit 850327e
+- result: done — commit c21023e (closes #12)
 
 ## 2026-05-28 — B7: Registry read methods should return `infer<T>` (output shape), not `input<T>`
 - manager: start, track: feature (flagged review)
@@ -84,7 +84,7 @@ it records the reason here AND states it in chat.
 - implementer: src/types.ts (Registry reads → z.infer<T>; store stays input<T>; World.get return → z.infer<TSchema>); src/world.ts (WorldImpl.get return + matches predicate retyped; added input<T> cast at registry.store write boundary, removed unnecessary input<T> cast); docs/api-reference.md updated with asymmetry note. GREEN: typecheck 10→0; 853 tests pass; no test annotations needed
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R7 met, typecheck clean, 853 tests green, doc rule honored, single store-boundary cast scoped correctly, no scope creep, no new standing constraint
-- result: done — commit 48f7d73
+- result: done — commit 1b67a89 (closes #7, #16)
 
 ## 2026-05-28 — B15: `prng.pick` should accept `readonly T[]`; verify `shuffle`/`sample` shipped on the published `Prng` interface
 - manager: start, track: feature (flagged review)
@@ -100,4 +100,18 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R3 met, 862 tests green, typecheck clean, additional deliverables (prepublishOnly ×4 + doc-comment + docs update) verified; recommended D7 standing constraint
 - manager: promoted D7 to decisions.md + one-line Rule in architecture.md ("Every publishable workspace package MUST have a prepublishOnly script")
+- result: done — commit 45b45df (closes #15)
+
+## 2026-05-28 — B14: `world.populate` should support a per-record factory for `GenerateOptions`
+- manager: start, track: feature (unflagged)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B14-world-populate-factory.md (R1–R7); 2 non-blocking open questions (factory shape = GenerateOptions; pure-factory determinism)
+- manager: spec-validation gate passed; no review flag → dispatch test-writer directly
+- (manager pause: backfilled (closes #N) refs onto B12/B7/B15 commits via stash + reset --hard b3a20e8 + cherry-pick + amend. New hashes: c21023e/1b67a89/45b45df. progress.md hashes updated in-tree.)
+- test-writer: wrote tests/unit/core/populate-factory.test.ts (11 tests, R1–R6); RED 13 TS errors + 5 runtime fails (missing factory arg + transform not threaded through populate path); regression guards pass
+- manager: dispatch implementer
+- implementer: added populate(schema, count, factory?) overload (src/types.ts, src/world.ts); routed through lower-level helpers; threaded transform through generateAndStorePrimary + generateDerivedRecord; added transformApplied flag in generateSingleItem to avoid double-apply; docs/api-reference.md updated. GREEN: 873 tests, typecheck clean. NOTE: this aligns registered-schema registry storage with the transform-applied return value (previously diverged) — reviewer to assess whether scope-acceptable.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R7 met, 873 tests green, typecheck clean; transform-alignment scope expansion ACCEPTED (required by R3, internally consistent, safe). Recommend D8 standing constraint.
+- manager: promoted D8 to decisions.md + one-line Rule in architecture.md ("registry storage = generate's return value including transform")
 - result: done — see commit below

@@ -133,3 +133,33 @@
 - **Rule added/changed**: "Every publishable workspace package MUST have a
   `prepublishOnly` script that rebuilds its dist (typically `pnpm build`)."
 - **Supersedes**: none
+
+## D8: Registry storage equals `generate`'s return value for registered schemas
+
+- **Date**: 2026-05-28
+- **By**: reviewer (B14)
+- **Context**: B14's per-record factory passes `GenerateOptions` (including
+  `transform`) through `populate`'s helper path. The test asserts the *stored*
+  record reflects the transform — i.e. `world.registry.all(...).map(...)` reads
+  post-transform values. Previously, `world.generate(schema, { transform })`
+  returned the transformed value but stored the **pre**-transform value, so
+  registry reads and the return value silently diverged for any schema with
+  `transform`. B7 separately retyped registry reads to `z.infer<T>` (output
+  shape) — a pre-transform stored value would not match that type for transforms
+  that reshape the output. The B14 implementer aligned both paths.
+- **Decision**: For schemas registered via `withSchema` (primary or derived
+  `from:`), the value stored in the registry MUST equal the value returned by
+  `world.generate(schema, options)`, including any `options.transform`. Apply
+  `transform` inside the storing helpers (`generateAndStorePrimary`,
+  `generateDerivedRecord`) before `registry.store`, and guard
+  `generateSingleItem`'s outer transform apply with a `transformApplied` flag
+  so it doesn't double-apply.
+- **Consequences**: Single, consistent contract: read what you'd get from
+  `generate`. Re-implements B7's read-side promise (`z.infer<T>` shape) honestly
+  for transform-bearing schemas. Trade-off: a caller who previously relied on
+  the registry holding pre-transform values (none in the suite or codebase as
+  of B14) would need to update.
+- **Rule added/changed**: "For schemas registered via `withSchema`, the value
+  stored in the registry MUST equal the value returned by `world.generate`,
+  including any `options.transform`."
+- **Supersedes**: none

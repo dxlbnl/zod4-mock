@@ -303,8 +303,17 @@ export interface World {
   /**
    * Pre-generate `count` instances of the schema and store them in the registry.
    * Returns `this` for fluent chaining.
+   *
+   * An optional per-record `factory` may be supplied. When given, it is invoked
+   * once per record with the 0-based index and must return `GenerateOptions`
+   * (`overrides`, `transform`, etc.) for that record. The returned options flow
+   * through the normal generate pipeline.
    */
-  populate(schema: ZodTypeAny, count: number): this;
+  populate<TSchema extends ZodTypeAny>(
+    schema: TSchema,
+    count: number,
+    factory?: (index: number) => GenerateOptions<z.infer<TSchema>>,
+  ): this;
 
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;

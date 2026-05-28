@@ -164,13 +164,18 @@ export class WorldImpl implements World {
   // populate
   // -------------------------------------------------------------------------
 
-  populate(schema: ZodTypeAny, count: number): this {
+  populate<TSchema extends ZodTypeAny>(
+    schema: TSchema,
+    count: number,
+    factory?: (index: number) => GenerateOptions<z.infer<TSchema>>,
+  ): this {
     const primaryRegs = this.findPrimaryRegs(schema);
     const derivedRegs = this.findDerivedRegs(schema);
 
     if (primaryRegs.length > 0) {
       for (let i = 0; i < count; i++) {
-        this.generateAndStorePrimary(schema, primaryRegs[0]!);
+        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        this.generateAndStorePrimary(schema, primaryRegs[0]!, opts);
       }
     } else if (derivedRegs.length > 0) {
       const reg = derivedRegs[0]!;
@@ -178,13 +183,15 @@ export class WorldImpl implements World {
       // Use the count to limit how many we derive, or derive from all if count is large
       const N = Math.min(count, sources.length);
       for (let i = 0; i < N; i++) {
-        const result = this.generateDerivedRecord(schema, reg, sources[i], i);
-        this.registry.store(schema, result);
+        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        const result = this.generateDerivedRecord(schema, reg, sources[i], i, opts);
+        this.registry.store(schema, result as input<TSchema>);
       }
     } else {
       // Default to primary if not registered
       for (let i = 0; i < count; i++) {
-        this.generateAndStorePrimary(schema, null);
+        const opts = factory ? (factory(i) as GenerateOptions<unknown>) : undefined;
+        this.generateAndStorePrimary(schema, null, opts);
       }
     }
     return this;
@@ -472,7 +479,7 @@ export class WorldImpl implements World {
       const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
       const effectiveReg = reg ?? EMPTY_REG;
       const fieldPath = options?.fieldPath ?? recordId;
-      const result = this.generateObjectFields(
+      let result = this.generateObjectFields(
         schema,
         effectiveReg,
         undefined,
@@ -481,6 +488,9 @@ export class WorldImpl implements World {
         fieldPath,
         options?.overrides as Record<string, unknown>,
       );
+      if (options?.transform) {
+        result = options.transform(result as input<ZodTypeAny>);
+      }
       this.registry.store(schema, result);
       return result;
     } finally {
@@ -502,7 +512,7 @@ export class WorldImpl implements World {
   ): unknown {
     const recordId = `dreg${reg.regId}#${sourceIndex}`;
     const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
-    return this.generateObjectFields(
+    let result = this.generateObjectFields(
       schema,
       reg,
       source,
@@ -511,6 +521,10 @@ export class WorldImpl implements World {
       recordId,
       options?.overrides as Record<string, unknown>,
     );
+    if (options?.transform) {
+      result = options.transform(result as input<ZodTypeAny>);
+    }
+    return result;
   }
 
   // -------------------------------------------------------------------------
@@ -817,11 +831,13 @@ export class WorldImpl implements World {
         : this.findPrimaryRegs(targetSchema);
 
     let result: unknown;
+    let transformApplied = false;
     const sourceOverride = (options as any)?.source;
 
     if (sourceOverride !== undefined) {
       const reg = derivedRegs[0] ?? { ...EMPTY_REG, schema };
       result = this.generateDerivedRecord(schema, reg as SchemaReg, sourceOverride, 0, options);
+      transformApplied = true;
     } else if (derivedRegs.length > 0) {
       // Pick first available source across all derived regs, auto-provisioning if needed
       for (const reg of derivedRegs) {
@@ -844,8 +860,10 @@ export class WorldImpl implements World {
       const idx = (this.generationCounter - 1) % pairs.length;
       const { source, reg, sourceIndex } = pairs[idx]!;
       result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
+      transformApplied = true;
     } else if (primaryRegs.length > 0) {
       result = this.generateAndStorePrimary(schema, primaryRegs[0]!, options);
+      transformApplied = true;
     } else {
       // Ad-hoc
       const recordId = `adhoc-${this.generationCounter}`;
@@ -870,7 +888,9 @@ export class WorldImpl implements World {
     }
 
     if (options?.overrides) result = deepMerge(result, options.overrides);
-    if (options?.transform) result = options.transform(result as input<ZodTypeAny>);
+    if (options?.transform && !transformApplied) {
+      result = options.transform(result as input<ZodTypeAny>);
+    }
     return result;
   }
 }

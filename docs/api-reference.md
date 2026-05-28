@@ -255,17 +255,48 @@ interface GenerateOptions<T> {
 
 **`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
 
-### `.populate(schema, count)`
+### `.populate(schema, count, factory?)`
 
 ```ts
-populate(schema: ZodTypeAny, count: number): this
+populate<TSchema extends ZodTypeAny>(
+  schema: TSchema,
+  count: number,
+  factory?: (index: number) => GenerateOptions<TSchema>,
+): this
 ```
 
 Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining.
 
+The simple two-arg form is unchanged:
+
 ```ts
 const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 3); // 3 persons in registry before any generate()
 ```
+
+An optional **per-record factory** may be supplied as the third argument. When given, it is invoked exactly `count` times with the 0-based record index (`i = 0..count - 1`, in ascending order) and must return `GenerateOptions` (`overrides`, `transform`, etc.) for that record. The factory's return value flows through the same generate pipeline (matchers → key-based → schema-based → `overrides` → `transform`) — so `overrides` win over generated values and `transform` runs after overrides, per record.
+
+```ts
+const UserSchema = z.object({
+  id: z.uuid(),
+  username: z.string(),
+  role: z.enum(["admin", "editor", "viewer"]),
+});
+
+const USER_PROFILES = [
+  { username: "admin", role: "admin" },
+  { username: "editor", role: "editor" },
+  { username: "viewer", role: "viewer" },
+] as const;
+
+const world = createWorld({ seed: 42 }).withSchema(UserSchema);
+
+// Declarative per-record overrides — no for-loop over generate().
+world.populate(UserSchema, USER_PROFILES.length, (i) => ({
+  overrides: USER_PROFILES[i],
+}));
+```
+
+The factory MUST be synchronous (matching `generate`'s contract) and SHOULD be pure: for a given world `seed`, the same sequence of `populate(schema, count, factory)` calls where `factory` returns the same `GenerateOptions` for the same `i` produces byte-identical registry contents across runs. A factory that reads/writes external state can break that guarantee by design.
 
 ### `.get(schema, predicate?)`
 
