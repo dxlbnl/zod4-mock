@@ -42,10 +42,11 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 
 **Generation pipeline** — for each field of a registered schema, values are resolved in this order:
 
+0. `options.overrides` — eager per-field assignment. Primitive/array overrides land in `ctx.current` before sibling matchers run, so matchers can read them via `ctx.current.<sibling>`.
 1. **Matchers** (explicit functions provided in `world.withSchema(..., matchers)`)
 2. **Key-based generators** — field name heuristics (e.g. `email`, `firstName`, fields ending in `id`) ([src/generators/key-based.ts](src/generators/key-based.ts))
 3. **Schema-based generators** — Zod type introspection (string, number, enum, object, array, etc.) ([src/generators/schema-based.ts](src/generators/schema-based.ts))
-4. `overrides` — deep merge after generation
+4. `overrides` — final deep-merge (covers nested-object overrides that step 0 didn't eagerly consume)
 5. `transform` — final transform function
 
 **PRNG** — Mulberry32 seeded PRNG with FNV-1a hashing for per-field `fork(key)` derivation ([src/prng.ts](src/prng.ts)). Per-field seeding means adding/removing schema fields does not disturb values for other fields. The `Prng.fork(key)` method creates an independent child PRNG without consuming the parent's state.

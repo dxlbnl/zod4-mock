@@ -13,11 +13,15 @@
  *
  * ## Generation pipeline (per field)
  *
+ * 0. `options.overrides` — eager per-field assignment. Primitive/array overrides
+ *    land in `ctx.current` before sibling matchers run, so matchers can read
+ *    them via `ctx.current.<sibling>`.
  * 1. Matchers registered via `withSchema`
  * 2. Per-schema key maps registered via `withKeyMap`
  * 3. Key-based generators (field name heuristics)
  * 4. Schema-based generator (Zod type introspection)
- * 5. `options.overrides` deep merge
+ * 5. `options.overrides` — final deep-merge (covers nested-object overrides
+ *    that step 0 didn't eagerly consume)
  * 6. `options.transform` function
  */
 

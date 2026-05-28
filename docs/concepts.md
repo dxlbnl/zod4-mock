@@ -76,10 +76,11 @@ All three modes can be combined — a schema can have both `from` and `relations
 
 For every field in a schema, values are resolved in this priority order:
 
+0. **Overrides (eager)** — primitive/array entries in `options.overrides` land in `ctx.current` before sibling matchers run, so a matcher can read them via `ctx.current.<sibling>`.
 1. **Matchers** — explicit functions from `withSchema({ matchers })`. Always wins.
 2. **Key-based heuristics** — field name recognition. `email` → realistic email, `firstName` → first name, `createdAt` → a date. [Full list →](key-heuristics.md)
 3. **Schema-based generation** — Zod type introspection. `z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc.
-4. **Overrides** — deep-merged after generation.
+4. **Overrides (final deep-merge)** — covers nested-object overrides that step 0 didn't eagerly consume.
 5. **Transform** — function applied after overrides.
 
 You only need to provide matchers for fields the pipeline can't resolve correctly on its own.

@@ -231,4 +231,13 @@ it records the reason here AND states it in chat.
 - implementer: added finite-key branch to generateZodRecord (src/generators/schema/collection.ts) detecting `def(d.keyType).type === "enum"` via def() helper (D3); iterates `Object.values(keyDef.entries ?? {})` in declared order, forks `rv-${i}` per entry (D4); empty enum falls out to `{}`; open-key path verbatim (B17-R4 byte-identical). Updated docs/zod4-schema-coverage.md row 185 with finite-key Notes entry (B17-R7, D5). Added .changeset/b17-record-enum-exhaustive.md (patch). GREEN: 982/982 tests, typecheck clean.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R8 met, 982/982 tests green, typecheck clean, no scope creep (only src/generators/schema/collection.ts + docs + changeset touched; generateZodMap untouched, nativeEnum/literal-union/world.ts untouched), card-repro asserts both halves (sorted keys deep-equals + safeParse green), D1/D3/D4/D5/D6 honored, no new standing constraint
-- result: done — commit pending (closes #18)
+- result: done — commit da72b78 (closes #18)
+
+## 2026-05-28 22:10 — B9: Doc — pipeline comment in `world.d.ts` omits the eager-overrides step
+- manager: start, track: feature/lite (no review flag)
+- manager: lite gate re-check PASS (1–2 files, comment only, no API/schema/contract change, no observable behavior, no security)
+- manager: dispatch implementer (lite)
+- implementer (lite): added step 0 (eager per-field overrides) to pipeline doc-comment in src/world.ts (lines 14-24, module-level JSDoc); mirrored in docs/concepts.md (lines 75-85) and CLAUDE.md (lines 43-50). Verified against source: step 0 = generateObjectFields lines 809-821 (eager assignment), step 5 = generateSingleItem line 1167 (final deepMerge). No executable code touched. No changeset (comment-only, no public-API or user-observable change). GREEN: 982/982 tests, typecheck clean.
+- manager: dispatch reviewer (lite)
+- reviewer (lite): PASS — three diffs surgical (JSDoc in src/world.ts:14-26, markdown in docs/concepts.md:75-86 + CLAUDE.md:43-51); step 0 accurate against src/world.ts:813-825, step 5 accurate against src/world.ts:1171; 982/982 tests, typecheck clean; no executable code touched; lite gate still holds (no API/schema/dep/behavior change); no scope creep; no standing constraint
+- result: done — commit pending (closes #9)
