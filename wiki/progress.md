@@ -194,4 +194,15 @@ it records the reason here AND states it in chat.
 - implementer (focused): replaced 6 lines × 2 files to byte-identical R7 scenario (column-1 width 12, column-2 width 17, createdAt → date.anytime no suffix). GREEN: 957 tests, typecheck clean.
 - manager: re-dispatch reviewer (3rd pass; narrow confirmation)
 - reviewer (3rd pass): PASS — both example blocks now byte-identical to R7 scenario; no `date.anytime+toISOString` remains in either; 957 tests green, typecheck clean. R1–R11 finally clean across all layers (spec/test/impl/docs/changeset).
-- result: done — see commit below
+- result: done — commit bc5558f (closes #17)
+
+## 2026-05-28 21:44 — manager: planning pass
+- inbox: 6 items (B2, B3, B9, B17, B18, B19); ready: 0; doing: 0
+- B19 is a tracking marker (already resolved by B8 in 0.7.0) flagged blocked — not real work; bookkeeping pending GitHub-side close on issue #20
+- ordered work plan presented to user; pausing for approval
+
+## 2026-05-28 21:45 — B19: BUG — `world.generate(derivedSchema, { source })` does not store (RESOLVED by B8 in 0.7.0)
+- manager: housekeeping pass — user approved "handle B19 first"
+- manager: no auth available for GitHub write API; falling back to card's Option 2 (close via commit subject on next push)
+- manager: swapped frontmatter flags: [blocked] → [cancelled], updated Notes; git mv inbox/ → done/
+- result: cancelled — commit pending (closes #20)

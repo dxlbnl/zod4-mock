@@ -3,7 +3,7 @@ id: B19
 title: BUG — `world.generate(derivedSchema, { source })` does not store (RESOLVED by B8 in 0.7.0)
 type: bug
 priority: low
-flags: [blocked]
+flags: [cancelled]
 created: 2026-05-28
 ---
 
@@ -61,7 +61,8 @@ Once closed on GitHub, move this card to `done/` with `flags: [cancelled]` (or r
 it entirely — it's bookkeeping).
 
 ## Notes
-- `flags: [blocked]` — the implementation work is already done; only the GitHub-side
-  close action is pending (user-driven).
+- `flags: [cancelled]` — tracking marker, no code change. Implementation already shipped
+  in B8 (commit `948bd71`, 0.7.0). Closed via `(closes #20)` on the cancel commit; GitHub
+  auto-closes on next push.
 - No spec, no test, no implementer dispatch needed.
 - No changeset (already covered by B8's changeset).
