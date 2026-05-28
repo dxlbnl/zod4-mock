@@ -1,6 +1,6 @@
 {
   "name": "@zod4-mock/locale-names",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pre-trained Markov name models by cultural origin for zod4-mock locales",
   "type": "module",
   "sideEffects": false,

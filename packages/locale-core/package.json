@@ -1,6 +1,6 @@
 {
   "name": "@zod4-mock/locale-core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared locale types and the extend() utility for zod4-mock locales",
   "type": "module",
   "sideEffects": false,
