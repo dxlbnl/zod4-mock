@@ -205,4 +205,17 @@ it records the reason here AND states it in chat.
 - manager: housekeeping pass — user approved "handle B19 first"
 - manager: no auth available for GitHub write API; falling back to card's Option 2 (close via commit subject on next push)
 - manager: swapped frontmatter flags: [blocked] → [cancelled], updated Notes; git mv inbox/ → done/
-- result: cancelled — commit pending (closes #20)
+- result: cancelled — commit d478d03 (closes #20)
+
+## 2026-05-28 21:46 — B18: BUG — `deepMerge` recurses into `Date` / `Map` / `Set` / `RegExp` and loses the value
+- manager: start, track: bug (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B18-deepmerge-atomic-objects.md (R1–R5); resolved realm-check open question in-spec as (a) `Object.getPrototypeOf === Object.prototype || null` (Node-only library); 0 blocking open questions
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: wrote tests/unit/core/merge-atomic.test.ts (11 tests, R1+R2) + tests/unit/core/overrides-atomic.test.ts (6 tests, R3+R4). RED confirmed: 12 fail attributable to "atomic object reduced to {} by deepMerge"; 5 pass-as-guards (R1 null-prototype dict + 4× R2 plain-object recursion). Placed under tests/unit/core/ (spec hint of tests/unit/utils/ was wrong — that dir doesn't exist; existing merge.test.ts is in core).
+- manager: dispatch implementer
+- implementer: added isPlainObject predicate (`value is Record<string, unknown>`) to src/utils/merge.ts; replaced deepMerge's early-return clause with `!isPlainObject(source) || !isPlainObject(target)`; body Object.keys recursion unchanged; deepEqual untouched; no per-call-site guards added in src/world.ts (R3 satisfied via single-source change); added .changeset/b18-deepmerge-atomic.md (patch). GREEN: 974/974 tests, typecheck clean.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R5 met, 974/974 tests green, typecheck clean, no scope creep (src/world.ts diff empty, no test edits), D6 regression test pins exact card repro, D1 honored (no `any`; impl actually removed 2 existing casts via type predicate), D5 not triggered (deepMerge internal), changeset present (patch, closes #19), no new standing constraint (one-helper local choice, documented in spec)
+- result: done — commit pending (closes #19)

@@ -5,6 +5,7 @@ type: bug
 priority: high
 flags: [review]
 created: 2026-05-28
+spec: wiki/specs/B18-deepmerge-atomic-objects.md
 ---
 
 ## Description

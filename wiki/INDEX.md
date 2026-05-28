@@ -37,6 +37,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B14-world-populate-factory.md](specs/B14-world-populate-factory.md) | B14 — `world.populate` accepts an optional per-record factory returning `GenerateOptions<TSchema>`; two-arg form unchanged. |
 | [specs/B13-world-populate-from.md](specs/B13-world-populate-from.md) | B13 — `world.populateFrom(derivedSchema, sourceSchema, predicate?, factory?)` iterates the source registry and calls `generate(D, { source })` per record; idempotent via B8. |
 | [specs/B16-surface-key-match-list.md](specs/B16-surface-key-match-list.md) | B16 — `world.explain(schema)` debug helper (structured `ExplainResult` + `toString()`, read-only/PRNG-neutral) and a regenerated `docs/key-heuristics.md` listing every `DEFAULT_KEY_MAP` exact key, every pattern, and the Dutch-localised aliases. |
+| [specs/B18-deepmerge-atomic-objects.md](specs/B18-deepmerge-atomic-objects.md) | B18 — BUG: `deepMerge` recurses into `Date`/`Map`/`Set`/`RegExp`/class instances and drops them to `{}`; add a plain-object guard in `deepMerge` itself so all call sites (B12 in-step branches + B14 transform pipeline + `generateSingleItem` final pass + array element overrides) inherit the fix. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
