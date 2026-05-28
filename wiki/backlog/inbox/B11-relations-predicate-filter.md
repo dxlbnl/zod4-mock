@@ -3,7 +3,7 @@ id: B11
 title: `relations` should support a predicate to filter the candidate pool
 type: feature
 priority: medium
-flags: []
+flags: [review]
 created: 2026-05-28
 ---
 

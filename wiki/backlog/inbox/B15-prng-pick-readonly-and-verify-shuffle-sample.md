@@ -3,7 +3,7 @@ id: B15
 title: `prng.pick` should accept `readonly T[]`; verify `shuffle`/`sample` shipped on the published `Prng` interface
 type: feature
 priority: medium
-flags: []
+flags: [review]
 created: 2026-05-28
 ---
 

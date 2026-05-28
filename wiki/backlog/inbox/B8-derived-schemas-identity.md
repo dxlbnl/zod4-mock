@@ -3,7 +3,7 @@ id: B8
 title: Derived schemas (`from:`) should be 1:1 / identity-preserving with their source
 type: feature
 priority: medium
-flags: []
+flags: [review]
 created: 2026-05-28
 ---
 

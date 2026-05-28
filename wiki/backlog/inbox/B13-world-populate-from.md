@@ -3,7 +3,7 @@ id: B13
 title: Add `world.populateFrom(derivedSchema, sourceSchema, predicate?)`
 type: feature
 priority: medium
-flags: []
+flags: [review]
 created: 2026-05-28
 ---
 

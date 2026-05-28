@@ -3,7 +3,7 @@ id: B7
 title: Registry read methods should return `infer<T>` (output shape), not `input<T>`
 type: feature
 priority: medium
-flags: []
+flags: [review]
 created: 2026-05-28
 ---
 
