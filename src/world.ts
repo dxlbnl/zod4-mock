@@ -246,10 +246,10 @@ export class WorldImpl implements World {
   get<TSchema extends ZodTypeAny>(
     schema: TSchema,
     predicate?: Partial<input<TSchema>>,
-  ): input<TSchema> {
+  ): z.infer<TSchema> {
     const pred = (predicate ?? {}) as Record<string, unknown>;
     const keys = Object.keys(pred);
-    const matches = (item: input<TSchema>): boolean => {
+    const matches = (item: z.infer<TSchema>): boolean => {
       const record = item as Record<string, unknown>;
       return keys.every((k) => deepEqual(record[k], pred[k]));
     };
@@ -262,7 +262,7 @@ export class WorldImpl implements World {
       predicate
         ? ({ overrides: predicate } as GenerateOptions<z.infer<TSchema>>)
         : undefined,
-    ) as input<TSchema>;
+    );
 
     const isRegistered =
       this.findPrimaryRegs(schema).length > 0 || this.findDerivedRegs(schema).length > 0;
@@ -270,7 +270,7 @@ export class WorldImpl implements World {
     if (!isRegistered) {
       // `generate` does not store ad-hoc, unregistered schemas — store the
       // created record ourselves so a later `find`/`get` can discover it.
-      this.registry.store(schema, created);
+      this.registry.store(schema, created as input<TSchema>);
       return created;
     }
 

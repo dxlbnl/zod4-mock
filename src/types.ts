@@ -24,16 +24,16 @@ export type {
 
 export interface Registry {
   store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
-  all<T extends ZodTypeAny>(schema: T): input<T>[];
-  pick<T extends ZodTypeAny>(schema: T): input<T>;
+  all<T extends ZodTypeAny>(schema: T): z.infer<T>[];
+  pick<T extends ZodTypeAny>(schema: T): z.infer<T>;
   filter<T extends ZodTypeAny>(
     schema: T,
-    predicate: (item: input<T>) => boolean,
-  ): input<T>[];
+    predicate: (item: z.infer<T>) => boolean,
+  ): z.infer<T>[];
   find<T extends ZodTypeAny>(
     schema: T,
-    predicate: (item: input<T>) => boolean,
-  ): input<T> | undefined;
+    predicate: (item: z.infer<T>) => boolean,
+  ): z.infer<T> | undefined;
   count(schema: ZodTypeAny): number;
 }
 
@@ -297,7 +297,7 @@ export interface World {
   get<TSchema extends ZodTypeAny>(
     schema: TSchema,
     predicate?: Partial<input<TSchema>>,
-  ): input<TSchema>;
+  ): z.infer<TSchema>;
 
   /**
    * Pre-generate `count` instances of the schema and store them in the registry.

@@ -273,10 +273,17 @@ const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(Person
 get<TSchema extends ZodTypeAny>(
   schema: TSchema,
   predicate?: Partial<input<TSchema>>,
-): input<TSchema>
+): z.infer<TSchema>
 ```
 
-Find-or-create: returns the first stored record (registry **insertion order**) for which **every** key in `predicate` matches, comparing shallow keys by value and nested-object values by **deep equality**. On a miss, it generates a new record via `generate` with `predicate` supplied as `overrides` (so the **predicate wins** over matchers and key/schema generators on conflicting keys), stores it in the registry for `schema`, and returns it. The found record is returned **by reference** (the same instance held in the registry).
+Find-or-create: returns the stored record in its **output shape** (`z.infer<T>`) —
+matching what `world.generate` returns and what registry reads return — while the
+`predicate` parameter accepts the permissive **input shape** (`Partial<input<TSchema>>`),
+mirroring the `overrides` it is passed through on the create path. (Reads return the
+output shape; writes / matchers / overrides accept the input shape — the asymmetry
+mirrors `z.coerce`.)
+
+Returns the first stored record (registry **insertion order**) for which **every** key in `predicate` matches, comparing shallow keys by value and nested-object values by **deep equality**. On a miss, it generates a new record via `generate` with `predicate` supplied as `overrides` (so the **predicate wins** over matchers and key/schema generators on conflicting keys), stores it in the registry for `schema`, and returns it. The found record is returned **by reference** (the same instance held in the registry).
 
 `get` is **deterministic** for a given seed and call sequence and **idempotent** for a repeated predicate: the first call generates-and-stores, and the second resolves via the find path and returns the same instance.
 
@@ -309,28 +316,45 @@ Read-only access to the world's registry. See [`Registry`](#registry) below.
 
 ```ts
 interface Registry {
-  store(schema: ZodTypeAny, item: unknown): void;
-  all<T = unknown>(schema: ZodTypeAny): T[];
-  pick<T = unknown>(schema: ZodTypeAny): T;
-  filter<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T[];
-  find<T = unknown>(schema: ZodTypeAny, predicate: (item: T) => boolean): T | undefined;
+  store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
+  all<T extends ZodTypeAny>(schema: T): z.infer<T>[];
+  pick<T extends ZodTypeAny>(schema: T): z.infer<T>;
+  filter<T extends ZodTypeAny>(
+    schema: T,
+    predicate: (item: z.infer<T>) => boolean,
+  ): z.infer<T>[];
+  find<T extends ZodTypeAny>(
+    schema: T,
+    predicate: (item: z.infer<T>) => boolean,
+  ): z.infer<T> | undefined;
   count(schema: ZodTypeAny): number;
 }
 ```
 
 Keys are Zod schema object references — the same object passed to `withSchema`. This gives typed lookup results without string casts.
 
-### `.all<T>(schema)`
+**Input vs. output asymmetry.** Reads (`all` / `pick` / `filter` / `find`) return the
+**output shape** (`z.infer<T>`) — the post-coerce, post-transform value Zod produces.
+Writes (`store`) and the matcher / `overrides` surface (see `SchemaOpts.matchers` and
+`GenerateOptions.overrides`) accept the **input shape** (`input<T>`) — the pre-coerce,
+permissive side. This mirrors `z.coerce`: input permissive, output fixed. In practice it
+means consumers naturally holding a `z.infer<T>` value need **no cast** at the registry
+boundary, while matchers on `z.coerce` / `.transform()` fields keep the flexibility to
+return any value Zod would accept as input.
 
-Returns all stored items for `schema` as `T[]`. Returns an empty array if none.
+### `.all(schema)`
+
+Returns all stored items for `schema` in their **output shape** (`z.infer<T>[]`). Returns
+an empty array if none.
 
 ```ts
 const persons = world.registry.all(PersonSchema);
 ```
 
-### `.pick<T>(schema)`
+### `.pick(schema)`
 
-Returns a random stored item. **Throws** if none exist.
+Returns a random stored item in its **output shape** (`z.infer<T>`). **Throws** if none
+exist.
 
 ```ts
 // Inside a matcher
@@ -340,9 +364,11 @@ lines: (ctx) => {
 },
 ```
 
-### `.filter<T>(schema, predicate)`
+### `.filter(schema, predicate)`
 
-Returns all stored items for `schema` satisfying `predicate`. Returns an empty array if none match — never throws.
+Returns all stored items for `schema` satisfying `predicate`, in their **output shape**
+(`z.infer<T>[]`). The predicate receives items typed as `z.infer<T>`. Returns an empty
+array if none match — never throws.
 
 ```ts
 fileIds: (ctx) => ctx.registry
@@ -350,9 +376,13 @@ fileIds: (ctx) => ctx.registry
   .map((f) => f.fileId),
 ```
 
-### `.find<T>(schema, predicate)`
+### `.find(schema, predicate)`
 
-Returns the **first** stored item for `schema` satisfying `predicate`, in registry insertion order (the order `store` was called), matching `Array.prototype.find`. Returns `undefined` if none match or none are stored — never throws. A pure, non-mutating lookup that consumes no PRNG state.
+Returns the **first** stored item for `schema` satisfying `predicate`, in registry
+insertion order (the order `store` was called), matching `Array.prototype.find`. The
+stored record is returned in its **output shape** (`z.infer<T>`), and the predicate
+receives items typed as `z.infer<T>`. Returns `undefined` if none match or none are
+stored — never throws. A pure, non-mutating lookup that consumes no PRNG state.
 
 ```ts
 createdBy: (ctx) => {
@@ -360,6 +390,13 @@ createdBy: (ctx) => {
   return admin?.username ?? "system";
 },
 ```
+
+### `.store(schema, item)`
+
+Stores `item` in `schema`'s bucket. `item` is typed as the **input shape** (`input<T>`)
+— the permissive pre-coerce side — so a matcher on a `z.coerce.date()` field that
+returns a raw `string` lands in the registry without a cast. No runtime parse is
+performed on store; the value is pushed as-is.
 
 ### `.count(schema)`
 

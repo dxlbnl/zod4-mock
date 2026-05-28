@@ -71,4 +71,17 @@ it records the reason here AND states it in chat.
 - implementer: edited src/world.ts generateObjectFields steps 1 (matcher), 2 (key-map), 4 (custom gen) to deepMerge object overrides in-step; reused src/utils/merge.ts deepMerge; no API/doc change. GREEN: 839 passed, typecheck clean
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R5 met (incl. card-repro regression per D6), 839 tests green, typecheck clean, no scope creep, no API/type/docs change, no new standing constraint
+- result: done — commit 850327e
+
+## 2026-05-28 — B7: Registry read methods should return `infer<T>` (output shape), not `input<T>`
+- manager: start, track: feature (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B7-registry-output-typing.md (R1–R7); empirically verified no matcher round-trips pre-coerce values in src/ or tests/ — option (b) document-the-contract safe
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: wrote tests/unit/core/output-typing.test.ts (13 tests, R1–R6). RED in typecheck only (10 TS errors at read/predicate sites); runtime all green (pure type-only spec)
+- manager: dispatch implementer
+- implementer: src/types.ts (Registry reads → z.infer<T>; store stays input<T>; World.get return → z.infer<TSchema>); src/world.ts (WorldImpl.get return + matches predicate retyped; added input<T> cast at registry.store write boundary, removed unnecessary input<T> cast); docs/api-reference.md updated with asymmetry note. GREEN: typecheck 10→0; 853 tests pass; no test annotations needed
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R7 met, typecheck clean, 853 tests green, doc rule honored, single store-boundary cast scoped correctly, no scope creep, no new standing constraint
 - result: done — see commit below

@@ -5,6 +5,7 @@ type: feature
 priority: medium
 flags: [review]
 created: 2026-05-28
+spec: wiki/specs/B7-registry-output-typing.md
 ---
 
 ## Description
