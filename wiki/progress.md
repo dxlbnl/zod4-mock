@@ -171,4 +171,27 @@ it records the reason here AND states it in chat.
 - implementer: added populateFrom to World interface (src/types.ts) + WorldImpl.populateFrom (src/world.ts): snapshot at entry, predicate-filter, per-source `this.generate(D, { source, ...factoryReturn })` (factory's `store` stripped), returns `this`. B8 upsert provides idempotence and determinism inherited via existing PRNG paths. Docs + changeset added. GREEN: 939 tests, typecheck clean.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R11 met, 939 tests green, typecheck clean, B8 composition verified (idempotence via upsert), snapshot semantics + factory-store-stripping confirmed, no scope creep, no new standing constraint
+- result: done — commit 30d1c17 (closes #13)
+
+## 2026-05-28 — B16: Surface the auto key-match list (docs + a debug helper `world.explain`)
+- manager: start, track: feature (unflagged)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B16-surface-key-match-list.md (R1–R11); 3 non-blocking open questions resolved (structured+toString, standalone method, single-schema scope). Found localized aliases live in DEFAULT_KEY_MAP.string (src/generators/data/key-map.ts), not in locale packages.
+- manager: spec-validation gate passed; no review flag → dispatch test-writer
+- test-writer: wrote tests/unit/core/world-explain.test.ts (18 tests, R1–R8). RED: 18/18 fail with TypeError: world.explain is not a function. Tests use a local WithExplain shim + `as World & WithExplain` (B6/world-get pattern); typecheck currently passes via the shim — B16-R1 will re-pin no-cast call sites once explain lands. R7 toString uses .toContain on exact aligned substrings.
+- manager: dispatch implementer
+- implementer: added explain to World (src/types.ts) + WorldImpl.explain (src/world.ts → delegates to src/explain.ts); types exported (FieldExplanation/RelationExplanation/ExplainResult); regenerated docs/key-heuristics.md (DEFAULT_KEY_MAP exact keys + patterns + Dutch aliases); api-reference + changeset added. GREEN: 957 tests, typecheck clean. FLAGGED: B16-R2 pins createdAt 'date.anytime', B16-R7 toString pins 'date.anytime+toISOString' for same field — internal contradiction. Workaround: parallel displayGenerators map in src/explain.ts swaps for toString only. Spec needs reconciliation.
+- manager: dispatch reviewer with explicit attention to the contradiction
+- reviewer: FAIL — contradiction is real; displayGenerators workaround misrepresents engine behavior (z.coerce.date() yields Date, not ISO string). Recommends option (a): fix R7 substrings to use 'date.anytime' (no suffix), re-align columns, drop workaround. docs/key-heuristics.md already documents the correct leaf-aware reality.
+- manager: loop back (1st rejection) — re-dispatch spec-writer to apply option (a) to R7, then implementer to drop workaround + update test substrings to match reconciled spec.
+- spec-writer (incorporate answers): R7 toString example reconciled to use 'date.anytime' (no suffix), columns re-aligned to width 16 driven by 'person.firstName'. New R7 invariant: toString MUST be byte-identical to fields[k].generator. R2 unchanged.
+- implementer (retry): removed displayGenerator field + displayGenerators map from src/explain.ts; formatExplainResult now reads entry.generator directly; updated R7 substrings in tests/unit/core/world-explain.test.ts (R2 untouched). GREEN: 957 tests, typecheck clean.
+- manager: re-dispatch reviewer to confirm fix
+- reviewer (re-run): FAIL — implementation correct & 957 tests green, but the same stale `date.anytime+toISOString` example block appears in docs/api-reference.md:552-557 AND in .changeset/b16-world-explain-and-key-heuristics.md:11-16. Fix: replace each example block with the byte-identical 6 lines from R7's scenario.
+- manager: ESCALATE (2nd reviewer rejection per workflow) — narrow scope (4-6 lines × 2 files); seeking user approval to do one more implementer pass.
+- user: approved one more focused implementer pass to update docs + changeset example blocks.
+- manager: dispatch implementer (focused — docs/api-reference.md:552-557 + .changeset b16:11-16 only)
+- implementer (focused): replaced 6 lines × 2 files to byte-identical R7 scenario (column-1 width 12, column-2 width 17, createdAt → date.anytime no suffix). GREEN: 957 tests, typecheck clean.
+- manager: re-dispatch reviewer (3rd pass; narrow confirmation)
+- reviewer (3rd pass): PASS — both example blocks now byte-identical to R7 scenario; no `date.anytime+toISOString` remains in either; 957 tests green, typecheck clean. R1–R11 finally clean across all layers (spec/test/impl/docs/changeset).
 - result: done — see commit below

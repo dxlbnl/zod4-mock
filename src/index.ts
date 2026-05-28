@@ -88,6 +88,11 @@ export type {
   // Key maps
   SchemaKeyMap,
 
+  // Explain (B16)
+  ExplainResult,
+  FieldExplanation,
+  RelationExplanation,
+
   // Localization
   LocaleData,
   MarkovModel,

@@ -33,6 +33,7 @@ import type {
   KeyGenerator,
   SchemaKeyMap,
   SchemaOpts,
+  ExplainResult,
 } from "./types.js";
 import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
@@ -42,6 +43,7 @@ import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def
 import { deepMerge, deepEqual } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 import { defaultLocale } from "./default-locale.js";
+import { explainSchema } from "./explain.js";
 
 // ---------------------------------------------------------------------------
 // Internal schema registration record
@@ -376,6 +378,30 @@ export class WorldImpl implements World {
     } finally {
       this.effectiveStore = previousEffectiveStore;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // explain — read-only, PRNG-neutral per-field decision summary (B16)
+  // -------------------------------------------------------------------------
+
+  explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema> {
+    // Use the most recent registration (last `withSchema` wins for matchers,
+    // mirroring how `generateObjectFields` resolves `reg.matchers`).
+    const primaryRegs = this.findPrimaryRegs(schema);
+    const reg = primaryRegs.length > 0 ? primaryRegs[primaryRegs.length - 1]! : null;
+    const schemaKeyMap =
+      this.schemaKeyMaps.get(schema) ??
+      (this.schemaKeyMaps.get(unwrap(schema)) as
+        | Record<string, (ctx: GeneratorContext) => unknown>
+        | undefined) ??
+      {};
+
+    return explainSchema(schema, {
+      matchers: reg?.matchers ?? {},
+      schemaKeyMap,
+      customKeyGenerators: this.customKeyGenerators,
+      relations: reg?.relations ?? {},
+    });
   }
 
   // -------------------------------------------------------------------------

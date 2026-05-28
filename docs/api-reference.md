@@ -32,6 +32,9 @@ Complete reference for every exported symbol. Use this as a lookup guide, not a 
 | `GenerateOptions`      | type      | Options for `generate()` and `world.generate()`  |
 | `DeepPartial`          | type      | Recursive optional type                          |
 | `extend`               | function  | Shallow-per-section locale override helper       |
+| `ExplainResult`        | type      | Return type of `world.explain(schema)` (B16)     |
+| `FieldExplanation`     | type      | Per-field entry in `ExplainResult.fields`        |
+| `RelationExplanation`  | type      | Per-relation entry in `ExplainResult.relations`  |
 | `LocaleData`           | type      | Pluggable locale interface                       |
 | `MarkovModel`          | type      | Trained n-gram model for word/name generation    |
 | `NameOriginSet`        | type      | A Markov name model + its sampling weight        |
@@ -497,6 +500,70 @@ const a = world.get(productSchema, { sku: "WIDGET-42" });
 const b = world.get(productSchema, { sku: "WIDGET-42" });
 // a === b — same instance from the registry
 ```
+
+### `world.explain(schema)`
+
+```ts
+explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema>
+```
+
+Debug helper: for each top-level field of `schema`, report which step of the resolution pipeline (matcher → `withKeyMap` → `withGenerators` → exact-key → key-pattern → schema-based) would resolve the field, plus a short reason. Returns a structured `ExplainResult` with a `toString()` formatter for human-readable, paste-able output.
+
+```ts
+interface FieldExplanation {
+  readonly generator: string;
+  readonly reason: string;
+}
+
+interface RelationExplanation {
+  readonly schema: string;
+  readonly where: "present" | "none";
+}
+
+interface ExplainResult<TSchema extends ZodTypeAny> {
+  readonly fields: { readonly [K in keyof z.infer<TSchema> & string]: FieldExplanation };
+  readonly relations: { readonly [relName: string]: RelationExplanation };
+  toString(): string;
+}
+```
+
+Example:
+
+```ts
+const UserSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  email: z.string(),
+  createdAt: z.coerce.date(),
+  homeAddress: z.string(),
+  kind: z.string(),
+});
+
+const world = createWorld({ seed: 1 }).withSchema(UserSchema, {
+  matchers: { kind: () => "admin" },
+});
+
+const r = world.explain(UserSchema);
+
+r.fields.email;
+// { generator: 'internet.email', reason: 'exact key: "email"' }
+
+console.log(r.toString());
+// id          → string.uuid      (key-pattern: ends with "id")
+// firstName   → person.firstName (exact key: "firstname")
+// email       → internet.email   (exact key: "email")
+// createdAt   → date.anytime     (key-pattern: ends with "at")
+// homeAddress → schema-based     (no key match, no matcher)
+// kind        → matcher:kind     (matcher registered via withSchema)
+```
+
+The `homeAddress` line is the **near-miss diagnostic**: the field name did not match any auto-key, so a random schema-based string will be produced. Rename it to `address`, or register a matcher, to attach a realistic generator.
+
+**Shallow.** `explain` only walks the top-level object shape. A nested-object field is summarised as one entry (`schema-based:object`); call `world.explain(NestedSchema)` to introspect it. Arrays of objects are summarised as `schema-based:array`.
+
+**PRNG- and registry-neutral (read-only).** `explain` does not call any generator, does not consume PRNG state, does not advance any counter, and does not write to the registry — calling `explain` immediately before `generate` produces the same value as `generate` alone. It also does not auto-provision a related record, so a schema with `relations` declared can be inspected on an otherwise-empty world.
+
+For the full table of exact-key entries, pattern rules, and the Dutch-localised aliases (`voornaam`, `bedrag`, `kenteken`, …), see [`docs/key-heuristics.md`](key-heuristics.md).
 
 ### `.registry`
 

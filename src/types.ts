@@ -258,6 +258,46 @@ export interface SchemaOpts<
 }
 
 // ---------------------------------------------------------------------------
+// ExplainResult — B16 introspection helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-field resolution record returned by `world.explain(schema)`.
+ *
+ * `generator` is a stable identifier (e.g. `'person.firstName'`,
+ * `'matcher:<key>'`, `'schema-based'`); `reason` is a short human-readable
+ * explanation of which step of the pipeline picked it.
+ */
+export interface FieldExplanation {
+  readonly generator: string;
+  readonly reason: string;
+}
+
+/**
+ * Per-relation record on `ExplainResult.relations`. `schema` is the leaf
+ * `def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`
+ * reports whether the relation entry was the B11 object form
+ * `{ schema, where }` with a predicate.
+ */
+export interface RelationExplanation {
+  readonly schema: string;
+  readonly where: "present" | "none";
+}
+
+/**
+ * Structured introspection result for `world.explain(schema)`. The `fields`
+ * map is keyed by top-level field name in schema-shape order; the
+ * `relations` map is keyed by relation name (empty `{}` when none). The
+ * `toString()` method produces a human-readable aligned table — see
+ * B16-R7.
+ */
+export interface ExplainResult<TSchema extends ZodTypeAny> {
+  readonly fields: { readonly [K in keyof z.infer<TSchema> & string]: FieldExplanation };
+  readonly relations: { readonly [relName: string]: RelationExplanation };
+  toString(): string;
+}
+
+// ---------------------------------------------------------------------------
 // World interface
 // ---------------------------------------------------------------------------
 
@@ -370,6 +410,18 @@ export interface World {
     predicate?: (item: z.infer<TSource>) => boolean,
     factory?: (source: z.infer<TSource>) => GenerateOptions<z.infer<TDerived>>,
   ): this;
+
+  /**
+   * Read-only debug helper: for each top-level field of `schema`, report
+   * which step of the resolution pipeline (matcher → withKeyMap →
+   * withGenerators → exact-key → key-pattern → schema-based) would resolve
+   * the field, and a short reason. Returns a structured `ExplainResult` with
+   * a `toString()` formatter for human-readable output. PRNG-neutral and
+   * registry-neutral — calling `explain` does not consume the world PRNG,
+   * does not write to the registry, and does not advance any generation
+   * counter (B16).
+   */
+  explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema>;
 
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;
