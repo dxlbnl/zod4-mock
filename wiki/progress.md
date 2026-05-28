@@ -145,4 +145,17 @@ it records the reason here AND states it in chat.
 - manager: re-dispatch reviewer to confirm fix
 - reviewer (re-run): PASS — B8-R6/D8 double-apply fix verified by new non-idempotent test ("bio" ends "!"). All R1–R9 met, 907 tests green, typecheck clean, no scope creep, no new `any`. Confirms D9 standing constraint recommendation.
 - manager: promoted D9 (cache short-circuits MUST be PRNG/counter-neutral) to decisions.md + one-line Rule in architecture.md
+- result: done — commit 948bd71 (closes #8)
+
+## 2026-05-28 — B11: `relations` should support a predicate to filter the candidate pool
+- manager: start, track: feature (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B11-relations-predicate-filter.md (R1–R10); 3 non-blocking open questions resolved (z.infer predicate, re-evaluate per record, empty-pool-throws)
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: wrote tests/unit/core/relations-where.test.ts (15 tests, R1–R8). RED: typecheck rejects { schema, where } object form; 11 runtime fails (withSchema doesn't normalize wrapper, where not applied). 4 pass-as-guards (R1 structural + R2 regression). D9 PRNG-neutrality test uses sibling-`.many` instrumentation (`whereCalls === 8`) instead of two-world PRNG compare (cleaner expression of the same invariant). Self-reference exemption test included for R6.
+- manager: dispatch implementer
+- implementer: added RelationEntry<T> discriminated union (src/types.ts) + isZodSchema/normalizeRelationEntry helpers; updated withSchema to normalize entries at registration; resolveRelated/Many filter snapshot once on cache-miss; throw with named relation when empty filtered pool (self-ref exemption); B10 store:false in-memory pool also filtered; docs + changeset added. GREEN: 922 tests, typecheck clean.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: PASS — R1–R10 met, 922 tests green, typecheck clean, discriminator robust (uses _zod brand per D3), D9 neutrality verified (whereCalls === 8), B10 store:false interaction confirmed, no scope creep, no new standing constraint
 - result: done — see commit below

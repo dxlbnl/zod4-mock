@@ -47,11 +47,16 @@ import { defaultLocale } from "./default-locale.js";
 // Internal schema registration record
 // ---------------------------------------------------------------------------
 
+interface NormalizedRelation {
+  schema: ZodTypeAny;
+  where: ((item: unknown) => boolean) | null;
+}
+
 interface SchemaReg {
   schema: ZodTypeAny;
   from: ZodTypeAny | null;
   sourceKey: string | null;
-  relations: Record<string, ZodTypeAny>;
+  relations: Record<string, NormalizedRelation>;
   matchers: Record<string, (ctx: GeneratorContext) => unknown>;
   regId: number;
 }
@@ -64,6 +69,43 @@ const EMPTY_REG: SchemaReg = {
   matchers: {},
   regId: -1,
 };
+
+/**
+ * B11: discriminate the bare-schema form (`relations: { post: Schema }`)
+ * from the object form (`relations: { post: { schema, where? } }`). An entry
+ * is the object form when it is a non-Zod object carrying a `schema` property
+ * whose value is itself a Zod schema. A `ZodTypeAny` carries its definition
+ * at `_zod.def` — we use that brand to discriminate.
+ */
+function isZodSchema(value: unknown): value is ZodTypeAny {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_zod" in (value as Record<string, unknown>)
+  );
+}
+
+function normalizeRelationEntry(entry: unknown): NormalizedRelation {
+  if (isZodSchema(entry)) {
+    return { schema: entry, where: null };
+  }
+  if (
+    typeof entry === "object" &&
+    entry !== null &&
+    "schema" in (entry as Record<string, unknown>)
+  ) {
+    const obj = entry as { schema: unknown; where?: (item: unknown) => boolean };
+    if (!isZodSchema(obj.schema)) {
+      throw new Error(
+        "Invalid relations entry: `schema` must be a Zod schema reference.",
+      );
+    }
+    return { schema: obj.schema, where: obj.where ?? null };
+  }
+  throw new Error(
+    "Invalid relations entry: expected a Zod schema or `{ schema, where? }` object.",
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Array constraint resolvers
@@ -147,7 +189,11 @@ export class WorldImpl implements World {
   >(schema: TSchema, opts?: SchemaOpts<TSchema, TSource, TRelations>): this {
     const from = (opts?.from as ZodTypeAny | undefined) ?? null;
     const sourceKey = (opts?.sourceKey as string | undefined) ?? null;
-    const relations = opts?.relations ?? {};
+    const rawRelations = (opts?.relations ?? {}) as Record<string, unknown>;
+    const relations: Record<string, NormalizedRelation> = {};
+    for (const [relName, entry] of Object.entries(rawRelations)) {
+      relations[relName] = normalizeRelationEntry(entry);
+    }
     const matchers = (opts?.matchers ?? {}) as unknown as Record<
       string,
       (ctx: GeneratorContext) => unknown
@@ -432,12 +478,15 @@ export class WorldImpl implements World {
     recordId: string,
     relName: string,
   ): T {
-    const relSchema = reg.relations[relName];
-    if (!relSchema) {
+    const rel = reg.relations[relName];
+    if (!rel) {
       throw new Error(
         `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
       );
     }
+    const relSchema = rel.schema;
+    const where = rel.where;
+    const isSelfRef = relSchema === reg.schema;
 
     const cacheKey = `${recordId}:${relName}`;
     let items = this.relationPools.get(cacheKey);
@@ -451,7 +500,7 @@ export class WorldImpl implements World {
         // simply has no related instance yet — later records reference the
         // earlier ones already stored. The matcher handles the empty case
         // (e.g. `ctx.related("parent")?.id ?? null`).
-        if (relSchema === reg.schema) {
+        if (isSelfRef) {
           this.relationPools.set(cacheKey, []);
           return undefined as T;
         }
@@ -461,13 +510,26 @@ export class WorldImpl implements World {
         // directly so the matcher still sees a related instance.
         if (!this.effectiveStore && provisioned !== undefined) {
           items = [provisioned];
-          this.relationPools.set(cacheKey, items);
         }
       }
       if (!items) {
         items = [...this.registry.all(relSchema)];
-        this.relationPools.set(cacheKey, items);
       }
+      // B11-R3 / B11-R7: apply `where` once, here, when building the snapshot.
+      // Filtering before caching means subsequent cache hits do not re-evaluate
+      // the predicate (D9 — cache neutrality).
+      if (where) {
+        items = items.filter((it) => where(it));
+      }
+      // B11-R6: empty filtered pool throws for non-self-referential relations.
+      // The throw happens before the PRNG fork so no PRNG state is consumed.
+      if (where && items.length === 0 && !isSelfRef) {
+        throw new Error(
+          `No related '${relName}' matches the \`where\` predicate. ` +
+            `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
+        );
+      }
+      this.relationPools.set(cacheKey, items);
     }
 
     if (items.length === 0) return undefined as T;
@@ -485,12 +547,15 @@ export class WorldImpl implements World {
     relName: string,
     count: number,
   ): T[] {
-    const relSchema = reg.relations[relName];
-    if (!relSchema) {
+    const rel = reg.relations[relName];
+    if (!rel) {
       throw new Error(
         `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
       );
     }
+    const relSchema = rel.schema;
+    const where = rel.where;
+    const isSelfRef = relSchema === reg.schema;
 
     const cacheKey = `${recordId}:${relName}:many`;
     let items = this.relationPools.get(cacheKey);
@@ -499,7 +564,11 @@ export class WorldImpl implements World {
       // Auto-provision the shortfall until at least `count` records exist —
       // except for self-referential relations, which must not be provisioned
       // (that would recurse forever; see resolveRelated's self-reference guard).
-      if (relSchema !== reg.schema) {
+      // Under `where`, auto-provision cannot guarantee the predicate is
+      // satisfied (B11-R6) — we do not attempt to coax matchers into
+      // producing predicate-satisfying records; if the filtered pool falls
+      // short, we throw below.
+      if (!isSelfRef && !where) {
         const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
         if (!this.effectiveStore) {
           // B10-R4: under `store: false`, the registry is not written; collect
@@ -519,6 +588,19 @@ export class WorldImpl implements World {
       }
       if (!items) {
         items = [...this.registry.all(relSchema)];
+      }
+      // B11-R4 / B11-R7: apply `where` once when building the snapshot.
+      if (where) {
+        items = items.filter((it) => where(it));
+      }
+      // B11-R6: throw when the filtered pool is smaller than the requested
+      // count for non-self-referential relations.
+      if (where && items.length < count && !isSelfRef) {
+        throw new Error(
+          `No related '${relName}' matches the \`where\` predicate ` +
+            `(requested ${count}, available ${items.length}). ` +
+            `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
+        );
       }
       this.relationPools.set(cacheKey, items);
     }

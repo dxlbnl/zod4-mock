@@ -216,6 +216,19 @@ export interface WorldOptions {
 // ---------------------------------------------------------------------------
 
 /**
+ * A relation entry on `SchemaOpts.relations`. Either a bare Zod schema (the
+ * historic form) or an object `{ schema, where? }` that filters the candidate
+ * pool by a predicate (B11). The predicate sees `z.infer<TRelation>` — the
+ * registry-read shape (per B7).
+ */
+export type RelationEntry<TRelation extends ZodTypeAny = ZodTypeAny> =
+  | TRelation
+  | {
+      readonly schema: TRelation;
+      readonly where?: (item: z.infer<TRelation>) => boolean;
+    };
+
+/**
  * Options for withSchema.
  * - If `from` is provided, the schema is "derived" and matchers receive `ctx.source`.
  * - If `from` is omitted, the schema is "primary" and `ctx.source` is undefined.
@@ -232,7 +245,7 @@ export interface SchemaOpts<
    * Declared at registration only — not overridable per `generate` call.
    */
   sourceKey?: TSource extends ZodTypeAny ? keyof input<TSource> & string : never;
-  relations?: TRelations;
+  relations?: { [K in keyof TRelations]: RelationEntry<TRelations[K]> };
   matchers?: {
     [K in keyof input<TSchema>]?: (
       ctx: MatcherCtx<

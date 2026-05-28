@@ -125,11 +125,20 @@ withSchema<TSchema extends ZodTypeAny>(
 
 ```ts
 interface PrimarySchemaOpts<TSchema extends ZodTypeAny> {
-  relations?: Record<string, ZodTypeAny>;
+  relations?: Record<string, RelationEntry>;
   matchers?: {
     [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
   };
 }
+
+// A relation entry is either a bare Zod schema (the historic form) or an
+// object that adds a `where` predicate filtering the candidate pool.
+type RelationEntry<TRelation extends ZodTypeAny = ZodTypeAny> =
+  | TRelation
+  | {
+      readonly schema: TRelation;
+      readonly where?: (item: z.infer<TRelation>) => boolean;
+    };
 ```
 
 **Derived** — each output record is driven by one source record:
@@ -152,7 +161,7 @@ interface DerivedSchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeA
    * registration only — not overridable per `generate` call.
    */
   sourceKey?: keyof input<TSource> & string;
-  relations?: Record<string, ZodTypeAny>;
+  relations?: Record<string, RelationEntry>;
   matchers?: {
     [K in keyof input<TSchema>]?: (
       ctx: GeneratorContext & { readonly source: input<TSource> },
@@ -203,6 +212,42 @@ world.withSchema(RawDataSchema, {
   },
 });
 ```
+
+**Filtered relations (`where` predicate).** A relation entry MAY be written as an object `{ schema, where? }` to filter the candidate pool to records satisfying a predicate. The predicate receives `z.infer<RelationSchema>` (the registry-read shape, per [`registry.all`](#allschema)); no cast or `any` is required:
+
+```ts
+const PostSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["article", "draft"]),
+});
+
+// Comments only relate to *article* posts; drafts are excluded.
+world.withSchema(CommentSchema, {
+  relations: {
+    post: { schema: PostSchema, where: (p) => p.kind === "article" },
+  },
+  matchers: { postId: (ctx) => ctx.related("post").id },
+});
+
+// `ctx.related.many` honours the same predicate.
+world.withSchema(DigestSchema, {
+  relations: {
+    items: { schema: PostSchema, where: (p) => p.kind === "article" },
+  },
+  matchers: { posts: (ctx) => ctx.related.many("items", 5) },
+});
+```
+
+The bare-schema form is preserved unchanged — passing `relations: { post: PostSchema }` keeps the no-filter behaviour. Internally, both forms normalise to the same per-record snapshot; the predicate is evaluated once per `(record, relation)` when the snapshot is first built, so a same-record cache hit consumes no extra PRNG state and does not re-run `where`. The snapshot is re-evaluated for each new record, so records added to the registry between two generations are observable to the second.
+
+**Empty filtered pool throws.** When `where` is declared and the candidate pool — `registry.all(schema).filter(where)` — is empty (or, for `.many(name, count)`, smaller than `count`), `ctx.related` / `ctx.related.many` throws a clear error naming the relation:
+
+```
+No related 'post' matches the `where` predicate. Pre-populate the registry
+with records satisfying the predicate, or relax the predicate.
+```
+
+The library does NOT attempt to auto-provision a record that satisfies an arbitrary predicate; the predicate is your contract. Pre-populate the registry (via `world.populate(PostSchema, n)`, `world.registry.store(...)`, or explicit `world.generate(...)` calls) with records that satisfy `where`, or relax the predicate. Self-referential relations are exempt: an empty filtered pool returns `undefined` from `ctx.related` (matchers guard `?.id ?? null`) and `.many` clamps to whatever distinct records exist that satisfy `where`.
 
 ### `.withGenerators(map)`
 

@@ -5,6 +5,7 @@ type: feature
 priority: medium
 flags: [review]
 created: 2026-05-28
+spec: wiki/specs/B11-relations-predicate-filter.md
 ---
 
 ## Description
