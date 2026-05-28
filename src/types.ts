@@ -189,6 +189,12 @@ export interface GenerateOptions<T> {
    * the registry). Default `true`.
    */
   readonly store?: boolean;
+  /**
+   * When `false`, bypass the derived-schema upsert keyed by `(schema, source)`:
+   * generate a fresh record even if a derived record already exists for this
+   * source. Has no effect on schemas without `from:`. Default `true` (upsert).
+   */
+  readonly unique?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +226,12 @@ export interface SchemaOpts<
   TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
 > {
   from?: TSource;
+  /**
+   * Identity field on the source record used to key the per-pair derived-schema
+   * upsert. When omitted, identity falls back to reference equality on `source`.
+   * Declared at registration only — not overridable per `generate` call.
+   */
+  sourceKey?: TSource extends ZodTypeAny ? keyof input<TSource> & string : never;
   relations?: TRelations;
   matchers?: {
     [K in keyof input<TSchema>]?: (

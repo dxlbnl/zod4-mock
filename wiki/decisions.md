@@ -163,3 +163,34 @@
   stored in the registry MUST equal the value returned by `world.generate`,
   including any `options.transform`."
 - **Supersedes**: none
+
+## D9: Cache short-circuits in generation must be PRNG/counter-neutral
+
+- **Date**: 2026-05-28
+- **By**: reviewer (B8)
+- **Context**: B8 added the first cache short-circuit in the generation
+  pipeline — `derivedUpsert` lets `world.generate(DerivedSchema, { source })`
+  return a previously-generated record without running the matcher pipeline. The
+  pipeline entry point `generateSingleItem` increments `this.generationCounter`
+  at the top (the counter seeds `gen-<n>`, `gen-wrap-<n>`, `adhoc-<n>` PRNG fork
+  keys). Without compensation, a cache hit would still consume one counter step
+  — and any subsequent ad-hoc generation in that world would diverge from a
+  parallel world that had taken the cache-miss path. B8-R9 pinned the lockstep
+  property; the implementer added `generationCounter--` on the upsert hit. The
+  pattern is non-obvious from D4 alone, so it deserves a binding rule before the
+  next cache layer is built (e.g. per-`world.get` memo, primary-record cache).
+- **Decision**: Any generation-pipeline cache short-circuit MUST be PRNG- and
+  counter-neutral: a cache hit MUST consume zero PRNG state and MUST NOT advance
+  any per-world counter the generation pipeline reads from. If the bypassed code
+  path increments such a counter (today: `this.generationCounter` at the top of
+  `generateSingleItem`), the short-circuit MUST roll it back so cache-hit and
+  cache-miss paths leave identical observable state to subsequent generation.
+- **Consequences**: D4 determinism holds across cache-hit vs cache-miss paths.
+  Future caches (per-source-index primary cache, world.get memo, etc.) inherit
+  the same discipline. Trade-off: cache implementations carry a small
+  compensation block (the `counter--` pattern in B8); diff is one line.
+- **Rule added/changed**: "Generation cache short-circuits MUST be PRNG- and
+  counter-neutral: a cache hit MUST consume zero PRNG state and MUST NOT advance
+  any counter the generation pipeline reads from (roll back any increments the
+  bypassed path made)."
+- **Supersedes**: none

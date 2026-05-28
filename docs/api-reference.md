@@ -144,6 +144,14 @@ withSchema<TSchema extends ZodTypeAny, TSource extends ZodTypeAny>(
 ```ts
 interface DerivedSchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny> {
   from: TSource;
+  /**
+   * Identity field on the source record used to key the per-pair derived-schema
+   * upsert. Default identity is reference equality on `source`; declare
+   * `sourceKey` for the look-alike case where the caller reconstructs the
+   * source (`{ ...user }`) but the field (e.g. `id`) is stable. Declared at
+   * registration only — not overridable per `generate` call.
+   */
+  sourceKey?: keyof input<TSource> & string;
   relations?: Record<string, ZodTypeAny>;
   matchers?: {
     [K in keyof input<TSchema>]?: (
@@ -154,6 +162,25 @@ interface DerivedSchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeA
 ```
 
 The same output schema can be registered multiple times with different `from:` values to represent multiple source types — generating the output will produce one record per source across all bindings.
+
+**Identity-preserving derivation.** By default, `world.generate(DerivedSchema, { source: x })` is an **upsert** keyed by `(DerivedSchema, identity(x))`: the first call generates and stores; every subsequent call with the same identity returns the stored instance by reference and does not advance the PRNG. Identity is reference equality on `source` by default; declare `sourceKey: '<field>'` to use `source[sourceKey]` instead so a reconstructed look-alike resolves to the same record:
+
+```ts
+world.withSchema(UserProfileSchema, {
+  from: UserSchema,
+  sourceKey: "id", // identity = source.id, not the source reference
+  matchers: { userId: (ctx) => ctx.source.id },
+});
+
+const a = world.generate(UserProfileSchema, { source: user });
+const b = world.generate(UserProfileSchema, { source: { ...user } });
+// a === b — resolved via `id`, not reference
+
+// Opt out for "many derivations from one source":
+world.generate(UserProfileSchema, { source: user, unique: false });
+```
+
+See [`GenerateOptions`](#generateoptions) for `unique?: boolean` and its interaction with `store: false`.
 
 **Examples:**
 
@@ -232,6 +259,7 @@ Generates a value matching the schema. The return type is fully inferred.
 - If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`.
 - If the schema has `from:` bindings (derived): generates one output per source in the registry.
 - If the schema is primary (registered or not): generates and stores a new record.
+- If `schema` is registered with `from:` and the call passes `{ source: x }`, the call is an **upsert** keyed by `(schema, identity(x))` — repeat calls with the same identity return the stored record by reference. See [`.withSchema`](#withschemaschema-opts) and the `unique` option below.
 
 **Array modifier chaining** is fully supported:
 
@@ -249,6 +277,7 @@ interface GenerateOptions<T> {
   transform?: (data: T) => T; // applied after overrides
   seed?: number; // only used by module-level generate()
   store?: boolean; // default true; false suppresses the registry write
+  unique?: boolean; // default true; false bypasses the derived-schema upsert
 }
 ```
 
@@ -257,6 +286,8 @@ interface GenerateOptions<T> {
 **`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
 
 **`store`** — when `false`, the registry write that normally happens for a `withSchema`-registered schema is suppressed. The full pipeline (matchers, relations, key-based, schema-based, overrides, transform) still runs and the returned value is identical to a `store: true` call — only the side effect on `world.registry` is skipped. Propagates through nested generation: inner registered schemas reached via arrays, nested objects, or relation auto-provisioning are also not stored. Scoped to one outer `generate` call — a subsequent default `generate` writes normally. **Ignored** by `world.get` (its create path must always store — see [`.get`](#getschema-predicate)) and by `world.populate` (its purpose is to populate the registry — see [`.populate`](#populateschema-count-factory)).
+
+**`unique`** — default `true`. For a schema registered with `from:`, a default `world.generate(DerivedSchema, { source: x })` call is an upsert keyed by `(schema, identity(x))` so repeated calls with the same source return the same record by reference. Pass `unique: false` to bypass the upsert for that call (both lookup **and** write) — useful for the rare "many derivations from one source" case. Has no effect on schemas without `from:`. **Interaction with `store: false`**: when `store: false` is set, the upsert lookup and write are also suppressed (every `store: false` derived call is fresh, and the upsert map stays consistent with the registry); a later default-mode call then generates and stores fresh, regardless of any prior `store: false` activity.
 
 ```ts
 // Search-bucket envelope: 10 inner items per request, registry stays clean.
@@ -777,12 +808,15 @@ interface GenerateOptions<T> {
   readonly transform?: (data: T) => T;
   readonly seed?: number;
   readonly store?: boolean; // default true
+  readonly unique?: boolean; // default true
 }
 ```
 
 `seed` is only used by the module-level `generate()` function; it is ignored by `world.generate()` (use `createWorld({ seed })` instead).
 
 `store` (default `true`) suppresses the registry write for `world.generate` when set to `false`. The full pipeline still runs; only the side effect on `world.registry` is skipped, and the flag propagates through nested generation so inner registered schemas are also not stored. Ignored by `world.get` (its create path always stores) and by `world.populate` (its purpose is to populate the registry). See [`.generate`](#generateschema-options) for an example.
+
+`unique` (default `true`) opts out of the derived-schema per-pair upsert when set to `false` — `world.generate(DerivedSchema, { source: x, unique: false })` generates a fresh record even if a derived record already exists for that source, and does not write to the upsert map. Has no effect on schemas without `from:`. A `store: false` derived call is always fresh (the upsert lookup and write are both suppressed under `effectiveStore === false`), so `unique` and `store` compose naturally. See [`.withSchema`](#withschemaschema-opts) and [`.generate`](#generateschema-options).
 
 ---
 

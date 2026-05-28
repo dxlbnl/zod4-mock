@@ -50,6 +50,7 @@ import { defaultLocale } from "./default-locale.js";
 interface SchemaReg {
   schema: ZodTypeAny;
   from: ZodTypeAny | null;
+  sourceKey: string | null;
   relations: Record<string, ZodTypeAny>;
   matchers: Record<string, (ctx: GeneratorContext) => unknown>;
   regId: number;
@@ -58,6 +59,7 @@ interface SchemaReg {
 const EMPTY_REG: SchemaReg = {
   schema: {} as ZodTypeAny,
   from: null,
+  sourceKey: null,
   relations: {},
   matchers: {},
   regId: -1,
@@ -108,6 +110,14 @@ export class WorldImpl implements World {
   > = new Map();
   private readonly relationPools: Map<string, unknown[]> = new Map();
   private readonly pendingCounts: Map<ZodTypeAny, number> = new Map();
+  /**
+   * B8 — per-pair upsert map for derived schemas registered with `from:`.
+   * Outer key: derived schema reference. Inner key: source identity (the
+   * source reference itself, or `source[sourceKey]` when declared). The
+   * stored value is the post-transform derived record — the same reference
+   * that lives in the registry (D8 — see `wiki/decisions.md`).
+   */
+  private readonly derivedUpsert: Map<ZodTypeAny, Map<unknown, unknown>> = new Map();
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
   /**
    * Effective storage mode for the current outer `generate` call. When `false`,
@@ -136,6 +146,7 @@ export class WorldImpl implements World {
     TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
   >(schema: TSchema, opts?: SchemaOpts<TSchema, TSource, TRelations>): this {
     const from = (opts?.from as ZodTypeAny | undefined) ?? null;
+    const sourceKey = (opts?.sourceKey as string | undefined) ?? null;
     const relations = opts?.relations ?? {};
     const matchers = (opts?.matchers ?? {}) as unknown as Record<
       string,
@@ -144,6 +155,7 @@ export class WorldImpl implements World {
     this.schemaRegs.push({
       schema,
       from,
+      sourceKey,
       relations,
       matchers,
       regId: this.schemaRegs.length,
@@ -903,8 +915,62 @@ export class WorldImpl implements World {
 
     if (sourceOverride !== undefined) {
       const reg = derivedRegs[0] ?? { ...EMPTY_REG, schema };
-      result = this.generateDerivedRecord(schema, reg as SchemaReg, sourceOverride, 0, options);
-      transformApplied = true;
+      const regWithKey = reg as SchemaReg;
+      // B8: derive the per-pair upsert identity. `sourceKey` is the declared
+      // field name; if absent, identity falls back to reference equality on
+      // the source object itself.
+      const sourceKey = regWithKey.sourceKey;
+      const identity =
+        sourceKey !== null && sourceKey !== undefined
+          ? (sourceOverride as Record<string, unknown>)[sourceKey]
+          : sourceOverride;
+
+      const isUnique = options?.unique !== false;
+      const canUseUpsert = isUnique && this.effectiveStore;
+
+      if (canUseUpsert) {
+        // B8-R1 / B8-R9: short-circuit on a hit — return the cached record
+        // by reference, do not run the generation pipeline, do not consume
+        // PRNG, do not advance the generation counter (we unwind it below).
+        const existing = this.derivedUpsert.get(schema)?.get(identity);
+        if (existing !== undefined) {
+          // The generationCounter was incremented at the top of this method;
+          // an upsert hit must consume no PRNG/counter state (B8-R9).
+          this.generationCounter--;
+          return existing;
+        }
+      }
+
+      // `generateDerivedRecord` already applies `options.overrides` (via
+      // `generateObjectFields`'s per-field deep-merge) AND `options.transform`
+      // — see B14 (D8). Trust its return value here; do NOT re-apply
+      // overrides or transform in this branch (would double-apply for any
+      // non-idempotent transform).
+      result = this.generateDerivedRecord(
+        schema,
+        regWithKey,
+        sourceOverride,
+        0,
+        options,
+      );
+
+      // B8-R7 / B10: when the outer call opted out of storage, do NOT touch
+      // the registry and do NOT write to the upsert map — both side effects
+      // are suppressed together so a later default-mode call cannot resolve
+      // to a record that isn't in the registry.
+      if (this.effectiveStore) {
+        this.registry.store(schema, result as input<ZodTypeAny>);
+        if (isUnique) {
+          let inner = this.derivedUpsert.get(schema);
+          if (!inner) {
+            inner = new Map<unknown, unknown>();
+            this.derivedUpsert.set(schema, inner);
+          }
+          inner.set(identity, result);
+        }
+      }
+
+      return result;
     } else if (derivedRegs.length > 0) {
       // Pick first available source across all derived regs, auto-provisioning if needed
       for (const reg of derivedRegs) {

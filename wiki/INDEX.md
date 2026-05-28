@@ -29,6 +29,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B5-related-many.md](specs/B5-related-many.md) | B5 — `ctx.related.many(name, count)` one-to-many relation picks in matchers. |
 | [specs/B6-world-get-find-or-create.md](specs/B6-world-get-find-or-create.md) | B6 — `world.get(schema, predicate)` find-an-existing-record-or-generate-one. |
 | [specs/B7-registry-output-typing.md](specs/B7-registry-output-typing.md) | B7 — Registry reads / `World.get` return `z.infer<T>` (output shape); writes / matchers stay `input<T>`. |
+| [specs/B8-derived-schemas-identity.md](specs/B8-derived-schemas-identity.md) | B8 — `world.generate(DerivedSchema, { source })` is per-pair upsert by source identity; `{ unique: false }` opt-out; `sourceKey` for look-alike identity. |
 | [specs/B10-generate-store-opt-out.md](specs/B10-generate-store-opt-out.md) | B10 — `world.generate(schema, { store: false })` ephemeral opt-out; propagates through nested generation; ignored by `world.get` / `world.populate`. |
 | [specs/B12-nested-override-skips-matcher.md](specs/B12-nested-override-skips-matcher.md) | B12 — BUG: nested-object overrides skip the matcher; deep-merge override on top of matcher result. |
 | [specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md](specs/B15-prng-pick-readonly-and-verify-shuffle-sample.md) | B15 — `Prng.pick` accepts `readonly T[]`; pin `shuffle`/`sample` on the shared interface + built artifact; add `prepublishOnly` guard to locale packages. |

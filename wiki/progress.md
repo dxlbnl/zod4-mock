@@ -127,4 +127,22 @@ it records the reason here AND states it in chat.
 - implementer: added store?: boolean to GenerateOptions (src/types.ts); per-call `effectiveStore` field on WorldImpl with try/finally push/pop in generate; gated registry.store in generateAndStorePrimary + resolveRelated/Many auto-provision pool; world.get forces store:true on its inner generate; populate strips factory's store field; docs + changeset added. GREEN: 890 tests, typecheck clean
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
 - reviewer: PASS — R1–R8 met, 890 tests green, typecheck clean, re-entrancy + double-store-via-pool both ruled out, changeset present, no scope creep. effectiveStore is a local impl detail (no new standing constraint).
+- result: done — commit 63e88e7 (closes #10)
+
+## 2026-05-28 — B8: Derived schemas (`from:`) should be 1:1 / identity-preserving with their source
+- manager: start, track: feature (flagged review)
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B8-derived-schemas-identity.md (R1–R11); 3 non-blocking open questions
+- manager: spec-validation gate passed; review checkpoint → user approved spec
+- manager: dispatch test-writer
+- test-writer: wrote tests/unit/core/derived-identity.test.ts (16 tests, R1–R9). RED: 4 typecheck errors (missing `unique`/`sourceKey` fields) + 13 runtime fails (no upsert; derive path doesn't even store today). 3 pass-as-guards. Implementer must add BOTH upsert tracking AND registry write for derived records, post-transform per D8.
+- manager: dispatch implementer
+- implementer: added `unique?: boolean` to GenerateOptions (src/types.ts) + `sourceKey?: keyof input<TSource> & string` to SchemaOpts; added private derivedUpsert Map<schema, Map<identity, record>> on WorldImpl; wired upsert in generateSingleItem's source-override branch (decrements generationCounter on hit for B8-R9 lockstep; applies overrides+transform inline, returns early to skip trailing pass); gated by effectiveStore (B8-R7) and unique (B8-R4); docs + changeset added. GREEN: 906 tests, typecheck clean.
+- manager: dispatch reviewer (no git; pnpm test/typecheck only)
+- reviewer: FAIL — B8-R6/D8 double-apply: generateDerivedRecord already applies overrides+transform; source-override branch applies AGAIN (lines 956-959); current tests pass only because their transform is idempotent. transformApplied=true at line 951 is dead code (early return). Fix: drop the manual override/transform pass in the source-override branch; add a non-idempotent transform test. Also recommended D9 standing constraint: "cache short-circuits MUST be PRNG/counter-neutral" (corroborates the existing generationCounter-- pattern).
+- manager: loop back to implementer with review notes (first rejection, retry budget 1)
+- implementer (retry): removed redundant override-merge + transform call + dead transformApplied=true from source-override branch; added non-idempotent transform regression test. Verified bug-real (before: bio ended "!!"; after: ends "!"). GREEN: 907 tests, typecheck clean.
+- manager: re-dispatch reviewer to confirm fix
+- reviewer (re-run): PASS — B8-R6/D8 double-apply fix verified by new non-idempotent test ("bio" ends "!"). All R1–R9 met, 907 tests green, typecheck clean, no scope creep, no new `any`. Confirms D9 standing constraint recommendation.
+- manager: promoted D9 (cache short-circuits MUST be PRNG/counter-neutral) to decisions.md + one-line Rule in architecture.md
 - result: done — see commit below
