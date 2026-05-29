@@ -561,16 +561,10 @@ export class WorldImpl implements World {
     // caller passes `store: false`, this mode propagates through nested
     // recursion (generateObjectFields / generateArray / ctx.generate which
     // re-enters this method); restore the previous value on exit so a separate
-    // top-level call is unaffected.
-    const previousEffectiveStore = this.effectiveStore;
-    if (options?.store === false) {
-      this.effectiveStore = false;
-    } else if (options?.store === true) {
-      // B10-R5: explicit `store: true` overrides an inherited `store: false`
-      // (used by `world.get` to force storage on its create-path delegate call).
-      this.effectiveStore = true;
-    }
-    try {
+    // top-level call is unaffected. B10-R5: explicit `store: true` overrides
+    // an inherited `store: false` (used by `world.get` to force storage on its
+    // create-path delegate call).
+    return this.withEffectiveStore(options?.store, () => {
       let current: ZodTypeAny = schema;
       let d = def(current);
       const outerWrappers: Array<"optional" | "nullable"> = [];
@@ -612,9 +606,7 @@ export class WorldImpl implements World {
         schema,
         options as GenerateOptions<unknown>,
       ) as z.infer<TSchema>;
-    } finally {
-      this.effectiveStore = previousEffectiveStore;
-    }
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -696,6 +688,31 @@ export class WorldImpl implements World {
 
   private findDerivedRegs(schema: ZodTypeAny): SchemaReg[] {
     return this.schemaRegs.filter((r) => r.schema === schema && r.from !== null);
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: effective-store scope helper
+  // -------------------------------------------------------------------------
+
+  /**
+   * B10 — push/pop the {@link effectiveStore} flag for the duration of `fn`,
+   * encapsulating the state machine described in B10-R2/R4/R5. When `value` is
+   * `undefined` no push/pop happens (the call inherits the ambient mode); when
+   * `value` is `true` or `false` the flag is set for the duration of `fn` and
+   * restored in `finally`.
+   *
+   * The try/finally is what makes the B10 transitive-suppression contract
+   * scoped to one outer `generate` call.
+   */
+  private withEffectiveStore<R>(value: boolean | undefined, fn: () => R): R {
+    if (value === undefined) return fn();
+    const previous = this.effectiveStore;
+    this.effectiveStore = value;
+    try {
+      return fn();
+    } finally {
+      this.effectiveStore = previous;
+    }
   }
 
   // -------------------------------------------------------------------------

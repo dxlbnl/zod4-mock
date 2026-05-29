@@ -355,4 +355,12 @@ it records the reason here AND states it in chat.
 - implementer: added `resolveLazyChain(schema, cache?)` helper in src/generators/schema/zod-def.ts (~20 LOC, optional cache param). Replaced 4 sites: world.ts:584/1069/1367 + explain.ts:251 (card cited :350/780/1040 — line shift post-B24/B39 decomposition reconciled). Chose Option A (module-level fn with optional cache) over Option B (instance method) so the cacheless explain.ts site fits the same helper without forcing explainSchema onto WorldImpl. Cache semantics byte-identical. Added .changeset/b31-extract-resolve-lazy-chain.md (patch). Also updated wiki/codebase-map.md to list the new helper. GREEN: 1017/1017 tests, typecheck clean. No `any` (D1), no Zod internals beyond def() helper (D3), no fork-key disturbance (D4/D10).
 - manager: dispatch reviewer (no git; verify by Read + pnpm test only)
 - reviewer: PASS — 1017/1017 green, typecheck clean. Four sites verified at world.ts:584/1059/1347 + explain.ts:251. Helper at src/generators/schema/zod-def.ts:75-104 — signature `(schema: ZodTypeAny, cache?: WeakMap<ZodTypeAny, ZodTypeAny>) => ZodTypeAny`, no `any`. Defensive `&& d.getter !== undefined` guard is strict superset of safety. Cache semantics byte-identical. Codebase-map updated. NO new standing constraint.
-- result: done — moved card to wiki/backlog/done/, commit pending
+- result: done — commit d3d9797
+
+## 2026-05-29 — B33: Refactor — encapsulate `effectiveStore` state machine as `withEffectiveStore(value, fn)`
+- manager: promoted inbox → doing, track: chore (XS). No spec/tests-first.
+- manager: dispatch implementer
+- implementer: added `private withEffectiveStore<R>(value: boolean | undefined, fn: () => R): R` at src/world.ts:707-716. Single call site `WorldImpl.generate` at :567. Helper short-circuits on undefined; sets+try/finally restores on true/false. Verified via grep: only 1 write site for effectiveStore (the card hinted at more — world.get and populate don't touch the flag; they use the GenerateOptions.store path or strip the option). Added .changeset/b33-with-effective-store-helper.md (patch). GREEN: 1017/1017 tests, typecheck clean.
+- manager: dispatch reviewer (no git; verify by Read + pnpm test only)
+- reviewer: PASS — helper signature/semantics match card, single call site verified, grep confirms zero remaining `this.effectiveStore = ...` write sites in src/. B10-R2/R4 transitive suppression preserved; B10-R5 world.get override + B10-R6 populate/populateFrom paths verified intact. No `any` (D1), no fork-key disturbance (D10). NO new standing constraint.
+- result: done — commit pending
