@@ -120,6 +120,17 @@ const EMPTY_REG: SchemaReg = {
 };
 
 /**
+ * B25 — internal discriminated union describing a schema's registration mode.
+ * Returned by `WorldImpl.resolveMode(schema)`; consumed by the four
+ * dispatchers (`generateSingleItem`, `generateArray`, `populate`'s explicit
+ * primary-first variant, and `get`'s registered/not check). Not exported.
+ */
+type SchemaMode =
+  | { kind: "derived"; regs: SchemaReg[] }
+  | { kind: "primary"; reg: SchemaReg }
+  | { kind: "ad-hoc" };
+
+/**
  * B11: discriminate the bare-schema form (`relations: { post: Schema }`)
  * from the object form (`relations: { post: { schema, where? } }`). An entry
  * is the object form when it is a non-Zod object carrying a `schema` property
@@ -583,30 +594,45 @@ export class WorldImpl implements World {
         }
       : undefined;
 
+    // `populate` historically inverts the standard derived-first precedence:
+    // if a schema is registered as both primary and derived, the primary path
+    // wins here (whereas `generateSingleItem` and `generateArray` prefer
+    // derived). `resolveMode` returns derived-first; the explicit primary
+    // re-check below preserves byte-identical behaviour without forcing
+    // `resolveMode` to carry an order-flipping parameter.
     const primaryRegs = this.findPrimaryRegs(schema);
-    const derivedRegs = this.findDerivedRegs(schema);
-
     if (primaryRegs.length > 0) {
       for (let i = 0; i < count; i++) {
         const opts = factoryOpts ? factoryOpts(i) : undefined;
         this.generateAndStorePrimary(schema, primaryRegs[0]!, opts);
       }
-    } else if (derivedRegs.length > 0) {
-      const reg = derivedRegs[0]!;
-      const sources = this.registry.all(reg.from!);
-      // Use the count to limit how many we derive, or derive from all if count is large
-      const N = Math.min(count, sources.length);
-      for (let i = 0; i < N; i++) {
-        const opts = factoryOpts ? factoryOpts(i) : undefined;
-        const result = this.generateDerivedRecord(schema, reg, sources[i], i, opts);
-        this.registry.store(schema, result as input<TSchema>);
+      return this;
+    }
+
+    const mode = this.resolveMode(schema);
+    switch (mode.kind) {
+      case "derived": {
+        const reg = mode.regs[0]!;
+        const sources = this.registry.all(reg.from!);
+        // Use the count to limit how many we derive, or derive from all if count is large
+        const N = Math.min(count, sources.length);
+        for (let i = 0; i < N; i++) {
+          const opts = factoryOpts ? factoryOpts(i) : undefined;
+          const result = this.generateDerivedRecord(schema, reg, sources[i], i, opts);
+          this.registry.store(schema, result as input<TSchema>);
+        }
+        break;
       }
-    } else {
-      // Default to primary if not registered
-      for (let i = 0; i < count; i++) {
-        const opts = factoryOpts ? factoryOpts(i) : undefined;
-        this.generateAndStorePrimary(schema, null, opts);
-      }
+      case "primary":
+        // Unreachable: the explicit primary check above returns first.
+        break;
+      case "ad-hoc":
+        // Default to primary if not registered
+        for (let i = 0; i < count; i++) {
+          const opts = factoryOpts ? factoryOpts(i) : undefined;
+          this.generateAndStorePrimary(schema, null, opts);
+        }
+        break;
     }
     return this;
   }
@@ -759,8 +785,7 @@ export class WorldImpl implements World {
         : ({ store: true } as GenerateOptions<z.infer<TSchema>>),
     );
 
-    const isRegistered =
-      this.findPrimaryRegs(schema).length > 0 || this.findDerivedRegs(schema).length > 0;
+    const isRegistered = this.resolveMode(schema).kind !== "ad-hoc";
 
     if (!isRegistered) {
       // `generate` does not store ad-hoc, unregistered schemas — store the
@@ -786,6 +811,29 @@ export class WorldImpl implements World {
 
   private findDerivedRegs(schema: ZodTypeAny): SchemaReg[] {
     return this.schemaRegs.filter((r) => r.schema === schema && r.from !== null);
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: schema-mode resolution (B25)
+  //
+  // Tagged union over the three registration modes. Replaces the
+  // `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
+  // ? ... : ad-hoc` cascade that previously appeared in `generateSingleItem`,
+  // `generateArray`, and `populate` (with `populate` using the inverted
+  // primary-first precedence — see its call site for the explicit handling).
+  //
+  // Derived-first precedence matches `generateSingleItem` and `generateArray`'s
+  // historical dispatch order. Operates on whatever schema reference it is
+  // given — callers handle the two-level (`schema` then `targetSchema`)
+  // fallback themselves where they need it.
+  // -------------------------------------------------------------------------
+
+  private resolveMode(schema: ZodTypeAny): SchemaMode {
+    const derivedRegs = this.findDerivedRegs(schema);
+    if (derivedRegs.length > 0) return { kind: "derived", regs: derivedRegs };
+    const primaryRegs = this.findPrimaryRegs(schema);
+    if (primaryRegs.length > 0) return { kind: "primary", reg: primaryRegs[0]! };
+    return { kind: "ad-hoc" };
   }
 
   // -------------------------------------------------------------------------
@@ -1292,78 +1340,81 @@ export class WorldImpl implements World {
     const genPrng = this.prng.fork(`array:${arrayId}:${arraySlot}`);
 
     const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5];
-    const derivedRegs = this.findDerivedRegs(innerSchema);
-    const primaryRegs = this.findPrimaryRegs(innerSchema);
+    const mode = this.resolveMode(innerSchema);
 
-    // -------------------------------------------------------------------
-    // Derived mode: one output per source record
-    // -------------------------------------------------------------------
-    if (derivedRegs.length > 0) {
-      // Collect all (source, reg, sourceIndex) pairs from existing sources
-      type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
-      const pairs: SourcePair[] = [];
+    switch (mode.kind) {
+      // -------------------------------------------------------------------
+      // Derived mode: one output per source record
+      // -------------------------------------------------------------------
+      case "derived": {
+        // Collect all (source, reg, sourceIndex) pairs from existing sources
+        type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
+        const pairs: SourcePair[] = [];
 
-      for (const reg of derivedRegs) {
-        const sources = this.registry.all(reg.from!);
-        for (let i = 0; i < sources.length; i++) {
-          pairs.push({ source: sources[i], reg, sourceIndex: i });
+        for (const reg of mode.regs) {
+          const sources = this.registry.all(reg.from!);
+          for (let i = 0; i < sources.length; i++) {
+            pairs.push({ source: sources[i], reg, sourceIndex: i });
+          }
         }
-      }
 
-      // Auto-provision more sources if min constraint requires it
-      const minRequired = resolveMinRequired(arraySchema, defMin);
-      while (pairs.length < minRequired) {
-        const regIdx = pairs.length % derivedRegs.length;
-        const reg = derivedRegs[regIdx]!;
-        const fromSchema = reg.from!;
-        const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
-        const sourceIndex = this.registry.count(fromSchema);
-        const newSource = this.generateAndStorePrimary(fromSchema, fromReg);
-        pairs.push({ source: newSource, reg, sourceIndex });
-      }
+        // Auto-provision more sources if min constraint requires it
+        const minRequired = resolveMinRequired(arraySchema, defMin);
+        while (pairs.length < minRequired) {
+          const regIdx = pairs.length % mode.regs.length;
+          const reg = mode.regs[regIdx]!;
+          const fromSchema = reg.from!;
+          const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
+          const sourceIndex = this.registry.count(fromSchema);
+          const newSource = this.generateAndStorePrimary(fromSchema, fromReg);
+          pairs.push({ source: newSource, reg, sourceIndex });
+        }
 
-      return pairs.map(({ source, reg, sourceIndex }) =>
-        this.generateDerivedRecord(innerSchema, reg, source, sourceIndex),
-      );
-    }
-
-    // -------------------------------------------------------------------
-    // Primary mode: generate N items, store in registry, return all
-    // -------------------------------------------------------------------
-    if (primaryRegs.length > 0) {
-      // B38: per-index overrides on a primary-registered array schema are
-      // silently dropped today (generateAndStorePrimary is called without
-      // options). Refuse the unsafe call shape loudly so the caller is
-      // steered to `world.populate(schema, count, factory)` — the API that
-      // actually applies per-record overrides. The guard fires BEFORE any
-      // record is generated so no partial work lands in the registry.
-      if (Array.isArray(options?.overrides) && options.overrides.length > 0) {
-        throw new Error(
-          "Per-index overrides on a primary-registered array schema are not supported on world.generate. " +
-            "Use world.populate(schema, count, factory) instead — see docs/api-reference.md → .populate.",
+        return pairs.map(({ source, reg, sourceIndex }) =>
+          this.generateDerivedRecord(innerSchema, reg, source, sourceIndex),
         );
       }
 
-      const reg = primaryRegs[0]!;
-      const existingCount = this.registry.count(innerSchema);
+      // -------------------------------------------------------------------
+      // Primary mode: generate N items, store in registry, return all
+      // -------------------------------------------------------------------
+      case "primary": {
+        // B38: per-index overrides on a primary-registered array schema are
+        // silently dropped today (generateAndStorePrimary is called without
+        // options). Refuse the unsafe call shape loudly so the caller is
+        // steered to `world.populate(schema, count, factory)` — the API that
+        // actually applies per-record overrides. The guard fires BEFORE any
+        // record is generated so no partial work lands in the registry.
+        if (Array.isArray(options?.overrides) && options.overrides.length > 0) {
+          throw new Error(
+            "Per-index overrides on a primary-registered array schema are not supported on world.generate. " +
+              "Use world.populate(schema, count, factory) instead — see docs/api-reference.md → .populate.",
+          );
+        }
 
-      const minRequired = resolveMinRequired(arraySchema, defMin);
-      const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
-      const target = Math.max(
-        existingCount,
-        genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
-      );
+        const existingCount = this.registry.count(innerSchema);
 
-      while (this.registry.count(innerSchema) < target) {
-        this.generateAndStorePrimary(innerSchema, reg);
+        const minRequired = resolveMinRequired(arraySchema, defMin);
+        const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
+        const target = Math.max(
+          existingCount,
+          genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+        );
+
+        while (this.registry.count(innerSchema) < target) {
+          this.generateAndStorePrimary(innerSchema, mode.reg);
+        }
+
+        return this.registry.all(innerSchema);
       }
 
-      return this.registry.all(innerSchema);
+      // -------------------------------------------------------------------
+      // Ad-hoc: no registration — pure schema-based generation
+      // -------------------------------------------------------------------
+      case "ad-hoc":
+        break;
     }
 
-    // -------------------------------------------------------------------
-    // Ad-hoc: no registration — pure schema-based generation
-    // -------------------------------------------------------------------
     let N = defMin;
     let maxN = defMax;
     for (const c of checks(arraySchema)) {
@@ -1436,14 +1487,16 @@ export class WorldImpl implements World {
     let d = def(current);
     const targetSchema = current;
 
-    const derivedRegs =
-      this.findDerivedRegs(schema).length > 0
-        ? this.findDerivedRegs(schema)
-        : this.findDerivedRegs(targetSchema);
-    const primaryRegs =
-      this.findPrimaryRegs(schema).length > 0
-        ? this.findPrimaryRegs(schema)
-        : this.findPrimaryRegs(targetSchema);
+    // Two-level fallback for the lazy-resolve interaction: prefer registrations
+    // keyed on the outer `schema` reference; fall back to the lazy-resolved
+    // `targetSchema` if the outer reference has no registration. The two-level
+    // check is specific to this dispatcher (lazy-resolved schemas may have been
+    // registered under either reference); `resolveMode` itself operates on
+    // whatever schema it is given.
+    let mode = this.resolveMode(schema);
+    if (mode.kind === "ad-hoc" && targetSchema !== schema) {
+      mode = this.resolveMode(targetSchema);
+    }
 
     // The `source` field on GenerateOptions is intentionally typed `any` at
     // registration time (B7's input/output type story); the cast is preserved
@@ -1459,6 +1512,7 @@ export class WorldImpl implements World {
       // `derivedPairCounter--` rollback runs before we call into the helper.
       // D9 / B8-R9: an upsert hit must leave no observable per-world
       // generation state behind.
+      const derivedRegs = mode.kind === "derived" ? mode.regs : [];
       const reg = (derivedRegs[0] ?? { ...EMPTY_REG, schema }) as SchemaReg;
       const sourceKey = reg.sourceKey;
       const identity =
@@ -1478,14 +1532,20 @@ export class WorldImpl implements World {
 
       result = this.generateWithSourceOverride(schema, derivedRegs, sourceOverride, options);
       transformApplied = true;
-    } else if (derivedRegs.length > 0) {
-      result = this.generateDerivedAutoSource(schema, derivedRegs, options);
-      transformApplied = true;
-    } else if (primaryRegs.length > 0) {
-      result = this.generatePrimary(schema, primaryRegs[0]!, options);
-      transformApplied = true;
     } else {
-      result = this.generateAdHoc(schema, targetSchema, options);
+      switch (mode.kind) {
+        case "derived":
+          result = this.generateDerivedAutoSource(schema, mode.regs, options);
+          transformApplied = true;
+          break;
+        case "primary":
+          result = this.generatePrimary(schema, mode.reg, options);
+          transformApplied = true;
+          break;
+        case "ad-hoc":
+          result = this.generateAdHoc(schema, targetSchema, options);
+          break;
+      }
     }
 
     if (options?.overrides) result = deepMerge(result, options.overrides);
