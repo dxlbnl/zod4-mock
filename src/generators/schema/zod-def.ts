@@ -184,109 +184,161 @@ export function unwrapOptionalChainForField(
   return { inner, absent: null };
 }
 
-/** Applies formatting modifiers (case, trim, transform) to a value based on the schema. */
+// B29 — string-modifier pipeline split into named passes.
+// Order is the call chain at the bottom of `applyStringModifiers`:
+//   1. overwritePass        — case/trim transforms on the base string
+//   2. formatAddPass        — add missing prefix/suffix/inclusion
+//   3. lengthBoundsPass     — pad/slice to satisfy min/max
+//   4. formatRefixPass      — restore prefix/suffix/inclusion broken by (3)
+//   5. overwriteRefixPass   — re-apply case/trim so the final string respects them
+
+function runOverwriteTransforms(value: string, overwrites: ZodCheck[]): string {
+  let result = value;
+  for (const c of overwrites) {
+    const tx = (c as unknown as { tx?: (v: string) => string }).tx;
+    if (typeof tx === "function") result = tx(result);
+  }
+  return result;
+}
+
+function overwritePass(value: string, overwrites: ZodCheck[]): string {
+  return runOverwriteTransforms(value, overwrites);
+}
+
+function formatAddPass(value: string, formats: ZodCheck[]): string {
+  let result = value;
+  for (const c of formats) {
+    if (c.format === "starts_with" && c.prefix) {
+      if (!result.startsWith(c.prefix)) result = c.prefix + result;
+    }
+    if (c.format === "ends_with" && c.suffix) {
+      if (!result.endsWith(c.suffix)) result = result + c.suffix;
+    }
+    if (c.format === "includes" && c.includes) {
+      if (!result.includes(c.includes)) result = result + c.includes;
+    }
+  }
+  return result;
+}
+
+function lengthBoundsPass(value: string, min: number, max: number): string {
+  let result = value;
+  if (result.length < min) result = result.padEnd(min, "x");
+  if (result.length > max) result = result.slice(0, max);
+  return result;
+}
+
+function formatRefixPass(value: string, formats: ZodCheck[]): string {
+  // Restore start/end in place so the length computed by lengthBoundsPass is preserved.
+  let result = value;
+  for (const c of formats) {
+    if (c.format === "starts_with" && c.prefix) {
+      if (!result.startsWith(c.prefix)) {
+        result = c.prefix + result.slice(c.prefix.length);
+      }
+    }
+    if (c.format === "ends_with" && c.suffix) {
+      if (!result.endsWith(c.suffix)) {
+        const start = Math.max(0, result.length - c.suffix.length);
+        result = result.slice(0, start) + c.suffix;
+      }
+    }
+    if (c.format === "includes" && c.includes) {
+      if (!result.includes(c.includes)) {
+        // Squeeze into the middle — safer than appending if length is tight.
+        const mid = Math.floor(result.length / 2);
+        const start = Math.max(0, mid - Math.floor(c.includes.length / 2));
+        result = result.slice(0, start) + c.includes + result.slice(start + c.includes.length);
+      }
+    }
+  }
+  return result;
+}
+
+function overwriteRefixPass(value: string, overwrites: ZodCheck[]): string {
+  return runOverwriteTransforms(value, overwrites);
+}
+
+/** Runs the 5-stage string-modifier pipeline (see B29). */
+export function applyStringModifiers(value: string, allChecks: ZodCheck[]): string {
+  const overwrites: ZodCheck[] = [];
+  const formats: ZodCheck[] = [];
+  let min = 0;
+  let max = Infinity;
+
+  for (const c of allChecks) {
+    if (c.check === "overwrite") overwrites.push(c);
+    else if (c.check === "string_format") formats.push(c);
+    else if (c.check === "min_length") min = Math.max(min, c.minimum!);
+    else if (c.check === "max_length") max = Math.min(max, c.maximum!);
+    else if (c.check === "length_equals") {
+      min = c.length!;
+      max = c.length!;
+    }
+  }
+
+  let result = value;
+  result = overwritePass(result, overwrites);
+  result = formatAddPass(result, formats);
+  result = lengthBoundsPass(result, min, max);
+  result = formatRefixPass(result, formats);
+  result = overwriteRefixPass(result, overwrites);
+  return result;
+}
+
+// B29 — number-modifier passes. Order is the call chain at the bottom of
+// `applyNumberModifiers`:
+//   1. intCoercePass    — floor when the schema is an int format
+//   2. multipleOfPass   — snap to the nearest multiple
+
+function intCoercePass(value: number, isInt: boolean): number {
+  return isInt ? Math.floor(value) : value;
+}
+
+function multipleOfPass(value: number, multipleOf: number | undefined): number {
+  if (multipleOf === undefined) return value;
+  return Math.round(value / multipleOf) * multipleOf;
+}
+
+/** Runs the number-modifier pipeline (see B29). */
+export function applyNumberModifiers(value: number, allChecks: ZodCheck[]): number {
+  let isInt = false;
+  let multipleOf: number | undefined;
+
+  for (const c of allChecks) {
+    if (c.check === "number_format") {
+      isInt = c.format === "int" || c.format === "int32" || c.format === "safeint";
+    }
+    if (c.check === "multiple_of") {
+      multipleOf = c.value as number;
+    }
+  }
+
+  let result = value;
+  result = intCoercePass(result, isInt);
+  result = multipleOfPass(result, multipleOf);
+  return result;
+}
+
+/**
+ * Applies formatting modifiers (case, trim, transform) to a value based on the schema.
+ *
+ * B29: thin dispatcher over the two split pipelines. Most callers don't statically
+ * know whether the value is a string or a number (e.g. `generateFromKey` returns
+ * `unknown`), so this shim keeps the runtime type-routing at one place. Callers
+ * that DO know the type (e.g. `generateZodString`) can call
+ * `applyStringModifiers` / `applyNumberModifiers` directly.
+ */
 export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
   const unwrapped = unwrap(schema);
   const d = def(unwrapped);
 
   if (d.type === "string" && typeof value === "string") {
-    let result = value;
-    const allChecks = checks(unwrapped);
-    const overwrites: ZodCheck[] = [];
-    const formats: ZodCheck[] = [];
-    let min = 0;
-    let max = Infinity;
-
-    for (const c of allChecks) {
-      if (c.check === "overwrite") overwrites.push(c);
-      else if (c.check === "string_format") formats.push(c);
-      else if (c.check === "min_length") min = Math.max(min, c.minimum!);
-      else if (c.check === "max_length") max = Math.min(max, c.maximum!);
-      else if (c.check === "length_equals") {
-        min = c.length!;
-        max = c.length!;
-      }
-    }
-
-    // 1. Apply transformations that might affect content (including trim)
-    for (const c of overwrites) {
-      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
-      if (typeof tx === "function") result = tx(result);
-    }
-
-    // 2. Add required prefixes/suffixes/inclusions to base string
-    for (const c of formats) {
-      if (c.format === "starts_with" && c.prefix) {
-        if (!result.startsWith(c.prefix)) result = c.prefix + result;
-      }
-      if (c.format === "ends_with" && c.suffix) {
-        if (!result.endsWith(c.suffix)) result = result + c.suffix;
-      }
-      if (c.format === "includes" && c.includes) {
-        if (!result.includes(c.includes)) result = result + c.includes;
-      }
-    }
-
-    // 3. Apply length bounds
-
-    if (result.length < min) result = result.padEnd(min, "x");
-    if (result.length > max) result = result.slice(0, max);
-
-    // 4. RE-FIX formats that might have been broken by padding/slicing
-    // We replace the start/end to preserve the length we just calculated
-    for (const c of formats) {
-      if (c.format === "starts_with" && c.prefix) {
-        if (!result.startsWith(c.prefix)) {
-          result = c.prefix + result.slice(c.prefix.length);
-        }
-      }
-      if (c.format === "ends_with" && c.suffix) {
-        if (!result.endsWith(c.suffix)) {
-          const start = Math.max(0, result.length - c.suffix.length);
-          result = result.slice(0, start) + c.suffix;
-        }
-      }
-      if (c.format === "includes" && c.includes) {
-        if (!result.includes(c.includes)) {
-          // If it doesn't fit, we just append it and accept the length violation
-          // or try to squeeze it in the middle. Squeezing in the middle is safer.
-          const mid = Math.floor(result.length / 2);
-          const start = Math.max(0, mid - Math.floor(c.includes.length / 2));
-          result = result.slice(0, start) + c.includes + result.slice(start + c.includes.length);
-        }
-      }
-    }
-
-    // 5. Re-apply transformations to ensure final string respects case
-    for (const c of overwrites) {
-      const tx = (c as unknown as { tx?: (v: string) => string }).tx;
-      if (typeof tx === "function") result = tx(result);
-    }
-
-    return result;
+    return applyStringModifiers(value, checks(unwrapped));
   }
 
   if (d.type === "number" && typeof value === "number") {
-    let result = value;
-    const allChecks = checks(unwrapped);
-    let isInt = false;
-    let multipleOf: number | undefined;
-
-    for (const c of allChecks) {
-      if (c.check === "number_format") {
-        isInt = c.format === "int" || c.format === "int32" || c.format === "safeint";
-      }
-      if (c.check === "multiple_of") {
-        multipleOf = c.value as number;
-      }
-    }
-
-    if (isInt) result = Math.floor(result);
-    if (multipleOf !== undefined) {
-      result = Math.round(result / multipleOf) * multipleOf;
-    }
-
-    return result;
+    return applyNumberModifiers(value, checks(unwrapped));
   }
 
   return value;
