@@ -135,6 +135,32 @@ function generateHostname(prng: GeneratorContext["prng"]): string {
   return `${w}.${tld}`;
 }
 
+function generateUrl(prng: GeneratorContext["prng"]): string {
+  return `https://${generateHostname(prng)}/${generateString(prng, 3, 10).replace(/ /g, "-")}`;
+}
+
+const FORMAT_GENERATORS: Record<string, (prng: GeneratorContext["prng"]) => string> = {
+  email: generateEmail,
+  uuid: generateUuid,
+  url: generateUrl,
+  cuid: generateCuid,
+  cuid2: generateCuid2,
+  ulid: generateUlid,
+  nanoid: generateNanoid,
+  base64: generateBase64,
+  base64url: generateBase64url,
+  jwt: generateJwt,
+  emoji: generateEmoji,
+  e164: generateE164,
+  cidrv4: generateCidrv4,
+  cidrv6: generateCidrv6,
+  date: generateIsoDate,
+  time: generateIsoTime,
+  datetime: generateIsoDatetime,
+  duration: generateIsoDuration,
+  hostname: generateHostname,
+};
+
 function generateStringMatchingRegex(
   prng: GeneratorContext["prng"],
   pattern: RegExp | undefined,
@@ -183,27 +209,10 @@ export function generateZodString(schema: ZodTypeAny, ctx: GeneratorContext): st
 
   let result = "";
 
-  if (format === "email") result = generateEmail(prng);
-  else if (format === "uuid") result = generateUuid(prng);
-  else if (format === "url")
-    result = `https://${generateHostname(prng)}/${generateString(prng, 3, 10).replace(/ /g, "-")}`;
-  else if (format === "cuid") result = generateCuid(prng);
-  else if (format === "cuid2") result = generateCuid2(prng);
-  else if (format === "ulid") result = generateUlid(prng);
-  else if (format === "nanoid") result = generateNanoid(prng);
-  else if (format === "base64") result = generateBase64(prng);
-  else if (format === "base64url") result = generateBase64url(prng);
-  else if (format === "jwt") result = generateJwt(prng);
-  else if (format === "emoji") result = generateEmoji(prng);
-  else if (format === "e164") result = generateE164(prng);
-  else if (format === "cidrv4") result = generateCidrv4(prng);
-  else if (format === "cidrv6") result = generateCidrv6(prng);
-  else if (format === "date") result = generateIsoDate(prng);
-  else if (format === "time") result = generateIsoTime(prng);
-  else if (format === "datetime") result = generateIsoDatetime(prng);
-  else if (format === "duration") result = generateIsoDuration(prng);
-  else if (format === "hostname") result = generateHostname(prng);
-  else {
+  const gen = format ? FORMAT_GENERATORS[format] : undefined;
+  if (gen) {
+    result = gen(prng);
+  } else {
     let handled = false;
     for (const c of checks(schema)) {
       if (c.check !== "string_format") continue;

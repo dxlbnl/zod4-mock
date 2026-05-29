@@ -395,4 +395,12 @@ it records the reason here AND states it in chat.
 - implementer: split applyModifiers in src/generators/schema/zod-def.ts into applyStringModifiers (L263, 5 passes: overwritePass/formatAddPass/lengthBoundsPass/formatRefixPass/overwriteRefixPass) + applyNumberModifiers (L304, 2 passes: intCoercePass/multipleOfPass). applyModifiers kept as thin 14-LOC runtime dispatcher (routes by def-type + typeof value) — three call sites still pass `unknown` so dispatcher avoids pushing typeof+def-check duplicates into them. Each pass takes only what it needs; checks iterated once per pipeline (down from 3× in the original string branch). Deviation from spec example: no `prng` parameter in pass signatures (none needed — these are pure string/number transforms); no `PASSES.reduce(...)` table (explicit call chain reads as the contract). Added .changeset/b29-split-apply-modifiers.md (patch). Updated codebase-map. GREEN: 1017/1017 tests, typecheck clean.
 - manager: dispatch reviewer (no git; verify by Read + pnpm test only)
 - reviewer: PASS — both helpers + all 7 named passes present at exact lines; dispatcher 14 LOC routes correctly; each pipeline scans checks once via classification loop into pre-bucketed slices then passes iterate slices; D1/D3/D5/D6 honored; codebase-map updated. NO new standing constraint.
+- result: done — commit 66b25f1
+
+## 2026-05-29 — B34: Refactor — replace `generateZodString`'s 22-arm `else if` chain with a format dispatch table
+- manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
+- manager: dispatch implementer
+- implementer: added FORMAT_GENERATORS dispatch table at src/generators/schema/string.ts:142-162 with 19 entries (card said "22" — actual format-chain count is 19 + 4 check-format arms; the latter stay a switch as the card prescribed). All 19 generators are pure `(prng: Prng) => string` — none need ctx (these are local file helpers, not ctx.gen surfacing). Extracted `generateUrl` helper for the only inline composition. Check-format switch + base fallback byte-for-byte unchanged. Added .changeset/b34-dispatch-table-generate-zod-string.md (patch). GREEN: 1017/1017 tests, typecheck clean.
+- manager: dispatch reviewer (no git; verify by Read + pnpm test only)
+- reviewer: PASS — table at :142-162 with 19 entries, type `Record<string, (prng: GeneratorContext["prng"]) => string>` no `any`. generateUrl template byte-identical to pre-refactor inline. Check-format switch + generateString fallback untouched. NO new standing constraint.
 - result: done — commit pending
