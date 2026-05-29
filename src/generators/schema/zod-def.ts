@@ -72,6 +72,37 @@ export function getLeafDef(schema: ZodTypeAny): ZodDef {
   return def(unwrap(schema));
 }
 
+/**
+ * B31 — collapses the `while (d.type === "lazy")` loop that previously
+ * appeared in four near-identical places (`world.ts` ×3 + `explain.ts` ×1).
+ *
+ * Walks `z.lazy(...)` references to their resolved targets. When a `cache`
+ * is supplied (the per-world `lazyCache`) the resolved getter result is
+ * memoized so repeated unwraps of the same outer lazy don't call the user's
+ * getter twice — this is the existing `WorldImpl` semantics. `explain.ts`
+ * passes no cache and gets the previous one-shot behaviour.
+ *
+ * Module-level (not an instance method) so the cache-less explain site
+ * shares the same code path.
+ */
+export function resolveLazyChain(
+  schema: ZodTypeAny,
+  cache?: WeakMap<ZodTypeAny, ZodTypeAny>,
+): ZodTypeAny {
+  let current = schema;
+  let d = def(current);
+  while (d.type === "lazy" && d.getter !== undefined) {
+    let resolved = cache?.get(current);
+    if (!resolved) {
+      resolved = d.getter();
+      cache?.set(current, resolved);
+    }
+    current = resolved;
+    d = def(current);
+  }
+  return current;
+}
+
 /** Applies formatting modifiers (case, trim, transform) to a value based on the schema. */
 export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
   const unwrapped = unwrap(schema);

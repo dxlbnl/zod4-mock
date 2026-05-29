@@ -11,7 +11,7 @@
  */
 
 import type { ZodTypeAny } from "zod";
-import { def, getLeafDef } from "./generators/schema/zod-def.js";
+import { def, getLeafDef, resolveLazyChain } from "./generators/schema/zod-def.js";
 import {
   DEFAULT_KEY_MAP,
   DEFAULT_KEY_PATTERNS,
@@ -248,10 +248,8 @@ export function explainSchema<TSchema extends ZodTypeAny>(
     current = d.innerType;
     d = def(current);
   }
-  while (d.type === "lazy" && d.getter !== undefined) {
-    current = d.getter();
-    d = def(current);
-  }
+  current = resolveLazyChain(current);
+  d = def(current);
 
   const fields: Record<string, FieldExplanation> = {};
   if (d.type === "object" && d.shape) {

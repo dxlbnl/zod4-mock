@@ -43,7 +43,7 @@ import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
-import { def, checks, unwrap, applyModifiers } from "./generators/schema/zod-def.js";
+import { def, checks, unwrap, applyModifiers, resolveLazyChain } from "./generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 import { defaultLocale } from "./default-locale.js";
@@ -581,15 +581,8 @@ export class WorldImpl implements World {
         d = def(current);
       }
 
-      while (d.type === "lazy") {
-        let resolved = this.lazyCache.get(current);
-        if (!resolved) {
-          resolved = d.getter!();
-          this.lazyCache.set(current, resolved);
-        }
-        current = resolved;
-        d = def(current);
-      }
+      current = resolveLazyChain(current, this.lazyCache);
+      d = def(current);
 
       if (d.type === "array") {
         if (outerWrappers.length > 0) {
@@ -1063,18 +1056,8 @@ export class WorldImpl implements World {
     const depth = fieldPathPrefix ? fieldPathPrefix.split(".").filter(Boolean).length : 0;
     if (depth > (this.options.recursionLimit ?? 5)) return null;
 
-    let current = schema;
+    let current = resolveLazyChain(schema, this.lazyCache);
     let d = def(current);
-
-    while (d.type === "lazy") {
-      let resolved = this.lazyCache.get(current);
-      if (!resolved) {
-        resolved = d.getter!();
-        this.lazyCache.set(current, resolved);
-      }
-      current = resolved;
-      d = def(current);
-    }
 
     if (d.type !== "object") {
       return generateFromSchema(
@@ -1361,18 +1344,8 @@ export class WorldImpl implements World {
     // `schemaCallCounts` via `nextSchemaSlot`.
     this.derivedPairCounter++;
 
-    let current = schema;
+    let current = resolveLazyChain(schema, this.lazyCache);
     let d = def(current);
-
-    while (d.type === "lazy") {
-      let resolved = this.lazyCache.get(current);
-      if (!resolved) {
-        resolved = d.getter!();
-        this.lazyCache.set(current, resolved);
-      }
-      current = resolved;
-      d = def(current);
-    }
     const targetSchema = current;
 
     const derivedRegs =
