@@ -137,16 +137,16 @@ describe("B20-R2: store: false suppresses the auto-provisioned source's registry
 
     expect(r2).toBeDefined();
     expect(Derived.safeParse(r2).success).toBe(true);
-    // Today's behaviour (must remain byte-identical post-B20, per B20-R5):
-    // the auto-provisioned source IS written; the derived record is NOT
-    // written by this code path (the no-source `generateSingleItem` branch
-    // never reaches a `registry.store(schema, …)` for the derived record).
-    // Spec B20-R2's second scenario asserts `count(Derived) === 1` after the
-    // follow-up call, but that contradicts the binding "byte-identical to
-    // today" rule on the default path. Reporting the discrepancy and
-    // pinning today's behaviour here.
+    // B24-R3 update (closes B21 / behaviour-aligning fix mandated by B24-R7
+    // and called out in B24-R8): the no-source-derived branch under default
+    // `store: true` now stores the derived record symmetric with the
+    // with-source path (B8). The auto-provisioned source still lands
+    // (today's behaviour, unchanged), and the derived record now lands too
+    // — was `count(Derived) === 0` pre-B24; is `count(Derived) === 1`
+    // post-B24. Spec B20-R2's "follow-up default-mode generate" scenario is
+    // explicitly updated by B24-R8.
     expect(world.registry.count(Source)).toBe(1);
-    expect(world.registry.count(Derived)).toBe(0);
+    expect(world.registry.count(Derived)).toBe(1);
   });
 });
 
@@ -236,16 +236,14 @@ describe("B20-R5: default-mode no-source derived generate — registry writes ma
 
     expect(r).toBeDefined();
     expect(Derived.safeParse(r).success).toBe(true);
-    // Today's behaviour (binding "byte-identical to today" rule of B20-R5):
-    // the auto-provisioned source IS written by `generateAndStorePrimary`;
-    // the derived record is NOT written — the no-source `generateSingleItem`
-    // branch (src/world.ts:1143) calls `generateDerivedRecord` and returns
-    // its result without touching `registry.store`. Spec B20-R5's text
-    // additionally asserts `count(Derived) === 1`, which contradicts the
-    // byte-identical-to-today binding. Pinning today's actual behaviour;
-    // discrepancy reported back to the manager.
+    // B24-R3 update (closes B21 — symmetric to the B20-R2 follow-up update
+    // mandated by B24-R8): the no-source-derived branch under default
+    // `store: true` now stores the derived record, aligning with B20-R5's
+    // original spec text (`count(Derived) === 1`). The pre-B24 codebase
+    // pinned "today's actual behaviour" (`count(Derived) === 0`) and the
+    // test-writer flagged the discrepancy at that time; B24-R3 closes it.
     expect(world.registry.count(Source)).toBe(1);
-    expect(world.registry.count(Derived)).toBe(0);
+    expect(world.registry.count(Derived)).toBe(1);
 
     // The derived record's `sourceId` matches the auto-provisioned source's
     // id — the matcher resolved against the registry-resident source.

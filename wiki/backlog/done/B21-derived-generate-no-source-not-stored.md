@@ -3,7 +3,7 @@ id: B21
 title: BUG/inconsistency — `world.generate(DerivedSchema)` (no source override) does not store the derived record
 type: bug
 priority: medium
-flags: [review]
+flags: [cancelled]
 created: 2026-05-29
 ---
 
@@ -104,3 +104,19 @@ explicitly approve before tests are written.
   visibility warrants. B is `patch` (docs-only) or no changeset (depending on
   whether `docs/` is in the release surface). C is `minor` (new upsert semantics
   on the auto-source path).
+
+## Resolution
+
+**Cancelled — superseded by [B24](B24-decompose-generate-single-item.md).** The
+B24 refactor decomposed `WorldImpl.generateSingleItem`'s four-branch cascade
+into named private methods. Pulling the no-source-derived path into its own
+method (`generateDerivedAutoSource`) made the missing `registry.store` call
+obvious, and B24-R3 added it (one line, gated by `effectiveStore`). B24-R7's
+regression file at `tests/unit/core/derived-no-source-store.test.ts` pins the
+exact B21 use cases (single-call store, 5-iteration loop with `count(Derived)
+=== 5`, with-source path unchanged, `store: false` still suppresses).
+
+Adopted **direction A** (the issue body's recommendation): the no-source
+branch now stores by default, symmetric with the B8 with-source path. No new
+public API; the asymmetry just disappears. Bump landed as part of B24's
+`minor` changeset.

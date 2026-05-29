@@ -1334,6 +1334,22 @@ export class WorldImpl implements World {
   // Private: single-item generation
   // -------------------------------------------------------------------------
 
+  /**
+   * Thin dispatcher: resolves the schema mode (with-source override / no-source
+   * derived / primary / ad-hoc), routes to one of the four private branch
+   * helpers, and applies the trailing `overrides` + `transform` pass when the
+   * branch helper hasn't already done so internally.
+   *
+   * Responsibilities kept here (per B24-R6):
+   *   - recursion-depth guard,
+   *   - `derivedPairCounter++` increment at top,
+   *   - lazy-resolve `while` producing `targetSchema`,
+   *   - two-level `findDerivedRegs` / `findPrimaryRegs` detection,
+   *   - `sourceOverride` extraction,
+   *   - B8 upsert cache short-circuit (D9 / B8-R9 cache-neutral — rolls back
+   *     `derivedPairCounter--` so an upsert hit advances no counter),
+   *   - trailing `overrides` deep-merge + `transform` application.
+   */
   private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
     const fieldPath = options?.fieldPath ?? "";
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
@@ -1368,141 +1384,47 @@ export class WorldImpl implements World {
         ? this.findPrimaryRegs(schema)
         : this.findPrimaryRegs(targetSchema);
 
-    let result: unknown;
-    let transformApplied = false;
+    // The `source` field on GenerateOptions is intentionally typed `any` at
+    // registration time (B7's input/output type story); the cast is preserved
+    // verbatim from the pre-B24 dispatcher (B24-R9 — no new `any`).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sourceOverride = (options as any)?.source;
 
+    let result: unknown;
+    let transformApplied = false;
+
     if (sourceOverride !== undefined) {
-      const reg = derivedRegs[0] ?? { ...EMPTY_REG, schema };
-      const regWithKey = reg as SchemaReg;
-      // B8: derive the per-pair upsert identity. `sourceKey` is the declared
-      // field name; if absent, identity falls back to reference equality on
-      // the source object itself.
-      const sourceKey = regWithKey.sourceKey;
+      // B8 upsert cache short-circuit lives here (dispatcher) so the
+      // `derivedPairCounter--` rollback runs before we call into the helper.
+      // D9 / B8-R9: an upsert hit must leave no observable per-world
+      // generation state behind.
+      const reg = (derivedRegs[0] ?? { ...EMPTY_REG, schema }) as SchemaReg;
+      const sourceKey = reg.sourceKey;
       const identity =
         sourceKey !== null && sourceKey !== undefined
           ? (sourceOverride as Record<string, unknown>)[sourceKey]
           : sourceOverride;
-
       const isUnique = options?.unique !== false;
       const canUseUpsert = isUnique && this.effectiveStore;
 
       if (canUseUpsert) {
-        // B8-R1 / B8-R9: short-circuit on a hit — return the cached record
-        // by reference, do not run the generation pipeline, do not consume
-        // PRNG, do not advance the generation counter (we unwind it below).
         const existing = this.derivedUpsert.get(schema)?.get(identity);
         if (existing !== undefined) {
-          // D9 / B8-R9: an upsert hit must leave no observable per-world
-          // generation state behind. Roll back the `derivedPairCounter`
-          // increment from the top of this method so the next derived-without-
-          // source pair pick sees the same index it would have if this call
-          // had not happened. The B39 per-schema slot maps (`schemaCallCounts`)
-          // were not touched in this branch (the ad-hoc Site 1 below was
-          // never reached), so no slot rollback is needed.
           this.derivedPairCounter--;
           return existing;
         }
       }
 
-      // `generateDerivedRecord` already applies `options.overrides` (via
-      // `generateObjectFields`'s per-field deep-merge) AND `options.transform`
-      // — see B14 (D8). Trust its return value here; do NOT re-apply
-      // overrides or transform in this branch (would double-apply for any
-      // non-idempotent transform).
-      result = this.generateDerivedRecord(
-        schema,
-        regWithKey,
-        sourceOverride,
-        0,
-        options,
-      );
-
-      // B8-R7 / B10: when the outer call opted out of storage, do NOT touch
-      // the registry and do NOT write to the upsert map — both side effects
-      // are suppressed together so a later default-mode call cannot resolve
-      // to a record that isn't in the registry.
-      if (this.effectiveStore) {
-        this.registry.store(schema, result as input<ZodTypeAny>);
-        if (isUnique) {
-          let inner = this.derivedUpsert.get(schema);
-          if (!inner) {
-            inner = new Map<unknown, unknown>();
-            this.derivedUpsert.set(schema, inner);
-          }
-          inner.set(identity, result);
-        }
-      }
-
-      return result;
+      result = this.generateWithSourceOverride(schema, derivedRegs, sourceOverride, options);
+      transformApplied = true;
     } else if (derivedRegs.length > 0) {
-      // Pick first available source across all derived regs, auto-provisioning
-      // if needed. Under `store: false` (B10-R4 transitive suppression) the
-      // `generateAndStorePrimary` call generates but does NOT write to the
-      // registry — so we capture the freshly generated source locally and
-      // fall back to it when the registry read still returns []. The local
-      // map is keyed by `reg.from` so multiple derivedRegs sharing the same
-      // source schema reuse one auto-provisioned source (matching the
-      // existing behaviour: `registry.count(reg.from) === 0` skips after
-      // the first call writes).
-      const captured = new Map<ZodTypeAny, unknown>();
-      for (const reg of derivedRegs) {
-        if (this.registry.count(reg.from!) === 0 && !captured.has(reg.from!)) {
-          const fromReg = this.findPrimaryRegs(reg.from!)[0] ?? null;
-          const fresh = this.generateAndStorePrimary(reg.from!, fromReg);
-          captured.set(reg.from!, fresh);
-        }
-      }
-
-      // Collect all (source, reg, index) pairs and pick by derivedPairCounter.
-      // B20-R4: the non-empty path reads from the registry exactly as today;
-      // the local capture is consulted only when the registry is still empty
-      // after the auto-provision attempt (i.e. only under `store: false`).
-      type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
-      const pairs: SourcePair[] = [];
-      for (const reg of derivedRegs) {
-        const sources = this.registry.all(reg.from!);
-        if (sources.length > 0) {
-          for (let i = 0; i < sources.length; i++) {
-            pairs.push({ source: sources[i], reg, sourceIndex: i });
-          }
-        } else if (captured.has(reg.from!)) {
-          pairs.push({ source: captured.get(reg.from!), reg, sourceIndex: 0 });
-        }
-      }
-
-      const idx = (this.derivedPairCounter - 1) % pairs.length;
-      const { source, reg, sourceIndex } = pairs[idx]!;
-      result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
+      result = this.generateDerivedAutoSource(schema, derivedRegs, options);
       transformApplied = true;
     } else if (primaryRegs.length > 0) {
-      result = this.generateAndStorePrimary(schema, primaryRegs[0]!, options);
+      result = this.generatePrimary(schema, primaryRegs[0]!, options);
       transformApplied = true;
     } else {
-      // Ad-hoc — B39 Site 1: key the ad-hoc PRNG on the outer `schema`
-      // reference (the one the caller invoked `generate(...)` with), NOT on
-      // the lazy-resolved `targetSchema`. The outer reference is stable
-      // across `z.lazy(...)` re-resolutions, matching the spec's identity model.
-      const { id: adhocId, slot: adhocSlot } = this.nextSchemaSlot(schema);
-      const recordId = `adhoc:${adhocId}:${adhocSlot}`;
-      const adHocPrng = this.prng.fork(recordId);
-      const fieldPath = options?.fieldPath ?? recordId;
-      if (def(targetSchema).type === "object") {
-        result = this.generateObjectFields(
-          targetSchema,
-          EMPTY_REG,
-          undefined,
-          adHocPrng,
-          recordId,
-          fieldPath,
-          options?.overrides as Record<string, unknown>,
-        );
-      } else {
-        result = generateFromSchema(
-          targetSchema,
-          this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath, recordId),
-        );
-      }
+      result = this.generateAdHoc(schema, targetSchema, options);
     }
 
     if (options?.overrides) result = deepMerge(result, options.overrides);
@@ -1510,6 +1432,199 @@ export class WorldImpl implements World {
       result = options.transform(result as input<ZodTypeAny>);
     }
     return result;
+  }
+
+  /**
+   * Branch 1 — `sourceOverride !== undefined`: B8 with-source per-(DerivedSchema,
+   * source-identity) upsert path.
+   *
+   * Preserved contracts:
+   *   - B8-R1 / B8-R4: writes the derived record to the registry and records
+   *     the `(identity → derived)` entry in `derivedUpsert` when
+   *     `effectiveStore === true && isUnique === true`.
+   *   - B8-R7 / B10: under `effectiveStore === false`, both the `registry.store`
+   *     and the `derivedUpsert` write are suppressed.
+   *   - D8 / B14: `generateDerivedRecord` applies `options.overrides` and
+   *     `options.transform` internally; the dispatcher's trailing block is
+   *     gated by `transformApplied = true` so neither is re-applied here.
+   *
+   * The upsert cache short-circuit and `derivedPairCounter--` rollback live in
+   * the dispatcher above (D9 / B8-R9).
+   */
+  private generateWithSourceOverride(
+    schema: ZodTypeAny,
+    derivedRegs: SchemaReg[],
+    source: unknown,
+    options: GenerateOptions<unknown> | undefined,
+  ): unknown {
+    const reg = (derivedRegs[0] ?? { ...EMPTY_REG, schema }) as SchemaReg;
+    const sourceKey = reg.sourceKey;
+    const identity =
+      sourceKey !== null && sourceKey !== undefined
+        ? (source as Record<string, unknown>)[sourceKey]
+        : source;
+    const isUnique = options?.unique !== false;
+
+    // `generateDerivedRecord` already applies `options.overrides` (via
+    // `generateObjectFields`'s per-field deep-merge) AND `options.transform`
+    // — see B14 (D8). Trust its return value here; do NOT re-apply overrides
+    // or transform in this branch (would double-apply for any non-idempotent
+    // transform).
+    const result = this.generateDerivedRecord(schema, reg, source, 0, options);
+
+    // B8-R7 / B10: when the outer call opted out of storage, do NOT touch
+    // the registry and do NOT write to the upsert map — both side effects
+    // are suppressed together so a later default-mode call cannot resolve
+    // to a record that isn't in the registry.
+    if (this.effectiveStore) {
+      this.registry.store(schema, result as input<ZodTypeAny>);
+      if (isUnique) {
+        let inner = this.derivedUpsert.get(schema);
+        if (!inner) {
+          inner = new Map<unknown, unknown>();
+          this.derivedUpsert.set(schema, inner);
+        }
+        inner.set(identity, result);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Branch 2 — `derivedRegs.length > 0` with no explicit source: the no-source
+   * derived auto-source path.
+   *
+   * Preserved contracts:
+   *   - Auto-provisions one source per distinct `reg.from` with an empty
+   *     source registry, via `generateAndStorePrimary`.
+   *   - B20 local-capture: under `store: false` the auto-provision write is
+   *     suppressed, so the freshly generated source is captured in a local
+   *     `Map<ZodTypeAny, unknown>` keyed by `reg.from`. Multiple derivedRegs
+   *     sharing the same `reg.from` reuse one captured source.
+   *   - Pair-pick by `(derivedPairCounter - 1) % pairs.length` round-robin.
+   *   - D8 / B14: `generateDerivedRecord` applies `options.overrides` /
+   *     `options.transform` internally; the dispatcher's trailing block is
+   *     gated by `transformApplied = true`.
+   *   - B24-R3 (closes B21): under `if (this.effectiveStore)`, write the
+   *     derived record to the registry. Mirrors the with-source branch's
+   *     existing line. The new store does NOT touch `derivedUpsert` — that
+   *     map is keyed on explicit source identity and the no-source path has
+   *     none.
+   *   - B10-R4 / B20-R2: the new store call is gated on `this.effectiveStore`,
+   *     preserving transitive `store: false` suppression.
+   */
+  private generateDerivedAutoSource(
+    schema: ZodTypeAny,
+    derivedRegs: SchemaReg[],
+    options: GenerateOptions<unknown> | undefined,
+  ): unknown {
+    // Pick first available source across all derived regs, auto-provisioning
+    // if needed. Under `store: false` (B10-R4 transitive suppression) the
+    // `generateAndStorePrimary` call generates but does NOT write to the
+    // registry — so we capture the freshly generated source locally and
+    // fall back to it when the registry read still returns []. The local
+    // map is keyed by `reg.from` so multiple derivedRegs sharing the same
+    // source schema reuse one auto-provisioned source (matching the
+    // existing behaviour: `registry.count(reg.from) === 0` skips after
+    // the first call writes).
+    const captured = new Map<ZodTypeAny, unknown>();
+    for (const reg of derivedRegs) {
+      if (this.registry.count(reg.from!) === 0 && !captured.has(reg.from!)) {
+        const fromReg = this.findPrimaryRegs(reg.from!)[0] ?? null;
+        const fresh = this.generateAndStorePrimary(reg.from!, fromReg);
+        captured.set(reg.from!, fresh);
+      }
+    }
+
+    // Collect all (source, reg, index) pairs and pick by derivedPairCounter.
+    // B20-R4: the non-empty path reads from the registry exactly as today;
+    // the local capture is consulted only when the registry is still empty
+    // after the auto-provision attempt (i.e. only under `store: false`).
+    type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
+    const pairs: SourcePair[] = [];
+    for (const reg of derivedRegs) {
+      const sources = this.registry.all(reg.from!);
+      if (sources.length > 0) {
+        for (let i = 0; i < sources.length; i++) {
+          pairs.push({ source: sources[i], reg, sourceIndex: i });
+        }
+      } else if (captured.has(reg.from!)) {
+        pairs.push({ source: captured.get(reg.from!), reg, sourceIndex: 0 });
+      }
+    }
+
+    const idx = (this.derivedPairCounter - 1) % pairs.length;
+    const { source, reg, sourceIndex } = pairs[idx]!;
+    const result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
+
+    // B24-R3 (closes B21): the no-source-derived path now stores the derived
+    // record by default, symmetric with the with-source branch. The store is
+    // gated on `effectiveStore` so `world.generate(D, { store: false })`
+    // still suppresses both source and derived writes (B10-R4 / B20-R2).
+    // Does NOT touch `derivedUpsert` — that map is keyed on explicit source
+    // identity, which the no-source path does not have.
+    if (this.effectiveStore) {
+      this.registry.store(schema, result as input<ZodTypeAny>);
+    }
+
+    return result;
+  }
+
+  /**
+   * Branch 3 — `primaryRegs.length > 0`: registered-primary path.
+   *
+   * Delegates to `generateAndStorePrimary`, which applies `options.transform`
+   * internally and stores under `if (this.effectiveStore)`. The dispatcher's
+   * trailing `transform` is suppressed via `transformApplied = true`.
+   */
+  private generatePrimary(
+    schema: ZodTypeAny,
+    primaryReg: SchemaReg,
+    options: GenerateOptions<unknown> | undefined,
+  ): unknown {
+    return this.generateAndStorePrimary(schema, primaryReg, options);
+  }
+
+  /**
+   * Branch 4 — ad-hoc fallback for an unregistered schema.
+   *
+   * Preserved contracts:
+   *   - D4 / D10 / B39 Site 1: keys the ad-hoc PRNG on the OUTER `schema`
+   *     reference via `nextSchemaSlot(schema)`, NOT on the lazy-resolved
+   *     `targetSchema`. The outer reference is stable across `z.lazy(...)`
+   *     re-resolutions, matching the spec's identity model.
+   *   - Fork key literal shape: `adhoc:${id}:${slot}` (D10 / B39 pins this).
+   *   - Dispatches on `def(targetSchema).type === "object"` to either
+   *     `generateObjectFields` (objects, threading through `options?.overrides`)
+   *     or `generateFromSchema` (non-objects).
+   *   - The dispatcher applies the trailing `overrides` + `transform` block
+   *     to the result of this branch (it does not set `transformApplied`).
+   */
+  private generateAdHoc(
+    schema: ZodTypeAny,
+    targetSchema: ZodTypeAny,
+    options: GenerateOptions<unknown> | undefined,
+  ): unknown {
+    const { id: adhocId, slot: adhocSlot } = this.nextSchemaSlot(schema);
+    const recordId = `adhoc:${adhocId}:${adhocSlot}`;
+    const adHocPrng = this.prng.fork(recordId);
+    const fieldPath = options?.fieldPath ?? recordId;
+    if (def(targetSchema).type === "object") {
+      return this.generateObjectFields(
+        targetSchema,
+        EMPTY_REG,
+        undefined,
+        adHocPrng,
+        recordId,
+        fieldPath,
+        options?.overrides as Record<string, unknown>,
+      );
+    }
+    return generateFromSchema(
+      targetSchema,
+      this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath, recordId),
+    );
   }
 }
 

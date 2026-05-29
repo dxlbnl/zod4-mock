@@ -5,6 +5,7 @@ type: chore
 priority: medium
 flags: [review]
 created: 2026-05-29
+spec: wiki/specs/B24-decompose-generate-single-item.md
 ---
 
 ## Description
