@@ -3,7 +3,7 @@ id: B37
 title: Chore — reconcile pipeline-numbering drift across docs/code/JSDoc
 type: chore
 priority: low
-flags: [blocked]
+flags: []
 created: 2026-05-29
 ---
 

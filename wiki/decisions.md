@@ -257,3 +257,81 @@
   NOT affect any value." Promoted to architecture.md by the manager when B39
   lands.
 - **Supersedes**: none (extends D4; coexists with D9).
+
+## D11: Per-field generation pipeline expressed as a canonical PIPELINE list
+
+- **Date**: 2026-05-29
+- **Status**: Accepted
+- **Decided by**: B23 (`wiki/specs/B23-promote-per-field-pipeline-to-list.md`)
+
+### Context
+
+Before B23, the per-field generation pipeline (the 0-through-6 rung ladder
+documented in `docs/concepts.md`) was implemented three separate times:
+
+- `WorldImpl.generateObjectFields` in `src/world.ts` — full ladder, 118 LOC
+  flat `for` body with `continue` between rungs.
+- `src/explain.ts`'s `decideField` — read-only mirror for `world.explain`
+  (313 LOC overall, ~150 LOC mirrored decision logic).
+- `src/generators/schema/collection.ts:generateZodObject` — partial ladder
+  (no registration: just unwrap, key-based, schema-based).
+
+Three drift-prone implementations. B22's complexity research called this
+the headline lever. B23 promotes the pipeline to a single `PIPELINE`
+list of named step functions returning a `FieldResolution` tagged union.
+
+### Decision
+
+The per-field generation pipeline **MUST** be expressed as the canonical
+`PIPELINE: ReadonlyArray<PipelineStep>` list in `src/pipeline.ts`. New
+rungs are added by editing the list, never by open-coding the ladder at a
+call site. `PIPELINE_NO_REGISTRATION` is the registration-less subset
+(indices 3, 5, 6 of `PIPELINE`) for non-`withSchema` paths.
+
+The seven canonical steps in order:
+
+1. `overrideEagerStep` — eager primitive/array override (B12).
+2. `matcherStep` — matcher hit (B12 deep-merge for plain-object overrides).
+3. `schemaKeyMapStep` — per-schema key map hit.
+4. `unwrapOptionalStep` — `.optional()` / `.nullable()` / `.default()`
+   chain (uses B30's `unwrapOptionalChainForField`).
+5. `customKeyGenStep` — world-level custom key generator hit.
+6. `keyHeuristicStep` — `DEFAULT_KEY_MAP` field-name heuristic.
+7. `schemaBasedStep` — schema-based generation (catch-all via
+   `generateFromSchema`).
+
+Each step takes a `PipelineStepContext` (struct-arg form) and returns a
+`FieldResolution | null`. `null` means "fall through". The first
+non-null result wins. The `dryRun` flag on `PipelineStepContext`
+gates PRNG consumption so `explain.ts` can walk the same list as a
+read-only inspector.
+
+### Consequences
+
+- Single source of truth — schema-shape changes touch one list, not three.
+- Compile-time exhaustiveness on `FieldResolution.kind` lets future
+  callers iterate the union without missing cases.
+- `explain.ts` shrinks ~151 LOC (313 → 162).
+- `generateObjectFields` shrinks ~78 LOC (118 → 40).
+- A future implementer adding a fourth call site (e.g. a streaming
+  variant, a partial-record probe, an alternative explain projector)
+  **MUST** walk `PIPELINE`/`PIPELINE_NO_REGISTRATION` rather than
+  re-implementing the ladder; the architecture Rule (D11) makes this
+  binding.
+- B37 (pipeline-numbering doc reconciliation) is unblocked — the
+  canonical `PIPELINE` list IS the numbering source-of-truth, and
+  `docs/concepts.md` can now derive from / link to it.
+
+### Rule added
+
+`wiki/architecture.md` Rules section gains:
+
+> The per-field generation pipeline **MUST** be expressed as the
+> canonical `PIPELINE` list in `src/pipeline.ts`; new rungs are added by
+> editing the list, never by open-coding the ladder at a call site.
+> `PIPELINE_NO_REGISTRATION` is the registration-less subset for
+> non-`withSchema` paths. (→ D11)
+
+- **Supersedes**: none (codifies the structural contract; coexists with
+  D4/D10 which pin per-(seed + schema + slot) determinism that the
+  steps themselves must honour).

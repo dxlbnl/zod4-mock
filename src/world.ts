@@ -43,19 +43,17 @@ import type {
 import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
-import { generateFromKey } from "./generators/index.js";
 import {
   def,
   checks,
   unwrap,
-  applyModifiers,
   resolveLazyChain,
-  unwrapOptionalChainForField,
 } from "./generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 import { defaultLocale } from "./default-locale.js";
 import { explainSchema } from "./explain.js";
+import { PIPELINE, walkPipeline } from "./pipeline.js";
 
 // ---------------------------------------------------------------------------
 // B39 — module-global stable schema identity
@@ -1226,95 +1224,16 @@ export class WorldImpl implements World {
     for (const [key, fieldSchema] of Object.entries(shape)) {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
-      const fieldCtx = this.makeFieldCtx(
-        reg,
-        source,
-        recordPrng,
-        fieldPrng,
-        fieldPath,
-        recordId,
-        result,
-      );
-
-      // 0. Overrides (Eager)
-      // If an override is provided for this key, use it.
-      // If it's an object, we still proceed to generateObjectFields below to handle nested overrides.
-      const fieldOverride = overrides?.[key];
-      if (
-        fieldOverride !== undefined &&
-        (typeof fieldOverride !== "object" ||
-          fieldOverride === null ||
-          Array.isArray(fieldOverride))
-      ) {
-        result[key] = fieldOverride;
-        continue;
-      }
-
-      // 1. Matcher
-      const matcher = reg.matchers[key];
-      if (matcher) {
-        // Object overrides deep-merge on top of the matcher's value; step 0
-        // already handled primitive/null/array overrides eagerly.
-        const matched = matcher(fieldCtx);
-        result[key] = fieldOverride !== undefined ? deepMerge(matched, fieldOverride) : matched;
-        continue;
-      }
-
-      // 2. Per-schema key map
-      const keyMapFn =
-        this.schemaKeyMaps.get(schema)?.[key] ?? this.schemaKeyMaps.get(current)?.[key];
-      if (keyMapFn !== undefined) {
-        const mapped = keyMapFn(fieldCtx);
-        result[key] = fieldOverride !== undefined ? deepMerge(mapped, fieldOverride) : mapped;
-        continue;
-      }
-
-      // 3. Unwrap optional/nullable/default — roll for absence probability.
-      // B30: shared helper with `generateZodObject` (collection.ts). When
-      // `fieldOverride` is defined (a nested-object override that fell through
-      // step 0), the absent branch is suppressed so the override can deep-merge
-      // onto a generated value; the helper still consumes one PRNG roll per
-      // wrapper layer to preserve byte-identical PRNG order (D4 / D10).
-      const { inner: innerSchema, absent } = unwrapOptionalChainForField(
-        fieldSchema as ZodTypeAny,
-        fieldCtx.prng,
-        this.options.optionalProbability ?? 0.2,
-        fieldOverride === undefined,
-      );
-      if (absent !== null) {
-        result[key] = absent.kind === "skip" ? undefined : absent.value;
-        continue;
-      }
-
-      // 4. Custom world-level key generator
-      const customGen = this.customKeyGenerators.get(key.toLowerCase());
-      if (customGen !== undefined) {
-        const val = applyModifiers(customGen(innerSchema, fieldCtx), innerSchema);
-        result[key] = fieldOverride !== undefined ? deepMerge(val, fieldOverride) : val;
-        continue;
-      }
-
-      // 5. Key-based heuristic generator
-      const keyResult = generateFromKey(key, innerSchema, fieldCtx);
-      if (keyResult !== undefined) {
-        result[key] =
-          fieldOverride !== undefined ? fieldOverride : applyModifiers(keyResult, innerSchema);
-        continue;
-      }
-
-      // 6. Schema-based generator
-      const innerUnwrapped = unwrap(innerSchema);
-      const innerDef = def(innerUnwrapped);
-      const isObjectLike = innerDef.type === "object" || innerDef.type === "lazy";
-
-      if (isObjectLike) {
-        result[key] = fieldCtx.generate(innerSchema, { overrides: fieldOverride });
-      } else {
-        result[key] =
-          fieldOverride !== undefined ? fieldOverride : generateFromSchema(innerSchema, fieldCtx);
-      }
+      const fs = fieldSchema as ZodTypeAny;
+      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, recordId, result);
+      result[key] = walkPipeline(PIPELINE, {
+        fieldSchema: fs, fieldName: key, fieldCtx, fieldOverride: overrides?.[key],
+        reg, outerSchema: schema, resolvedSchema: current,
+        customKeyGenerators: this.customKeyGenerators, schemaKeyMaps: this.schemaKeyMaps,
+        optionalProbability: this.options.optionalProbability ?? 0.2,
+        dryRun: false, state: { inner: fs }, explainMeta: {},
+      }).value;
     }
-
     return result;
   }
 

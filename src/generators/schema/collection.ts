@@ -1,7 +1,13 @@
 import type { ZodTypeAny } from "zod";
-import type { GeneratorContext, Prng } from "../../types.js";
-import { def, checks, applyModifiers, unwrapOptionalChainForField } from "./zod-def.js";
+import type { GeneratorContext, KeyGenerator, Prng } from "../../types.js";
+import { def, checks } from "./zod-def.js";
 import { createPrng, fnv1a, splitmix32 } from "../../prng.js";
+import {
+  PIPELINE_NO_REGISTRATION,
+  walkPipeline,
+  EMPTY_SCHEMA_REG,
+  type PipelineStepContext,
+} from "../../pipeline.js";
 
 export function resolveArrayLength(
   schema: ZodTypeAny,
@@ -188,8 +194,13 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
   return result;
 }
 
-import { generateFromKey } from "../data/key-map.js";
-
+/**
+ * B23 — walks the same `PIPELINE_NO_REGISTRATION` subset
+ * (unwrapOptional → keyHeuristic → schemaBased) as `WorldImpl.generateObjectFields`
+ * does for the registration-free path. The four omitted rungs (override,
+ * matcher, schemaKeyMap, customKeyGen) are explicitly absent because this
+ * nested-`z.object` entry path has no `SchemaReg` available.
+ */
 export function generateZodObject(
   schema: ZodTypeAny,
   ctx: GeneratorContext,
@@ -197,6 +208,12 @@ export function generateZodObject(
   const d = def(schema);
   const shape = d.shape!;
   const result: Record<string, unknown> = {};
+  const emptyCustomKeyGenerators: ReadonlyMap<string, KeyGenerator> = new Map();
+  const emptySchemaKeyMaps: ReadonlyMap<
+    ZodTypeAny,
+    Record<string, (ctx: GeneratorContext) => unknown>
+  > = new Map();
+
   for (const [key, fieldSchema] of Object.entries(shape)) {
     const childCtx: GeneratorContext = {
       ...ctx,
@@ -204,28 +221,23 @@ export function generateZodObject(
       fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${key}` : key,
       current: result as Record<string, unknown>,
     };
-
-    // Unwrap optional/nullable so key-based generators see the inner schema,
-    // and handle the absent-value probability here rather than deep inside
-    // generateFromSchema where the field key is no longer available. B30:
-    // shared helper with `generateObjectFields`.
-    const { inner: innerSchema, absent } = unwrapOptionalChainForField(
+    const stepCtx: PipelineStepContext = {
       fieldSchema,
-      childCtx.prng,
-      ctx.optionalProbability ?? 0.2,
-    );
-
-    if (absent !== null) {
-      result[key] = absent.kind === "skip" ? undefined : absent.value;
-      continue;
-    }
-
-    // Try key-based heuristics first
-    const keyResult = generateFromKey(key, innerSchema, childCtx);
-    result[key] =
-      keyResult !== undefined
-        ? applyModifiers(keyResult, innerSchema)
-        : childCtx.generate(innerSchema);
+      fieldName: key,
+      fieldCtx: childCtx,
+      fieldOverride: undefined,
+      reg: EMPTY_SCHEMA_REG,
+      outerSchema: schema,
+      resolvedSchema: schema,
+      customKeyGenerators: emptyCustomKeyGenerators,
+      schemaKeyMaps: emptySchemaKeyMaps,
+      optionalProbability: ctx.optionalProbability ?? 0.2,
+      dryRun: false,
+      state: { inner: fieldSchema },
+      explainMeta: {},
+    };
+    const r = walkPipeline(PIPELINE_NO_REGISTRATION, stepCtx);
+    result[key] = r.value;
   }
   return result;
 }

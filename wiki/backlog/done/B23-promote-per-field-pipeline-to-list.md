@@ -5,6 +5,7 @@ type: chore
 priority: medium
 flags: [review]
 created: 2026-05-29
+spec: wiki/specs/B23-promote-per-field-pipeline-to-list.md
 ---
 
 ## Description
