@@ -1,6 +1,7 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../../types.js";
 import { def } from "./zod-def.js";
+import type { ZodDef } from "./zod-def.js";
 
 import { generateZodString, generateTemplateLiteral, generateString } from "./string.js";
 import { generateZodNumber, generateZodBigInt } from "./number.js";
@@ -51,173 +52,226 @@ function generateJson(ctx: GeneratorContext, depth = 0): unknown {
   }
 }
 
-export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+// B26 — dispatch table for `generateFromSchema`.
+//
+// `ZodDefType` enumerates every `def.type` value the router knows how to handle.
+// Adding a new Zod type that should be mockable means adding an entry here; the
+// `Record<ZodDefType, GenFn>` typing turns "forgot to wire it up" into a compile
+// error at the `DISPATCH` literal. `def.type` itself is typed as `string` upstream
+// (Zod v4 does not export a discriminated union), hence the local enumeration.
+type ZodDefType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "bigint"
+  | "symbol"
+  | "nan"
+  | "never"
+  | "date"
+  | "enum"
+  | "literal"
+  | "template_literal"
+  | "tuple"
+  | "record"
+  | "map"
+  | "set"
+  | "object"
+  | "array"
+  | "xor"
+  | "optional"
+  | "nullable"
+  | "union"
+  | "intersection"
+  | "pipe"
+  | "default"
+  | "catch"
+  | "readonly"
+  | "lazy"
+  | "promise"
+  | "json"
+  | "null"
+  | "undefined"
+  | "void"
+  | "any"
+  | "unknown"
+  | "custom"
+  | "function"
+  | "instanceof"
+  | "file";
+
+type GenFn = (schema: ZodTypeAny, ctx: GeneratorContext) => unknown;
+
+// --- Non-trivial dispatch arms, lifted to named functions. ---
+
+function generateXor(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const d = def(schema);
   const prng = ctx.prng;
-  const optProb = ctx.optionalProbability ?? 0.2;
+  const pickLeft = prng.random() > 0.5;
+  const chosen = pickLeft ? d.left : d.right;
+  if (!chosen) return generateString(prng, 3, 10);
+  return ctx.generate(chosen, { prng: ctx.prng.fork(pickLeft ? "l" : "r") });
+}
 
-  switch (d.type) {
-    case "string":
-      return generateZodString(schema, ctx);
-    case "number":
-      return generateZodNumber(schema, ctx);
-    case "boolean":
-      return prng.random() > 0.5;
-    case "bigint":
-      return generateZodBigInt(schema, ctx);
-    case "symbol":
-      return Symbol();
-    case "nan":
-      return NaN;
-    case "never":
-      return undefined;
-    case "date":
-      return generateZodDate(schema, ctx);
+function generateUnion(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const prng = ctx.prng;
+  // In Zod v4, discriminatedUnion is often typed as 'union' but with discriminator/optionsMap.
+  // These fields are not part of the shared ZodDef interface; read them off a local view.
+  const dWithDiscriminator = d as ZodDef & {
+    discriminator?: string;
+    optionsMap?: Map<unknown, ZodTypeAny>;
+  };
+  const optionsMap = dWithDiscriminator.optionsMap;
+  if (dWithDiscriminator.discriminator && optionsMap && optionsMap.size > 0) {
+    const keys = Array.from(optionsMap.keys());
+    const randomKey = keys[prng.int(0, keys.length - 1)]!;
+    const chosen = optionsMap.get(randomKey)!;
+    return ctx.generate(chosen, ctx);
+  }
 
-    case "enum": {
-      const keys = Object.keys(d.entries!);
-      return d.entries![keys[prng.int(0, keys.length - 1)]!];
-    }
+  const options = d.options;
+  if (!options || options.length === 0) {
+    throw new Error("Unsupported schema: union missing options");
+  }
+  const chosen = options[prng.int(0, options.length - 1)]!;
+  return ctx.generate(chosen, ctx);
+}
 
-    case "literal":
-      return d.values![0];
+function generateIntersection(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const left = ctx.generate(d.left!, ctx);
+  const right = ctx.generate(d.right!, ctx);
+  return deepMerge(left, right);
+}
 
-    case "template_literal":
-      return generateTemplateLiteral(schema, ctx);
+function generatePipe(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const prng = ctx.prng;
+  const pipeIn = d.in;
+  const pipeOut = d.out;
 
-    case "tuple":
-      return generateZodTuple(schema, ctx);
-    case "record":
-      return generateZodRecord(schema, ctx);
-    case "map":
-      return generateZodMap(schema, ctx);
-    case "set":
-      return generateZodSet(schema, ctx);
-    case "object":
-      return generateZodObject(schema, ctx);
-    case "array":
-      return generateZodArray(schema, ctx);
+  if (!pipeIn || !pipeOut) {
+    return generateString(prng, 3, 20);
+  }
 
-    case "xor": {
-      const pickLeft = prng.random() > 0.5;
-      const chosen = pickLeft ? d.left : d.right;
-      if (!chosen) return generateString(prng, 3, 10);
-      return ctx.generate(chosen, { prng: ctx.prng.fork(pickLeft ? "l" : "r") });
-    }
+  const dIn = def(pipeIn);
+  const dOut = def(pipeOut);
 
-    case "optional": {
-      if (prng.random() < optProb) return undefined;
-      return ctx.generate(d.innerType!, ctx);
-    }
-
-    case "nullable": {
-      if (prng.random() < optProb) return null;
-      return ctx.generate(d.innerType!, ctx);
-    }
-
-    case "union": {
-      // In Zod v4, discriminatedUnion is often typed as 'union' but with discriminator/optionsMap
-      const dAny = d as any;
-      if (dAny.discriminator && dAny.optionsMap && dAny.optionsMap.size > 0) {
-        const keys = Array.from(dAny.optionsMap.keys());
-        const randomKey = keys[prng.int(0, keys.length - 1)]!;
-        const chosen = dAny.optionsMap.get(randomKey)!;
-        return ctx.generate(chosen, ctx);
-      }
-
-      const options = d.options;
-      if (!options || options.length === 0) {
-        throw new Error("Unsupported schema: union missing options");
-      }
-      const chosen = options[prng.int(0, options.length - 1)]!;
-      return ctx.generate(chosen, ctx);
-    }
-
-    case "intersection": {
-      const left = ctx.generate(d.left!, ctx);
-      const right = ctx.generate(d.right!, ctx);
-      return deepMerge(left, right);
-    }
-
-    case "pipe": {
-      const pipeIn = d.in;
-      const pipeOut = d.out;
-
-      if (!pipeIn || !pipeOut) {
-        return generateString(prng, 3, 20);
-      }
-
-      const dIn = def(pipeIn);
-      const dOut = def(pipeOut);
-
-      // Zod v4 uses 'pipe' for effects (transform/preprocess).
-      // If one side is a 'transform' tag, we have an effect.
-      if (dOut.type === "transform") {
-        // This is a transform (post-process).
-        const input = ctx.generate(pipeIn, ctx);
-        const transformFn = (dOut as any).transform;
-        if (typeof transformFn === "function") {
-          try {
-            // Try to apply the transformation.
-            const result = transformFn(input, { addIssue: () => {} });
-            return result !== undefined ? result : input;
-          } catch {
-            return input;
-          }
-        }
+  // Zod v4 uses 'pipe' for effects (transform/preprocess).
+  // If one side is a 'transform' tag, we have an effect.
+  if (dOut.type === "transform") {
+    // This is a transform (post-process).
+    const input = ctx.generate(pipeIn, ctx);
+    const transformFn = (dOut as ZodDef & { transform?: (v: unknown, c: { addIssue: () => void }) => unknown }).transform;
+    if (typeof transformFn === "function") {
+      try {
+        // Try to apply the transformation.
+        const result = transformFn(input, { addIssue: () => {} });
+        return result !== undefined ? result : input;
+      } catch {
         return input;
       }
-
-      if (dIn.type === "transform") {
-        // This is a preprocess (pre-process).
-        // Since we can't easily invert a preprocessor, we generate the output type.
-        return ctx.generate(pipeOut, ctx);
-      }
-
-      // If both are schemas, it's a real pipeline.
-      // We prioritize the output side for generation to ensure the final
-      // constraints of the pipe chain are satisfied.
-      return ctx.generate(pipeOut, ctx);
     }
-
-    case "default": {
-      const optProb = ctx.optionalProbability ?? 0.2;
-      if (prng.random() < optProb) {
-        return typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
-      }
-      return ctx.generate(d.innerType!, ctx);
-    }
-    case "catch":
-      return ctx.generate(d.innerType!, ctx);
-    case "readonly":
-      return ctx.generate(d.innerType!, ctx);
-
-    case "lazy":
-      return ctx.generate(schema);
-
-    case "promise":
-      return undefined;
-
-    case "json":
-      return generateJson(ctx);
-
-    case "null":
-      return null;
-    case "undefined":
-      return undefined;
-    case "void":
-      return undefined;
-    case "any":
-    case "unknown":
-      return generateString(prng, 3, 10);
-
-    case "custom":
-    case "function":
-    case "instanceof":
-    case "file":
-      throw new UnsupportedSchemaError(d.type);
-
-    default:
-      return generateString(prng, 3, 10);
+    return input;
   }
+
+  if (dIn.type === "transform") {
+    // This is a preprocess (pre-process).
+    // Since we can't easily invert a preprocessor, we generate the output type.
+    return ctx.generate(pipeOut, ctx);
+  }
+
+  // If both are schemas, it's a real pipeline.
+  // We prioritize the output side for generation to ensure the final
+  // constraints of the pipe chain are satisfied.
+  return ctx.generate(pipeOut, ctx);
+}
+
+function generateOptional(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const optProb = ctx.optionalProbability ?? 0.2;
+  if (ctx.prng.random() < optProb) return undefined;
+  return ctx.generate(d.innerType!, ctx);
+}
+
+function generateNullable(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const optProb = ctx.optionalProbability ?? 0.2;
+  if (ctx.prng.random() < optProb) return null;
+  return ctx.generate(d.innerType!, ctx);
+}
+
+function generateDefault(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const optProb = ctx.optionalProbability ?? 0.2;
+  if (ctx.prng.random() < optProb) {
+    return typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+  }
+  return ctx.generate(d.innerType!, ctx);
+}
+
+function generateInnerType(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  return ctx.generate(def(schema).innerType!, ctx);
+}
+
+function generateEnum(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const keys = Object.keys(d.entries!);
+  return d.entries![keys[ctx.prng.int(0, keys.length - 1)]!];
+}
+
+function generateUnsupported(schema: ZodTypeAny): never {
+  throw new UnsupportedSchemaError(def(schema).type);
+}
+
+function generateFallbackString(_schema: ZodTypeAny, ctx: GeneratorContext): string {
+  return generateString(ctx.prng, 3, 10);
+}
+
+const DISPATCH: Record<ZodDefType, GenFn> = {
+  string: (s, ctx) => generateZodString(s, ctx),
+  number: (s, ctx) => generateZodNumber(s, ctx),
+  boolean: (_s, ctx) => ctx.prng.random() > 0.5,
+  bigint: (s, ctx) => generateZodBigInt(s, ctx),
+  symbol: () => Symbol(),
+  nan: () => NaN,
+  never: () => undefined,
+  date: (s, ctx) => generateZodDate(s, ctx),
+  enum: generateEnum,
+  literal: (s) => def(s).values![0],
+  template_literal: (s, ctx) => generateTemplateLiteral(s, ctx),
+  tuple: (s, ctx) => generateZodTuple(s, ctx),
+  record: (s, ctx) => generateZodRecord(s, ctx),
+  map: (s, ctx) => generateZodMap(s, ctx),
+  set: (s, ctx) => generateZodSet(s, ctx),
+  object: (s, ctx) => generateZodObject(s, ctx),
+  array: (s, ctx) => generateZodArray(s, ctx),
+  xor: generateXor,
+  optional: generateOptional,
+  nullable: generateNullable,
+  union: generateUnion,
+  intersection: generateIntersection,
+  pipe: generatePipe,
+  default: generateDefault,
+  catch: generateInnerType,
+  readonly: generateInnerType,
+  lazy: (s, ctx) => ctx.generate(s),
+  promise: () => undefined,
+  json: (_s, ctx) => generateJson(ctx),
+  null: () => null,
+  undefined: () => undefined,
+  void: () => undefined,
+  any: generateFallbackString,
+  unknown: generateFallbackString,
+  custom: generateUnsupported,
+  function: generateUnsupported,
+  instanceof: generateUnsupported,
+  file: generateUnsupported,
+};
+
+export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
+  const d = def(schema);
+  const handler = (DISPATCH as Record<string, GenFn | undefined>)[d.type];
+  if (handler !== undefined) return handler(schema, ctx);
+  return generateString(ctx.prng, 3, 10);
 }
