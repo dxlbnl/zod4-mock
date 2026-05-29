@@ -913,65 +913,9 @@ export class WorldImpl implements World {
     recordId: string,
     relName: string,
   ): T {
-    const rel = reg.relations[relName];
-    if (!rel) {
-      throw new Error(
-        `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
-      );
-    }
-    const relSchema = rel.schema;
-    const where = rel.where;
-    const isSelfRef = relSchema === reg.schema;
-
-    const cacheKey = `${recordId}:${relName}`;
-    let items = this.relationPools.get(cacheKey);
-
-    if (!items) {
-      if (this.registry.count(relSchema) === 0) {
-        // A self-referential relation (the schema relates to itself, e.g. a
-        // category whose parent is another category) must NOT auto-provision:
-        // generating a new record would re-enter this matcher with the
-        // registry still empty and recurse forever. Instead the first record
-        // simply has no related instance yet — later records reference the
-        // earlier ones already stored. The matcher handles the empty case
-        // (e.g. `ctx.related("parent")?.id ?? null`).
-        if (isSelfRef) {
-          this.relationPools.set(cacheKey, []);
-          return undefined as T;
-        }
-        const provisioned = this.ensurePrimaryRecord(relSchema);
-        // B10-R4: when the outer call opted out of storage, the auto-provisioned
-        // record was NOT written to the registry. Use the in-memory value
-        // directly so the matcher still sees a related instance.
-        if (!this.effectiveStore && provisioned !== undefined) {
-          items = [provisioned];
-        }
-      }
-      if (!items) {
-        items = [...this.registry.all(relSchema)];
-      }
-      // B11-R3 / B11-R7: apply `where` once, here, when building the snapshot.
-      // Filtering before caching means subsequent cache hits do not re-evaluate
-      // the predicate (D9 — cache neutrality).
-      if (where) {
-        items = items.filter((it) => where(it));
-      }
-      // B11-R6: empty filtered pool throws for non-self-referential relations.
-      // The throw happens before the PRNG fork so no PRNG state is consumed.
-      if (where && items.length === 0 && !isSelfRef) {
-        throw new Error(
-          `No related '${relName}' matches the \`where\` predicate. ` +
-            `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
-        );
-      }
-      this.relationPools.set(cacheKey, items);
-    }
-
+    const { items, prng } = this.resolveRelationPool(reg, recordPrng, recordId, relName, "single");
     if (items.length === 0) return undefined as T;
-
-    // Derive a stable per-relation PRNG so all fields in one record pick the same related entity.
-    const relPrng = recordPrng.fork(`rel:${relName}`);
-    const pickedIdx = relPrng.int(0, items.length - 1);
+    const pickedIdx = prng.int(0, items.length - 1);
     return items[pickedIdx]! as T;
   }
 
@@ -982,6 +926,43 @@ export class WorldImpl implements World {
     relName: string,
     count: number,
   ): T[] {
+    const { items, prng } = this.resolveRelationPool(
+      reg,
+      recordPrng,
+      recordId,
+      relName,
+      "many",
+      count,
+    );
+    return prng.sample(items, count) as T[];
+  }
+
+  /**
+   * Shared snapshot+fork pipeline for `ctx.related` (kind="single") and
+   * `ctx.related.many` (kind="many"). Builds the per-record candidate pool —
+   * applying `where` once before caching (B11-R3 / B11-R4 / B11-R7) — and
+   * returns it alongside a per-relation PRNG fork.
+   *
+   * Diverges by `kind`:
+   * - cache key suffix (`""` vs `":many"`),
+   * - auto-provision: single calls `ensurePrimaryRecord` when the registry is
+   *   empty; many runs an explicit shortfall loop up to `count` (and skips
+   *   under `where`, since auto-provision cannot guarantee the predicate),
+   * - PRNG fork key (`rel:<name>` vs `rel-many:<name>`),
+   * - empty-pool throw threshold (`< 1` vs `< count`).
+   *
+   * Self-referential relations are exempt from auto-provision (would recurse)
+   * and from the empty-pool throw (B5-R6 / B11-R6); callers handle the empty
+   * pool themselves.
+   */
+  private resolveRelationPool(
+    reg: SchemaReg,
+    recordPrng: ReturnType<typeof createPrng>,
+    recordId: string,
+    relName: string,
+    kind: "single" | "many",
+    count?: number,
+  ): { items: unknown[]; prng: Prng } {
     const rel = reg.relations[relName];
     if (!rel) {
       throw new Error(
@@ -992,59 +973,97 @@ export class WorldImpl implements World {
     const where = rel.where;
     const isSelfRef = relSchema === reg.schema;
 
-    const cacheKey = `${recordId}:${relName}:many`;
+    const cacheKey = kind === "many" ? `${recordId}:${relName}:many` : `${recordId}:${relName}`;
     let items = this.relationPools.get(cacheKey);
 
     if (!items) {
-      // Auto-provision the shortfall until at least `count` records exist —
-      // except for self-referential relations, which must not be provisioned
-      // (that would recurse forever; see resolveRelated's self-reference guard).
-      // Under `where`, auto-provision cannot guarantee the predicate is
-      // satisfied (B11-R6) — we do not attempt to coax matchers into
-      // producing predicate-satisfying records; if the filtered pool falls
-      // short, we throw below.
-      if (!isSelfRef && !where) {
-        const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
-        if (!this.effectiveStore) {
-          // B10-R4: under `store: false`, the registry is not written; collect
-          // provisioned records directly into the pool so the matcher still
-          // sees them.
-          const pool: unknown[] = [...this.registry.all(relSchema)];
-          while (pool.length < count) {
-            const provisioned = this.generateAndStorePrimary(relSchema, relReg);
-            pool.push(provisioned);
+      if (kind === "single") {
+        if (this.registry.count(relSchema) === 0) {
+          // A self-referential relation (the schema relates to itself, e.g. a
+          // category whose parent is another category) must NOT auto-provision:
+          // generating a new record would re-enter this matcher with the
+          // registry still empty and recurse forever. Instead the first record
+          // simply has no related instance yet — later records reference the
+          // earlier ones already stored. The matcher handles the empty case
+          // (e.g. `ctx.related("parent")?.id ?? null`).
+          if (isSelfRef) {
+            this.relationPools.set(cacheKey, []);
+            items = [];
+          } else {
+            const provisioned = this.ensurePrimaryRecord(relSchema);
+            // B10-R4: when the outer call opted out of storage, the
+            // auto-provisioned record was NOT written to the registry. Use
+            // the in-memory value directly so the matcher still sees a
+            // related instance.
+            if (!this.effectiveStore && provisioned !== undefined) {
+              items = [provisioned];
+            }
           }
-          items = pool;
-        } else {
-          while (this.registry.count(relSchema) < count) {
-            this.generateAndStorePrimary(relSchema, relReg);
+        }
+      } else {
+        // kind === "many": auto-provision the shortfall until at least `count`
+        // records exist — except for self-referential relations (would recurse,
+        // see the single guard above). Under `where`, auto-provision cannot
+        // guarantee the predicate is satisfied (B11-R6) — we do not attempt to
+        // coax matchers into producing predicate-satisfying records; if the
+        // filtered pool falls short, we throw below.
+        const want = count ?? 0;
+        if (!isSelfRef && !where) {
+          const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
+          if (!this.effectiveStore) {
+            // B10-R4: under `store: false`, the registry is not written;
+            // collect provisioned records directly into the pool so the
+            // matcher still sees them.
+            const pool: unknown[] = [...this.registry.all(relSchema)];
+            while (pool.length < want) {
+              const provisioned = this.generateAndStorePrimary(relSchema, relReg);
+              pool.push(provisioned);
+            }
+            items = pool;
+          } else {
+            while (this.registry.count(relSchema) < want) {
+              this.generateAndStorePrimary(relSchema, relReg);
+            }
           }
         }
       }
       if (!items) {
         items = [...this.registry.all(relSchema)];
       }
-      // B11-R4 / B11-R7: apply `where` once when building the snapshot.
+      // B11-R3 / B11-R4 / B11-R7: apply `where` once, here, when building the
+      // snapshot. Filtering before caching means subsequent cache hits do not
+      // re-evaluate the predicate (D9 — cache neutrality).
       if (where) {
         items = items.filter((it) => where(it));
       }
-      // B11-R6: throw when the filtered pool is smaller than the requested
-      // count for non-self-referential relations.
-      if (where && items.length < count && !isSelfRef) {
-        throw new Error(
-          `No related '${relName}' matches the \`where\` predicate ` +
-            `(requested ${count}, available ${items.length}). ` +
-            `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
-        );
+      // B11-R6: empty / undersupplied filtered pool throws for
+      // non-self-referential relations. The throw happens before the PRNG fork
+      // so no PRNG state is consumed.
+      if (where && !isSelfRef) {
+        if (kind === "single" && items.length === 0) {
+          throw new Error(
+            `No related '${relName}' matches the \`where\` predicate. ` +
+              `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
+          );
+        }
+        if (kind === "many" && items.length < (count ?? 0)) {
+          throw new Error(
+            `No related '${relName}' matches the \`where\` predicate ` +
+              `(requested ${count}, available ${items.length}). ` +
+              `Pre-populate the registry with records satisfying the predicate, or relax the predicate.`,
+          );
+        }
       }
       this.relationPools.set(cacheKey, items);
     }
 
-    // Derive a stable per-relation PRNG, distinct from single `related`'s fork,
-    // so the picks are deterministic and record-scoped. prng.sample clamps
-    // `count` into [0, items.length] and yields distinct, ordered records.
-    const relPrng = recordPrng.fork(`rel-many:${relName}`);
-    return relPrng.sample(items, count) as T[];
+    // Derive a stable per-relation PRNG so all fields in one record pick the
+    // same related entity (single) or set (many). The `rel-many:` prefix on
+    // the many path keeps its fork independent of the single path's `rel:`
+    // fork — D4 / D10 byte-identical fork-key shape.
+    const forkKey = kind === "many" ? `rel-many:${relName}` : `rel:${relName}`;
+    const prng = recordPrng.fork(forkKey);
+    return { items, prng };
   }
 
   private ensurePrimaryRecord(schema: ZodTypeAny): unknown | undefined {

@@ -403,4 +403,12 @@ it records the reason here AND states it in chat.
 - implementer: added FORMAT_GENERATORS dispatch table at src/generators/schema/string.ts:142-162 with 19 entries (card said "22" — actual format-chain count is 19 + 4 check-format arms; the latter stay a switch as the card prescribed). All 19 generators are pure `(prng: Prng) => string` — none need ctx (these are local file helpers, not ctx.gen surfacing). Extracted `generateUrl` helper for the only inline composition. Check-format switch + base fallback byte-for-byte unchanged. Added .changeset/b34-dispatch-table-generate-zod-string.md (patch). GREEN: 1017/1017 tests, typecheck clean.
 - manager: dispatch reviewer (no git; verify by Read + pnpm test only)
 - reviewer: PASS — table at :142-162 with 19 entries, type `Record<string, (prng: GeneratorContext["prng"]) => string>` no `any`. generateUrl template byte-identical to pre-refactor inline. Check-format switch + generateString fallback untouched. NO new standing constraint.
+- result: done — commit dca70c3
+
+## 2026-05-29 — B32: Refactor — extract `resolveRelationPool` shared between `resolveRelated` + `resolveRelatedMany`
+- manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
+- manager: dispatch implementer
+- implementer: extracted `private resolveRelationPool(reg, recordPrng, recordId, relName, kind, count?): { items, prng }` at world.ts:958; reduced resolveRelated (lines 910-920, ~4 lines body) and resolveRelatedMany (922-938, ~3 stmts) to thin wrappers. Fork keys `rel:${relName}` / `rel-many:${relName}` preserved byte-identically. Cache keys `${recordId}:${relName}` / `${recordId}:${relName}:many` preserved. `where` filter applied once at snapshot build (D9 cache neutrality). Auto-provision branches on `kind` inside cache-miss (single → ensurePrimaryRecord if empty; many → shortfall loop up to count, gated by `!where`). Self-ref guard preserved. Added .changeset/b32-extract-resolve-relation-pool.md (patch). GREEN: 1017/1017 tests, typecheck clean. No `any` (D1).
+- manager: dispatch reviewer (no git; verify by Read + pnpm test only)
+- reviewer: PASS — signature matches spec at :958; wrappers thin; fork+cache keys byte-identical; where applied once before cache-set (D9); empty-pool throw before PRNG draw (B11-R6); self-ref guard preserved (`undefined as T` for single, `prng.sample` clamp for many). NO new standing constraint.
 - result: done — commit pending
