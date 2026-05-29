@@ -87,7 +87,20 @@ interface WorldOptions {
 }
 ```
 
-**`seed`** — master seed for all generation in this world. The same seed with the same builder chain always produces byte-identical output.
+**`seed`** — master seed for all generation in this world. The same seed with the same builder chain and the same per-schema call sequence always produces byte-identical output. Call order across distinct schemas does not affect any value: `world.generate(X); world.generate(Y)` and `world.generate(Y); world.generate(X)` produce the same `X` and the same `Y` either way.
+
+**Pattern — hoist schemas to module scope.** Determinism is keyed on schema *reference* identity, not structural equality. If you construct a schema inline inside a factory or a per-test helper, two calls will see two different references and produce different output. Construct your schemas once (typically at module scope) and import them where needed — that's how the same seed gives the same output across separate `createWorld` calls.
+
+```ts
+// ✗ inline construction inside `make` — separate references, different output
+const make = (seed: number) =>
+  createWorld({ seed }).generate(z.array(Person).length(3));
+
+// ✓ hoist the schema — both calls share the reference, identical output
+const ArrSchema = z.array(Person).length(3);
+const make = (seed: number) =>
+  createWorld({ seed }).generate(ArrSchema);
+```
 
 **`optionalProbability`** — probability in [0, 1] that `z.optional()` or `z.nullable()` fields are omitted/nulled. Set to `0` to always generate optional fields; `1` to always omit them. Default `0.2`.
 
@@ -482,7 +495,7 @@ mirrors `z.coerce`.)
 
 Returns the first stored record (registry **insertion order**) for which **every** key in `predicate` matches, comparing shallow keys by value and nested-object values by **deep equality**. On a miss, it generates a new record via `generate` with `predicate` supplied as `overrides` (so the **predicate wins** over matchers and key/schema generators on conflicting keys), stores it in the registry for `schema`, and returns it. The found record is returned **by reference** (the same instance held in the registry).
 
-`get` is **deterministic** for a given seed and call sequence and **idempotent** for a repeated predicate: the first call generates-and-stores, and the second resolves via the find path and returns the same instance.
+`get` is **deterministic** for a given seed and the per-schema call sequence and **idempotent** for a repeated predicate: the first call generates-and-stores, and the second resolves via the find path and returns the same instance.
 
 The create path **always stores** — `get` ignores any ambient `store: false` from an enclosing call. This is required for idempotence: if the first call's record were not written to the registry, the second call could not discover it.
 

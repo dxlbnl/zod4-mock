@@ -211,10 +211,16 @@ describe("schema/collection", () => {
     // Iterating in declared order means appending 'C' at the end of the enum
     // disturbs only C's value — A and B at index 0 and 1 are byte-identical
     // across the two schemas at the same seed.
+    //
+    // Under B39/D10 (reference-identity determinism) the shared value schema
+    // `Num` MUST be hoisted: inline `z.number()` calls would each get a
+    // distinct schema identity, so A and B's fork keys would diverge between
+    // S1 and S2. Hoisting preserves the B17-R6 intent under the new contract.
+    const Num = z.number();
     const E1 = z.enum(["A", "B"]);
-    const S1 = z.record(E1, z.number());
+    const S1 = z.record(E1, Num);
     const E2 = z.enum(["A", "B", "C"]);
-    const S2 = z.record(E2, z.number());
+    const S2 = z.record(E2, Num);
 
     const v1 = generate(S1, { seed: 1 }) as Record<string, number>;
     const v2 = generate(S2, { seed: 1 }) as Record<string, number>;

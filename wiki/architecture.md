@@ -52,8 +52,13 @@ wiki/                # Vibin workflow source of truth (this directory)
 - All relative imports **MUST** use `.js` extensions (Node16 ESM resolution). (→ D1)
 - Zod v4 internals **MUST** be read via `schema._zod.def` / `check._zod.def` (not `_def`);
   access is type-cast and intentional. (→ D3)
-- Generation **MUST** stay deterministic: per-field PRNG `fork(key)`, so adding/removing a
-  field does not disturb other fields. (→ D4)
+- Generation **MUST** be deterministic per `(seed + schema reference + per-schema call slot)`;
+  call order across distinct schemas **MUST NOT** affect any value. Determinism is keyed on
+  schema *reference* identity (a module-global `WeakMap<ZodTypeAny, number>`), not structural
+  equality — two separately-constructed `z.object(...)`s produce independent fork keys. Within
+  a single record, per-field PRNG `fork(fieldName)` ensures field-name order doesn't disturb
+  other fields. Construct schemas once at module scope and reuse them for stable mock data
+  across refactors and `createWorld` calls. (→ D4, D10)
 - When a public API changes, `docs/api-reference.md` **MUST** be updated in the same step
   (not deferred). (→ D5)
 - When fixing a bug, a regression test **MUST** be added. (→ D6)

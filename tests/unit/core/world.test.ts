@@ -630,15 +630,42 @@ describe("determinism", () => {
     expect(make(1)).not.toEqual(make(2));
   });
 
-  it("adding a field does not change values of existing fields", () => {
-    // Per-field PRNG seeding: each field derives its PRNG from
-    // hash(seed + fieldPath), so adding 'age' doesn't shift 'name' or 'email'.
-    const SchemaA = z.object({ name: z.string(), email: z.email() });
-    const SchemaB = z.object({ name: z.string(), age: z.number(), email: z.email() });
-    const a = createWorld({ seed: 42 }).generate(SchemaA);
-    const b = createWorld({ seed: 42 }).generate(SchemaB);
-    expect(a.name).toBe(b.name);
-    expect(a.email).toBe(b.email);
+  // B39 — pre-B39 the test
+  // `adding a field does not change values of existing fields`
+  // lived here. It asserted that two separately-constructed `z.object(...)`
+  // schemas with shared field names produced byte-identical values for the
+  // shared fields at the same seed. Pre-B39 that happened to pass because
+  // the global generationCounter started at 0 in each fresh world; the
+  // per-field forks `fork("name")`/`fork("email")` chained from the same
+  // `adhoc-1` parent PRNG.
+  //
+  // Under B39's reference-identity determinism contract (D4) the per-field
+  // fork chain is keyed on the *outer object's* reference identity
+  // (`adhoc:<schemaId>:<slot>` → `fork("name")` …). Two separately-
+  // constructed `z.object(...)` references have distinct ids by design,
+  // so their per-field forks do not share PRNG state — even if every
+  // field schema is hoisted to module scope. Re-asserting the old shape
+  // would contradict the contract the library now ships; see the
+  // determinism note in `docs/api-reference.md` and ADR D10 in
+  // `wiki/decisions.md`. The closest reference-identity property — that
+  // the same schema reference produces the same value for the same seed,
+  // regardless of intervening generation calls — is covered by
+  // `tests/unit/core/call-order-independence.test.ts` (B39-R1/R2).
+  it("same schema reference + same seed → identical output (D4 under B39)", () => {
+    // The reference-identity stability claim: when the SAME schema reference
+    // is generated twice on two identically-seeded worlds, the output is
+    // byte-identical. Adding fields to a schema yields a new reference and
+    // therefore independent output — see the determinism note in
+    // `docs/api-reference.md` for the hoist-at-module-scope pattern that
+    // gives stable mock data across refactors.
+    const Schema = z.object({
+      name: z.string(),
+      email: z.email(),
+      age: z.number(),
+    });
+    const a = createWorld({ seed: 42 }).generate(Schema);
+    const b = createWorld({ seed: 42 }).generate(Schema);
+    expect(a).toEqual(b);
   });
 });
 

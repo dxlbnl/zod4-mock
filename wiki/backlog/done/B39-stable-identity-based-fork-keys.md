@@ -5,6 +5,7 @@ type: bug
 priority: high
 flags: [review]
 created: 2026-05-29
+spec: wiki/specs/B39-stable-identity-based-fork-keys.md
 ---
 
 ## Description

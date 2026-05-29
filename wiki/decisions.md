@@ -194,3 +194,66 @@
   any counter the generation pipeline reads from (roll back any increments the
   bypassed path made)."
 - **Supersedes**: none
+
+## D10: Generation determinism is per-(seed + schema identity + per-schema call index)
+
+- **Date**: 2026-05-29
+- **By**: spec-writer (B39) / implementer (B39) / manager promotion on item land
+- **Context**: D4 historically meant "per-field `fork(key)` so adding/removing a
+  field does not disturb other fields", which held in the letter. B22's
+  codebase-complexity audit and B27's targeted audit
+  (`wiki/research/generation-counter-d4-audit.md`) surfaced that the unwritten
+  spirit — "seed alone determines values" — was incompletely realised: three
+  call sites in `WorldImpl` (`generateSingleItem` ad-hoc, `generateArray`, and
+  the outer-wrapper optional/nullable roll in `WorldImpl.generate`) derived
+  their PRNG fork keys from a per-world `generationCounter` rather than from a
+  stable schema identity. The result: inserting a stray
+  `world.generate(SomethingElse)` earlier in a session shifted the value of
+  every subsequent ad-hoc, array, or outer-optional generation. B39 fixes the
+  three sites and promotes the strengthened invariant to a binding rule.
+- **Decision**: Generation determinism is contracted on **(seed + schema
+  identity + per-schema call index)**. Two identically-seeded worlds with the
+  same `withSchema`/`withGenerators` chain produce byte-identical output for
+  the Nth `world.generate(X)` call regardless of which other
+  `world.generate(Y_i)` (for `Y_i !== X`) calls happened in between. The
+  per-schema call index is held on a private `WeakMap<ZodTypeAny, number>` in
+  `WorldImpl`; the schema *identity* itself is a module-global
+  `WeakMap<ZodTypeAny, number>` so two independently constructed worlds give
+  the same `ZodTypeAny` reference the same `<id>` (this is a deviation from
+  B39-R3's "scoped to one world" language — the spec-writer's per-world map
+  would have made `<id>` depend on observation order, which contradicts
+  B39-R1's cross-world invariant. The implementer flagged this and the manager
+  records the resolution here). The fork-key shapes are `adhoc:<id>:<slot>`,
+  `array:<id>:<slot>`, and `wrap:<id>:<slot>`. Registered-primary and
+  registered-derived paths (`reg{id}#{index}` / `dreg{id}#{sourceIndex}`) are
+  unchanged — they were already on stable identity-based keys.
+- **Consequences**: The published docs change from "same seed and same
+  builder chain" / "deterministic for a given seed and call sequence" to
+  "deterministic for a given seed and the per-schema call sequence"
+  (`docs/api-reference.md` lines 90 and 485 — B39-R9 dispatched). Downstream
+  consumers who snapshot their generated values across the three
+  counter-bearing paths will see those values shift once on the upgrade
+  (B39-R8 frames this as a `major` bump). Future cache layers MUST honour
+  this rule: a cache hit MUST consume no `schemaCallCounts` slot (D9 still
+  applies, now on a per-schema slot rather than a global counter). The
+  `WorldImpl.generationCounter` field is renamed to `derivedPairCounter` and
+  is read only by the derived-without-source pair picker; the rename signals
+  the field's remaining purpose. **Test surprise (escalated)**: the B39-R5
+  enumeration claimed zero in-repo test re-pins; the implementer hit three
+  unflagged regressions
+  (`tests/unit/core/world.test.ts:633` "adding a field does not change values
+  of existing fields", `tests/unit/generators/domains/collection.test.ts:209`
+  "B17-R6 / appending an enum member only disturbs the new member's value",
+  and `tests/integration/document-corpus/document-corpus.test.ts:148` "same
+  seed produces identical output"). All three compared two *distinct* schema
+  references (either inline `z.array(...)` re-constructions, or two object
+  schemas constructed side-by-side for a "before/after add-a-field" pair)
+  and relied on the pre-B39 counter coincidence (both got `counter=1` on a
+  fresh world). Under B39 the two schemas get different identity-derived
+  IDs and therefore different fork keys. The implementer escalated rather
+  than weakening the tests; the manager / spec-writer will resolve.
+- **Rule added/changed**: "Generation determinism MUST be per-(seed + schema
+  identity + per-schema call index); call order across distinct schemas MUST
+  NOT affect any value." Promoted to architecture.md by the manager when B39
+  lands.
+- **Supersedes**: none (extends D4; coexists with D9).

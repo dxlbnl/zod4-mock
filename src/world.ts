@@ -50,6 +50,41 @@ import { defaultLocale } from "./default-locale.js";
 import { explainSchema } from "./explain.js";
 
 // ---------------------------------------------------------------------------
+// B39 — module-global stable schema identity
+// ---------------------------------------------------------------------------
+//
+// To satisfy B39-R1 (call-order independence ACROSS distinct schemas), the
+// integer ID assigned to a `ZodTypeAny` reference must be the same in two
+// independently constructed worlds even when their `generate(...)` call
+// sequences differ — e.g. `worldA.generate(X)` vs
+// `worldB.generate(Y); worldB.generate(X)` must produce the same value for
+// `X`. A per-world counter cannot satisfy that: it would give X different IDs
+// (worldA: 0, worldB: 1).
+//
+// The fix: assign each schema reference a process-stable integer ID via a
+// **module-global** `WeakMap`. Schemas are GC'd naturally; the global counter
+// monotonically advances. The per-world `schemaCallCounts` (below) stays
+// per-world — it counts how many times THIS world has called `generate` on
+// that schema (the "Nth call" component of the fork-key seed). The spec's
+// B39-R3 language said both maps would be per-world; the call-order
+// independence requirement (B39-R1) takes precedence and forces the ID map
+// to be global. See the report at the bottom of the implementer commit.
+//
+// ---------------------------------------------------------------------------
+
+const globalSchemaIds: WeakMap<ZodTypeAny, number> = new WeakMap();
+let nextGlobalSchemaId = 0;
+
+function getSchemaId(schema: ZodTypeAny): number {
+  let id = globalSchemaIds.get(schema);
+  if (id === undefined) {
+    id = nextGlobalSchemaId++;
+    globalSchemaIds.set(schema, id);
+  }
+  return id;
+}
+
+// ---------------------------------------------------------------------------
 // Internal schema registration record
 // ---------------------------------------------------------------------------
 
@@ -148,7 +183,30 @@ export class WorldImpl implements World {
   readonly registry: Registry;
 
   private readonly schemaRegs: SchemaReg[] = [];
-  private generationCounter = 0;
+  /**
+   * B39 — round-robin index for the derived-without-source pair picker
+   * (`generateSingleItem`'s derived-fallback branch). Was historically named
+   * `generationCounter` and used for PRNG fork keys too; under B39 those
+   * fork keys moved to per-schema slots (`schemaCallCounts`), leaving this
+   * counter with one remaining consumer: `pairs[idx]` at the derived-without-
+   * source path. Incremented at the top of `generateSingleItem` and rolled
+   * back by the B8 upsert short-circuit (D9 cache neutrality).
+   */
+  private derivedPairCounter = 0;
+  /**
+   * B39 — per-schema call index, advanced exactly once at each top-level
+   * `generateSingleItem` ad-hoc / `generateArray` / outer-wrapper roll site.
+   * Keyed by the same `ZodTypeAny` reference the call was made with. Two
+   * `generate(X)` calls on one world get slots 1, 2, ...; an intervening
+   * `generate(Y)` on a different schema reference leaves X's slot
+   * untouched (the B39-R1 invariant). Scoped per-world so two worlds with
+   * the same call sequence on X both see X's first call at slot 1.
+   *
+   * NB: the schema *identity* component of the fork key (`<id>`) is a
+   * module-global `WeakMap` (see `getSchemaId` above). The per-world map
+   * holds only the call count.
+   */
+  private readonly schemaCallCounts: WeakMap<ZodTypeAny, number> = new WeakMap();
   private readonly rootSeed: number;
 
   private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
@@ -182,6 +240,35 @@ export class WorldImpl implements World {
     for (const [k, fn] of Object.entries(options.generators ?? {})) {
       this.customKeyGenerators.set(k.toLowerCase(), fn);
     }
+  }
+
+  /**
+   * B39 — assign a stable identity to `schema` (lazily, on first sight) and
+   * return the next per-schema call slot for the three fork-key sites
+   * (`generateSingleItem` ad-hoc, `generateArray`, outer-wrapper roll).
+   *
+   * @param schema  The outer schema reference the caller invoked
+   *                `generate(...)` with — NOT a re-resolved inner type. Using
+   *                the outer reference preserves identity across `lazy`
+   *                re-resolutions and `.optional()` / `.array()` wrappers.
+   * @param commit  When `true` (default) the slot is consumed and the
+   *                per-schema counter advances. When `false`, the next slot
+   *                that *would* be assigned is returned without mutating the
+   *                counter — useful for peek-before-cache-check patterns.
+   *                B39 currently always commits and rolls back on cache hit
+   *                via `rollbackSchemaSlot`; the parameter is here for
+   *                future use.
+   */
+  private nextSchemaSlot(
+    schema: ZodTypeAny,
+    commit: boolean = true,
+  ): { id: number; slot: number } {
+    const id = getSchemaId(schema);
+    const slot = (this.schemaCallCounts.get(schema) ?? 0) + 1;
+    if (commit) {
+      this.schemaCallCounts.set(schema, slot);
+    }
+    return { id, slot };
   }
 
   // -------------------------------------------------------------------------
@@ -359,11 +446,17 @@ export class WorldImpl implements World {
 
       if (d.type === "array") {
         if (outerWrappers.length > 0) {
-          const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
+          // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
+          // outer `schema` reference (the `.optional()` wrapper) so the Nth
+          // call to the same `.optional()` schema reuses the same fork key
+          // regardless of intervening `generate(Y)` calls.
+          const { id, slot } = this.nextSchemaSlot(schema);
+          const prng = this.prng.fork(`wrap:${id}:${slot}`);
           const optProb = this.options.optionalProbability ?? 0.2;
           for (const wrapper of outerWrappers) {
             if (prng.random() < optProb) {
-              this.generationCounter++;
+              // No counter mutation on skip — the per-schema slot was already
+              // advanced by `nextSchemaSlot` above (the next call gets slot+1).
               return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
             }
           }
@@ -923,8 +1016,13 @@ export class WorldImpl implements World {
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
     if (depth > (this.options.recursionLimit ?? 5)) return [];
 
-    this.generationCounter++;
-    const genPrng = this.prng.fork(`gen-${this.generationCounter}`);
+    // B39 — site 2: key the array's PRNG on the outer `arraySchema` reference
+    // (NOT the inner element schema). Keying on the inner schema would
+    // coalesce `z.array(X).min(3)` and `z.array(X).max(5)` into one slot
+    // bucket; keying on the outer ZodArray reference preserves their
+    // independence.
+    const { id: arrayId, slot: arraySlot } = this.nextSchemaSlot(arraySchema);
+    const genPrng = this.prng.fork(`array:${arrayId}:${arraySlot}`);
 
     const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5];
     const derivedRegs = this.findDerivedRegs(innerSchema);
@@ -1045,7 +1143,11 @@ export class WorldImpl implements World {
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
     if (depth > (this.options.recursionLimit ?? 5)) return null;
 
-    this.generationCounter++;
+    // B39 — only the derived-without-source pair picker (below, at the
+    // `pairs[idx]` site) still reads this counter. The three former
+    // PRNG-fork-key consumers (ad-hoc, array, outer-wrap) moved to
+    // `schemaCallCounts` via `nextSchemaSlot`.
+    this.derivedPairCounter++;
 
     let current = schema;
     let d = def(current);
@@ -1095,9 +1197,14 @@ export class WorldImpl implements World {
         // PRNG, do not advance the generation counter (we unwind it below).
         const existing = this.derivedUpsert.get(schema)?.get(identity);
         if (existing !== undefined) {
-          // The generationCounter was incremented at the top of this method;
-          // an upsert hit must consume no PRNG/counter state (B8-R9).
-          this.generationCounter--;
+          // D9 / B8-R9: an upsert hit must leave no observable per-world
+          // generation state behind. Roll back the `derivedPairCounter`
+          // increment from the top of this method so the next derived-without-
+          // source pair pick sees the same index it would have if this call
+          // had not happened. The B39 per-schema slot maps (`schemaCallCounts`)
+          // were not touched in this branch (the ad-hoc Site 1 below was
+          // never reached), so no slot rollback is needed.
+          this.derivedPairCounter--;
           return existing;
         }
       }
@@ -1151,7 +1258,7 @@ export class WorldImpl implements World {
         }
       }
 
-      // Collect all (source, reg, index) pairs and pick by generationCounter.
+      // Collect all (source, reg, index) pairs and pick by derivedPairCounter.
       // B20-R4: the non-empty path reads from the registry exactly as today;
       // the local capture is consulted only when the registry is still empty
       // after the auto-provision attempt (i.e. only under `store: false`).
@@ -1168,7 +1275,7 @@ export class WorldImpl implements World {
         }
       }
 
-      const idx = (this.generationCounter - 1) % pairs.length;
+      const idx = (this.derivedPairCounter - 1) % pairs.length;
       const { source, reg, sourceIndex } = pairs[idx]!;
       result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
       transformApplied = true;
@@ -1176,8 +1283,12 @@ export class WorldImpl implements World {
       result = this.generateAndStorePrimary(schema, primaryRegs[0]!, options);
       transformApplied = true;
     } else {
-      // Ad-hoc
-      const recordId = `adhoc-${this.generationCounter}`;
+      // Ad-hoc — B39 Site 1: key the ad-hoc PRNG on the outer `schema`
+      // reference (the one the caller invoked `generate(...)` with), NOT on
+      // the lazy-resolved `targetSchema`. The outer reference is stable
+      // across `z.lazy(...)` re-resolutions, matching the spec's identity model.
+      const { id: adhocId, slot: adhocSlot } = this.nextSchemaSlot(schema);
+      const recordId = `adhoc:${adhocId}:${adhocSlot}`;
       const adHocPrng = this.prng.fork(recordId);
       const fieldPath = options?.fieldPath ?? recordId;
       if (def(targetSchema).type === "object") {

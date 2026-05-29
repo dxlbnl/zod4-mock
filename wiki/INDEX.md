@@ -44,6 +44,7 @@ Every agent reads this page first, before doing anything else.
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 | [research/codebase-complexity.md](research/codebase-complexity.md) | B22 — deep complexity survey of `src/`: per-function, module-shape, structural, and architectural hot spots, with refactor candidates. |
 | [research/generation-counter-d4-audit.md](research/generation-counter-d4-audit.md) | B27 — audit of `WorldImpl.generationCounter`-derived PRNG fork keys vs D4's intent; confirms the call-order dependence is real on ad-hoc + array + outer-optional paths, recommends rename + documented rule (Option (a)) over identity-based fork keys (Option (b)). |
+| [specs/B39-stable-identity-based-fork-keys.md](specs/B39-stable-identity-based-fork-keys.md) | B39 — BUG: replace `generationCounter`-derived PRNG fork keys at `src/world.ts:362/927/1180` with stable per-schema identity-based ones (`WeakMap<ZodTypeAny, number>` + per-schema slot); strengthens D4 so call order across distinct schemas no longer affects any value; promotes ADR D10; major bump per B27 framing; zero in-repo test re-pins (B39-R5 enumeration). |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
 > `docs/getting-started.md`, `docs/concepts.md`, `docs/key-heuristics.md`,

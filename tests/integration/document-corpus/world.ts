@@ -109,12 +109,20 @@ export function createDocumentCorpusWorld(seed = 42) {
   );
 }
 
+// Hoisted array schemas — reference identity is the determinism key (B39 / D10),
+// so the same array-schema reference must be reused across `buildCorpus` calls
+// for `same seed produces identical output` to hold.
+const AuthorArraySchema = z.array(AuthorSchema).min(3).max(5);
+const DocumentArraySchema = z.array(DocumentSchema).min(5).max(10);
+const SentenceArraySchema = z.array(SentenceSchema).min(15).max(30);
+const AnnotationArraySchema = z.array(AnnotationSchema).min(20).max(40);
+
 // Convenience: build a fully-populated world and return all four collections.
 export function buildCorpus(seed = 42) {
   const world = createDocumentCorpusWorld(seed);
-  const authors = world.generate(z.array(AuthorSchema).min(3).max(5));
-  const documents = world.generate(z.array(DocumentSchema).min(5).max(10));
-  const sentences = world.generate(z.array(SentenceSchema).min(15).max(30));
-  const annotations = world.generate(z.array(AnnotationSchema).min(20).max(40));
+  const authors = world.generate(AuthorArraySchema);
+  const documents = world.generate(DocumentArraySchema);
+  const sentences = world.generate(SentenceArraySchema);
+  const annotations = world.generate(AnnotationArraySchema);
   return { world, authors, documents, sentences, annotations };
 }

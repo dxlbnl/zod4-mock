@@ -49,7 +49,7 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 4. `overrides` — final deep-merge (covers nested-object overrides that step 0 didn't eagerly consume)
 5. `transform` — final transform function
 
-**PRNG** — Mulberry32 seeded PRNG with FNV-1a hashing for per-field `fork(key)` derivation ([src/prng.ts](src/prng.ts)). Per-field seeding means adding/removing schema fields does not disturb values for other fields. The `Prng.fork(key)` method creates an independent child PRNG without consuming the parent's state.
+**PRNG** — SFC32 seeded PRNG with FNV-1a hashing for per-field `fork(key)` derivation ([src/prng.ts](src/prng.ts)). Per-field seeding means adding/removing schema fields does not disturb values for other fields. The `Prng.fork(key)` method creates an independent child PRNG without consuming the parent's state.
 
 **Registry** — in-memory store for all generated data within a world ([src/registry.ts](src/registry.ts)). Matchers can call `ctx.registry.pick<T>('typename')` to reference data generated for other subject types, enabling cross-API consistency.
 
