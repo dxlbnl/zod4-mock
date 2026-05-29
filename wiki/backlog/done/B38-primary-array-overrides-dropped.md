@@ -2,9 +2,10 @@
 id: B38
 title: BUG — `world.generate(primaryArraySchema, { overrides })` silently drops per-index overrides
 type: bug
-priority: medium
+priority: high
 flags: [review]
 created: 2026-05-29
+spec: wiki/specs/B38-primary-array-overrides-dropped.md
 ---
 
 ## Description

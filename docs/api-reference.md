@@ -304,7 +304,7 @@ generate<TSchema extends ZodTypeAny>(
 
 Generates a value matching the schema. The return type is fully inferred.
 
-- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`.
+- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`. (per-index `overrides` → see [`.populate`](#populateschema-count-factory) for primary-registered inner schemas)
 - If the schema has `from:` bindings (derived): generates one output per source in the registry.
 - If the schema is primary (registered or not): generates and stores a new record.
 - If `schema` is registered with `from:` and the call passes `{ source: x }`, the call is an **upsert** keyed by `(schema, identity(x))` — repeat calls with the same identity return the stored record by reference. See [`.withSchema`](#withschemaschema-opts) and the `unique` option below.
@@ -329,7 +329,7 @@ interface GenerateOptions<T> {
 }
 ```
 
-**`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`.
+**`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`. **Note**: per-index `overrides` on a **primary-registered** array schema (`world.generate(RegisteredSchema.array(), { overrides: [...] })`) **throw** — use [`world.populate(schema, count, factory)`](#populateschema-count-factory) to per-record-override a registered schema.
 
 **`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
 
@@ -364,7 +364,7 @@ populate<TSchema extends ZodTypeAny>(
 ): this
 ```
 
-Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining.
+Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining. (This is also the supported way to per-record-override a registered schema — `world.generate(RegisteredSchema.array(), { overrides: [...] })` throws; see the `overrides` note under [`GenerateOptions`](#generateschema-options).)
 
 The simple two-arg form is unchanged:
 

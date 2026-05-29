@@ -966,6 +966,19 @@ export class WorldImpl implements World {
     // Primary mode: generate N items, store in registry, return all
     // -------------------------------------------------------------------
     if (primaryRegs.length > 0) {
+      // B38: per-index overrides on a primary-registered array schema are
+      // silently dropped today (generateAndStorePrimary is called without
+      // options). Refuse the unsafe call shape loudly so the caller is
+      // steered to `world.populate(schema, count, factory)` — the API that
+      // actually applies per-record overrides. The guard fires BEFORE any
+      // record is generated so no partial work lands in the registry.
+      if (Array.isArray(options?.overrides) && options.overrides.length > 0) {
+        throw new Error(
+          "Per-index overrides on a primary-registered array schema are not supported on world.generate. " +
+            "Use world.populate(schema, count, factory) instead — see docs/api-reference.md → .populate.",
+        );
+      }
+
       const reg = primaryRegs[0]!;
       const existingCount = this.registry.count(innerSchema);
 
