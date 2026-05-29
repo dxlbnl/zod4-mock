@@ -41,6 +41,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B17-record-enum-exhaustive-keys.md](specs/B17-record-enum-exhaustive-keys.md) | B17 — BUG: `z.record(z.enum([...]), V)` emits one entry per enum member in declared order so the result satisfies Zod's strict-key inferred type; open-key `z.record(z.string()/z.number(), V)` unchanged; `z.map`, `z.nativeEnum`, and literal-union keyTypes deferred. |
 | [specs/B20-store-false-empty-from-crash.md](specs/B20-store-false-empty-from-crash.md) | B20 — BUG: `world.generate(DerivedSchema, { store: false })` with no `source` and an empty `from:` registry crashes with `TypeError`; fix captures the auto-provisioned source locally (Fix B) so nothing lands in the registry, honouring B10-R4's transitive suppression. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
+| [research/codebase-complexity.md](research/codebase-complexity.md) | B22 — deep complexity survey of `src/`: per-function, module-shape, structural, and architectural hot spots, with refactor candidates. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
 > `docs/getting-started.md`, `docs/concepts.md`, `docs/key-heuristics.md`,
