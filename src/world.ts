@@ -1120,21 +1120,38 @@ export class WorldImpl implements World {
 
       return result;
     } else if (derivedRegs.length > 0) {
-      // Pick first available source across all derived regs, auto-provisioning if needed
+      // Pick first available source across all derived regs, auto-provisioning
+      // if needed. Under `store: false` (B10-R4 transitive suppression) the
+      // `generateAndStorePrimary` call generates but does NOT write to the
+      // registry — so we capture the freshly generated source locally and
+      // fall back to it when the registry read still returns []. The local
+      // map is keyed by `reg.from` so multiple derivedRegs sharing the same
+      // source schema reuse one auto-provisioned source (matching the
+      // existing behaviour: `registry.count(reg.from) === 0` skips after
+      // the first call writes).
+      const captured = new Map<ZodTypeAny, unknown>();
       for (const reg of derivedRegs) {
-        if (this.registry.count(reg.from!) === 0) {
+        if (this.registry.count(reg.from!) === 0 && !captured.has(reg.from!)) {
           const fromReg = this.findPrimaryRegs(reg.from!)[0] ?? null;
-          this.generateAndStorePrimary(reg.from!, fromReg);
+          const fresh = this.generateAndStorePrimary(reg.from!, fromReg);
+          captured.set(reg.from!, fresh);
         }
       }
 
-      // Collect all (source, reg, index) pairs and pick by generationCounter
+      // Collect all (source, reg, index) pairs and pick by generationCounter.
+      // B20-R4: the non-empty path reads from the registry exactly as today;
+      // the local capture is consulted only when the registry is still empty
+      // after the auto-provision attempt (i.e. only under `store: false`).
       type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
       const pairs: SourcePair[] = [];
       for (const reg of derivedRegs) {
         const sources = this.registry.all(reg.from!);
-        for (let i = 0; i < sources.length; i++) {
-          pairs.push({ source: sources[i], reg, sourceIndex: i });
+        if (sources.length > 0) {
+          for (let i = 0; i < sources.length; i++) {
+            pairs.push({ source: sources[i], reg, sourceIndex: i });
+          }
+        } else if (captured.has(reg.from!)) {
+          pairs.push({ source: captured.get(reg.from!), reg, sourceIndex: 0 });
         }
       }
 

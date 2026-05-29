@@ -1,4 +1,33 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(pwd)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git mv:*)",
+      "Bash(python3 .claude/skills/migrate-vibin/migrate-plan.py:*)",
+      "Bash(pnpm:*)",
+      "Bash(pnpx:*)",
+      "Bash(node:*)",
+      "Bash(tsc:*)",
+      "Bash(tsx:*)",
+      "Read(//home/dexter/.claude/practices/**)"
+    ],
+    "deny": []
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -46,33 +75,5 @@
         ]
       }
     ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(ls:*)",
-      "Bash(pwd)",
-      "Bash(cat:*)",
-      "Bash(head:*)",
-      "Bash(tail:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(rg:*)",
-      "Bash(wc:*)",
-      "Bash(git status:*)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(git show:*)",
-      "Bash(git branch:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git mv:*)",
-      "Bash(python3 .claude/skills/migrate-vibin/migrate-plan.py:*)",
-      "Bash(pnpm:*)",
-      "Bash(pnpx:*)",
-      "Bash(node:*)",
-      "Bash(tsc:*)",
-      "Bash(tsx:*)"
-    ],
-    "deny": []
   }
 }
