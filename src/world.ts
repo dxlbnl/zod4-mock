@@ -43,7 +43,14 @@ import { SchemaRegistry } from "./registry.js";
 import { createPrng, fieldSeed } from "./prng.js";
 import { generateFromSchema } from "./generators/schema/index.js";
 import { generateFromKey } from "./generators/index.js";
-import { def, checks, unwrap, applyModifiers, resolveLazyChain } from "./generators/schema/zod-def.js";
+import {
+  def,
+  checks,
+  unwrap,
+  applyModifiers,
+  resolveLazyChain,
+  unwrapOptionalChainForField,
+} from "./generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "./utils/merge.js";
 import * as generatorsData from "./generators/data/index.js";
 import { defaultLocale } from "./default-locale.js";
@@ -1132,40 +1139,22 @@ export class WorldImpl implements World {
         continue;
       }
 
-      // 3. Unwrap optional/nullable/default — roll for absence probability
-      let innerSchema = fieldSchema as ZodTypeAny;
-      let fd = def(innerSchema);
-      let skip = false;
-      let fallbackValue: unknown | undefined = undefined;
-      let hasFallback = false;
-
-      while (fd.type === "optional" || fd.type === "nullable" || fd.type === "default") {
-        const isAbsent = fieldCtx.prng.random() < (this.options.optionalProbability ?? 0.2);
-
-        if (isAbsent && fieldOverride === undefined) {
-          if (fd.type === "default") {
-            result[key] =
-              typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
-          } else if (fd.type === "optional") {
-            result[key] = hasFallback ? fallbackValue : undefined;
-          } else if (fd.type === "nullable") {
-            result[key] = null;
-          }
-          skip = true;
-          break;
-        }
-
-        if (fd.type === "default") {
-          fallbackValue =
-            typeof fd.defaultValue === "function" ? fd.defaultValue() : fd.defaultValue;
-          hasFallback = true;
-        }
-
-        if (!fd.innerType) break;
-        innerSchema = fd.innerType;
-        fd = def(innerSchema);
+      // 3. Unwrap optional/nullable/default — roll for absence probability.
+      // B30: shared helper with `generateZodObject` (collection.ts). When
+      // `fieldOverride` is defined (a nested-object override that fell through
+      // step 0), the absent branch is suppressed so the override can deep-merge
+      // onto a generated value; the helper still consumes one PRNG roll per
+      // wrapper layer to preserve byte-identical PRNG order (D4 / D10).
+      const { inner: innerSchema, absent } = unwrapOptionalChainForField(
+        fieldSchema as ZodTypeAny,
+        fieldCtx.prng,
+        this.options.optionalProbability ?? 0.2,
+        fieldOverride === undefined,
+      );
+      if (absent !== null) {
+        result[key] = absent.kind === "skip" ? undefined : absent.value;
+        continue;
       }
-      if (skip) continue;
 
       // 4. Custom world-level key generator
       const customGen = this.customKeyGenerators.get(key.toLowerCase());

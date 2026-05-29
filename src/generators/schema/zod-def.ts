@@ -1,4 +1,5 @@
 import type { ZodTypeAny } from "zod";
+import type { Prng } from "@zod4-mock/locale-core";
 
 export interface ZodDef {
   type: string;
@@ -101,6 +102,86 @@ export function resolveLazyChain(
     d = def(current);
   }
   return current;
+}
+
+/**
+ * B30 — collapses the optional/nullable/default unwrap loop that previously
+ * appeared in two near-identical places (`world.ts:generateObjectFields` +
+ * `collection.ts:generateZodObject`).
+ *
+ * Walks the `.optional()` / `.nullable()` / `.default()` wrapper chain on a
+ * single field's schema. At each layer rolls `prng.random() < optProb`; on
+ * the first absent roll the loop breaks and returns the appropriate absent
+ * resolution. Otherwise the chain is fully unwrapped and `inner` carries the
+ * non-wrapper schema for downstream generation.
+ *
+ * PRNG consumption: exactly one `prng.random()` per wrapper layer, terminated
+ * on first absent roll (matching the two original sites byte-for-byte).
+ *
+ * `allowAbsent` — when `false`, every layer still rolls `prng.random()` but
+ * the absent branch is never taken (the chain is fully unwrapped). This
+ * preserves the world.ts call-site semantics where a non-undefined
+ * `fieldOverride` suppresses the absent branch while still consuming PRNG
+ * state at each layer.
+ *
+ * Return shape:
+ *   - `absent === null`            — generate from `inner` normally.
+ *   - `{ kind: "skip" }`           — optional layer with no captured `.default()`
+ *                                    fallback; the caller assigns `undefined`
+ *                                    (and typically `continue`s).
+ *   - `{ kind: "default", value }` — assign `value` verbatim. Used for:
+ *       • `.default()` absent (value = the default),
+ *       • `.optional()` absent with a previously captured fallback,
+ *       • `.nullable()` absent (value = `null`).
+ */
+export type UnwrappedAbsent =
+  | { kind: "skip" }
+  | { kind: "default"; value: unknown };
+
+export function unwrapOptionalChainForField(
+  fieldSchema: ZodTypeAny,
+  prng: Prng,
+  optProb: number,
+  allowAbsent: boolean = true,
+): { inner: ZodTypeAny; absent: UnwrappedAbsent | null } {
+  let inner = fieldSchema;
+  let d = def(inner);
+  let fallbackValue: unknown | undefined = undefined;
+  let hasFallback = false;
+
+  while (d.type === "optional" || d.type === "nullable" || d.type === "default") {
+    const isAbsent = prng.random() < optProb;
+
+    if (isAbsent && allowAbsent) {
+      if (d.type === "default") {
+        const value =
+          typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+        return { inner, absent: { kind: "default", value } };
+      }
+      if (d.type === "optional") {
+        return {
+          inner,
+          absent: hasFallback
+            ? { kind: "default", value: fallbackValue }
+            : { kind: "skip" },
+        };
+      }
+      // d.type === "nullable"
+      return { inner, absent: { kind: "default", value: null } };
+    }
+
+    if (d.type === "default") {
+      fallbackValue =
+        typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+      hasFallback = true;
+    }
+
+    if (!d.innerType) break;
+    inner = d.innerType;
+    d = def(inner);
+  }
+
+  return { inner, absent: null };
 }
 
 /** Applies formatting modifiers (case, trim, transform) to a value based on the schema. */

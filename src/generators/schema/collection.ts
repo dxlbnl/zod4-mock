@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, Prng } from "../../types.js";
-import { def, checks, applyModifiers } from "./zod-def.js";
+import { def, checks, applyModifiers, unwrapOptionalChainForField } from "./zod-def.js";
 import { createPrng, fnv1a, splitmix32 } from "../../prng.js";
 
 export function resolveArrayLength(
@@ -207,40 +207,18 @@ export function generateZodObject(
 
     // Unwrap optional/nullable so key-based generators see the inner schema,
     // and handle the absent-value probability here rather than deep inside
-    // generateFromSchema where the field key is no longer available.
-    let innerSchema = fieldSchema;
-    let d = def(innerSchema);
-    let skip = false;
+    // generateFromSchema where the field key is no longer available. B30:
+    // shared helper with `generateObjectFields`.
+    const { inner: innerSchema, absent } = unwrapOptionalChainForField(
+      fieldSchema,
+      childCtx.prng,
+      ctx.optionalProbability ?? 0.2,
+    );
 
-    let fallbackValue: unknown | undefined = undefined;
-    let hasFallback = false;
-
-    while (d.type === "optional" || d.type === "nullable" || d.type === "default") {
-      const isAbsent = childCtx.prng.random() < (ctx.optionalProbability ?? 0.2);
-
-      if (isAbsent) {
-        if (d.type === "default") {
-          result[key] = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
-        } else if (d.type === "optional") {
-          result[key] = hasFallback ? fallbackValue : undefined;
-        } else if (d.type === "nullable") {
-          result[key] = null;
-        }
-        skip = true;
-        break;
-      }
-
-      if (d.type === "default") {
-        fallbackValue = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
-        hasFallback = true;
-      }
-
-      if (!d.innerType) break;
-      innerSchema = d.innerType;
-      d = def(innerSchema);
+    if (absent !== null) {
+      result[key] = absent.kind === "skip" ? undefined : absent.value;
+      continue;
     }
-
-    if (skip) continue;
 
     // Try key-based heuristics first
     const keyResult = generateFromKey(key, innerSchema, childCtx);
