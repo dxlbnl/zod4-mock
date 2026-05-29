@@ -379,4 +379,12 @@ it records the reason here AND states it in chat.
 - implementer: extracted shared `textWithLength: PrngGen<string>` closure + `TEXT_ALIASES` array in src/generators/data/key-map.ts. 10 keys populated programmatically via loop. Chose Option A (inline) over B (separate file) — no other data table would naturally migrate. Net 352→348 LOC (smaller than card's ~80 estimate due to added docs/comments). B16 explain contract preserved: explain emits `inline:${key}` keyed on lookup key, not function reference, so per-key `inline:text`/`inline:description`/etc. still surface correctly. Added .changeset/b35-key-map-text-aliases.md (patch). GREEN: 1017/1017 tests, typecheck clean.
 - manager: dispatch reviewer (no git; verify by Read + pnpm test only)
 - reviewer: PASS — 10 aliases present, shared closure byte-identical to pre-refactor literals, B16-R2 rule 4 preserved (explain output is per-key not per-function-reference), D1/D5/D6 honored, NO new standing constraint.
+- result: done — commit 6e03302
+
+## 2026-05-29 — B36: Refactor — replace `bindGenerators` Proxy with eager-bound object (drops 2 `any`s, supersedes B40 CTX_SLOTS machinery)
+- manager: promoted inbox → doing, track: chore (S). No spec/tests-first. B40 deliberately deferred the Gender-string `person.firstName("male")` locale-residual to B36; this item should fix it during the rewrite.
+- manager: dispatch implementer
+- implementer: added module-scope `bindNamespace<T>(prng, ctx, nsObj)` helper at world.ts:329-419; rewrote `bindGenerators` at :729-793 as eager object literal of 14 namespace entries (no Proxy, no cache). Approach A: kept CTX_SLOTS table. Both `any` casts dropped (Record cache + generatorsData cast). Non-function members (DOMAINS, TECH_WORDS, EMOJIS) forwarded verbatim via typeof-guard. Bucket-2 Gender-string residual PRESERVED per Option α — explicit JSDoc on the `"no-args-only"` branch documenting that `person.firstName("male")` still doesn't pick up locale (out of scope for chore). Added .changeset/b36-bind-generators-eager.md (patch). GREEN: 1017/1017 tests, typecheck clean, B40 file 10/10 green.
+- manager: dispatch reviewer (no git; verify by Read + pnpm test only)
+- reviewer: PASS — `new Proxy` count is 0 in world.ts; 2 `any` casts dropped (remaining matches all pre-existing). bindNamespace handles all 4 buckets correctly. BoundGenerators public type unchanged. B40 contract preserved byte-identically. Bucket-2 residual explicitly documented. NO new standing constraint.
 - result: done — commit pending

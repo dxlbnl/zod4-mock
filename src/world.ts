@@ -35,6 +35,7 @@ import type {
   GeneratorContext,
   BoundGenerators,
   KeyGenerator,
+  Prng,
   SchemaKeyMap,
   SchemaOpts,
   ExplainResult,
@@ -327,6 +328,96 @@ const CTX_SLOTS: Readonly<Record<string, Readonly<Record<string, CtxSlot>>>> = {
     paragraph: 2,
   },
 };
+
+// ---------------------------------------------------------------------------
+// B36 — eager generator binding
+//
+// `bindNamespace` walks one namespace object once and produces a plain
+// `Record<string, unknown>` whose function members are wrapped per
+// `CTX_SLOTS[nsName]`. Non-function members (e.g. `internet.DOMAINS`,
+// `word.TECH_WORDS`) are forwarded verbatim. The slot lookup happens at
+// bind time, not call time — this replaces B40's double-Proxy machinery
+// with a single eager pass.
+//
+// Bucket semantics are preserved verbatim from B40:
+//   - slot === number       (bucket 1 / bucket 3): inject boundCtx at the
+//                            declared ctx-slot index when the caller did
+//                            not supply one;
+//   - slot === "no-args-only" (bucket 2): inject boundCtx only when the
+//                            caller passes zero args. The Gender-string-
+//                            without-locale residual (B40 deferred to B36)
+//                            is intentionally preserved here — fixing it
+//                            requires a helper-signature change, which is
+//                            out of scope for this refactor (chore);
+//   - slot === undefined    (bucket 4): forward args verbatim, no ctx
+//                            injection.
+// ---------------------------------------------------------------------------
+
+type CtxAwareFn = (prng: Prng, ...args: unknown[]) => unknown;
+
+function bindNamespace<T extends Readonly<Record<string, unknown>>>(
+  ns: T,
+  nsName: string,
+  prng: Prng,
+  boundCtx: GeneratorContext,
+): { [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
+  ? (...args: P) => R
+  : T[K] } {
+  const nsSlots = CTX_SLOTS[nsName];
+  const out: Record<string, unknown> = {};
+
+  for (const name of Object.keys(ns)) {
+    const value: unknown = ns[name];
+
+    if (typeof value !== "function") {
+      out[name] = value;
+      continue;
+    }
+
+    const fn = value as CtxAwareFn;
+    const slot = nsSlots?.[name];
+
+    if (slot === undefined) {
+      // Bucket 4: pure-prng helpers and any unmapped helper. Forward args
+      // verbatim — injecting an extra arg could clash with numeric/string
+      // positional parameters (e.g. `string.alphanumeric(length)`).
+      out[name] = (...args: unknown[]) => fn(prng, ...args);
+      continue;
+    }
+
+    if (slot === "no-args-only") {
+      // Bucket 2: `person.{firstName,middleName,fullName,prefix}`. The second
+      // arg is ambiguous (`Gender` string OR `GeneratorContext`); inject
+      // boundCtx ONLY when the caller passes no args. The Gender-string form
+      // (`ctx.gen.person.firstName("male")`) does NOT pick up the configured
+      // locale — known residual carried over from B40, intentionally deferred:
+      // fixing it requires changing the helper signatures (a breaking change
+      // out of scope for this refactor).
+      out[name] = (...args: unknown[]) =>
+        args.length === 0 ? fn(prng, boundCtx) : fn(prng, ...args);
+      continue;
+    }
+
+    // Bucket 1 / Bucket 3 (numeric slot): inject boundCtx at the declared
+    // ctx-slot index when the caller has not supplied one.
+    const ctxArgIdx = slot - 1;
+    out[name] = (...args: unknown[]) => {
+      if (args[ctxArgIdx] === undefined) {
+        const padded: unknown[] = [...args];
+        while (padded.length < ctxArgIdx) padded.push(undefined);
+        padded[ctxArgIdx] = boundCtx;
+        return fn(prng, ...padded);
+      }
+      return fn(prng, ...args);
+    };
+  }
+
+  return out as {
+    [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
+      ? (...args: P) => R
+      : T[K];
+  };
+}
 
 // ---------------------------------------------------------------------------
 // WorldImpl
@@ -726,70 +817,42 @@ export class WorldImpl implements World {
   // Private: generators binding
   // -------------------------------------------------------------------------
 
+  /**
+   * B36 — eager generator binding.
+   *
+   * Walks every namespace in `generatorsData` once and builds an object whose
+   * function members are wrapped per `CTX_SLOTS` (bucket 1/2/3) and whose
+   * non-function members (e.g. `internet.DOMAINS`, `word.TECH_WORDS`) are
+   * forwarded verbatim. Replaces B40's double-Proxy machinery — the slot
+   * lookup is done once at bind time rather than on every property access.
+   *
+   * B40's ctx-forwarding contract is preserved byte-identically. In
+   * particular, the bucket-2 `person.{firstName,middleName,fullName,prefix}`
+   * helpers continue to forward `boundCtx` **only** when the caller passes
+   * zero args — the Gender-string-without-locale residual carried over from
+   * B40 is intentionally preserved (fixing it requires a helper-signature
+   * change, which is out of scope for this refactor).
+   */
   private bindGenerators(
     prng: ReturnType<typeof createPrng>,
     boundCtx: GeneratorContext,
   ): BoundGenerators {
-    const boundCache: Record<string, any> = {};
-
-    return new Proxy({} as BoundGenerators, {
-      get: (_target, ns: string) => {
-        if (boundCache[ns]) return boundCache[ns];
-
-        const nsObj = (generatorsData as Record<string, any>)[ns];
-        if (!nsObj) return undefined;
-
-        const nsSlots = CTX_SLOTS[ns];
-
-        const boundNs = new Proxy(nsObj, {
-          get: (target, name: string) => {
-            const fn = target[name];
-            if (typeof fn !== "function") return fn;
-
-            const slot = nsSlots?.[name];
-
-            // Bucket 4 (no entry in the table): forward verbatim. Pure-prng
-            // helpers MUST NOT receive an injected ctx — extra positional
-            // args could collide with their numeric/string parameters.
-            if (slot === undefined) {
-              return (...args: unknown[]) => fn(prng, ...args);
-            }
-
-            // Bucket 2 (person.firstName / middleName / fullName / prefix):
-            // the second arg is ambiguous (Gender string OR GeneratorContext).
-            // Only inject boundCtx when the caller passes NO args — otherwise
-            // the user's first arg (Gender string or explicit ctx) wins.
-            // The Gender-string-without-locale residual is documented and
-            // deferred to B36 per spec.
-            if (slot === "no-args-only") {
-              return (...args: unknown[]) =>
-                args.length === 0 ? fn(prng, boundCtx) : fn(prng, ...args);
-            }
-
-            // Bucket 1 / Bucket 3 with numeric slot: inject boundCtx at the
-            // declared ctx-slot index if the caller did not supply one.
-            // `slot` is the helper's 1-indexed signature position counting
-            // prng as position 0 (e.g. noun(prng, ctx)→1; words(prng, count, ctx)→2;
-            // price(prng, min, max, ctx)→3). Within the user-facing `args`
-            // array (prng already bound, stripped), the ctx therefore lives
-            // at index `slot - 1`.
-            const ctxArgIdx = slot - 1;
-            return (...args: unknown[]) => {
-              if (args[ctxArgIdx] === undefined) {
-                const padded: unknown[] = [...args];
-                while (padded.length < ctxArgIdx) padded.push(undefined);
-                padded[ctxArgIdx] = boundCtx;
-                return fn(prng, ...padded);
-              }
-              return fn(prng, ...args);
-            };
-          },
-        });
-
-        boundCache[ns] = boundNs;
-        return boundNs;
-      },
-    });
+    return {
+      color: bindNamespace(generatorsData.color, "color", prng, boundCtx),
+      commerce: bindNamespace(generatorsData.commerce, "commerce", prng, boundCtx),
+      company: bindNamespace(generatorsData.company, "company", prng, boundCtx),
+      date: bindNamespace(generatorsData.date, "date", prng, boundCtx),
+      finance: bindNamespace(generatorsData.finance, "finance", prng, boundCtx),
+      internet: bindNamespace(generatorsData.internet, "internet", prng, boundCtx),
+      location: bindNamespace(generatorsData.location, "location", prng, boundCtx),
+      lorem: bindNamespace(generatorsData.lorem, "lorem", prng, boundCtx),
+      person: bindNamespace(generatorsData.person, "person", prng, boundCtx),
+      phone: bindNamespace(generatorsData.phone, "phone", prng, boundCtx),
+      string: bindNamespace(generatorsData.string, "string", prng, boundCtx),
+      system: bindNamespace(generatorsData.system, "system", prng, boundCtx),
+      vehicle: bindNamespace(generatorsData.vehicle, "vehicle", prng, boundCtx),
+      word: bindNamespace(generatorsData.word, "word", prng, boundCtx),
+    };
   }
 
   // -------------------------------------------------------------------------
