@@ -487,7 +487,7 @@ The ADR text:
   (`docs/api-reference.md` lines 90 and 485 — see B39-R9). Downstream
   consumers who snapshot their generated values across the three
   counter-bearing paths will see those values shift once on the upgrade
-  (B39-R8 frames this as a `major` bump). Future cache layers MUST honour
+  (B39-R8 framed this as a `major` bump originally; revised to `minor` for 0.x SemVer convention). Future cache layers MUST honour
   this rule: a cache hit MUST consume no `schemaCallCounts` slot (D9 still
   applies, now on a per-schema slot rather than a global counter). The
   `WorldImpl.generationCounter` field is renamed to `derivedPairCounter`
@@ -511,11 +511,11 @@ place; the manager promotes the rule line when the item moves to `done/`.
   WHEN `wiki/decisions.md` is read
   THEN it contains a new `## D10:` block matching the text above, including the literal title "Generation determinism is per-(seed + schema identity + per-schema call index)" and the "Rule added/changed" line ready for the manager's architecture.md promotion.
 
-### B39-R8: changeset bump — `major`
+### B39-R8: changeset bump — `minor` (revised; was `major`)
 
 A changeset MUST be created at
 `.changeset/b39-stable-identity-based-fork-keys.md` recording B39 as a
-`"zod4-mock": major` bump with a user-facing summary covering: (a) the
+`"zod4-mock": minor` bump with a user-facing summary covering: (a) the
 behavioural change — `world.generate(X)` is now order-independent of
 intervening `generate(Y)` calls on distinct schemas; (b) the value shift for
 ad-hoc / array / outer-wrap generation when seeds + builder chains stay the
@@ -526,27 +526,29 @@ registered-primary and registered-derived (`populate`, `populateFrom`,
 upgrade flow (re-snapshot any tests that pin specific bytes from the three
 counter-bearing paths).
 
-The bump choice is **`major`**, not `minor`, per the B27 audit's framing:
-> "Option (b) buys a stronger contract at the price of re-pinning every
-> array/ad-hoc snapshot across the suite, which is a major-version change
-> worth its own pipeline."
+**Bump revised from `major` to `minor` post-implementation.** The original
+B27 audit framing recommended `major` because the PRNG sequence is part of
+the published `docs/api-reference.md` deterministic contract. That reasoning
+holds — but under SemVer 0.x, breaking changes are conventionally `minor`
+bumps; `major` is reserved for the deliberate 1.0.0 commitment to API
+stability. With multiple open items still in flight (B42 Markov quality,
+B43 primary-array `.min/.max`, B28 `world.ts` split, B41 populate dispatch
+divergence), 1.0.0 is premature. Landing this as `minor` produces a
+`0.7.x → 0.8.0` bump that honestly signals "behaviour shifted" without
+locking in API stability.
 
-The B39-R5 enumeration shows zero in-repo test re-pins, but `docs/api-reference.md`
-lines 90 and 485 are a **published contract** — the public string
-"same builder chain" and "deterministic for a given seed and call sequence"
-becomes "deterministic for a given seed and the per-schema call sequence"
-(B39-R9). The two phrasings are subtly but observably different for a
-downstream consumer who has been relying on call-order as a contract input.
-Honouring SemVer, that is a `major` bump.
+The downstream-consumer guidance from the original `major` framing is
+unchanged: re-snapshot any tests that pin specific bytes from the three
+counter-bearing paths.
 
 The changeset MUST include `(closes #N)` only if the item card carries a
 GitHub issue number — the card does not, so the changeset MAY omit the
 issue reference.
 
-- Scenario: changeset file exists and is shaped as `major`
+- Scenario: changeset file exists and is shaped as `minor`
   GIVEN B39 has been implemented
   WHEN `.changeset/b39-stable-identity-based-fork-keys.md` is read
-  THEN its frontmatter declares `"zod4-mock": major`, the body summarises the contract change and the downstream upgrade flow, and a final non-empty line either references the issue (`(closes #N)`) or is the final summary line (no issue exists on the card, so the issue reference is optional here).
+  THEN its frontmatter declares `"zod4-mock": minor`, the body summarises the contract change and the downstream upgrade flow, and a final non-empty line either references the issue (`(closes #N)`) or is the final summary line (no issue exists on the card, so the issue reference is optional here).
 
 ### B39-R9: `docs/api-reference.md` updated in the same step (D5)
 
