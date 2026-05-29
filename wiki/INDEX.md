@@ -43,6 +43,7 @@ Every agent reads this page first, before doing anything else.
 | [specs/B38-primary-array-overrides-dropped.md](specs/B38-primary-array-overrides-dropped.md) | B38 — BUG: `world.generate(primaryArraySchema, { overrides })` silently drops per-index overrides on a primary-registered inner schema; fix throws loudly (direction C) and redirects callers to `world.populate(schema, count, factory)` (direction D). D8-preserving by construction; B14 contract unchanged. |
 | [research/better-gen/](research/better-gen/index.md) | Generator-overhaul research — localization, Markov chains, PRNG, batching. Most pillars implemented; see `research/better-gen/tracking.md`. |
 | [research/codebase-complexity.md](research/codebase-complexity.md) | B22 — deep complexity survey of `src/`: per-function, module-shape, structural, and architectural hot spots, with refactor candidates. |
+| [research/generation-counter-d4-audit.md](research/generation-counter-d4-audit.md) | B27 — audit of `WorldImpl.generationCounter`-derived PRNG fork keys vs D4's intent; confirms the call-order dependence is real on ad-hoc + array + outer-optional paths, recommends rename + documented rule (Option (a)) over identity-based fork keys (Option (b)). |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
 > `docs/getting-started.md`, `docs/concepts.md`, `docs/key-heuristics.md`,
