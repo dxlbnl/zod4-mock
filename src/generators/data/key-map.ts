@@ -29,6 +29,30 @@ export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?:
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("") as [string, ...string[]];
 
+/**
+ * Field-name aliases that all share the same length-aware text generator.
+ * Built programmatically into DEFAULT_KEY_MAP below so the table reads as
+ * data, not a literal copy per key.
+ */
+const TEXT_ALIASES = [
+  "text",
+  "description",
+  "note",
+  "summary",
+  "comment",
+  "body",
+  "content",
+  "message",
+  // nl
+  "omschrijving",
+  "bericht",
+] as const;
+
+const textWithLength: PrngGen<string> = (p, ctx, schema) => {
+  const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
+  return generateTextToLength(p, ctx, min, max);
+};
+
 export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined> = {
   string: {
     // Person
@@ -200,46 +224,9 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 
     // Word/Text
     word: data.word.noun as PrngGen,
-    text: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    description: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    note: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    summary: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    comment: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    body: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    content: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    message: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    omschrijving: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
-    bericht: (p, ctx, schema) => {
-      const { min, max } = resolveStringLength(schema, 0, Number.MAX_SAFE_INTEGER);
-      return generateTextToLength(p, ctx, min, max);
-    },
+    // text, description, note, summary, comment, body, content, message,
+    // omschrijving, bericht — populated programmatically from TEXT_ALIASES
+    // below (each shares the same length-aware closure).
 
     // Dutch names
     voornaam: data.person.firstName as PrngGen,
@@ -282,6 +269,15 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     },
   },
 };
+
+// Populate the length-aware text aliases programmatically — all share one
+// closure, so listing them as data avoids ten near-identical literals.
+{
+  const stringMap = DEFAULT_KEY_MAP.string;
+  if (stringMap !== undefined) {
+    for (const k of TEXT_ALIASES) stringMap[k] = textWithLength;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // DEFAULT_KEY_PATTERNS
