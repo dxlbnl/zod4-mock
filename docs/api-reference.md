@@ -714,6 +714,10 @@ matchers: {
 
 Arguments still pass through: `ctx.gen.string.alphanumeric(12)` calls `alphanumeric(prng, 12)` internally.
 
+Locale-aware helpers (every helper that accepts an optional `ctx?: GeneratorContext` — e.g. `word.noun`, `word.words`, `word.paragraph`, `location.city`, `commerce.productName`, `commerce.price`, `finance.iban`, `phone.number`, `company.name`, `date.month`, …) automatically receive the world's configured locale through `ctx.gen.<ns>.<fn>()`. You do not need to thread `ctx` through manually — `ctx.gen.word.noun()` honours `createWorld({ locale: nl })` out of the box. Helpers that take no `ctx` (`internet.ip`, `string.uuid`, `finance.bitcoinAddress`, …) are unaffected.
+
+Caveat for `person.firstName` / `middleName` / `fullName` / `prefix`: these helpers take an optional first argument that is either a `Gender` string OR a `GeneratorContext`. Auto-forwarding only kicks in when the matcher passes no argument. If you need both a fixed gender and the configured locale, use the explicit-`ctx` form by reading the sibling gender field yourself, or call `ctx.gen.person.firstName(ctx)` (no gender) and let the helper read it via `ctx.current`.
+
 **`source`** — for derived schemas (registered with `from:`), holds the source record that is driving this output. `undefined` for primary schemas. Typed as `input<TSource>` in `DerivedSchemaOpts` matchers.
 
 ```ts

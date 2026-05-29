@@ -175,6 +175,153 @@ function resolveMaxAllowed(schema: ZodTypeAny, defaultMax: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// B40 — per-helper ctx-slot table for bindGenerators
+//
+// Maps `<namespace>.<helper-name>` → the positional index at which the
+// helper accepts a `ctx?: GeneratorContext` argument. `bindGenerators`'s
+// Proxy adapter consults this table to decide whether (and where) to inject
+// the active `GeneratorContext` when the caller does not supply one.
+//
+// Slot semantics:
+//   - number       — bucket 1 / bucket 3: ctx-slot index past `prng`. The
+//                    adapter injects boundCtx at this index if args[slot] is
+//                    undefined. The dominant bucket-1 shape is slot 1.
+//                    Bucket-3 helpers (word.words, word.paragraph,
+//                    commerce.price) carry numeric/positional args before
+//                    ctx, so their slots are 2 or 3.
+//   - "no-args-only" — bucket 2 (person.firstName / middleName / fullName /
+//                    prefix): the second arg is ambiguous (`Gender` string
+//                    OR `GeneratorContext`). Inject boundCtx ONLY when the
+//                    caller passes no args; any explicit arg (string Gender
+//                    or ctx) wins verbatim. The Gender-string-without-locale
+//                    residual is documented and deferred to B36.
+//   - (absent)      — bucket 4: pure prng-only helpers. The adapter MUST
+//                    NOT inject ctx; injecting an extra arg could clash
+//                    with a numeric/string positional parameter (e.g.
+//                    `string.alphanumeric(prng, length)`).
+//
+// The table is per-namespace, per-helper-name; an absent namespace or
+// absent helper falls through to the bucket-4 safe default.
+// ---------------------------------------------------------------------------
+
+type CtxSlot = number | "no-args-only";
+
+const CTX_SLOTS: Readonly<Record<string, Readonly<Record<string, CtxSlot>>>> = {
+  word: {
+    noun: 1,
+    word: 1,
+    adjective: 1,
+    verb: 1,
+    adverb: 1,
+    conjunction: 1,
+    interjection: 1,
+    preposition: 1,
+    sentence: 1,
+    sample: 1,
+    words: 2,
+    paragraph: 2,
+  },
+  commerce: {
+    department: 1,
+    productAdjective: 1,
+    productMaterial: 1,
+    productName: 1,
+    product: 1,
+    productDescription: 1,
+    price: 3,
+  },
+  person: {
+    lastName: 1,
+    suffix: 1,
+    jobTitle: 1,
+    jobArea: 1,
+    jobType: 1,
+    jobDescriptor: 1,
+    gender: 1,
+    bio: 1,
+    firstName: "no-args-only",
+    middleName: "no-args-only",
+    fullName: "no-args-only",
+    prefix: "no-args-only",
+  },
+  location: {
+    street: 1,
+    buildingNumber: 1,
+    streetAddress: 1,
+    secondaryAddress: 1,
+    zipCode: 1,
+    postalCode: 1,
+    city: 1,
+    state: 1,
+    county: 1,
+    country: 1,
+    countryCode: 1,
+    continent: 1,
+    language: 1,
+    timeZone: 1,
+    direction: 1,
+    cardinalDirection: 1,
+    ordinalDirection: 1,
+  },
+  company: {
+    name: 1,
+    buzzAdjective: 1,
+    buzzNoun: 1,
+    buzzVerb: 1,
+    buzzPhrase: 1,
+    catchPhraseAdjective: 1,
+    catchPhraseDescriptor: 1,
+    catchPhraseNoun: 1,
+    catchPhrase: 1,
+  },
+  finance: {
+    currencyCode: 1,
+    currencyName: 1,
+    currencySymbol: 1,
+    currencyNumericCode: 1,
+    accountName: 1,
+    transactionType: 1,
+    transactionDescription: 1,
+    iban: 1,
+    bic: 1,
+    creditCardNumber: 1,
+  },
+  date: {
+    month: 1,
+    weekday: 1,
+    timeZone: 1,
+  },
+  color: {
+    colorName: 1,
+  },
+  phone: {
+    number: 1,
+  },
+  internet: {
+    domainWord: 1,
+    username: 1,
+    displayName: 1,
+    email: 1,
+    exampleEmail: 1,
+  },
+  // `lorem` re-exports all `word` helpers, so apply the same slot table.
+  lorem: {
+    noun: 1,
+    word: 1,
+    adjective: 1,
+    verb: 1,
+    adverb: 1,
+    conjunction: 1,
+    interjection: 1,
+    preposition: 1,
+    sentence: 1,
+    sample: 1,
+    words: 2,
+    paragraph: 2,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // WorldImpl
 // ---------------------------------------------------------------------------
 
@@ -562,7 +709,10 @@ export class WorldImpl implements World {
   // Private: generators binding
   // -------------------------------------------------------------------------
 
-  private bindGenerators(prng: ReturnType<typeof createPrng>): BoundGenerators {
+  private bindGenerators(
+    prng: ReturnType<typeof createPrng>,
+    boundCtx: GeneratorContext,
+  ): BoundGenerators {
     const boundCache: Record<string, any> = {};
 
     return new Proxy({} as BoundGenerators, {
@@ -572,11 +722,50 @@ export class WorldImpl implements World {
         const nsObj = (generatorsData as Record<string, any>)[ns];
         if (!nsObj) return undefined;
 
+        const nsSlots = CTX_SLOTS[ns];
+
         const boundNs = new Proxy(nsObj, {
           get: (target, name: string) => {
             const fn = target[name];
             if (typeof fn !== "function") return fn;
-            return (...args: unknown[]) => fn(prng, ...args);
+
+            const slot = nsSlots?.[name];
+
+            // Bucket 4 (no entry in the table): forward verbatim. Pure-prng
+            // helpers MUST NOT receive an injected ctx — extra positional
+            // args could collide with their numeric/string parameters.
+            if (slot === undefined) {
+              return (...args: unknown[]) => fn(prng, ...args);
+            }
+
+            // Bucket 2 (person.firstName / middleName / fullName / prefix):
+            // the second arg is ambiguous (Gender string OR GeneratorContext).
+            // Only inject boundCtx when the caller passes NO args — otherwise
+            // the user's first arg (Gender string or explicit ctx) wins.
+            // The Gender-string-without-locale residual is documented and
+            // deferred to B36 per spec.
+            if (slot === "no-args-only") {
+              return (...args: unknown[]) =>
+                args.length === 0 ? fn(prng, boundCtx) : fn(prng, ...args);
+            }
+
+            // Bucket 1 / Bucket 3 with numeric slot: inject boundCtx at the
+            // declared ctx-slot index if the caller did not supply one.
+            // `slot` is the helper's 1-indexed signature position counting
+            // prng as position 0 (e.g. noun(prng, ctx)→1; words(prng, count, ctx)→2;
+            // price(prng, min, max, ctx)→3). Within the user-facing `args`
+            // array (prng already bound, stripped), the ctx therefore lives
+            // at index `slot - 1`.
+            const ctxArgIdx = slot - 1;
+            return (...args: unknown[]) => {
+              if (args[ctxArgIdx] === undefined) {
+                const padded: unknown[] = [...args];
+                while (padded.length < ctxArgIdx) padded.push(undefined);
+                padded[ctxArgIdx] = boundCtx;
+                return fn(prng, ...padded);
+              }
+              return fn(prng, ...args);
+            };
           },
         });
 
@@ -609,9 +798,14 @@ export class WorldImpl implements World {
       this.resolveRelated<T>(reg, recordPrng, recordId, relName)) as GeneratorContext["related"];
     related.many = <T = unknown>(relName: string, count: number): T[] =>
       this.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
-    return {
+    // B40: build the ctx first (with a placeholder `gen`), then replace `gen`
+    // with a properly-bound proxy that captures THIS ctx as its `boundCtx`.
+    // The Proxy adapter injects this ctx (carrying `locale`, `current`, etc.)
+    // as the default `ctx?` arg for every locale-aware helper, so matcher
+    // calls like `ctx.gen.word.noun()` honour the configured locale.
+    const ctx: GeneratorContext = {
       prng: fieldPrng,
-      gen: this.bindGenerators(fieldPrng),
+      gen: {} as BoundGenerators,
       source,
       registry: this.registry,
       fieldPath,
@@ -625,6 +819,8 @@ export class WorldImpl implements World {
       current: (current ?? {}) as Partial<any>,
       locale: this.options.locale ?? defaultLocale,
     };
+    (ctx as { gen: BoundGenerators }).gen = this.bindGenerators(fieldPrng, ctx);
+    return ctx;
   }
 
   // -------------------------------------------------------------------------
