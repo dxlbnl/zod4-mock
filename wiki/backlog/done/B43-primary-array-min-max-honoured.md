@@ -3,9 +3,22 @@ id: B43
 title: BUG — `world.generate(primaryArraySchema.min(N).max(M))` silently ignores `.min()` / `.max()` modifiers
 type: bug
 priority: high
-flags: [review]
+flags: []
 created: 2026-05-29
 ---
+
+## Resolution
+
+Fix shipped as **direction A (honour the bounds by slicing)**. When the caller writes
+`.min/.max/.length` on the array schema, the returned array length is capped to the
+caller's specified maximum via `Array.prototype.slice(0, callerMax)`. Library-side
+`defMax` fallback is NOT used to cap returns — `world.generate(S.array())` against a
+10-record registry still returns 10 records as before.
+
+The earlier "direction B" attempt (throw + redirect to `world.populate(schema, N)`) was
+reverted after the user pointed out that `.min().max()` and `populate()` should both
+produce valid fixtures — refusing the call shape was overcomplicated and contradicted
+the user's natural mental model.
 
 ## Description
 

@@ -191,6 +191,32 @@ function resolveMaxAllowed(schema: ZodTypeAny, defaultMax: number): number {
   return max;
 }
 
+/**
+ * B43 — read the caller-side upper bound on an array schema, returning
+ * `undefined` when the caller did not write `.max()` / `.length()`. Distinct
+ * from {@link resolveMaxAllowed}, which folds in the library-side
+ * `defaultArrayLength[1]` fallback. The primary-mode arm of `generateArray`
+ * needs the raw caller intent so it can slice the registry to `.max()` /
+ * `.length()` when present and leave it untouched when absent — slicing on
+ * the library fallback would silently cap `world.populate(S, 10)` +
+ * `world.generate(S.array())` at `defaultArrayLength[1]`.
+ *
+ * `.length(N)` sets both min and max to N, so it is treated as `max = N`
+ * for slicing purposes (the call site rolls `target >= existingCount` and
+ * the slice trims down to N). `.min()` alone leaves the upper bound
+ * unconstrained — returns `undefined`.
+ */
+function readCallerMaxBound(schema: ZodTypeAny): number | undefined {
+  let max: number | undefined;
+  for (const c of checks(schema)) {
+    if (c.check === "length_equals" && c.length !== undefined) return c.length;
+    if (c.check === "max_length" && c.maximum !== undefined) {
+      max = max === undefined ? c.maximum : Math.min(max, c.maximum);
+    }
+  }
+  return max;
+}
+
 // ---------------------------------------------------------------------------
 // B40 — per-helper ctx-slot table for bindGenerators
 //
@@ -1335,7 +1361,21 @@ export class WorldImpl implements World {
           this.generateAndStorePrimary(innerSchema, mode.reg);
         }
 
-        return this.registry.all(innerSchema);
+        const all = this.registry.all(innerSchema);
+
+        // B43: honour caller-side `.max()` / `.length()` by slicing the
+        // returned array. Only slice when the caller actually wrote a bound —
+        // we MUST NOT slice on the library-side `defMax` fallback (otherwise
+        // `world.generate(S.array())` would silently cap at `defaultArrayLength[1]`
+        // even after `world.populate(S, 10)`). `.min()` alone leaves the upper
+        // bound unconstrained; `.length(N)` is treated as `max = N`. D8 is
+        // preserved by construction: every returned record was first stored
+        // via `generateAndStorePrimary`, so the slice is a read-only narrowing
+        // of an already-D8-consistent registry view.
+        const callerMax = readCallerMaxBound(arraySchema);
+        return callerMax !== undefined && all.length > callerMax
+          ? all.slice(0, callerMax)
+          : all;
       }
 
       // -------------------------------------------------------------------
