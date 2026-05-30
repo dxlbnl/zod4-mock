@@ -19,6 +19,12 @@ it records the reason here AND states it in chat.
 
 <!-- entries start here -->
 
+## 2026-05-29 23:15 — B45: Evaluate alternatives to char-level Markov for name/word generation
+- manager: start, track: research (flagged review)
+- manager: dispatch general-purpose researcher → wiki/research/better-gen/markov-alternatives.md
+- note: filed as B44 originally; renumbered to B45 to coexist with another session's concurrent B44
+- manager: researcher returned report; paused at review checkpoint (flagged review)
+
 ## 2026-05-27 — B4: Add `registry.find()` — single-record predicate lookup
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
