@@ -10,7 +10,7 @@ calls `generate(X)` directly and the other calls `generate(Y); generate(X)` prod
 **different** values for the second `generate(X)`.
 
 **Root cause** (per the B27 audit
-[wiki/research/generation-counter-d4-audit.md](../research/generation-counter-d4-audit.md)
+[wiki/research/engine/generation-counter-d4-audit.md](../research/engine/generation-counter-d4-audit.md)
 §"The three call sites"): three PRNG fork keys in `WorldImpl` are derived from the
 per-world `generationCounter` field rather than from the schema's identity:
 
@@ -38,7 +38,7 @@ The user chose **Option B** (replace counter with stable identity-based fork key
 Option A (rename + document the call-order semantics). The decision pre-dates this spec
 and is **not re-litigated here**. This spec elaborates the Option B sketch from the B27
 audit
-([wiki/research/generation-counter-d4-audit.md](../research/generation-counter-d4-audit.md)
+([wiki/research/engine/generation-counter-d4-audit.md](../research/engine/generation-counter-d4-audit.md)
 §"Option (b) — replace counter with stable identity-based fork keys") into testable
 requirements and enumerates the test churn cost.
 
@@ -462,7 +462,7 @@ The ADR text:
 - **Context**: D4 historically meant "per-field `fork(key)` so adding/removing a
   field does not disturb other fields", which held in the letter. B22's
   codebase-complexity audit and B27's targeted audit
-  (`wiki/research/generation-counter-d4-audit.md`) surfaced that the unwritten
+  (`wiki/research/engine/generation-counter-d4-audit.md`) surfaced that the unwritten
   spirit — "seed alone determines values" — was incompletely realised: three
   call sites in `WorldImpl` (`generateSingleItem` ad-hoc, `generateArray`, and
   the outer-wrapper optional/nullable roll in `WorldImpl.generate`) derived

@@ -92,4 +92,4 @@ This ties into [Conjugation-Based Compression](conjugation-compression.md) — d
 
 ---
 
-See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Conjugation-Based Compression](conjugation-compression.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Conjugation-Based Compression](conjugation-compression.md) · [Localization Architecture](localization.md) · [Back to Index](../overview.md)

@@ -79,7 +79,7 @@ The traversal loop can be steered to respect Zod `min`/`max` constraints without
 
 **Enforcing `maxLength`:** As `result.length` approaches `maxLength`, bias toward states that have a path to `$` within the remaining budget. For the hard cutoff, simply stop and capitalize — this is safe because the CDF encoding gives good mid-word termination points.
 
-See [Constraint-Aware Generation](constraint-awareness.md) for the broader picture.
+See [Constraint-Aware Generation](../field-resolution/constraint-awareness.md) for the broader picture.
 
 ## Dirichlet Smoothing
 
@@ -123,4 +123,4 @@ The actual stored format uses `Float32Array` for the CDF and a single `string` f
 
 ---
 
-See also: [Markov Training Pipeline](markov-training-pipeline.md) · [Word Generation](word-generation.md) · [Constraint-Aware Generation](constraint-awareness.md) · [Back to Index](index.md)
+See also: [Markov Training Pipeline](markov-training-pipeline.md) · [Word Generation](word-generation.md) · [Constraint-Aware Generation](../field-resolution/constraint-awareness.md) · [Back to Index](../overview.md)

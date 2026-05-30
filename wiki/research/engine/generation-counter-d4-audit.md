@@ -6,20 +6,20 @@
 
 **Yes, the dependency is real.** A stray `world.generate(X)` earlier in a session
 shifts the PRNG state observed by subsequent calls that exercise either of two code
-paths: (1) the **ad-hoc** branch in [`generateSingleItem`](../../src/world.ts#L1043)
+paths: (1) the **ad-hoc** branch in [`generateSingleItem`](../../../src/world.ts#L1043)
 (unregistered schemas), and (2) **every** array generation through
-[`generateArray`](../../src/world.ts#L917) — both registered and ad-hoc — because the
+[`generateArray`](../../../src/world.ts#L917) — both registered and ad-hoc — because the
 array's `genPrng` is seeded by `gen-${counter}`. The outer-wrapper optional/nullable roll
-at [world.ts:362](../../src/world.ts#L362) is the third call site. The B22 report's
+at [world.ts:362](../../../src/world.ts#L362) is the third call site. The B22 report's
 characterisation is accurate.
 
 **However, the call-order dependence does *not* leak into the two paths that are
 actually load-bearing for the library's deterministic-fixtures value proposition.**
 Registered primary schemas seed their `recordPrng` from
-[`fieldSeed(rootSeed, "reg{regId}#{recordIndex}", "")`](../../src/world.ts#L702-L703),
+[`fieldSeed(rootSeed, "reg{regId}#{recordIndex}", "")`](../../../src/world.ts#L702-L703),
 where `recordIndex` is `registry.count(schema) + pending` — *not* the counter.
 Registered derived schemas key off
-[`"dreg{regId}#{sourceIndex}"`](../../src/world.ts#L740-L741) — also not the counter.
+[`"dreg{regId}#{sourceIndex}"`](../../../src/world.ts#L740-L741) — also not the counter.
 So `world.populate(Person, N)`, `world.generate(RegisteredSchema)`, and the
 registry-driven derived path are all already counter-independent. The counter is
 load-bearing only for **(a) ad-hoc primitive/object generation** and **(b) every array
@@ -39,12 +39,12 @@ this audit.
 
 ### What D4 actually says
 
-[`wiki/architecture.md`](../architecture.md) Rule for D4:
+[`wiki/architecture.md`](../../architecture.md) Rule for D4:
 
 > "Generation MUST stay deterministic: per-field PRNG `fork(key)`, so adding/removing a
 > field does not disturb other fields. (→ D4)"
 
-The decision entry in [`wiki/decisions.md`](../decisions.md):
+The decision entry in [`wiki/decisions.md`](../../decisions.md):
 
 > **Context**: Reproducible fixtures are the core value proposition; values must be
 > stable when schemas evolve.
@@ -85,7 +85,7 @@ calls matters.
 ### What B22 flagged
 
 The codebase-complexity report
-[wiki/research/codebase-complexity.md](codebase-complexity.md) §"Dimension 4 → Prng
+[wiki/research/reports/codebase-complexity.md](../reports/codebase-complexity.md) §"Dimension 4 → Prng
 and fork(key) discipline (D4)" (lines 197-208) and cross-cutting observation #4 (line
 230) called this out as the only audit finding that smells like a possible *correctness*
 issue rather than a readability one. Proposed item #5 (line 247) gave the option-a /
@@ -95,29 +95,29 @@ option-b split this audit resolves.
 
 ### The three call sites (verified post-B38)
 
-1. [`src/world.ts:362`](../../src/world.ts#L362) — outer-wrapper optional/nullable roll:
+1. [`src/world.ts:362`](../../../src/world.ts#L362) — outer-wrapper optional/nullable roll:
    ```ts
    const prng = this.prng.fork(`gen-wrap-${this.generationCounter + 1}`);
    ```
-2. [`src/world.ts:927`](../../src/world.ts#L927) — `generateArray`:
+2. [`src/world.ts:927`](../../../src/world.ts#L927) — `generateArray`:
    ```ts
    this.generationCounter++;
    const genPrng = this.prng.fork(`gen-${this.generationCounter}`);
    ```
-3. [`src/world.ts:1180`](../../src/world.ts#L1180) — ad-hoc branch of `generateSingleItem`:
+3. [`src/world.ts:1180`](../../../src/world.ts#L1180) — ad-hoc branch of `generateSingleItem`:
    ```ts
    const recordId = `adhoc-${this.generationCounter}`;
    const adHocPrng = this.prng.fork(recordId);
    ```
 
 Counter reads/writes total:
-[`src/world.ts:151`](../../src/world.ts#L151) (init `= 0`);
-[`src/world.ts:366`](../../src/world.ts#L366) (increment, after wrap-roll),
-[`src/world.ts:926`](../../src/world.ts#L926) (increment, top of `generateArray`),
-[`src/world.ts:1048`](../../src/world.ts#L1048) (increment, top of
+[`src/world.ts:151`](../../../src/world.ts#L151) (init `= 0`);
+[`src/world.ts:366`](../../../src/world.ts#L366) (increment, after wrap-roll),
+[`src/world.ts:926`](../../../src/world.ts#L926) (increment, top of `generateArray`),
+[`src/world.ts:1048`](../../../src/world.ts#L1048) (increment, top of
 `generateSingleItem`),
-[`src/world.ts:1100`](../../src/world.ts#L1100) (decrement, B8/D9 upsert short-circuit),
-[`src/world.ts:1171`](../../src/world.ts#L1171) (read, derived-without-source pair
+[`src/world.ts:1100`](../../../src/world.ts#L1100) (decrement, B8/D9 upsert short-circuit),
+[`src/world.ts:1171`](../../../src/world.ts#L1171) (read, derived-without-source pair
 picker: `idx = (counter - 1) % pairs.length`).
 
 ### Scenarios
@@ -179,7 +179,7 @@ const v1Prime = createWorld({ seed: 42 }).withSchema(Y).generate(Y).then(_ =>
 ```
 
 Here `generateSingleItem` falls into the **ad-hoc** branch:
-[`src/world.ts:1180`](../../src/world.ts#L1180):
+[`src/world.ts:1180`](../../../src/world.ts#L1180):
 
 ```ts
 const recordId = `adhoc-${this.generationCounter}`;
@@ -194,9 +194,9 @@ independent forks of the world PRNG with **different keys**, so `v1 !== v1Prime`
 **Scenario D** — arrays (both ad-hoc and registered):
 
 `generateArray` *always* derives its `genPrng` from `gen-${counter}`. That `genPrng`
-picks the array length ([line 989](../../src/world.ts#L989) primary mode and
-[line 1013](../../src/world.ts#L1013) ad-hoc mode) and forks every per-element PRNG
-([line 1016](../../src/world.ts#L1016)). So if you add an intervening
+picks the array length ([line 989](../../../src/world.ts#L989) primary mode and
+[line 1013](../../../src/world.ts#L1013) ad-hoc mode) and forks every per-element PRNG
+([line 1016](../../../src/world.ts#L1016)). So if you add an intervening
 `world.generate(SomethingElse)` before a `world.generate(ArraySchema)`, the array's
 length and every element's PRNG shift — even when the element type is a registered
 primary.
@@ -214,7 +214,7 @@ counter-free identities.
 
 ### One existing test already encodes call-order semantics
 
-[`tests/unit/core/derived-identity.test.ts:496-538`](../../tests/unit/core/derived-identity.test.ts#L496)
+[`tests/unit/core/derived-identity.test.ts:496-538`](../../../tests/unit/core/derived-identity.test.ts#L496)
 ("B8-R9: upsert short-circuit does not consume PRNG") deliberately uses an
 **unregistered** `AdHocSchema = z.object({ x: z.number().int() })` to expose the
 counter dependence — its comment explicitly states:
@@ -255,12 +255,12 @@ The counter has three load-bearing uses, only one of which is unambiguously
    make each call distinct. Schema identity + per-schema counter would do the same
    job without leaking call order.
 
-D9's decision entry ([`wiki/decisions.md` D9](../decisions.md), lines 167-196) is the
+D9's decision entry ([`wiki/decisions.md` D9](../../decisions.md), lines 167-196) is the
 only place the counter has been formally reasoned about in the wiki. D9 codifies the
 *compensation* rule (cache short-circuits roll back any counter increments) — i.e. it
 treats the counter as a load-bearing piece of state but does not justify *why* the
 fork keys are counter-based in the first place. B8-R9 in
-[`wiki/specs/B8-derived-schemas-identity.md`](../specs/B8-derived-schemas-identity.md)
+[`wiki/specs/B8-derived-schemas-identity.md`](../../specs/B8-derived-schemas-identity.md)
 line 362 says "byte-identical across runs of the same world seed and **same call
 order**" — confirming that the spec author understood call-order to be part of the
 contract.
@@ -298,12 +298,12 @@ user-facing determinism contract.
 Renaming `generationCounter → callCounter` is mechanical. Per the grep at the top of
 this report, there are 9 occurrences in `src/world.ts`, plus references in:
 
-- [`tests/unit/store-false-empty-from.test.ts:15`](../../tests/unit/store-false-empty-from.test.ts#L15) — comment.
-- [`tests/unit/core/derived-identity.test.ts:500`](../../tests/unit/core/derived-identity.test.ts#L500) — comment.
-- [`wiki/decisions.md`](../decisions.md) D9 — three references in the decision text.
-- [`wiki/specs/B20-store-false-empty-from-crash.md`](../specs/B20-store-false-empty-from-crash.md) — four references.
-- [`wiki/specs/B16-surface-key-match-list.md`](../specs/B16-surface-key-match-list.md) — two references.
-- [`wiki/research/codebase-complexity.md`](codebase-complexity.md) — three references.
+- [`tests/unit/store-false-empty-from.test.ts:15`](../../../tests/unit/store-false-empty-from.test.ts#L15) — comment.
+- [`tests/unit/core/derived-identity.test.ts:500`](../../../tests/unit/core/derived-identity.test.ts#L500) — comment.
+- [`wiki/decisions.md`](../../decisions.md) D9 — three references in the decision text.
+- [`wiki/specs/B20-store-false-empty-from-crash.md`](../../specs/B20-store-false-empty-from-crash.md) — four references.
+- [`wiki/specs/B16-surface-key-match-list.md`](../../specs/B16-surface-key-match-list.md) — two references.
+- [`wiki/research/reports/codebase-complexity.md`](../reports/codebase-complexity.md) — three references.
 
 None of these are user-facing — `generationCounter` is a private field. The rename
 is comment-only outside `src/world.ts`. Total: a few dozen line edits, no test
@@ -353,7 +353,7 @@ Insert after the existing D4 rule, before D5:
   implicit in the docs becomes explicit in the wiki rules. Future audits can
   reference this rule when adding call sites that would be tempted to use the
   counter. If we later decide call-order independence is a feature worth pursuing
-  (Option (b) in `wiki/research/generation-counter-d4-audit.md`), this entry
+  (Option (b) in `wiki/research/engine/generation-counter-d4-audit.md`), this entry
   is superseded by the new one.
 - **Rule added/changed**: "Generation determinism is per-(seed + builder chain + call
   sequence): same seed + same withSchema/withGenerators chain + same sequence of
@@ -432,7 +432,7 @@ them** — exactly the "seed-alone-determines-data" contract the B22 report want
    A test-writer would need to re-pin systematically. Risk: medium — the test count
    is high (the codebase-complexity report notes 906 tests at B8 time).
 2. **The `idx = (counter - 1) % pairs.length` round-robin at
-   [src/world.ts:1171](../../src/world.ts#L1171) is a use #1 — intentional
+   [src/world.ts:1171](../../../src/world.ts#L1171) is a use #1 — intentional
    behaviour, documented as part of the derived-schema contract.** It MUST keep
    working. Either (i) leave a `derivedCallCounter` field for this single use,
    distinct from the per-schema counters; or (ii) replace the global counter here
@@ -440,7 +440,7 @@ them** — exactly the "seed-alone-determines-data" contract the B22 report want
    (ii) is purer but changes the cycling behaviour when the derived registration
    list grows mid-session. Either way, this site is not a fork-key issue — it's
    a "pick the Nth source" issue, and the counter is doing meaningful work there.
-3. **B8 / D9 compensation pattern** ([src/world.ts:1100](../../src/world.ts#L1100)).
+3. **B8 / D9 compensation pattern** ([src/world.ts:1100](../../../src/world.ts#L1100)).
    The upsert short-circuit currently does `this.generationCounter--` to keep
    cache-hit and cache-miss paths in lockstep. With per-schema counters, the
    `generateSingleItem` increment moves into the schema-specific counter slot, and
@@ -508,8 +508,8 @@ this item via `/intake`:
   need a refactor if Option (b) is taken, and then the right shape is a
   derived-pair-specific counter (sketched above).
 - **The `Prng` algorithm change from Mulberry32 to SFC32.** The codebase has already
-  moved to SFC32 (per [src/prng.ts](../../src/prng.ts) docstring), but `CLAUDE.md`
-  and [wiki/codebase-map.md](../codebase-map.md) still describe Mulberry32. That's a
+  moved to SFC32 (per [src/prng.ts](../../../src/prng.ts) docstring), but `CLAUDE.md`
+  and [wiki/codebase-map.md](../../codebase-map.md) still describe Mulberry32. That's a
   separate drift; flag it for a future `/wiki-sync` pass.
 - **The cluster of distinct fork-key conventions** (`gen-N`, `gen-wrap-N`,
   `rel:relName`, `rel-many:relName`, `jwt-p`, `jwt-s`, `el-${i}`, `t-${i}`,

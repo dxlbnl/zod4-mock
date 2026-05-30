@@ -117,4 +117,4 @@ bytes(n: number): Uint8Array {
 
 ---
 
-See also: [Batch Generation](batch-generation.md) · [Back to Index](index.md)
+See also: [Batch Generation](batch-generation.md) · [Back to Index](../overview.md)

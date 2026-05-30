@@ -54,7 +54,7 @@ Markov-based generators handle `min`/`max` natively during traversal — no post
 - **Enforcing `minLength`:** Filter the end-token `$` from possible next characters while `result.length < minLength`. The chain is forced to keep generating.
 - **Enforcing `maxLength`:** Stop the loop when `result.length` reaches `maxLength`. Optionally bias toward end-token states in the last few characters to avoid hard mid-syllable cutoffs.
 
-This is a key advantage of Markov generation over static lists: the generator can honor length constraints in a single pass. See [Algorithmic Entropy](algorithmic-entropy.md) for the full traversal implementation.
+This is a key advantage of Markov generation over static lists: the generator can honor length constraints in a single pass. See [Algorithmic Entropy](../text-generation/algorithmic-entropy.md) for the full traversal implementation.
 
 ## Regex Constraints
 
@@ -64,4 +64,4 @@ A future improvement: a small regex-to-generator compiler that recognizes common
 
 ---
 
-See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Back to Index](index.md)
+See also: [Algorithmic Entropy](../text-generation/algorithmic-entropy.md) · [Back to Index](../overview.md)

@@ -36,7 +36,7 @@ function resolveLazyChain(schema: ZodTypeAny, cache: WeakMap<ZodTypeAny, ZodType
 Cuts ~30 LOC and one drift risk. XS, mechanical.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#9**.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#9**.
 - Dimension: 3 #5.
 - Size: **XS**.
 - Cross-cutting observation #1 in the research report.

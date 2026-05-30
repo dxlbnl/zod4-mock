@@ -86,4 +86,4 @@ Field-name → realistic value. Each module is a flat set of `(prng, ctx?) => va
 | `scripts/verify-markov.ts` | Inspect/sample a trained model. |
 
 > Per-locale corpora and their own training scripts live in `packages/locale-*`. The
-> generator-overhaul design + status is in [`research/better-gen/`](research/better-gen/index.md).
+> generator-overhaul design + status is in [`research/`](research/overview.md).

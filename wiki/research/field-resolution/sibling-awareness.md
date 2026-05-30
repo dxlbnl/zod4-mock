@@ -192,4 +192,4 @@ Sibling awareness is **not** the same as matchers or relations:
 
 ---
 
-See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Generator Reuse](generator-reuse.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Algorithmic Entropy](../text-generation/algorithmic-entropy.md) · [Markov Training Pipeline](../text-generation/markov-training-pipeline.md) · [Generator Reuse](generator-reuse.md) · [Localization Architecture](../text-generation/localization.md) · [Back to Index](../overview.md)

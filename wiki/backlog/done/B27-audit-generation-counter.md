@@ -5,7 +5,7 @@ type: research
 priority: high
 flags: [review]
 created: 2026-05-29
-report: wiki/research/generation-counter-d4-audit.md
+report: wiki/research/engine/generation-counter-d4-audit.md
 ---
 
 ## Description
@@ -47,7 +47,7 @@ Two questions to answer with this research:
      changes (PRNG sequences shift), every test that pinned a specific value
      potentially flips.
 
-The deliverable is `wiki/research/generation-counter-d4-audit.md` with the
+The deliverable is `wiki/research/engine/generation-counter-d4-audit.md` with the
 question answered and a recommendation. If option (b) is recommended, file a
 follow-up `bug` item for the actual fix (since it's a behavior change tied to
 a soft-correctness concern).
@@ -56,7 +56,7 @@ Flagged `review` — has design implications; pause for user approval after the
 research lands, before any code change.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#5**, also discussed in `## Dimension 4 → Prng and fork(key) discipline (D4)`.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#5**, also discussed in `## Dimension 4 → Prng and fork(key) discipline (D4)`.
 - Dimension: 4 (PRNG / D4).
 - Size: **S** for the audit; **M** if option (b) becomes a follow-up `bug` fix.
 - Priority: **high** — only candidate from B22 with a possible correctness angle.

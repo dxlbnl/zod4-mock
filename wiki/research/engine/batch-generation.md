@@ -71,4 +71,4 @@ expect(batched).toEqual(sequential);
 
 ---
 
-See also: [PRNG Improvements](prng-batching.md) · [Back to Index](index.md)
+See also: [PRNG Improvements](prng-batching.md) · [Back to Index](../overview.md)

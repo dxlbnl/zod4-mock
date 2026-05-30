@@ -106,7 +106,7 @@ user sign-off (which corpus? how is "fair" defined?).
 - Closely related: B40 (just shipped) fixed the locale-not-forwarded bug
   that prevented this from being visible. Now that nl Markov output
   flows correctly, the underlying quality issue surfaces.
-- Related research: [wiki/research/better-gen/](../../research/better-gen/index.md)
+- Related research: [wiki/research/](../../research/overview.md)
   (the broader generator-overhaul track), particularly the Markov-training
   pages.
 - May want to coordinate with `packages/locale-names/` training pipeline

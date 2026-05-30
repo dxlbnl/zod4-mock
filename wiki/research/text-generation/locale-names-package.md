@@ -359,4 +359,4 @@ With tree-shaking, a user who only ever uses `locale-nl` never pays for the `sou
 
 ---
 
-See also: [Name Origin Distribution](name-origin-distribution.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Name Origin Distribution](name-origin-distribution.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Localization Architecture](localization.md) · [Back to Index](../overview.md)

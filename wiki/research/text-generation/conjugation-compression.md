@@ -110,4 +110,4 @@ For mock data purposes, a few dozen exception entries are sufficient.
 
 ---
 
-See also: [Word Generation](word-generation.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Word Generation](word-generation.md) · [Localization Architecture](localization.md) · [Back to Index](../overview.md)

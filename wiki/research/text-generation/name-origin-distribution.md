@@ -232,4 +232,4 @@ The distribution for last names in the `nl` locale would look similar to first n
 
 ---
 
-See also: [Markov Training Pipeline](markov-training-pipeline.md) · [Algorithmic Entropy](algorithmic-entropy.md) · [Sibling-Aware Generation](sibling-awareness.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Markov Training Pipeline](markov-training-pipeline.md) · [Algorithmic Entropy](algorithmic-entropy.md) · [Sibling-Aware Generation](../field-resolution/sibling-awareness.md) · [Localization Architecture](localization.md) · [Back to Index](../overview.md)

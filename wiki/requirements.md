@@ -29,8 +29,8 @@
 - **ESM-only**, Node16 module resolution — all relative imports use `.js` extensions.
 - TypeScript `strict` plus `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`;
   **no `any`**.
-- Performance/size budget: the better-gen research aims to beat `faker-js` on runtime
-  speed, bundle size, and data quality (benchmark-first; see `wiki/research/better-gen/`).
+- Performance/size budget: the data-generation research aims to beat `faker-js` on runtime
+  speed, bundle size, and data quality (benchmark-first; see `wiki/research/`).
 - Monorepo: pnpm workspaces with the root library plus `packages/locale-*` and a
   `playground/` (Svelte) app.
 
@@ -43,7 +43,7 @@
 
 ## Open questions
 
-- The two remaining better-gen pillars (Markov character entropy for synthetic strings,
+- The two remaining data-generation pillars (Markov character entropy for synthetic strings,
   conjugation-based word compression) — priority and scope (tracked as backlog items).
 - Self-referential relations (a schema relating to itself, e.g. category → parent) are
   not yet supported (tracked as a bug; see `docs/bugs.md`).

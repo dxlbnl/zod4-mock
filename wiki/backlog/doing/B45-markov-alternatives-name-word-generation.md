@@ -5,7 +5,7 @@ type: research
 priority: medium
 flags: [review]
 created: 2026-05-29
-report: wiki/research/better-gen/markov-alternatives.md
+report: wiki/research/text-generation/markov-alternatives.md
 ---
 
 ## Description
@@ -55,7 +55,7 @@ uniqueness** and determinism (everything must consume the SFC32 PRNG via `fork(k
 
 ## Deliverable
 
-`wiki/research/better-gen/markov-alternatives.md`: a comparison table (quality / size /
+`wiki/research/text-generation/markov-alternatives.md`: a comparison table (quality / size /
 time / uniqueness / determinism / implementation cost) across the options above,
 anchored to the measured baseline (540 KB EN, 3.5 MB names), with a recommended
 direction and a suggested spike (e.g. wordlist+Feistel for names; DAWG/brotli sizing on
@@ -73,7 +73,7 @@ follow-up implementation `feature`/`chore` (or a retrain) with user sign-off.
   - **B42** (nl-locale Markov initial-letter distribution bias, issue #24) — a specific
     quality bug within the current Markov approach; a wholesale alternative here could
     subsume it, so coordinate findings.
-- Broader track: `wiki/research/better-gen/` (index, `tracking.md`,
+- Broader track: `wiki/research/` (overview.md, `tracking.md`,
   `markov-training-pipeline.md`, `word-generation.md`, `algorithmic-entropy.md`,
   `name-origin-distribution.md`).
 - `flags: [review]` — architecturally significant (potential replacement of a core

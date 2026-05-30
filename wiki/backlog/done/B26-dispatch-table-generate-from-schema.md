@@ -32,7 +32,7 @@ The four cases that contain non-trivial branching (`union`, `pipe`, `xor`,
 a 2-line lookup. New Zod type → compile error if missed.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#4**.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#4**.
 - Dimensions: 1 #1, 2 #7.
 - Size: **M**.
 - Synergy: helps the `explain.ts` story (it can iterate `Object.keys(DISPATCH)` to enumerate what it can introspect).

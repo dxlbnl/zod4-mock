@@ -31,7 +31,7 @@ Each call site shrinks to ~5 lines. Removes the drift risk between the two
 collection.ts key-based-fallback version.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#8**.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#8**.
 - Dimensions: 3 #6, 4 (key-based vs schema-based convergence).
 - Size: **S**.
 - Synergy: helps B23 (the `unwrapOptionalStep` of the `PIPELINE` list calls this helper). Can land independently.

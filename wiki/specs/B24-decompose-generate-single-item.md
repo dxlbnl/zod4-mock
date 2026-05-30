@@ -45,7 +45,7 @@ already applied `transform`, which already applied `overrides`?" is the function
 worst readability tax.
 
 B22's audit
-([wiki/research/codebase-complexity.md](../research/codebase-complexity.md)
+([wiki/research/reports/codebase-complexity.md](../research/reports/codebase-complexity.md)
 §"Dimension 4 → WorldImpl.generateSingleItem", §"Dimension 1 #3") flagged this
 as the engine's clearest accidental-complexity hot spot. The item card
 ([wiki/backlog/doing/B24-decompose-generate-single-item.md](../backlog/doing/B24-decompose-generate-single-item.md))

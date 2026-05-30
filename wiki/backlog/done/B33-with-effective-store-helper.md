@@ -41,6 +41,6 @@ The contract is named, the try/finally is encapsulated, and the next person
 who needs to suppress storage for a new code path has somewhere to call.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#11**.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#11**.
 - Dimension: 4 (state machine).
 - Size: **XS**.

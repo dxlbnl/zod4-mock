@@ -5,14 +5,14 @@ type: research
 priority: medium
 flags: []
 created: 2026-05-29
-report: wiki/research/codebase-complexity.md
+report: wiki/research/reports/codebase-complexity.md
 ---
 
 ## Description
 
 User wants a deep analysis of complexity within the `zod4-mock` codebase, filed
 as a research result in the wiki. The output is a single report at
-[wiki/research/codebase-complexity.md](../../research/codebase-complexity.md)
+[wiki/research/reports/codebase-complexity.md](../../research/reports/codebase-complexity.md)
 that surveys the whole `src/` tree across four dimensions, lists the top
 hotspots per dimension, and proposes concrete refactor candidates as backlog
 items the user can choose to `/intake` (not auto-filed).

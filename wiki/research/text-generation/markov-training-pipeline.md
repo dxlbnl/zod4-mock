@@ -253,4 +253,4 @@ Retrain, review the output, then commit the regenerated model file.
 
 ---
 
-See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Word Generation](word-generation.md) · [Back to Index](index.md)
+See also: [Algorithmic Entropy](algorithmic-entropy.md) · [Word Generation](word-generation.md) · [Back to Index](../overview.md)

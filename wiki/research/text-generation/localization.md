@@ -138,4 +138,4 @@ const world = createWorld({ locale: nl });
 
 ---
 
-See also: [Word Generation](word-generation.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Back to Index](index.md)
+See also: [Word Generation](word-generation.md) · [Markov Training Pipeline](markov-training-pipeline.md) · [Back to Index](../overview.md)

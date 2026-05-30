@@ -82,7 +82,7 @@
   dataset.
 - **Consequences**: Adding/removing a field does not disturb other fields' values; output
   is identical across runs/machines. (The PRNG algorithm itself — Mulberry32 → SFC32 — is
-  an implementation detail tracked in the better-gen research, not a standing rule.)
+  an implementation detail tracked in the data-generation research, not a standing rule.)
 - **Rule added/changed**: "Generation MUST stay deterministic: per-field PRNG `fork(key)`."
 - **Supersedes**: none
 
@@ -202,7 +202,7 @@
 - **Context**: D4 historically meant "per-field `fork(key)` so adding/removing a
   field does not disturb other fields", which held in the letter. B22's
   codebase-complexity audit and B27's targeted audit
-  (`wiki/research/generation-counter-d4-audit.md`) surfaced that the unwritten
+  (`wiki/research/engine/generation-counter-d4-audit.md`) surfaced that the unwritten
   spirit — "seed alone determines values" — was incompletely realised: three
   call sites in `WorldImpl` (`generateSingleItem` ad-hoc, `generateArray`, and
   the outer-wrapper optional/nullable roll in `WorldImpl.generate`) derived

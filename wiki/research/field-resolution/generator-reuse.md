@@ -233,4 +233,4 @@ And one new generator function worth extracting from existing modules:
 
 ---
 
-See also: [Methods Inventory](methods-inventory.md) · [Word Generation](word-generation.md) · [Localization Architecture](localization.md) · [Back to Index](index.md)
+See also: [Methods Inventory](methods-inventory.md) · [Word Generation](../text-generation/word-generation.md) · [Localization Architecture](../text-generation/localization.md) · [Back to Index](../overview.md)

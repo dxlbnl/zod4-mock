@@ -10,7 +10,7 @@ spec: wiki/specs/B39-stable-identity-based-fork-keys.md
 
 ## Description
 
-Per the B27 D4 audit ([wiki/research/generation-counter-d4-audit.md](../../research/generation-counter-d4-audit.md))
+Per the B27 D4 audit ([wiki/research/engine/generation-counter-d4-audit.md](../../research/engine/generation-counter-d4-audit.md))
 and user direction, replace the `gen-${callCounter}` / `gen-wrap-${callCounter+1}` /
 `adhoc-${callCounter}` PRNG fork keys in `WorldImpl` with **stable per-schema
 identity-based keys**, so the Nth `generate(X)` call always uses the same
@@ -136,10 +136,10 @@ audit shows downstream impact is minimal.
 
 - Predecessor: [B27](../done/B27-audit-generation-counter.md) — the audit
   that confirmed the dependence and surfaced Option B.
-- Research report: [wiki/research/generation-counter-d4-audit.md](../../research/generation-counter-d4-audit.md).
+- Research report: [wiki/research/engine/generation-counter-d4-audit.md](../../research/engine/generation-counter-d4-audit.md).
 - Related: [B22](../done/B22-codebase-complexity-analysis.md) cross-cutting
   observation #4 ("the `generationCounter` is a hidden global"), and
-  [wiki/research/codebase-complexity.md](../../research/codebase-complexity.md)'s
+  [wiki/research/reports/codebase-complexity.md](../../research/reports/codebase-complexity.md)'s
   `## Dimension 4 → Prng and fork(key) discipline (D4)` section.
 - Synergy: lands well **before** B23 / B24 / B28 (decompose generateArray /
   generateSingleItem / split world.ts) so the refactor inherits the strengthened

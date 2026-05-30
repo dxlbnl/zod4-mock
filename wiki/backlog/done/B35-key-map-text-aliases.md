@@ -31,7 +31,7 @@ Cuts ~80 LOC. Move the constant into a small `key-aliases.ts` data file so the
 table reads as data, not literal.
 
 ## Notes
-- Source: [B22 research report](../../research/codebase-complexity.md), proposed item **#13**.
+- Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#13**.
 - Dimension: 2 #3.
 - Size: **XS**.
 - B16 already exposes the key map via `world.explain(schema)` and `docs/key-heuristics.md` — the regen path stays compatible since the resulting `DEFAULT_KEY_MAP` is byte-identical.

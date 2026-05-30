@@ -75,4 +75,4 @@ This order is a correctness guarantee — patterns must never override an exact 
 
 ---
 
-See also: [Constraint-Aware Generation](constraint-awareness.md) · [Batch Generation](batch-generation.md) · [Back to Index](index.md)
+See also: [Constraint-Aware Generation](../field-resolution/constraint-awareness.md) · [Batch Generation](batch-generation.md) · [Back to Index](../overview.md)

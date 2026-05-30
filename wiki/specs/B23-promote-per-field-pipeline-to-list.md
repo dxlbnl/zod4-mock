@@ -35,7 +35,7 @@ Today the contract is **implemented three times**:
    without registration silently bypasses four rungs of the contract.
 
 Three implementations, guaranteed to drift. The B22 codebase-complexity audit
-([`wiki/research/codebase-complexity.md`](../research/codebase-complexity.md))
+([`wiki/research/reports/codebase-complexity.md`](../research/reports/codebase-complexity.md))
 ranks this as **the engine's headline architectural lever**:
 
 - Dimension 1 #4 (`generateObjectFields` — 147 LOC, ~21 branches, nested `while`

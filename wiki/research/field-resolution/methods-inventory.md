@@ -102,7 +102,7 @@ The generation strategy column describes the _source_ of the output, not the imp
 | `interjection()` | ✅ | Locale list |
 | `word()` | ✅ | → `noun` |
 | `words(n)` | ✅ | Compose: `n` × `noun` joined by space |
-| `sentence()` | 🔧 | Compose: phrase structure grammar (see [Word Generation](word-generation.md)) |
+| `sentence()` | 🔧 | Compose: phrase structure grammar (see [Word Generation](../text-generation/word-generation.md)) |
 | `paragraph(n?)` | ✅ | Compose: `n` × `sentence` |
 | `lines(n?)` | ❌ | Compose: `n` × `sentence` joined by `\n` |
 | `text()` | ❌ | Compose: 2–4 `paragraph` joined by `\n\n` |
@@ -117,7 +117,7 @@ The generation strategy column describes the _source_ of the output, not the imp
 |--------|:------:|-------------------|
 | `name()` | 🔧 | Compose: multiple formats using `lastName`, company prefixes, `buzzNoun` (add tech-style format) |
 | `buzzPhrase()` | ✅ | Compose: `buzzVerb` + `buzzAdjective` + `buzzNoun`, word order from locale |
-| `buzzVerb()` | 🔧 | Locale list → derive from lemmas via [Conjugation Compression](conjugation-compression.md) |
+| `buzzVerb()` | 🔧 | Locale list → derive from lemmas via [Conjugation Compression](../text-generation/conjugation-compression.md) |
 | `buzzAdjective()` | ✅ | Locale list |
 | `buzzNoun()` | ✅ | Locale list |
 | `catchPhrase()` | ✅ | Compose: `catchPhraseAdjective` + `catchPhraseDescriptor` + `catchPhraseNoun` |
@@ -285,4 +285,4 @@ Sorting by value (realism gain / user impact) vs. effort:
 
 ---
 
-See also: [Generator Reuse](generator-reuse.md) · [Word Generation](word-generation.md) · [Back to Index](index.md)
+See also: [Generator Reuse](generator-reuse.md) · [Word Generation](../text-generation/word-generation.md) · [Back to Index](../overview.md)

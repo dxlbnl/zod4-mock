@@ -43,7 +43,7 @@ packages/
 scripts/             # train-markov.ts, verify-markov.ts (offline model tooling)
 docs/                # end-user documentation (API reference, concepts, recipes, …)
 wiki/                # Vibin workflow source of truth (this directory)
-  research/better-gen/  # generator-overhaul research + tracking
+  research/             # generator-overhaul research: overview, tracking, text-generation/, engine/, field-resolution/, reports/
 ```
 
 ## Rules (binding)

@@ -26,8 +26,8 @@ across several API contracts in one codebase.
 
 Drop-in `generate(schema)` with zero setup; identical output on every run and machine;
 realistic values driven by field names and Zod constraints; and measurably beating
-`faker-js` on the three axes tracked in the better-gen research: **runtime speed**,
-**bundle size**, and **data quality** (see `wiki/research/better-gen/`).
+`faker-js` on the three axes tracked in the data-generation research: **runtime speed**,
+**bundle size**, and **data quality** (see `wiki/research/`).
 
 ## Non-goals
 
