@@ -1320,6 +1320,17 @@ export class WorldImpl implements World {
           genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
         );
 
+        // B44: under store:false, the loop below would never terminate —
+        // generateAndStorePrimary skips the registry write (B10-R4 transitive
+        // suppression) so `registry.count(innerSchema)` never advances past
+        // `existingCount`. Generate `target` records directly via Array.from
+        // and return them; the store-on path below is byte-identical.
+        if (!this.effectiveStore) {
+          return Array.from({ length: target }, () =>
+            this.generateAndStorePrimary(innerSchema, mode.reg),
+          );
+        }
+
         while (this.registry.count(innerSchema) < target) {
           this.generateAndStorePrimary(innerSchema, mode.reg);
         }

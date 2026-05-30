@@ -317,7 +317,7 @@ generate<TSchema extends ZodTypeAny>(
 
 Generates a value matching the schema. The return type is fully inferred.
 
-- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`. (per-index `overrides` → see [`.populate`](#populateschema-count-factory) for primary-registered inner schemas)
+- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`. (per-index `overrides` → see [`.populate`](#populateschema-count-factory) for primary-registered inner schemas; `{ store: false }` against a primary-registered inner schema returns ephemeral records of the auto-rolled length, no registry write)
 - If the schema has `from:` bindings (derived): generates one output per source in the registry.
 - If the schema is primary (registered or not): generates and stores a new record.
 - If `schema` is registered with `from:` and the call passes `{ source: x }`, the call is an **upsert** keyed by `(schema, identity(x))` — repeat calls with the same identity return the stored record by reference. See [`.withSchema`](#withschemaschema-opts) and the `unique` option below.

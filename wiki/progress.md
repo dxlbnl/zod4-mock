@@ -445,4 +445,33 @@ it records the reason here AND states it in chat.
 - reviewer: PASS with one finding — missing structural tests for R3/R4/R6/R9/R10 (literal spec gap; behaviour invariants hold but no test pins structural shape). RECOMMENDED standing constraint promotion: the PIPELINE list IS the canonical contract, future call sites must use it. Manager actioned both.
 - manager: dispatched test-writer for the missing structural tests; added tests/unit/core/pipeline.test.ts (16 tests: R3 shape, R4 instance-identity, R6 applyObjectOverride contract incl. B18 atomic-object replace, R7 explain.ts ≤215 LOC, R9 generateObjectFields ≤60 LOC). GREEN: 1033/1033 tests.
 - manager: promoted D11 to architecture.md Rules section: "The per-field generation pipeline MUST be expressed as the canonical PIPELINE list in src/pipeline.ts; new rungs added by editing the list, never by open-coding at a call site." Appended ADR D11 to wiki/decisions.md with full Context/Decision/Consequences. **B37 unblocked** (flags: [blocked] removed from B37 inbox card).
-- result: done — commit pending
+- result: done — commit f9ea47d
+
+## 2026-05-29 — manager: planning pass (post-0.8.0 release)
+- inbox: 7 items (B43 high, B28/B41/B42 medium, B2/B3/B37 low); ready: 0; doing: 0
+- working tree clean; last release 0.8.0 (3e2d5de); B39 changeset downgraded major→minor (bef2176) in keeping with 0.x SemVer convention; B42/B43 filed (a596a7a) from GH issues #24/#25
+- B37 unblocked since B23 landed (the PIPELINE list it pointed to is now real); flags: []
+- ordered work plan presented to user; pausing for approval (review checkpoint #1)
+- user direction: do B43 first, then release, then B28
+
+## 2026-05-29 — B43: BUG — `world.generate(primaryArraySchema.min(N).max(M))` silently ignores `.min`/`.max`
+- manager: promoted inbox → doing, track: bug (flagged review). Sibling of B38 (#22, just shipped) — same primary branch of generateArray. From GH issue #25.
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B43-primary-array-min-max-ignored.md (R1-R7). Direction B (throw + redirect to world.populate(schema, N) for writes / world.generate(schema.array()).slice(0, N) for reads) — symmetric with B38. Trigger: any of min_length/max_length/length_equals + primary-registered inner. Changeset minor (matches B38). 3 non-blocking open questions (slot-counter advance, loose-trigger predicate, message wording).
+- manager: spec-validation gate PASS — 7 reqs with B43-R<k> ids, observable scenarios, no blocking open questions. Pausing at review checkpoint (card flagged review) on direction B.
+- user (mid-pause): "we have a few more issues" — got me to check GH for new issues
+- manager: pulled open GH issues — #24 (B42 ✓), #25 (B43 ✓), and **#26 new**: primaryArray + store:false hangs forever
+- /intake → B44 filed with full #26 root cause + proposed fix + B43 adjacency note (high priority, [review])
+- manager: presented 3 ordering options to user (1: B43 then B44; 2: B44 first then B43 — recommended on hang>silent severity; 3: fold B44 into B43 spec)
+- user: option 2 — do B44 first, then B43, then release
+- manager: git mv B43 doing → ready (spec already written, parked for resumption after B44); mv B44 inbox → doing (carries [review] but coordination question is answered; will surface if spec-writer hits a real design choice)
+
+## 2026-05-30 — B44: BUG — `world.generate(primaryArraySchema, { store: false })` hangs forever (infinite loop)
+- manager: filed from GH issue #26 (high priority, [review]); promoted to doing, track: bug
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B44-primary-array-store-false-hangs.md (R1-R10). Direction: under `!effectiveStore`, decouple loop from `registry.count` — generate `target` records via `Array.from(...)` + `generateAndStorePrimary`, return that array. Store-on path byte-identical (R5). B20 "Fix B" local-capture precedent (primary-array analogue of derived). B10-R2/R4 invariants restored. Orthogonal to B38 (overrides throw) and B43 (.min/.max throw); both throws still win on composed calls (R8). Patch bump. 4 non-blocking open questions.
+- manager: spec-validation gate PASS — 10 reqs with B44-R<k> ids, MUST/MUST NOT each, ≥1 GIVEN/WHEN/THEN with observable THEN, no blocking open questions. **Review checkpoint waved through by user** ("yes please") — autonomous run through impl/review.
+- manager: multiple aborted test-writer dispatches — sync infinite loop can't be preempted by vitest's per-test timeout (event loop blocked); user pushed back on over-ceremony around RED confirmation. Reframed: user direction was "just fix the damn bug" — drop the formal test-writer step, dispatch implementer-only with the fix.
+- implementer: 11-LOC change to src/world.ts generateArray primary arm — added `if (!this.effectiveStore) return Array.from({ length: target }, () => this.generateAndStorePrimary(innerSchema, mode.reg))` branch immediately above the existing `while (registry.count < target)` loop. Store-on path byte-identical. Added .changeset/b44-primary-array-store-false-hangs.md (patch, closes #26) and one-line note in docs/api-reference.md. **Note**: an earlier aborted test-writer attempt left a 4-test file at tests/unit/core/primary-array-store-false-hangs.test.ts (B44-R1/R3/R5/R7); the tests pass under the new fix so kept as a regression guard. GREEN: 1037/1037 tests, typecheck clean. No `any` (D1), no new Zod-internal access (D3), PRNG draws unchanged (D4/D10), D8 vacuously preserved.
+- manager: no reviewer dispatch — per user direction (minimum ceremony for a one-line fix on a well-understood bug). Manager spot-checked the diff (11 LOC, correctly positioned relative to B38 throw, leaves store-on byte-identical).
+- result: done — moved card to wiki/backlog/done/, commit pending
