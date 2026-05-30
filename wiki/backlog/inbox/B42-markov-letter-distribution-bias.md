@@ -3,7 +3,7 @@ id: B42
 title: BUG/quality — nl-locale Markov-generated words skew heavily toward A/B/C/D initial letters
 type: bug
 priority: medium
-flags: [review]
+flags: [blocked]
 created: 2026-05-29
 ---
 
@@ -102,6 +102,13 @@ user sign-off (which corpus? how is "fair" defined?).
 
 ## Notes
 
+- **Blocked / subsumed by B45 direction (2026-05-30).** User signed off on B45's
+  wordlist direction (`prng.pick` over real Dutch wordlists). Uniform sampling
+  over a real list makes the initial-letter distribution match natural Dutch
+  letter frequency by construction — no sampler patch, no `uniformStart` option,
+  no retrain needed. **Do not ship a B42 fix** in the meantime; it would be
+  deleted when the B46 spike's wordlist direction lands. Cancel B42 when B46
+  confirms the direction empirically (B46 step 5 is the explicit confirmation).
 - GitHub issue: [#24](https://github.com/dxlbnl/zod4-mock/issues/24).
 - Closely related: B40 (just shipped) fixed the locale-not-forwarded bug
   that prevented this from being visible. Now that nl Markov output

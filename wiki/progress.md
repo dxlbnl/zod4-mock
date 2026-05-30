@@ -491,3 +491,15 @@ it records the reason here AND states it in chat.
 - both changesets present (.changeset/b43-…honoured.md patch, .changeset/b44-…hangs.md patch)
 - working tree clean
 - next item on plan: B28 (split src/world.ts) — paused until user signals release done
+
+## 2026-05-30 — B45 (resumed): research checkpoint resolution
+- manager: resumed from 2026-05-29 23:15 pause; research report committed at 0862a27 was awaiting review checkpoint #2 sign-off
+- manager: presented headline recommendation + 6 open questions to user via AskUserQuestion (Direction / B42 handling / Uniqueness / Determinism break)
+- user: accepted full direction; fold B42 in; det-break OK under 0.x minor bump
+- user: **pushed back on Feistel walk** — "Realistic data has a chance for each value, some names are more common, same with words. we don't need the distribution. but I dont want to bloat the api with options, like a unique: true one"
+- manager: simplified the resolution — drop Feistel / FPE entirely, drop `{ unique: true }` opt-in, use plain `prng.pick` over real wordlists. Determinism becomes trivially clean (one constant-consumption draw per field via existing fork(key)). B42 subsumption still holds (`prng.pick` over real list → natural initial-letter distribution). Report §3.1 (Feistel design) marked moot in the Resolution.
+- manager: edited B45 card with ## Resolution block recording the direction, the 6 open-question dispositions, the report deviation, and the B46 follow-up pointer
+- manager: filed **B46** (`research`/`chore`, medium, [review]) — `wordlist-corpus-sourcing-and-sizing-spike.md` in inbox/. Scope: per-locale corpus + license sourcing, measured compressed sizes (front-coded / DAFSA / brotli), sampler-shape sanity check, sized PCFG sketch, B42 empirical confirmation. Explicitly NOT a Feistel POC and NOT an implementation.
+- manager: annotated **B42** card — flags `[review]` → `[blocked]`, added Notes block documenting subsumption by B45 direction and "do not ship a B42 fix in the meantime; cancel when B46 step 5 confirms"
+- manager: git mv wiki/backlog/doing/B45-…md → wiki/backlog/done/
+- result: done — commit pending

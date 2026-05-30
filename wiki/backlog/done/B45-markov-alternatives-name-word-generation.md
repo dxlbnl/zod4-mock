@@ -79,3 +79,23 @@ follow-up implementation `feature`/`chore` (or a retrain) with user sign-off.
 - `flags: [review]` — architecturally significant (potential replacement of a core
   generation path + possible corpus/data-shipping change); the manager pauses for user
   sign-off on the recommended direction before any implementation item is spun off.
+
+## Resolution
+
+User approved the recommended direction at review checkpoint #2 (2026-05-30), with one deliberate simplification of the report:
+
+1. **Names → real wordlists sampled with `prng.pick`** (no Feistel / FPE walk). Compose composite names by independently picking each field (e.g. `prng.pick(firstNames)` + `prng.pick(lastNames)`). The natural list composition encodes realistic frequency ("some names are more common"); collisions are tolerated at the rate the list size dictates. Succinct storage (option 2 — front-coding / DAFSA / brotli) ships the lists compactly.
+2. **Words → real lemma lists + weighted PCFG** (option 6) with syllable n-grams (option 3) as the pseudo-word fallback where invention is wanted.
+3. **Quantize + prune (option 4)** as an interim stopgap if bundle size becomes pressing before #1 lands.
+4. **Neural (option 5) dismissed.**
+
+Decisions on the open questions:
+
+- **Q1–Q3 (corpus / licensing / bundle budget)** — deferred to the spike's measurement deliverable. Spike must surface candidate corpora + licenses for sign-off before any retrain commits.
+- **Q4 (uniqueness default)** — **dropped entirely.** No Feistel walk, no `{ unique: true }` opt-in. Independent `prng.pick` is the only sampling path. Keeps the API surface unchanged. Collisions occur at the natural rate of `1 / N` per draw, which the spike's measurements will bound per locale.
+- **Q5 (determinism break)** — accepted under 0.x SemVer (minor bump, coordinated test re-pin, per B39 precedent).
+- **Q6 (B42)** — folded into B45 direction. Subsumption still holds: `prng.pick` over a real wordlist makes the initial-letter distribution match the list's natural distribution (the real distribution of Dutch first letters), eliminating the Markov chain's pathological start-state skew. B42 stays in inbox flagged subsumed-by-B45 and will be cancelled-by-spike when the wordlist direction lands. Do NOT ship a B42 sampler patch in the meantime.
+
+**Report deviation:** the report's §3.1 (Feistel-key derivation, slot wiring, D9-cache neutrality of the permutation) is moot under this resolution. The spike does not need a Feistel proof-of-concept, only the measurement deliverables.
+
+Follow-up spike filed as **B46** (`research`/`chore`, [review]) — scope narrowed to measurement + corpus sourcing.
