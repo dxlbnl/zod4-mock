@@ -170,12 +170,16 @@ describe("B23-R6: applyObjectOverride — B12 deep-merge contract helper", () =>
 // signature up through the first `\n  }\n` (the method's closing brace at
 // two-space indent). The spec's binding upper bound is 50 LOC; we apply the
 // 10-line jsdoc/signature tolerance from the user-supplied task brief (≤ 60).
+//
+// B28: the method moved from `src/world.ts` to `src/world/engine.ts` when
+// `world.ts` was split by concern. The LOC bound is unchanged — only the
+// path follows the file.
 // ---------------------------------------------------------------------------
 
 describe("B23-R9: generateObjectFields method body stays concise", () => {
   it("B23-R9 / loc-bound — body is ≤ 60 lines (signature + jsdoc tolerance over 50)", () => {
     const src = readFileSync(
-      path.join(REPO_ROOT, "src/world.ts"),
+      path.join(REPO_ROOT, "src/world/engine.ts"),
       "utf-8",
     );
     const match = src.match(/private generateObjectFields\([\s\S]*?\n  \}\n/);

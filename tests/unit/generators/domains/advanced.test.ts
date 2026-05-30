@@ -206,8 +206,8 @@ describe("schema/advanced", () => {
     const mockSchema = { _zod: { def: { type: "json" } } } as unknown as ZodTypeAny;
     // Run many seeds — statistically some will recurse 4+ levels hitting the depth guard
     const results = Array.from({ length: 500 }, (_, i) => generateFromSchema(mockSchema, ctx(i)));
+    // Reaching this assertion proves the generator terminated on every seed;
+    // value shape is intentionally unconstrained for json.
     expect(results.length).toBe(500);
-    // Any result is acceptable; we just want to ensure the function terminates
-    expect(results.every((v) => v !== undefined || v === undefined)).toBe(true);
   });
 });

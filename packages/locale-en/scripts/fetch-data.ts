@@ -10,12 +10,10 @@
  * Usage: pnpm --filter @zod4-mock/locale-en fetch-data
  */
 
-import { mkdirSync, writeFileSync, createWriteStream } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { pipeline } from "node:stream/promises";
-import { createGunzip } from "node:zlib";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(__dirname, "../data/training");

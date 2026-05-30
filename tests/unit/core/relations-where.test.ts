@@ -112,12 +112,6 @@ function pickId(rec: Record<string, unknown>): string {
   return id;
 }
 
-function pickKind(rec: Record<string, unknown>): string {
-  const k = rec["kind"];
-  if (typeof k !== "string") throw new Error("expected string kind");
-  return k;
-}
-
 // ---------------------------------------------------------------------------
 // B11-R1 — object form `{ schema, where }` type-checks; `where`'s parameter
 // is `z.infer<RelationSchema>`

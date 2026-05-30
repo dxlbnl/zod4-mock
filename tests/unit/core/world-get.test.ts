@@ -64,7 +64,6 @@ const gadgetSchema = z.object({
 });
 
 type Product = input<typeof productSchema>;
-type Node = input<typeof nodeSchema>;
 
 // `WorldImpl implements World`; the `& WithGet` documents the method B6 adds.
 // Once `get` lands on `World`, this is a plain `World` and the intersection is

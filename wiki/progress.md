@@ -502,4 +502,21 @@ it records the reason here AND states it in chat.
 - manager: filed **B46** (`research`/`chore`, medium, [review]) — `wordlist-corpus-sourcing-and-sizing-spike.md` in inbox/. Scope: per-locale corpus + license sourcing, measured compressed sizes (front-coded / DAFSA / brotli), sampler-shape sanity check, sized PCFG sketch, B42 empirical confirmation. Explicitly NOT a Feistel POC and NOT an implementation.
 - manager: annotated **B42** card — flags `[review]` → `[blocked]`, added Notes block documenting subsumption by B45 direction and "do not ship a B42 fix in the meantime; cancel when B46 step 5 confirms"
 - manager: git mv wiki/backlog/doing/B45-…md → wiki/backlog/done/
-- result: done — commit pending
+- result: done — commit 2092eb9
+
+## 2026-05-30 — manager: post-B45 planning pass
+- inbox: 7 items (B28/B41/B46 medium [review]; B2/B3 low [review]; B37 low; B42 medium [blocked by B45])
+- ready: 0; doing: 0
+- 4 unpushed commits on main (B43/B44/B45 + release-pause log) — 0.8.0 still last released
+- ordered plan presented to user (priority → created)
+- user direction: do a fresh planning pass (done), pull B28 next
+- B28 review flag satisfied by user direct selection; card pins module boundary exactly so no spec needed (chore track per skill)
+
+## 2026-05-30 — B28: Refactor — split src/world.ts into world/{engine,relations,derived,registration}.ts
+- manager: promoted inbox → doing, track: chore (L, mechanical, [review] honored via user direct selection)
+- manager: dispatch implementer
+- implementer: created src/world/ with 5 new files — engine.ts (1670 LOC, WorldImpl class + all methods), registration.ts (138 LOC, pure SchemaReg/normalizeRelationEntry/findPrimaryRegs/findDerivedRegs/resolveMode), derived.ts (70 LOC, B8 upsert map + access helpers), relations.ts (80 LOC, pure cache-key/fork-key/error-message helpers), index.ts (barrel). Original src/world.ts kept as 15-LOC re-export shim so external imports resolve byte-identically. **Layout (a)+(b) combined**: flat src/world.ts barrel → src/world/index.ts barrel → engine.ts (the actual class). Strategy: WorldImpl methods stay on the class in engine.ts; pure helpers extracted as free functions in the concern-grouped files, called from thin wrappers (e.g. `private findPrimaryRegs(s) { return findPrimaryRegsPure(this.schemaRegs, s); }`). No class augmentation. B39 globalSchemaIds module-global WeakMap kept as single instance in engine.ts (not duplicated). All composition invariants preserved byte-identically. Updated wiki/codebase-map.md to reflect new layout. Updated tests/unit/core/pipeline.test.ts B23-R9 LOC-bound assertion path (src/world.ts → src/world/engine.ts; ≤60 LOC bound unchanged). Added .changeset/b28-split-world-ts.md (patch). GREEN: 1041/1041 tests, typecheck clean, lint clean (1 B28-introduced warning fixed inline — stray `let d = def(current)` in dispatcher removed).
+- manager: user requested all lint warnings cleared. 7 pre-existing warnings cleaned up inline (out-of-B28 scope but user-directed): unused imports in packages/locale-en/scripts/fetch-data.ts (createWriteStream/pipeline/createGunzip), unused const HEX_CHARS in src/generators/data/string.ts, unused Node type alias in tests/unit/core/world-get.test.ts, unused pickKind in tests/unit/core/relations-where.test.ts, tautology `v !== undefined || v === undefined` in tests/unit/generators/domains/advanced.test.ts replaced with comment + retained `results.length === 500` termination guard.
+- manager: dispatch reviewer
+- reviewer: PASS — 1041/1041 green, typecheck clean, lint 0/0, no new `any` (4 pre-existing dispatcher casts byte-identical to pre-B28), all `.js` extensions, B39 module-global WeakMap singleton verified at engine.ts:117, all composition invariants (B8/B10/B11/B14/B23/B24/B25/B36/B38/B43/B44) verified at named line numbers, public API byte-identical, no scope creep, codebase-map updated, changeset patch correct. NO new standing constraint (one-off mechanical split governed by existing D1/D4/D10/D11).
+- result: done — moved card to wiki/backlog/done/, commit pending

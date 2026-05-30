@@ -4,7 +4,6 @@ const ALNUM_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
   string,
   ...string[],
 ];
-const HEX_CHARS = "0123456789abcdef".split("") as [string, ...string[]];
 const NANOID_CHARS = "ModuleSymbhasOwnPr-0123456789ABCDEFGHNRVfgctiUvz_KPLXTYJQSZ".split("") as [
   string,
   ...string[],
