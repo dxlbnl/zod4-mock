@@ -484,4 +484,10 @@ it records the reason here AND states it in chat.
 - manager: dispatch implementer for direction A (honour the bounds via slice; cap return to caller-specified max only — library-side defMax fallback does NOT cap unbounded calls)
 - implementer (round 2, direction A): added `readCallerMaxBound(schema)` helper at src/world.ts:209 (walks `checks(schema)` via existing typed helper; returns `length_equals.length` or `max_length.maximum` if caller wrote one, else undefined) + slice at src/world.ts:1377 wired into generateArray's primary arm (fires only when callerMax !== undefined AND registry exceeds it). Added tests/unit/core/primary-array-min-max-bounds.test.ts (4 tests: #25 repro, .length(3), no-caller-bound passthrough, top-up sanity) + .changeset/b43-primary-array-min-max-honoured.md (patch, closes #25). GREEN: 1041/1041 tests, typecheck clean. No new `any` (D1), no new Zod-internal access (D3), PRNG draws unchanged (D4/D10), D8 preserved (slice is read-only narrowing of stored records). Docs at api-reference.md:320 already describes post-fix behaviour correctly — no doc edit needed.
 - manager: reconciled card frontmatter — dropped stale `spec:` reference (no spec page in shipped direction-A flow), cleared review flag, added ## Resolution section to card body, git mv card doing → done.
-- result: done — commit pending
+- result: done — commit 04a4f57
+
+## 2026-05-30 — manager: pausing for release per user direction
+- 2 unpushed commits on main: 13fbd58 (B44, closes #26), 04a4f57 (B43, closes #25)
+- both changesets present (.changeset/b43-…honoured.md patch, .changeset/b44-…hangs.md patch)
+- working tree clean
+- next item on plan: B28 (split src/world.ts) — paused until user signals release done
