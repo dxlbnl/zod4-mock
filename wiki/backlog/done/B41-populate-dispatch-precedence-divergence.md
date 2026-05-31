@@ -5,7 +5,7 @@ type: research
 priority: medium
 flags: [review]
 created: 2026-05-29
-report: wiki/research/populate-dispatch-divergence.md
+report: wiki/research/engine/populate-dispatch-divergence.md
 ---
 
 ## Description
@@ -98,3 +98,15 @@ should approve direction before any code change.
   during refactor" item.
 - If the audit confirms intentionality (Option C), no code change is needed
   beyond a rule line in `architecture.md`.
+
+## Resolution
+
+Research landed at [wiki/research/engine/populate-dispatch-divergence.md](../../research/engine/populate-dispatch-divergence.md). User signed off at review checkpoint #2 (2026-05-31):
+
+- **Direction D — forbid dual primary+derived registration at `withSchema` time** (throw at registration, not at dispatch). Removes the asymmetry at the source without changing any dispatch behaviour.
+- **Follow-up tracked as `bug`** (not `chore` per the researcher's recommendation): user wants a regression test pinning the throw.
+- All five non-blocking open questions defaulted: multi-primary tightening **out of scope** (separate axis); bump shape `patch`; throw-message wording **implementer's call**; no docs follow-up needed (the dual-config can no longer exist under D).
+
+Maintainer was previously unaware dual registration was a thing at all — strong signal that no real user depends on today's primary-first behaviour. Researcher confirmed zero tests + zero docs reference it.
+
+Follow-up filed as **B47** in inbox/ (bug, medium, `flags: [review]` cleared since the design is already user-approved).
