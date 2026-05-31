@@ -1,7 +1,5 @@
 import type { Prng, GeneratorContext } from "../../types.js";
-import type { LocaleData } from "@zod4-mock/locale-core";
 import { siblingString } from "./sibling.js";
-import { sampleWeighted } from "./markov/sample.js";
 import { defaultLocale } from "../../default-locale.js";
 
 // Universal — not locale-dependent
@@ -52,16 +50,12 @@ function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
 }
 
 /**
- * Samples a name from a locale, preferring the weighted Markov models when
- * present and falling back to the plain string array otherwise.
+ * Samples one entry from a name pool with `prng.pick`. Empty / missing pool
+ * returns the "Unknown" sentinel; this preserves a structured fallback for
+ * locales that do not populate the relevant pool.
  */
-function sampleName(
-  prng: Prng,
-  models: LocaleData["person"]["firstNamesMale"],
-  simple: readonly string[] | undefined,
-): string {
-  if (models && models.length > 0) return sampleWeighted(prng, models);
-  if (simple && simple.length > 0) return pick(prng, simple);
+function sampleName(prng: Prng, pool: readonly string[] | undefined): string {
+  if (pool && pool.length > 0) return pick(prng, pool);
   return "Unknown";
 }
 
@@ -73,8 +67,8 @@ export function firstName(prng: Prng, genderOrCtx?: Gender | GeneratorContext): 
   const ctx = typeof genderOrCtx === "object" ? genderOrCtx : undefined;
   const g = extractGender(genderOrCtx);
   const p = (ctx?.locale ?? defaultLocale).person;
-  const male = (): string => sampleName(prng, p.firstNamesMale, p.simpleFirstNamesMale);
-  const female = (): string => sampleName(prng, p.firstNamesFemale, p.simpleFirstNamesFemale);
+  const male = (): string => sampleName(prng, p.firstNamesMale);
+  const female = (): string => sampleName(prng, p.firstNamesFemale);
   if (g === "male") return male();
   if (g === "female") return female();
   return prng.random() < 0.5 ? male() : female();
@@ -82,12 +76,18 @@ export function firstName(prng: Prng, genderOrCtx?: Gender | GeneratorContext): 
 
 export function lastName(prng: Prng, ctx?: GeneratorContext): string {
   const locale = ctx?.locale ?? defaultLocale;
-  const stem = sampleName(prng, locale.person.lastNames, locale.person.simpleLastNames);
+  const stem = sampleName(prng, locale.person.lastNames);
   const pfxList = locale.person.lastNamePrefixes;
   if (!pfxList || pfxList.length === 0) return stem;
+  // Decide the prefix on an independent fork so the leaf `lastName` call
+  // consumes exactly one draw from the caller's PRNG (B48-R7). Forking does
+  // not consume parent state (see src/prng.ts:112-116), so the prefix
+  // decision stays deterministic per (seed, "lastNamePrefix") without
+  // disturbing sibling generators that share the parent counter.
+  const prefixPrng = prng.fork("lastNamePrefix");
   // Weight "no prefix" at 100, then select proportionally
   const prefixTotal = pfxList.reduce((s: number, p) => s + p.weight, 0);
-  const r = prng.random() * (prefixTotal + 100);
+  const r = prefixPrng.random() * (prefixTotal + 100);
   if (r >= prefixTotal) return stem;
   let cum = 0;
   for (const { prefix: pfx, weight } of pfxList) {

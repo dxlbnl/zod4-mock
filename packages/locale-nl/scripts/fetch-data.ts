@@ -7,6 +7,12 @@
  *   - Nouns/adj:   OpenTaal opentaal-wordlist (BSD/GPL)
  *
  * Usage: pnpm --filter @zod4-mock/locale-nl fetch-data
+ *
+ * TODO B48 Phase 2: the digitalheir mirror is license-undeclared (B46 Q-S2)
+ * and MUST NOT be the shipped source per B48-R5. Refetch surnames directly
+ * from CBS (Statistics Netherlands) or Meertens under their open-data terms,
+ * then emit a brotli-compressed blob into `packages/locale-nl/src/data/blobs/`
+ * per B48-R4 instead of the plain `.txt` outputs.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -110,4 +116,6 @@ try {
   console.error("  ✗ OpenTaal word list failed:", (e as Error).message);
 }
 
-console.log("\nDone. Run `pnpm train` to regenerate Markov models.");
+// TODO B48 Phase 2: replace this stdout note with brotli-blob emission into
+// `packages/locale-nl/src/data/blobs/` (Phase 2 ships the loader pattern).
+console.log("\nDone.");

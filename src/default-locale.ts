@@ -2,9 +2,9 @@ import type { LocaleData, Prng } from "@zod4-mock/locale-core";
 
 /**
  * Minimal English locale used when no `locale` is passed to `createWorld()`.
- * Deliberately small and Markov-free — names and words come from short curated
- * arrays. For realistic, Markov-generated data import a full locale package
- * (`@zod4-mock/locale-en`, `@zod4-mock/locale-nl`).
+ * Deliberately small — names and words come from short curated arrays. For
+ * larger curated lists import a full locale package (`@zod4-mock/locale-en`,
+ * `@zod4-mock/locale-nl`).
  */
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -13,7 +13,7 @@ export const defaultLocale: LocaleData = {
   id: "default",
 
   person: {
-    simpleFirstNamesMale: [
+    firstNamesMale: [
       "James",
       "John",
       "Michael",
@@ -31,7 +31,7 @@ export const defaultLocale: LocaleData = {
       "George",
       "Edward",
     ],
-    simpleFirstNamesFemale: [
+    firstNamesFemale: [
       "Mary",
       "Linda",
       "Sarah",
@@ -49,7 +49,7 @@ export const defaultLocale: LocaleData = {
       "Claire",
       "Rose",
     ],
-    simpleLastNames: [
+    lastNames: [
       "Smith",
       "Johnson",
       "Williams",

@@ -91,8 +91,6 @@ export type {
 
   // Localization
   LocaleData,
-  MarkovModel,
-  NameOriginSet,
   LastNamePrefix,
   Currency,
 } from "./types.js";

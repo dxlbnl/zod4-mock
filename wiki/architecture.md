@@ -10,7 +10,7 @@
   `vitest` (tests), `oxlint`/`oxfmt` (lint/format), `tsup` (package builds), `changesets`
   (versioning/release).
 - **Workspaces** (pnpm): root library `zod4-mock`, `packages/locale-core`,
-  `packages/locale-en`, `packages/locale-nl`, `packages/locale-names`, and `playground/`.
+  `packages/locale-en`, `packages/locale-nl`, and `playground/`.
 
 ## Package manager (binding)
 
@@ -39,8 +39,8 @@ tests/
   integration/       # full-scenario tests, each with schemas.ts + world.ts
 packages/
   locale-core/       # LocaleData types + extend()
-  locale-en/  locale-nl/  locale-names/      # locales + shared Markov name models
-scripts/             # train-markov.ts, verify-markov.ts (offline model tooling)
+  locale-en/  locale-nl/        # locales (real wordlists, no Markov)
+scripts/             # offline build tooling (data fetchers, measurement scripts)
 docs/                # end-user documentation (API reference, concepts, recipes, …)
 wiki/                # Vibin workflow source of truth (this directory)
   research/             # generator-overhaul research: overview, tracking, text-generation/, engine/, field-resolution/, reports/

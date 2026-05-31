@@ -29,7 +29,7 @@ describe("extend()", () => {
   it("overriding one word field preserves all other word fields", () => {
     const custom = extend(en, { word: { articles: ["the", "a"] } });
     expect(custom.word.articles).toEqual(["the", "a"]);
-    expect(custom.word.nounModel).toBe(en.word.nounModel);
+    expect(custom.word.nouns).toBe(en.word.nouns);
     expect(custom.word.verbs).toBe(en.word.verbs);
     expect(custom.word.conjunctions).toBe(en.word.conjunctions);
   });

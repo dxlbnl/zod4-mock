@@ -609,6 +609,7 @@ it records the reason here AND states it in chat.
 - result: done — commit d2a9d98
 
 ## 2026-05-31 — chore: repo-wide oxfmt sweep + cancel B48 ticket
+
 - manager: user pushed back on me filing B48 as a backlog item for a `pnpm fmt` run — "I'm not happy you just making a ticket for a simple chore like a fmt sweep.. this is unnecessary. just do the fmt". Saved feedback to memory as [[feedback-no-ceremony-for-trivial-chores]]: trivial mechanical chores (one or two project-owned commands, zero design choices, behaviour-neutral) skip the Vibin pipeline entirely — the manager just runs them inline.
 - manager: ran `pnpm fmt` directly — 202 files reformatted in 2.4s (oxfmt across .changeset/, .claude/, CHANGELOG.md, CLAUDE.md, README.md, docs/, packages/, src/, tests/, wiki/, and similar). No behavioural change; pure whitespace.
 - manager: ran `pnpm validate` — clean across typecheck + test + lint + fmt:check (`All matched files use the correct format`). 1044/1044 tests still green.
@@ -617,10 +618,12 @@ it records the reason here AND states it in chat.
 - result: done — commit b7630d3
 
 ## 2026-05-31 — chore: trivial-chore gate added to CLAUDE.md + backlog README
+
 - manager: codified the workflow rule the user enforced (don't file backlog items for one-or-two-command mechanical chores like `pnpm fmt`). Added bullet to CLAUDE.md → Operational rules → Trivial-chore gate; cross-referenced from wiki/backlog/README.md's filing conventions. Workflow discipline (not a technical/schema constraint), so no architecture.md Rule / decisions.md ADR per user direction ("or put it in the claude.md"). Followed the gate by skipping the backlog ceremony for this commit itself.
 - result: done — commit 7fdea86
 
 ## 2026-05-31 — B46: Spike — wordlist corpus sourcing & sizing for B45 direction
+
 - manager: promoted inbox → doing, track: research (flagged review). Release paused per user direction ("I want B46 in there before making a new version"). Spike scope (per card): 5 axes — corpus sourcing + license, measured compressed sizes (front-coded / DAFSA / brotli), sampler-shape sanity check, PCFG sketch for words, B42 empirical confirmation.
 - manager: dispatch researcher (general-purpose, with full tooling rules + measurement-script authorization for the sanctioned no-ad-hoc path)
 - researcher: wrote wiki/research/text-generation/wordlist-sourcing-spike.md + committed scripts/b46-measure-corpus-sizes.ts (idempotent, read-only, uses Node's built-in zlib for brotli). Headline: real wordlists land under the 250 KB-per-locale target with margin — locale-names = **172 KB combined front-coded+brotli vs 2.34 MB Markov today** (13.5× reduction). EN words: ~20 KB lemma lists + PCFG vs ~201 KB today (10× reduction). Sampler-shape: NO API change, NO new ctx surface (the `simple*` fallback arrays on LocaleData are already plumbed end-to-end via word.ts:75,87 and person.ts:58-66). B42 (#24) is **cancellable by construction** — Markov empty-state row's A+B+C+D mass = 21.66% / 22.94% essentially matches real-list 22.0% / 23.1%; the user-observed skew is rejection-sampling + `"x"` sentinel compounding, not a start-state distribution issue. Six blocking sign-off questions surfaced (Q-S1/S2/S3/S6/S7 + O-A1/O-A5). Tooling: 2 bash grep slips disclosed (Grep/Glob tool wasn't surfaced for the general-purpose subagent).
@@ -631,11 +634,28 @@ it records the reason here AND states it in chat.
   2. **Q-S6 (arabic/frisian/turkish slices)** → drop. Plus **drop `packages/locale-names/` entirely** (user-volunteered, beyond my question scope). Dutch first names migrate to `packages/locale-nl/`.
   3. **Q-S7 (south-asian, 175 entries)** → drop.
   4. **O-A1/O-A5 (LocaleData type-shape break)** → accept under 0.x (minor bump per B45/B39 precedent).
-  Plus follow-up Q-B1 (locale-en surname size) → **filter to top-10K by frequency** (locale-en lands at ~85 KB).
+     Plus follow-up Q-B1 (locale-en surname size) → **filter to top-10K by frequency** (locale-en lands at ~85 KB).
 - user direction (separate, mid-pipeline): noticed I was leading with names; clarified the words story (EN words ~20 KB after, 10× reduction; per-call PRNG goes from variable to constant). Confirmed: **Markov goes away entirely** — sample.ts, train scripts, verify-markov, the markov/ dir, LocaleData Markov fields, packages/locale-names — all deleted under B48.
 - user direction (B48 id): asked "where's B48?". I had filed B48 originally for the fmt-sweep ticket and inline-cancelled it via `git rm` (breaking the B19/B21 precedent of preserving cancelled cards with `flags: [cancelled]`). User picked **reuse B48 for the implementation item** (the original B48 card had no content worth preserving — it was a procedural mistake).
 - manager: appended ## Resolution block to B46 card capturing the 4-axis sign-off + Q-B1 answer + B42 cancellation rationale + B48 forward pointer + the "drop Markov entirely" punch list.
 - manager: filed **B48** (`feature`, high priority, [review]) — `wiki/backlog/inbox/B48-replace-markov-with-real-wordlists.md`. Scope baked in from the sign-off: replace Markov with real wordlists + `prng.pick`, drop `packages/locale-names/`, refetch surnames from official sources, filter Census surnames to top-10K, drop arabic/frisian/turkish/south-asian, accept LocaleData type-shape break under 0.x minor bump. 11 preliminary acceptance requirements (B48-R1..R11) — spec-writer formalizes when manager dispatches.
 - manager: cancelled **B42** — git mv inbox → done, frontmatter `flags: [blocked]` → `[cancelled]`, added ## Resolution block recording the spike's empirical evidence + forward pointer to B48. Issue #24 closes when B48 lands.
 - manager: git mv wiki/backlog/doing/B46-…md → wiki/backlog/done/
-- result: done — commit pending
+- result: done — commit ddc2553
+
+## 2026-05-31 — B48: Replace Markov chains with real wordlists; drop locale-names; LocaleData cleanup
+
+- manager: promoted inbox → doing, track: feature (flagged review). The implementation of the B45→B46 direction. Release paused per user direction ("I want the new generation stuff in before making a new version"). Card carries 11 preliminary acceptance R-IDs + full Markov-removal punch list baked in from B46 sign-off.
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B48-replace-markov-with-real-wordlists.md (499 lines, 11 R-IDs with GIVEN/WHEN/THEN, 4 non-blocking open questions all implementer's call, 0 blocking). Tightened scope: R3 pinned the rename (drop `simple` prefix wholesale); R4 pinned the test mechanism; R7 pinned the counter-proxy approach; R11 pinned N=2000 + seed=42 + [0.21, 0.24] band. Zero forbidden Bash. Standing constraint candidate analyzed (recommendation: don't promote, type signature is the enforcement).
+- manager: spec-validation gate PASS. Review checkpoint #2 → user approved spec, NO D13 promotion ("type signature is the enforcement").
+- user direction (mid-pipeline, very firm): "wtf is going on.... these test files are insane" + "not even the letter thing, this was an artifact of the markov chains. these are gone". Saved to memory as [[feedback-tests-test-behavior]]: tests exercise runtime BEHAVIOUR, not implementation artifacts. File-existence/diff/changeset/docs-grep checks are reviewer-eyeball territory, NOT test files. And: if the failure mode can't structurally exist anymore (Markov-era A/B/C/D skew is gone once Markov is gone), don't write a regression test for it.
+- manager: edited B48 spec inline — dropped R11 entirely (failure mode gone with Markov), tagged each of R1-R6 + R8-R10 as `**Verification: reviewer-only**` (or `**Verification: typecheck-enforced**` for R3), kept R7 as the ONLY test-bearing requirement. Updated `## Minimum tests directive` to specify 1 test file + ~5 it blocks.
+- manager: deleted 7 leftover B48-\*.test.ts files that a prior dispatch had created before the user pushed back (B48-bundle-size, B48-changesets, B48-deletions, B48-docs-updated, B48-locale-shape, B48-nl-letter-distribution, B48-pcfg-preserved — all artifact-check style, not behaviour).
+- manager: dispatch test-writer with the tight scope (1 file, ~5 it blocks, R7 only)
+- test-writer: wrote tests/unit/B48-prng-counter.test.ts with 6 `it(...)` blocks (5 R7 leaf-generator checks + 1 documenting the unspecified-gender 2-draw exemption). makeCounter helper proxies a real Prng and increments on each random() call. Zero `any`. RED: all 6 fail today with counter values {5, 9, 5, 5, 6, 14} vs expected {1, 1, 1, 1, 1, 2} — exactly because the Markov path is active (sampleMarkov burns N+ draws per call). Suite: 1044 → 1050 (+6 RED). Zero forbidden Bash.
+- manager: user direction: phase B48 implementation into 2 passes — Phase 1 structural (delete locale-names + Markov code + LocaleData reshape + leaf swap, use existing data inline as placeholder), Phase 2 data layer (fetch script rewrites + brotli blob pipeline + final docs + changeset).
+- manager: dispatch implementer for Phase 1
+- implementer (Phase 1): all 6 R7 tests GREEN (counters 1/1/1/1/1/2). `pnpm validate` clean. Suite: 1044 → 1038 (6 net-removed = locale-names workspace tests gone with package). 74 files changed: deleted packages/locale-names/ entirely, deleted src/generators/data/markov/, deleted Markov model files in locale-en/locale-nl src/models/, deleted train.ts/verify.ts in both locale packages, deleted scripts/b46-measure-corpus-sizes.ts (it read from the now-gone locale-names/data/training/). Created 12 data files: Dutch real wordlists inlined into packages/locale-nl/src/data/ (~830 male + 970 female + 830 last) + ~75-entry curated stubs for Dutch nouns/adjectives + ~100-entry curated stubs for all 5 EN data files (TODO B48 Phase 2 markers). LocaleData reshape: dropped `simple*` prefix wholesale, removed `nounModel`/`adjectiveModel`/`MarkovModel`/`NameOriginSet`; `extend()` still compiles. Workspace cleanup: locale-names dropped from pnpm-workspace.yaml + root package.json + tsup externals. docs/api-reference.md purged of Markov shape. Architecture.md workspaces list updated. 3 TODO Phase 2 markers tagged.
+- implementer Phase 1 tooling slips: 3 disclosed (grep -lr, wc -l, head -N) — should have used Read tool.
+- manager: committing Phase 1 separately per user direction; Phase 2 dispatched on top of clean checkpoint.

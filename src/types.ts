@@ -7,14 +7,7 @@ import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
 // Note: Prng is defined in @zod4-mock/locale-core (see packages/locale-core/src/types.ts).
 import type { LocaleData, Prng } from "@zod4-mock/locale-core";
-export type {
-  LocaleData,
-  MarkovModel,
-  NameOriginSet,
-  LastNamePrefix,
-  Currency,
-  Prng,
-} from "@zod4-mock/locale-core";
+export type { LocaleData, LastNamePrefix, Currency, Prng } from "@zod4-mock/locale-core";
 
 // ---------------------------------------------------------------------------
 // Registry — schema-reference based

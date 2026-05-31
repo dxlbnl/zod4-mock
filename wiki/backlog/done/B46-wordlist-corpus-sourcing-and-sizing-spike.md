@@ -94,6 +94,7 @@ with concrete bytes and licenses pinned.
 Spike landed at [wiki/research/text-generation/wordlist-sourcing-spike.md](../../research/text-generation/wordlist-sourcing-spike.md) with the measurement script at [scripts/b46-measure-corpus-sizes.ts](../../../scripts/b46-measure-corpus-sizes.ts). Reviewer PASSed: script reproduces report numbers cell-for-cell; sampler-shape claim verified at `packages/locale-core/src/types.ts:62-65` + `src/generators/data/word.ts:75,87` + `person.ts:58-66`; B42 cancellation rationale verified (Markov empty-state A+B+C+D = 21.66% / 22.94% essentially matches real-list 22.0% / 23.1%).
 
 **Headline measurements:**
+
 - `locale-names` corpora compress to **172 KB** combined front-coded+brotli vs **2.34 MB** shipped Markov today — **13.5× reduction**.
 - EN words (nouns + adjectives): **~20 KB** real lists + PCFG vs **~201 KB** Markov today — **10× reduction**.
 - EN first names: ~55–65 KB vs ~215 KB today.

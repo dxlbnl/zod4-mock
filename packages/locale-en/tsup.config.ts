@@ -5,5 +5,5 @@ export default defineConfig({
   format: ["esm"],
   dts: true,
   clean: true,
-  external: ["@zod4-mock/locale-core", "@zod4-mock/locale-names"],
+  external: ["@zod4-mock/locale-core"],
 });

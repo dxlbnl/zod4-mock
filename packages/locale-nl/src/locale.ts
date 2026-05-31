@@ -1,36 +1,15 @@
 import type { LocaleData, LastNamePrefix, Prng } from "@zod4-mock/locale-core";
-import {
-  dutchMaleModel,
-  dutchFemaleModel,
-  dutchLastNamesModel,
-} from "@zod4-mock/locale-names/groups/dutch";
-import { arabicMaleModel, arabicFemaleModel } from "@zod4-mock/locale-names/groups/arabic";
-import { turkishMaleModel, turkishFemaleModel } from "@zod4-mock/locale-names/groups/turkish";
-import { frisianMaleModel, frisianFemaleModel } from "@zod4-mock/locale-names/groups/frisian";
-import { nlNounsModel } from "./models/nouns.js";
-import { nlAdjectivesModel } from "./models/adjectives.js";
+import { firstNamesMale, firstNamesFemale, lastNames, nouns, adjectives } from "./data/index.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Approximate name-origin distribution in the Dutch population:
-//   ~68% Dutch-origin, ~12% Arabic, ~6% Turkish, ~2% Frisian, ~12% other (not modelled yet)
 export const nl: LocaleData = {
   id: "nl",
 
   person: {
-    firstNamesMale: [
-      { model: dutchMaleModel, weight: 68 },
-      { model: arabicMaleModel, weight: 12 },
-      { model: turkishMaleModel, weight: 6 },
-      { model: frisianMaleModel, weight: 2 },
-    ],
-    firstNamesFemale: [
-      { model: dutchFemaleModel, weight: 68 },
-      { model: arabicFemaleModel, weight: 12 },
-      { model: turkishFemaleModel, weight: 6 },
-      { model: frisianFemaleModel, weight: 2 },
-    ],
-    lastNames: [{ model: dutchLastNamesModel, weight: 100 }],
+    firstNamesMale,
+    firstNamesFemale,
+    lastNames,
     lastNamePrefixes: [
       { prefix: "de", weight: 15 },
       { prefix: "van", weight: 12 },
@@ -630,8 +609,8 @@ export const nl: LocaleData = {
   },
 
   word: {
-    nounModel: nlNounsModel,
-    adjectiveModel: nlAdjectivesModel,
+    nouns,
+    adjectives,
     articles: ["de", "het", "een"],
     prepositions: ["in", "op", "van", "voor", "met", "naar", "door", "uit"],
     conjunctions: ["en", "of", "maar", "want", "omdat"],

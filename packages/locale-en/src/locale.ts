@@ -1,11 +1,5 @@
 import type { LocaleData, Prng } from "@zod4-mock/locale-core";
-import {
-  englishMaleModel,
-  englishFemaleModel,
-  englishLastNamesModel,
-} from "@zod4-mock/locale-names/groups/english";
-import { enNounsModel } from "./models/nouns.js";
-import { enAdjectivesModel } from "./models/adjectives.js";
+import { firstNamesMale, firstNamesFemale, lastNames, nouns, adjectives } from "./data/index.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -13,9 +7,9 @@ export const en: LocaleData = {
   id: "en",
 
   person: {
-    firstNamesMale: [{ model: englishMaleModel, weight: 100 }],
-    firstNamesFemale: [{ model: englishFemaleModel, weight: 100 }],
-    lastNames: [{ model: englishLastNamesModel, weight: 100 }],
+    firstNamesMale,
+    firstNamesFemale,
+    lastNames,
     prefixes: {
       male: ["Mr.", "Dr.", "Prof."],
       female: ["Ms.", "Mrs.", "Dr.", "Prof."],
@@ -582,8 +576,8 @@ export const en: LocaleData = {
   },
 
   word: {
-    nounModel: enNounsModel,
-    adjectiveModel: enAdjectivesModel,
+    nouns,
+    adjectives,
     articles: ["the", "a", "an"],
     prepositions: ["in", "on", "at", "for", "with", "of", "to", "from", "by", "about"],
     conjunctions: ["and", "or", "but", "because", "so", "yet"],

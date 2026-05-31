@@ -17,13 +17,10 @@
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "pnpm build",
-    "fetch-data": "tsx scripts/fetch-data.ts",
-    "train": "tsx scripts/train.ts",
-    "verify": "tsx scripts/verify.ts"
+    "fetch-data": "tsx scripts/fetch-data.ts"
   },
   "dependencies": {
-    "@zod4-mock/locale-core": "workspace:*",
-    "@zod4-mock/locale-names": "workspace:*"
+    "@zod4-mock/locale-core": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.21.0",

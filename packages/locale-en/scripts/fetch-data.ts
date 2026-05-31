@@ -8,6 +8,13 @@
  *   - Adjectives:  same source, heuristically filtered
  *
  * Usage: pnpm --filter @zod4-mock/locale-en fetch-data
+ *
+ * TODO B48 Phase 2: this script must be rewritten to (1) filter US Census
+ * surnames to the top-10K by frequency per B48-R6 (the current `.filter(...)`
+ * below keeps all ~150K), (2) emit a brotli-compressed blob into
+ * `packages/locale-en/src/data/blobs/` per B48-R4 instead of the plain `.txt`
+ * outputs, and (3) drop the unused dwyl heuristic in favour of a curated POS
+ * source.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -120,4 +127,6 @@ try {
   console.error("  ✗ Word list failed:", (e as Error).message);
 }
 
-console.log("\nDone. Run `pnpm train` to regenerate Markov models.");
+// TODO B48 Phase 2: replace this stdout note with brotli-blob emission into
+// `packages/locale-en/src/data/blobs/` (Phase 2 ships the loader pattern).
+console.log("\nDone.");

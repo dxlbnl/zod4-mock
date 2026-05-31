@@ -1,5 +1,4 @@
 import type { Prng, GeneratorContext } from "../../types.js";
-import { sampleMarkov } from "./markov/sample.js";
 import { defaultLocale } from "../../default-locale.js";
 
 // ---------------------------------------------------------------------------
@@ -62,31 +61,28 @@ function cap(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Open-class word generators (Markov-sampled, locale-aware)
+// Open-class word generators (locale-aware)
 // ---------------------------------------------------------------------------
 
 /**
- * Samples a noun from the active locale — uses the Markov model when present,
- * otherwise falls back to the locale's plain `nouns` array. Output is always
- * capitalized for consistency between Markov and array-based locales.
+ * Samples a noun from the active locale by picking uniformly at random from
+ * the locale's `nouns` array. Output is always capitalized.
  */
 export function noun(prng: Prng, ctx?: GeneratorContext): string {
   const w = (ctx?.locale ?? defaultLocale).word;
-  return w.nounModel ? sampleMarkov(prng, w.nounModel) : cap(locPick(prng, w.nouns ?? []));
+  return cap(locPick(prng, w.nouns ?? []));
 }
 
 /** Alias for noun. */
 export const word = noun;
 
 /**
- * Samples an adjective from the active locale — Markov model when present,
- * otherwise the locale's plain `adjectives` array. Output is always capitalized.
+ * Samples an adjective from the active locale by picking uniformly at random
+ * from the locale's `adjectives` array. Output is always capitalized.
  */
 export function adjective(prng: Prng, ctx?: GeneratorContext): string {
   const w = (ctx?.locale ?? defaultLocale).word;
-  return w.adjectiveModel
-    ? sampleMarkov(prng, w.adjectiveModel)
-    : cap(locPick(prng, w.adjectives ?? []));
+  return cap(locPick(prng, w.adjectives ?? []));
 }
 
 // ---------------------------------------------------------------------------
