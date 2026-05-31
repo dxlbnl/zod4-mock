@@ -335,3 +335,54 @@ read-only inspector.
 - **Supersedes**: none (codifies the structural contract; coexists with
   D4/D10 which pin per-(seed + schema + slot) determinism that the
   steps themselves must honour).
+
+## D12: Schema polarity at `withSchema` is unambiguous; mixing primary + derived throws
+
+- **Date**: 2026-05-31
+- **By**: B47 (manager promoted from reviewer recommendation)
+- **Context**: B41 (research) surfaced that the library's four dispatch sites
+  (`generate` single, `generate` array, `get`, `populate`) classify a registered
+  schema as derived / primary / ad-hoc, and three of them check derived-first via
+  the shared `resolveMode` while `populate` checks primary-first via an explicit
+  `findPrimaryRegs` pre-check. The asymmetry is only observable when the same
+  schema reference is registered as **both** primary (`withSchema(S)`) and derived
+  (`withSchema(S, { from: T })`) on the same world. B41 confirmed: no spec records
+  it, no ADR logs it, no test exercises it, no doc describes it. The user (the
+  maintainer) was not aware dual registration was even possible.
+- **Decision**: Forbid dual registration at the configuration boundary rather than
+  picking a "right" dispatch precedence. `WorldImpl.withSchema` throws at
+  registration time when an incoming registration's polarity conflicts with the
+  polarity of an existing registration of the same schema reference (by reference
+  identity). The check uses the existing pure `findPrimaryRegs` / `findDerivedRegs`
+  helpers in `src/world/registration.ts`; no new abstractions. Same-polarity
+  re-registration (two primary, two derived from any source) is unchanged.
+  Relations (B11 `RelationEntry`) and `from:` source roles do NOT count as
+  registrations of the target schema, so they don't trigger the throw.
+- **Consequences**:
+  - The four dispatchers' asymmetry becomes moot — the configuration where it
+    was observable can no longer exist. Cleaning up `populate`'s primary-first
+    pre-check at `src/world/engine.ts:600-655` (now dead code) is a separate
+    chore-class follow-up; B47 only added the throw, leaving the pre-check intact
+    for safety.
+  - Future contributors adding a fifth dispatcher, a new `withSchema` variant, or
+    a new resolver helper assume a schema's polarity is unambiguous at registration
+    time. The architecture Rule (D12) makes this binding.
+  - Users who legitimately need both a primary "Person" and a derived "Person"
+    must use two distinct schema references — the throw message hints at this
+    resolution.
+  - No public-API surface change. No `docs/api-reference.md` edit. Patch bump
+    (the configuration the throw forbids has zero in-repo call sites and was
+    undocumented).
+
+### Rule added
+
+`wiki/architecture.md` Rules section gains:
+
+> A schema reference **MUST NOT** be registered as both primary and derived on
+> the same world; `withSchema` **MUST** throw at registration time when an
+> incoming registration's polarity (`opts?.from !== undefined` ⇒ derived;
+> otherwise primary) conflicts with the polarity of an existing registration of
+> the same schema reference. (→ D12)
+
+- **Supersedes**: none (B41 research established that no prior decision pinned
+  dispatch precedence either way; D12 removes the ambiguity that B41 surfaced).

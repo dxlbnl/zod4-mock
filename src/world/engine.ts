@@ -539,6 +539,22 @@ export class WorldImpl implements World {
     TSource extends ZodTypeAny | undefined = undefined,
     TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
   >(schema: TSchema, opts?: SchemaOpts<TSchema, TSource, TRelations>): this {
+    // B47: a schema reference MAY be registered only as one of primary OR
+    // derived on a given world. Mixing the two polarities throws at
+    // `withSchema` time, before the new `SchemaReg` is appended — so the
+    // failed call leaves `this.schemaRegs` unchanged.
+    const incomingDerived = opts?.from !== undefined;
+    if (incomingDerived && this.findPrimaryRegs(schema).length > 0) {
+      throw new Error(
+        "withSchema: schema is already registered as primary and cannot also be registered as derived (with `from:`). Use a distinct schema reference for the other role.",
+      );
+    }
+    if (!incomingDerived && this.findDerivedRegs(schema).length > 0) {
+      throw new Error(
+        "withSchema: schema is already registered as derived (with `from:`) and cannot also be registered as primary. Use a distinct schema reference for the other role.",
+      );
+    }
+
     const from = (opts?.from as ZodTypeAny | undefined) ?? null;
     const sourceKey = (opts?.sourceKey as string | undefined) ?? null;
     const rawRelations = (opts?.relations ?? {}) as Record<string, unknown>;

@@ -38,6 +38,7 @@ superseded.
 | [B39](B39-stable-identity-based-fork-keys.md) | BUG: replaced `generationCounter`-derived PRNG fork keys with stable per-schema identity-based ones (D10). |
 | [B40](B40-ctx-gen-ignores-locale.md) | BUG: `ctx.gen.<ns>.<fn>()` dropped the configured locale; fix injects the active `GeneratorContext` as a default `ctx` arg. |
 | [B44](B44-primary-array-store-false-hangs.md) | BUG: `generate(primaryArraySchema, { store: false })` hung forever; fix decouples the loop from `registry.count` under `!effectiveStore`. |
+| [B47](B47-forbid-dual-primary-derived-registration.md) | BUG: `withSchema` throws at registration time when a schema is registered as both primary and derived (resolves B41's silent dispatch divergence). |
 
 ## Spec ↔ item card pairing
 

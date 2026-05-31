@@ -5,6 +5,7 @@ type: bug
 priority: medium
 flags: []
 created: 2026-05-31
+spec: wiki/specs/B47-forbid-dual-primary-derived-registration.md
 ---
 
 ## Description
