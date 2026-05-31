@@ -88,3 +88,26 @@ with concrete bytes and licenses pinned.
   `packages/locale-names/src/groups/`, `packages/locale-en/src/models/`,
   `scripts/train-markov.ts`, `src/generators/data/markov/sample.ts`.
 - B45 Resolution is the binding contract for this spike's scope.
+
+## Resolution
+
+Spike landed at [wiki/research/text-generation/wordlist-sourcing-spike.md](../../research/text-generation/wordlist-sourcing-spike.md) with the measurement script at [scripts/b46-measure-corpus-sizes.ts](../../../scripts/b46-measure-corpus-sizes.ts). Reviewer PASSed: script reproduces report numbers cell-for-cell; sampler-shape claim verified at `packages/locale-core/src/types.ts:62-65` + `src/generators/data/word.ts:75,87` + `person.ts:58-66`; B42 cancellation rationale verified (Markov empty-state A+B+C+D = 21.66% / 22.94% essentially matches real-list 22.0% / 23.1%).
+
+**Headline measurements:**
+- `locale-names` corpora compress to **172 KB** combined front-coded+brotli vs **2.34 MB** shipped Markov today — **13.5× reduction**.
+- EN words (nouns + adjectives): **~20 KB** real lists + PCFG vs **~201 KB** Markov today — **10× reduction**.
+- EN first names: ~55–65 KB vs ~215 KB today.
+- Per-call PRNG: variable (1+N+up-to-8-retries) → constant (1 draw). Strictly stronger D4/D10 fit.
+
+User decisions at review checkpoint #2 (2026-05-31):
+
+- **Q-S2 / Q-S3 (no-declared-license surname sources)** — **refetch from official sources**: US Census 2010 surnames (public domain) for English (already in `packages/locale-en/scripts/fetch-data.ts`); CBS / Meertens for Dutch. Removes the licensing ambiguity entirely.
+- **Q-S6 (arabic / frisian / turkish slices) + Q-S7 (south-asian)** — **drop**. Plus **drop `packages/locale-names/` entirely**. Dutch first names migrate to `packages/locale-nl/` under the implementation item. Arabic / frisian / turkish / south-asian out-of-the-box locales removed; users can extend via locale-core if they bring their own corpora.
+- **Q-B1 (locale-en surname bundle size)** — **top-10K by frequency**. Locale-en lands at ~85 KB total. Common surnames are what users see in mock data; rare names add long-tail bytes for little realism gain.
+- **O-A1 / O-A5 (`LocaleData` type-shape break)** — **accept under 0.x** (minor bump per B45 SemVer precedent). Drop `nounModel`/`adjectiveModel`/Markov `NameOriginSet[]` fields from `LocaleData`; the existing `simple*` fallback arrays become THE source (not a fallback). `packages/locale-nl` is workspace-coordinated in the same commit.
+
+**Markov goes away entirely** under the recommended direction: `src/generators/data/markov/sample.ts` deleted, `sampleMarkov` / `sampleWeighted` / dead-end detection / `"x"` sentinel / rejection sampling all removed, `scripts/train-markov.ts` + `scripts/verify-markov.ts` deleted, `packages/locale-en/data/training/` model files replaced by fetched-then-compressed wordlist blobs.
+
+**B42 ([#24](https://github.com/dxlbnl/zod4-mock/issues/24))** — confirmed cancellable by construction. The user-observed A/B/C/D skew is rejection-sampling + `"x"` fallback compounding, not a start-state distribution issue. Under `prng.pick(realList)` the natural Dutch first-letter distribution shows through (~22 %); the issue closes without any sampler patch. Cancel B42 (move to done/ with `flags: [cancelled]`) as part of this commit.
+
+Follow-up implementation item filed as **B48** (`feature`, `flags: [review]`, minor bump). Scope baked in from this Resolution; spec-writer pins acceptance + the Markov-removal punch list. (The B48 id was previously consumed by a fmt-sweep ticket I shouldn't have filed; cancelled inline in commit `b7630d3` — the slot was empty at HEAD when this item was filed.)

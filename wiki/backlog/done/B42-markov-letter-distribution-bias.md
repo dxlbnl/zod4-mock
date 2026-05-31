@@ -3,9 +3,19 @@ id: B42
 title: BUG/quality — nl-locale Markov-generated words skew heavily toward A/B/C/D initial letters
 type: bug
 priority: medium
-flags: [blocked]
+flags: [cancelled]
 created: 2026-05-29
 ---
+
+## Resolution
+
+**Cancelled by B46 spike (2026-05-31).** Subsumed by the wordlist direction, not a standalone fix.
+
+The B46 spike ([report](../../research/text-generation/wordlist-sourcing-spike.md) §6) decoded the Markov empty-state row at `packages/locale-names/src/groups/dutch/male.ts:8-12`: A+B+C+D combined = **21.66 %** (male) / **22.94 %** (female). The real Dutch wordlist's first-letter distribution is **22.0 %** / **23.1 %** — essentially identical. So the user-observed A/B/C/D skew in the issue isn't a Markov start-state distribution problem; it's the rejection sampling + `"x"` sentinel fallback compounding the perceived bias.
+
+Under `prng.pick(realList)` (the direction landing in **B48**), the natural Dutch first-letter distribution shows through by construction. No special start-state handling, no `uniformStart` flag, no retrain needed. B42 closes when B48 ships.
+
+Issue #24 will close automatically when B48 lands with a `(closes #24)` reference in the commit subject.
 
 ## Description
 
