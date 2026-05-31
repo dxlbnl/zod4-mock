@@ -37,6 +37,7 @@ Removes ~80 LOC of structural code. Type-safe, identity-equality lookup, no
 behaviour change.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#3**.
 - Dimensions: 4 (registry interactions), 1 #7 (generateArray complexity).
 - Size: **M**.

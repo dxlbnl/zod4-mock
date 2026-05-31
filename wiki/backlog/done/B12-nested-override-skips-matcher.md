@@ -9,7 +9,8 @@ spec: wiki/specs/B12-nested-override-skips-matcher.md
 ---
 
 ## Description
-For an object field with both a matcher and a *partial-object* override, the matcher is
+
+For an object field with both a matcher and a _partial-object_ override, the matcher is
 **bypassed** and the override is assigned raw, leaving the matcher's intended structure
 missing. The final `deepMerge` at the end of `generateSingleItem` doesn't recover the
 missing fields because `result[key]` has already been clobbered with just the partial.
@@ -18,6 +19,7 @@ deep merge with the matcher output — but they get a replacement instead. (GitH
 issue #12.)
 
 ## Repro
+
 ```ts
 const UserSchema = z.object({
   name: z.string(),
@@ -30,14 +32,14 @@ const UserSchema = z.object({
 world.withSchema(UserSchema, {
   matchers: {
     profile: (ctx) => ({
-      bio: 'matcher-bio',
+      bio: "matcher-bio",
       avatar: ctx.gen.internet.url(),
     }),
   },
 });
 
 const user = world.generate(UserSchema, {
-  overrides: { profile: { bio: 'overridden-bio' } },
+  overrides: { profile: { bio: "overridden-bio" } },
 });
 
 user.profile;
@@ -46,7 +48,9 @@ user.profile;
 ```
 
 ## Root cause (from issue)
+
 In `generateObjectFields` (src/world.ts):
+
 ```js
 // 0. Overrides (Eager) — only handles primitives/null/arrays; nested objects fall through
 const fieldOverride = overrides?.[key];
@@ -67,6 +71,7 @@ if (matcher) {
 ```
 
 ## Proposed fix
+
 When a matcher exists and the override is a non-null plain object, run the matcher
 **and** deep-merge:
 
@@ -81,16 +86,19 @@ if (matcher) {
   continue;
 }
 ```
+
 Primitives and arrays keep replace semantics (matching step 0). Nested-object overrides
 merge with the matcher output, matching the `DeepPartial<T>` user expectation and the
 final-pass `deepMerge` behaviour for fields without a matcher.
 
 ## Regression test (mandatory for bugs)
+
 A unit test in `tests/unit/core/` that reproduces the issue: matcher produces a
 multi-field object, override supplies one leaf field, the result MUST contain the
 override leaf AND the matcher's other leaves.
 
 ## Notes
+
 - `bug` track + `flags: [review]` per project default — regression test required (per
   D6 in `wiki/decisions.md`).
 - The `deepMerge` helper already exists in `src/utils/merge.ts` (B6 also added

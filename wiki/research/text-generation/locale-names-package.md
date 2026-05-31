@@ -7,6 +7,7 @@
 A shared workspace package that contains pre-trained Markov models for every significant cultural name group — Dutch, German, French, Arabic, Turkish, Frisian, Scandinavian, Slavic, and more. Each locale package (`locale-nl`, `locale-de`, `locale-fr`, …) imports only the cultural groups it needs and assembles them with locale-specific weights. Models that are not imported are tree-shaken away.
 
 This separates two concerns that are currently conflated in each locale package:
+
 - **Data** — what names exist and their phonological character (lives in `locale-names`)
 - **Distribution** — how often each cultural group appears in a given locale (lives in `locale-nl`, `locale-de`, etc.)
 
@@ -64,23 +65,29 @@ Each `src/groups/dutch/male.ts` exports a single `MarkovModel` constant. Nothing
 
 ```typescript
 // packages/locale-nl/src/locale.ts (as-built — 5 groups shipped, 7 originally planned)
-import { dutchMaleModel,   dutchFemaleModel,   dutchLastNamesModel }   from "@zod4-mock/locale-names/groups/dutch";
-import { arabicMaleModel,  arabicFemaleModel }                          from "@zod4-mock/locale-names/groups/arabic";
-import { turkishMaleModel, turkishFemaleModel }                         from "@zod4-mock/locale-names/groups/turkish";
-import { frisianMaleModel, frisianFemaleModel }                         from "@zod4-mock/locale-names/groups/frisian";
+import {
+  dutchMaleModel,
+  dutchFemaleModel,
+  dutchLastNamesModel,
+} from "@zod4-mock/locale-names/groups/dutch";
+import { arabicMaleModel, arabicFemaleModel } from "@zod4-mock/locale-names/groups/arabic";
+import { turkishMaleModel, turkishFemaleModel } from "@zod4-mock/locale-names/groups/turkish";
+import { frisianMaleModel, frisianFemaleModel } from "@zod4-mock/locale-names/groups/frisian";
 // french, german groups are planned — see roadmap below
 
 export const nl: LocaleData = {
   person: {
     firstNamesMale: [
-      { model: dutchMaleModel,    weight: 68 },
-      { model: arabicMaleModel,   weight: 12 },
-      { model: turkishMaleModel,  weight:  6 },
-      { model: frisianMaleModel,  weight:  2 },
+      { model: dutchMaleModel, weight: 68 },
+      { model: arabicMaleModel, weight: 12 },
+      { model: turkishMaleModel, weight: 6 },
+      { model: frisianMaleModel, weight: 2 },
     ],
-    firstNamesFemale: [ /* same groups, different weights */ ],
+    firstNamesFemale: [
+      /* same groups, different weights */
+    ],
     lastNames: [
-      { model: dutchLastNamesModel, weight: 100 },   // only Dutch surnames trained as of v0.x
+      { model: dutchLastNamesModel, weight: 100 }, // only Dutch surnames trained as of v0.x
     ],
     // ...
   },
@@ -95,11 +102,11 @@ export const nl: LocaleData = {
 
 ### `dutch` — Germanic Dutch
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source                           | URL / Notes                                                              |
+| ----------- | -------------------------------- | ------------------------------------------------------------------------ |
 | First names | open-nl-data/dutch-names-dataset | `Mannen/Vrouwen > 100` filter to isolate high-frequency core Dutch names |
-| First names | Meertens Instituut voornamenbank | meertens.knaw.nl — has etymological origin filters |
-| Last names | CBS top-surnames (2007 census) | digitalheir/family-names-in-the-netherlands |
+| First names | Meertens Instituut voornamenbank | meertens.knaw.nl — has etymological origin filters                       |
+| Last names  | CBS top-surnames (2007 census)   | digitalheir/family-names-in-the-netherlands                              |
 
 Filter threshold `> 100` drops from 25k → ~2,000–4,000 genuinely common Dutch names, eliminating most multicultural noise.
 
@@ -107,20 +114,20 @@ Filter threshold `> 100` drops from 25k → ~2,000–4,000 genuinely common Dutc
 
 ### `german` — Germanic German
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source                      | URL / Notes                                           |
+| ----------- | --------------------------- | ----------------------------------------------------- |
 | First names | GfDS Vornamenliste (annual) | gfds.de/vornamen/ — Gesellschaft für deutsche Sprache |
-| First names | davidak/vornamen GitHub | ~5,000 German first names |
-| Last names | destatis.de | German Statistical Office surname frequency data |
+| First names | davidak/vornamen GitHub     | ~5,000 German first names                             |
+| Last names  | destatis.de                 | German Statistical Office surname frequency data      |
 
 ---
 
 ### `french` — Romance French
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source                | URL / Notes                                                                  |
+| ----------- | --------------------- | ---------------------------------------------------------------------------- |
 | First names | INSEE prénoms dataset | insee.fr/fr/statistiques/2540004 — excellent quality, annual, with frequency |
-| Last names | INSEE noms de famille | Same source, surname distribution data |
+| Last names  | INSEE noms de famille | Same source, surname distribution data                                       |
 
 INSEE is the gold standard — frequency data back to 1900, full population coverage, freely downloadable CSV.
 
@@ -128,11 +135,11 @@ INSEE is the gold standard — frequency data back to 1900, full population cove
 
 ### `arabic` — Arabic transliterated
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source                        | URL / Notes                                          |
+| ----------- | ----------------------------- | ---------------------------------------------------- |
 | First names | bzeekhan/arabic-names-dataset | GitHub — Arabic first names in ASCII transliteration |
-| First names | zacanger/arabic-names | GitHub — additional Arabic name list |
-| Last names | Moroccan-specific | Haut-Commissariat au Plan (HCP) Morocco surname data |
+| First names | zacanger/arabic-names         | GitHub — additional Arabic name list                 |
+| Last names  | Moroccan-specific             | Haut-Commissariat au Plan (HCP) Morocco surname data |
 
 Note: Arabic names in Dutch/French/Belgian registries use Dutch/French transliteration conventions, not formal Arabic romanization. Sourcing from Dutch/French-registered Arabic name data is more accurate than sourcing from a pure Arabic list.
 
@@ -140,30 +147,30 @@ Note: Arabic names in Dutch/French/Belgian registries use Dutch/French translite
 
 ### `turkish` — Turkish
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | ozdemirburak/turkish-names | GitHub — well-maintained Turkish name list |
-| First names | TÜİK (Turkish Statistical Institute) | tuik.gov.tr — official frequency data |
-| Last names | ozdemirburak/turkish-names | Same repo includes surnames |
+| Type        | Source                               | URL / Notes                                |
+| ----------- | ------------------------------------ | ------------------------------------------ |
+| First names | ozdemirburak/turkish-names           | GitHub — well-maintained Turkish name list |
+| First names | TÜİK (Turkish Statistical Institute) | tuik.gov.tr — official frequency data      |
+| Last names  | ozdemirburak/turkish-names           | Same repo includes surnames                |
 
 ---
 
 ### `english` — Anglo-Saxon/modern English
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | SSA Baby Names | ssa.gov/oact/babynames/ — top-1000 by decade |
-| First names | ONS England & Wales | ons.gov.uk — annual statistics |
-| Last names | US Census Bureau surnames | census.gov/topics/population/genealogy/data |
+| Type        | Source                    | URL / Notes                                  |
+| ----------- | ------------------------- | -------------------------------------------- |
+| First names | SSA Baby Names            | ssa.gov/oact/babynames/ — top-1000 by decade |
+| First names | ONS England & Wales       | ons.gov.uk — annual statistics               |
+| Last names  | US Census Bureau surnames | census.gov/topics/population/genealogy/data  |
 
 ---
 
 ### `frisian` — Regional Frisian
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source             | URL / Notes                                     |
+| ----------- | ------------------ | ----------------------------------------------- |
 | First names | Meertens Instituut | nvb-frisian filter — specifically Frisian names |
-| First names | Fryske Akademy | fryske-akademy.nl — Frisian cultural institute |
+| First names | Fryske Akademy     | fryske-akademy.nl — Frisian cultural institute  |
 
 Frisian names are phonologically distinct from Dutch (hard consonants, diphthongs: Wierd, Rienk, Tjerkje, Yttje). A small model (~300–500 names) captures this well.
 
@@ -171,12 +178,12 @@ Frisian names are phonologically distinct from Dutch (hard consonants, diphthong
 
 ### `scandinavian` — Danish, Norwegian, Swedish, Finnish
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | Danmarks Statistik | dst.dk — Danish name statistics |
-| First names | SSB Norway | ssb.no — Norwegian name statistics |
-| First names | SCB Sweden | scb.se — Swedish name statistics |
-| Last names | Combined from above | Mix of patronymic (-sen, -son) and geographic surnames |
+| Type        | Source              | URL / Notes                                            |
+| ----------- | ------------------- | ------------------------------------------------------ |
+| First names | Danmarks Statistik  | dst.dk — Danish name statistics                        |
+| First names | SSB Norway          | ssb.no — Norwegian name statistics                     |
+| First names | SCB Sweden          | scb.se — Swedish name statistics                       |
+| Last names  | Combined from above | Mix of patronymic (-sen, -son) and geographic surnames |
 
 Scandinavian names form a coherent linguistic group for Markov purposes and can initially be combined into one model. Split into per-language models later if quality demands it.
 
@@ -184,38 +191,38 @@ Scandinavian names form a coherent linguistic group for Markov purposes and can 
 
 ### `spanish` — Romance Spanish/Catalan
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source    | URL / Notes                                |
+| ----------- | --------- | ------------------------------------------ |
 | First names | INE Spain | ine.es — Instituto Nacional de Estadística |
-| Last names | INE Spain | Same source |
+| Last names  | INE Spain | Same source                                |
 
 ---
 
 ### `italian` — Romance Italian
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
+| Type        | Source      | URL / Notes                          |
+| ----------- | ----------- | ------------------------------------ |
 | First names | ISTAT Italy | istat.it — annual nomi più frequenti |
-| Last names | ISTAT Italy | Same source |
+| Last names  | ISTAT Italy | Same source                          |
 
 ---
 
 ### `portuguese` — Romance Portuguese
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | INE Portugal | ine.pt |
-| First names | IBGE Brazil | ibge.gov.br — for Brazilian Portuguese flavor |
+| Type        | Source       | URL / Notes                                   |
+| ----------- | ------------ | --------------------------------------------- |
+| First names | INE Portugal | ine.pt                                        |
+| First names | IBGE Brazil  | ibge.gov.br — for Brazilian Portuguese flavor |
 
 ---
 
 ### `slavic` — Polish, Czech, Slovak, Croatian, etc.
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | GUS Poland | stat.gov.pl — Polish name statistics |
-| First names | ČSÚ Czech Republic | czso.cz |
-| Last names | GUS Poland + ČSÚ Czech | Combined for initial model |
+| Type        | Source                 | URL / Notes                          |
+| ----------- | ---------------------- | ------------------------------------ |
+| First names | GUS Poland             | stat.gov.pl — Polish name statistics |
+| First names | ČSÚ Czech Republic     | czso.cz                              |
+| Last names  | GUS Poland + ČSÚ Czech | Combined for initial model           |
 
 Slavic names share enough phonological patterns (consonant clusters, -ski/-cki/-ić endings) to work as a combined model initially. Split by sub-group if needed.
 
@@ -223,11 +230,11 @@ Slavic names share enough phonological patterns (consonant clusters, -ski/-cki/-
 
 ### `south-asian` — Hindi/Sanskrit, Punjabi, Bengali origin
 
-| Type | Source | URL / Notes |
-|------|--------|-------------|
-| First names | Census India | censusindia.gov.in — partial name frequency data |
-| First names | Various GitHub datasets | Multiple Hindi/Sanskrit baby name lists |
-| Last names | Regional surname lists | Curated from multiple Indian census sources |
+| Type        | Source                  | URL / Notes                                      |
+| ----------- | ----------------------- | ------------------------------------------------ |
+| First names | Census India            | censusindia.gov.in — partial name frequency data |
+| First names | Various GitHub datasets | Multiple Hindi/Sanskrit baby name lists          |
+| Last names  | Regional surname lists  | Curated from multiple Indian census sources      |
 
 These names appear in NL primarily through Surinamese immigration (Dutch colonial history). The Surinamese-Dutch variants (Koemar, Persad, Baldewsing) differ orthographically from Indian variants but share the same Markov phonology.
 
@@ -242,8 +249,8 @@ When you have a registry dump with mixed origins and need to split it, three com
 The simplest and most reliable method. High-frequency names in a Dutch registry are almost always Dutch-origin; low-frequency names are predominantly minority-origin.
 
 ```typescript
-const dutchCore  = names.filter(n => n.count > 100);   // ~2,000 names — Dutch core
-const allOthers  = names.filter(n => n.count <= 100);  // multicultural diversity pool
+const dutchCore = names.filter((n) => n.count > 100); // ~2,000 names — Dutch core
+const allOthers = names.filter((n) => n.count <= 100); // multicultural diversity pool
 ```
 
 Train `dutchCore` as the Dutch group. Source other groups from dedicated origin-specific datasets.
@@ -254,11 +261,11 @@ Handles clear outliers before any statistical analysis. Apply before either of t
 
 ```typescript
 const ORIGIN_RULES: Array<[RegExp, string]> = [
-  [/singh$|kumar$|persad$|koemar$|lal$|ram$|devi$/,                    "south-asian"],
-  [/^(mohammed|muhammad|ibrahim|youssef|fatima|amina|ayesha|abdel)/,   "arabic"],
-  [/^(mehmet|ahmet|mustafa|fatma|ayse|yilmaz|demir)$/,                 "turkish"],
-  [/escu$|anu$|ica$|escu$/,                                             "romanian"],
-  [/^(wierd|rienk|tjerk|yttje|sjoerd|douwe|hinke|jitske)$/,            "frisian"],
+  [/singh$|kumar$|persad$|koemar$|lal$|ram$|devi$/, "south-asian"],
+  [/^(mohammed|muhammad|ibrahim|youssef|fatima|amina|ayesha|abdel)/, "arabic"],
+  [/^(mehmet|ahmet|mustafa|fatma|ayse|yilmaz|demir)$/, "turkish"],
+  [/escu$|anu$|ica$|escu$/, "romanian"],
+  [/^(wierd|rienk|tjerk|yttje|sjoerd|douwe|hinke|jitske)$/, "frisian"],
 ];
 
 function classifyByRule(name: string): string | null {
@@ -298,10 +305,14 @@ function cosineSimilarity(a: NgramVector, b: NgramVector): number {
 
 function classify(name: string, references: Record<string, NgramVector>): string {
   const v = buildVector([name]);
-  let best = "unknown", bestScore = -1;
+  let best = "unknown",
+    bestScore = -1;
   for (const [origin, ref] of Object.entries(references)) {
     const score = cosineSimilarity(v, ref);
-    if (score > bestScore) { bestScore = score; best = origin; }
+    if (score > bestScore) {
+      bestScore = score;
+      best = origin;
+    }
   }
   return best;
 }
@@ -320,24 +331,29 @@ NamSor (namsor.com) is a dedicated name-origin classification API with a free ti
 Don't try to build all 13 groups at once. A realistic roadmap:
 
 **Phase 1 — Dutch + English (covers `locale-nl` and `locale-en` basic needs)**
+
 - `dutch`: filter current corpus to `count > 100`
 - `english`: SSA top-1000 per decade
 
 **Phase 2 — Extend nl distribution**
+
 - `arabic`: one GitHub dataset
 - `german`: GfDS list
 - `frisian`: Meertens Instituut
 
 **Phase 3 — Enable `locale-de`, `locale-fr`**
+
 - Proper `german` corpus from GfDS
 - `french` from INSEE
 
 **Phase 4 — Remaining Romance and Slavic**
+
 - `spanish` (INE), `italian` (ISTAT), `portuguese` (INE)
 - `scandinavian` (DST/SCB)
 - `slavic` (GUS Poland)
 
 **Phase 5 — Rare/regional**
+
 - `south-asian`, `frisian` upgrade, `breton`, `turkish`
 
 ---
@@ -346,14 +362,14 @@ Don't try to build all 13 groups at once. A realistic roadmap:
 
 Each model, per group per gender, trained at order-2 on ~1,500–3,000 filtered names:
 
-| Property | Value |
-|----------|-------|
-| States per model | ~200–500 |
-| Chars per model | ~27 |
-| Size per model (Float32Array) | ~25–55 KB |
-| 13 groups × 3 files (M/F/last) | ~39 models total |
-| Full package size | ~1–2 MB |
-| Typical locale import (6 groups) | ~450–650 KB |
+| Property                         | Value            |
+| -------------------------------- | ---------------- |
+| States per model                 | ~200–500         |
+| Chars per model                  | ~27              |
+| Size per model (Float32Array)    | ~25–55 KB        |
+| 13 groups × 3 files (M/F/last)   | ~39 models total |
+| Full package size                | ~1–2 MB          |
+| Typical locale import (6 groups) | ~450–650 KB      |
 
 With tree-shaking, a user who only ever uses `locale-nl` never pays for the `south-asian` or `slavic` models. A user who builds for a single locale pays for ~6–7 groups × 3 = ~18 models ≈ ~450–650 KB — comparable to one medium-sized image.
 

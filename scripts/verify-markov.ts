@@ -30,8 +30,15 @@ export interface VerifyOptions {
   seed?: number;
 }
 
-export function verifyMarkov({ model, name = "model", count = 20, seed = 42 }: VerifyOptions): void {
-  console.log(`Model: ${name} (order=${model.order}, states=${Object.keys(model.table).length}, chars="${model.chars}")`);
+export function verifyMarkov({
+  model,
+  name = "model",
+  count = 20,
+  seed = 42,
+}: VerifyOptions): void {
+  console.log(
+    `Model: ${name} (order=${model.order}, states=${Object.keys(model.table).length}, chars="${model.chars}")`,
+  );
   console.log(`Sampling ${count} words with seed=${seed}:\n`);
 
   const prng = createPrng(seed);
@@ -48,19 +55,17 @@ export function verifyMarkov({ model, name = "model", count = 20, seed = 42 }: V
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
-  const get  = (flag: string): string | undefined => {
+  const get = (flag: string): string | undefined => {
     const idx = args.indexOf(flag);
     return idx !== -1 ? args[idx + 1] : undefined;
   };
 
   const modelPath = get("--model");
   const count = Number(get("--count") ?? "20");
-  const seed  = Number(get("--seed")  ?? "42");
+  const seed = Number(get("--seed") ?? "42");
 
   if (!modelPath) {
-    console.error(
-      "Usage: npx tsx scripts/verify-markov.ts --model <file> [--count N] [--seed S]",
-    );
+    console.error("Usage: npx tsx scripts/verify-markov.ts --model <file> [--count N] [--seed S]");
     process.exit(1);
   }
 

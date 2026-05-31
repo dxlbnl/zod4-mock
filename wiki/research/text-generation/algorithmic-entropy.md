@@ -8,14 +8,14 @@ A character-level Markov chain captures the probability that a given character f
 
 Markov generation applies to **open-class words** — words that can be invented without breaking anything:
 
-| Generator | Apply Markov? | Reason |
-|-----------|:---:|--------|
-| `firstName`, `lastName` | ✅ | Invented names that sound real are fine |
-| `noun`, `adjective`, `verb`, `adverb` | ✅ | Generated pseudo-words in sentences |
-| `company.buzzNoun`, `buzzAdjective` | ✅ | Corporate jargon is forgiving |
-| Country codes, currency codes | ❌ | Must be exact real values |
-| IBAN prefixes, phone prefixes | ❌ | Must be exact real values |
-| Articles, prepositions, conjunctions | ❌ | Closed-class; grammatical roles require real words |
+| Generator                             | Apply Markov? | Reason                                             |
+| ------------------------------------- | :-----------: | -------------------------------------------------- |
+| `firstName`, `lastName`               |      ✅       | Invented names that sound real are fine            |
+| `noun`, `adjective`, `verb`, `adverb` |      ✅       | Generated pseudo-words in sentences                |
+| `company.buzzNoun`, `buzzAdjective`   |      ✅       | Corporate jargon is forgiving                      |
+| Country codes, currency codes         |      ❌       | Must be exact real values                          |
+| IBAN prefixes, phone prefixes         |      ❌       | Must be exact real values                          |
+| Articles, prepositions, conjunctions  |      ❌       | Closed-class; grammatical roles require real words |
 
 For all the ❌ cases, keep curated real-data lists. See also: [Word Generation](word-generation.md) for the full open/closed-class breakdown.
 
@@ -29,23 +29,18 @@ An Order-2 model tracks what character tends to follow every pair of characters 
 const enNamesModel = {
   "^^": ["A", "B", "C", "D", "E", "J", "K", "L", "M", "R", "S"],
   "^A": ["l", "n", "r"],
-  "Al": ["e", "i", "b"],
-  "le": ["x", "s", "y", "$"],
-  "ex": ["a", "i"],
+  Al: ["e", "i", "b"],
+  le: ["x", "s", "y", "$"],
+  ex: ["a", "i"],
   // ...hundreds more entries
-  "$$": [],  // terminal
+  $$: [], // terminal
 };
 ```
 
 The generator walks this table until it emits the end-of-word token `$`:
 
 ```typescript
-function generateMarkovWord(
-  prng: Prng,
-  model: MarkovModel,
-  minLength = 2,
-  maxLength = 12,
-): string {
+function generateMarkovWord(prng: Prng, model: MarkovModel, minLength = 2, maxLength = 12): string {
   const { order, chars, table } = model;
   let state = "^".repeat(order);
   let result = "";
@@ -67,6 +62,7 @@ function generateMarkovWord(
 ```
 
 **Example output** (Order-2, trained on 40 classic English names):
+
 - Oliet, Wilher, Lean, Hanor, Alia, Chary, Nargabel
 
 Trained on 10,000+ real names, the output is indistinguishable from real names to most readers.
@@ -83,7 +79,7 @@ See [Constraint-Aware Generation](../field-resolution/constraint-awareness.md) f
 
 ## Dirichlet Smoothing
 
-Without smoothing, a bigram state that never appeared in the training data causes a hard dead-end — the generator breaks. Dirichlet smoothing adds a small background probability `prior = 0.01` that *any* character can follow any state:
+Without smoothing, a bigram state that never appeared in the training data causes a hard dead-end — the generator breaks. Dirichlet smoothing adds a small background probability `prior = 0.01` that _any_ character can follow any state:
 
 ```
 P(c | state) = (count(state → c) + prior) / (total(state) + prior × |alphabet|)
@@ -93,11 +89,11 @@ This prevents dead-ends entirely and also improves output diversity — less rep
 
 ## Order Selection
 
-| Use case | Recommended order | Notes |
-|----------|:---:|-------|
-| First / last names | 2 | Sweet spot: realistic feel without being template-y |
-| Content words (nouns, adjectives) | 3 | Richer phoneme clusters, more natural-sounding |
-| Company buzzwords | 2 | Sufficient variety at smaller matrix size |
+| Use case                          | Recommended order | Notes                                               |
+| --------------------------------- | :---------------: | --------------------------------------------------- |
+| First / last names                |         2         | Sweet spot: realistic feel without being template-y |
+| Content words (nouns, adjectives) |         3         | Richer phoneme clusters, more natural-sounding      |
+| Company buzzwords                 |         2         | Sufficient variety at smaller matrix size           |
 
 Higher order → matrix grows, but output quality plateaus around Order 3 for most word types.
 

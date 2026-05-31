@@ -23,8 +23,12 @@ Promote the pipeline to a list:
 
 ```ts
 const PIPELINE: ReadonlyArray<PipelineStep> = [
-  overrideEagerStep, matcherStep, schemaKeyMapStep,
-  unwrapOptionalStep, customKeyGenStep, keyHeuristicStep,
+  overrideEagerStep,
+  matcherStep,
+  schemaKeyMapStep,
+  unwrapOptionalStep,
+  customKeyGenStep,
+  keyHeuristicStep,
   schemaBasedStep,
 ];
 ```
@@ -43,6 +47,7 @@ touches all four dimensions; user should see the shape (the `PipelineStep`
 type, the `FieldResolution` union) before tests/impl.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#1**.
 - Dimensions: 1 (per-function complexity of `generateObjectFields`), 3 (147 LOC + nested `while`), 4 (pipeline structure + cross-axis convergence), and indirectly 2 (eliminates `explain.ts` re-implementation).
 - Size: **L**.

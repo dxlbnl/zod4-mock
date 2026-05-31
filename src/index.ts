@@ -4,11 +4,7 @@
 
 export { createWorld } from "./world.js";
 export { createPrng, fieldSeed } from "./prng.js";
-export {
-  generateFromSchema,
-  generateFromKey,
-  data,
-} from "./generators/index.js";
+export { generateFromSchema, generateFromKey, data } from "./generators/index.js";
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 export type { PrngGen, KeyPattern } from "./generators/index.js";
 export { extend } from "@zod4-mock/locale-core";

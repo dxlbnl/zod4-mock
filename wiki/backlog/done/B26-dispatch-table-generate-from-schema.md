@@ -22,7 +22,7 @@ type GenFn = (schema: ZodTypeAny, ctx: GeneratorContext) => unknown;
 const DISPATCH: Record<ZodDefType, GenFn> = {
   string: (s, ctx) => generateZodString(s, ctx),
   number: (s, ctx) => generateZodNumber(s, ctx),
-  union:  (s, ctx) => generateZodUnion(s, ctx),
+  union: (s, ctx) => generateZodUnion(s, ctx),
   // ...
 };
 ```
@@ -32,6 +32,7 @@ The four cases that contain non-trivial branching (`union`, `pipe`, `xor`,
 a 2-line lookup. New Zod type → compile error if missed.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#4**.
 - Dimensions: 1 #1, 2 #7.
 - Size: **M**.

@@ -24,7 +24,7 @@ agent prompts, so it runs whether or not anyone invokes this skill.
 
 #### What counts as trivially-passing
 
-A trivially-passing test is one that would pass *before* any implementation exists —
+A trivially-passing test is one that would pass _before_ any implementation exists —
 e.g. `assert True`, asserting against a constant the test sets itself, or checking
 "function exists" without exercising it. The `test-writer` does not write these. See
 `.claude/agents/test-writer.md` → "What counts as a trivially-passing test".

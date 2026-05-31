@@ -50,10 +50,7 @@ export function explainSchema<TSchema extends ZodTypeAny>(
   // strip optional / nullable / lazy wrappers to reach an object.
   let current: ZodTypeAny = schema;
   let d = def(current);
-  while (
-    (d.type === "optional" || d.type === "nullable") &&
-    d.innerType !== undefined
-  ) {
+  while ((d.type === "optional" || d.type === "nullable") && d.innerType !== undefined) {
     current = d.innerType;
     d = def(current);
   }
@@ -69,18 +66,12 @@ export function explainSchema<TSchema extends ZodTypeAny>(
       schema: current,
       matchers: inputs.matchers as Record<string, (ctx: GeneratorContext) => unknown>,
     };
-    const schemaKeyMaps = new Map<
-      ZodTypeAny,
-      Record<string, (ctx: GeneratorContext) => unknown>
-    >();
-    schemaKeyMaps.set(current, inputs.schemaKeyMap as Record<
-      string,
-      (ctx: GeneratorContext) => unknown
-    >);
-    const customKeyGenerators = inputs.customKeyGenerators as ReadonlyMap<
-      string,
-      KeyGenerator
-    >;
+    const schemaKeyMaps = new Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>>();
+    schemaKeyMaps.set(
+      current,
+      inputs.schemaKeyMap as Record<string, (ctx: GeneratorContext) => unknown>,
+    );
+    const customKeyGenerators = inputs.customKeyGenerators as ReadonlyMap<string, KeyGenerator>;
 
     for (const [key, fieldSchema] of Object.entries(d.shape)) {
       const stepCtx: PipelineStepContext = {

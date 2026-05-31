@@ -71,12 +71,7 @@ import type {
 import { SchemaRegistry } from "../registry.js";
 import { createPrng, fieldSeed } from "../prng.js";
 import { generateFromSchema } from "../generators/schema/index.js";
-import {
-  def,
-  checks,
-  unwrap,
-  resolveLazyChain,
-} from "../generators/schema/zod-def.js";
+import { def, checks, unwrap, resolveLazyChain } from "../generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "../utils/merge.js";
 import * as generatorsData from "../generators/data/index.js";
 import { defaultLocale } from "../default-locale.js";
@@ -374,9 +369,9 @@ function bindNamespace<T extends Readonly<Record<string, unknown>>>(
   nsName: string,
   prng: Prng,
   boundCtx: GeneratorContext,
-): { [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
-  ? (...args: P) => R
-  : T[K] } {
+): {
+  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R ? (...args: P) => R : T[K];
+} {
   const nsSlots = CTX_SLOTS[nsName];
   const out: Record<string, unknown> = {};
 
@@ -518,10 +513,7 @@ export class WorldImpl implements World {
    *                via `rollbackSchemaSlot`; the parameter is here for
    *                future use.
    */
-  private nextSchemaSlot(
-    schema: ZodTypeAny,
-    commit: boolean = true,
-  ): { id: number; slot: number } {
+  private nextSchemaSlot(schema: ZodTypeAny, commit: boolean = true): { id: number; slot: number } {
     const id = getSchemaId(schema);
     const slot = (this.schemaCallCounts.get(schema) ?? 0) + 1;
     if (commit) {
@@ -677,10 +669,11 @@ export class WorldImpl implements World {
       // B13-R8: strip any `store: false` returned by the factory — populateFrom
       // always writes, mirroring populate's contract (B10-R6).
       const factoryReturn = factory?.(source);
-      const { store: _ignored, ...rest } =
-        (factoryReturn ?? {}) as GenerateOptions<z.infer<TDerived>> & {
-          store?: boolean;
-        };
+      const { store: _ignored, ...rest } = (factoryReturn ?? {}) as GenerateOptions<
+        z.infer<TDerived>
+      > & {
+        store?: boolean;
+      };
       // B13-R4 idempotence: delegate to generate, which hits B8's per-pair
       // upsert on a repeat call with the same source identity.
       this.generate(derivedSchema, {
@@ -1111,9 +1104,7 @@ export class WorldImpl implements World {
           throw new Error(relationEmptyPoolMessage(relName));
         }
         if (kind === "many" && items.length < (count ?? 0)) {
-          throw new Error(
-            relationShortPoolMessage(relName, count ?? 0, items.length),
-          );
+          throw new Error(relationShortPoolMessage(relName, count ?? 0, items.length));
         }
       }
       this.relationPools.set(cacheKey, items);
@@ -1240,13 +1231,29 @@ export class WorldImpl implements World {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
       const fs = fieldSchema as ZodTypeAny;
-      const fieldCtx = this.makeFieldCtx(reg, source, recordPrng, fieldPrng, fieldPath, recordId, result);
+      const fieldCtx = this.makeFieldCtx(
+        reg,
+        source,
+        recordPrng,
+        fieldPrng,
+        fieldPath,
+        recordId,
+        result,
+      );
       result[key] = walkPipeline(PIPELINE, {
-        fieldSchema: fs, fieldName: key, fieldCtx, fieldOverride: overrides?.[key],
-        reg, outerSchema: schema, resolvedSchema: current,
-        customKeyGenerators: this.customKeyGenerators, schemaKeyMaps: this.schemaKeyMaps,
+        fieldSchema: fs,
+        fieldName: key,
+        fieldCtx,
+        fieldOverride: overrides?.[key],
+        reg,
+        outerSchema: schema,
+        resolvedSchema: current,
+        customKeyGenerators: this.customKeyGenerators,
+        schemaKeyMaps: this.schemaKeyMaps,
         optionalProbability: this.options.optionalProbability ?? 0.2,
-        dryRun: false, state: { inner: fs }, explainMeta: {},
+        dryRun: false,
+        state: { inner: fs },
+        explainMeta: {},
       }).value;
     }
     return result;
@@ -1362,9 +1369,7 @@ export class WorldImpl implements World {
         // via `generateAndStorePrimary`, so the slice is a read-only narrowing
         // of an already-D8-consistent registry view.
         const callerMax = readCallerMaxBound(arraySchema);
-        return callerMax !== undefined && all.length > callerMax
-          ? all.slice(0, callerMax)
-          : all;
+        return callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
       }
 
       // -------------------------------------------------------------------

@@ -84,13 +84,13 @@ requirement. Report it; do not invent the missing requirement.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "A helper / abstraction here is cleaner." | Minimum first. If an inline check or literal passes, use it; refactor is a separate `chore` item (see "What counts as 'minimum'"). |
-| "This test looks wrong — I'll just fix it." | Flag it to the manager with specifics; do not silently change a test to get green. |
-| "I'll generalize now to save time later." | YAGNI. Write the literal that passes the current scenarios; generality no test drives is scope creep. |
-| "The spec clearly implies this extra behavior." | If no scenario asserts it, it isn't in the contract. Report the gap; don't implement uncovered behavior. |
-| "My change is isolated, the full suite is overkill." | Done means the **full** suite is green — run it. |
+| Excuse                                               | Reality                                                                                                                            |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| "A helper / abstraction here is cleaner."            | Minimum first. If an inline check or literal passes, use it; refactor is a separate `chore` item (see "What counts as 'minimum'"). |
+| "This test looks wrong — I'll just fix it."          | Flag it to the manager with specifics; do not silently change a test to get green.                                                 |
+| "I'll generalize now to save time later."            | YAGNI. Write the literal that passes the current scenarios; generality no test drives is scope creep.                              |
+| "The spec clearly implies this extra behavior."      | If no scenario asserts it, it isn't in the contract. Report the gap; don't implement uncovered behavior.                           |
+| "My change is isolated, the full suite is overkill." | Done means the **full** suite is green — run it.                                                                                   |
 
 ## Red flags
 

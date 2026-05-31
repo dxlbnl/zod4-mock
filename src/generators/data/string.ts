@@ -28,7 +28,12 @@ export function alphanumeric(prng: Prng, length = 8): string {
 
 export function hexadecimal(prng: Prng, length = 8): string {
   const b = prng.bytes(Math.ceil(length / 2));
-  return "0x" + Array.from(b, (v) => v!.toString(16).padStart(2, "0")).join("").slice(0, length);
+  return (
+    "0x" +
+    Array.from(b, (v) => v!.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, length)
+  );
 }
 
 export function nanoid(prng: Prng, length = 21): string {

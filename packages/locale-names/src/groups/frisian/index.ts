@@ -1,2 +1,2 @@
-export { frisianMaleModel }   from "./male.js";
+export { frisianMaleModel } from "./male.js";
 export { frisianFemaleModel } from "./female.js";

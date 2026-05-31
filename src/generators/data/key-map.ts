@@ -10,7 +10,12 @@ import * as data from "./index.js";
  * then clips to `maxLen`. Used by bio/description-type key generators so
  * they produce naturally fitting text rather than x-padded strings.
  */
-function generateTextToLength(prng: Prng, ctx: GeneratorContext | undefined, minLen: number, maxLen: number): string {
+function generateTextToLength(
+  prng: Prng,
+  ctx: GeneratorContext | undefined,
+  minLen: number,
+  maxLen: number,
+): string {
   let result = data.word.sentence(prng, ctx);
   while (result.length < minLen) result += " " + data.word.sentence(prng, ctx);
   return result.length > maxLen ? result.slice(0, maxLen) : result;

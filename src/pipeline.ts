@@ -47,7 +47,10 @@ export interface SchemaReg {
   readonly schema: ZodTypeAny;
   readonly from: ZodTypeAny | null;
   readonly sourceKey: string | null;
-  readonly relations: Record<string, { schema: ZodTypeAny; where: ((item: unknown) => boolean) | null }>;
+  readonly relations: Record<
+    string,
+    { schema: ZodTypeAny; where: ((item: unknown) => boolean) | null }
+  >;
   readonly matchers: Record<string, (ctx: GeneratorContext) => unknown>;
   readonly regId: number;
 }
@@ -156,9 +159,7 @@ export function applyObjectOverride(value: unknown, fieldOverride: unknown): unk
  */
 const FN_TO_ID: Map<unknown, string> = (() => {
   const m = new Map<unknown, string>();
-  for (const [ns, mod] of Object.entries(data) as Array<
-    [string, Record<string, unknown>]
-  >) {
+  for (const [ns, mod] of Object.entries(data) as Array<[string, Record<string, unknown>]>) {
     if (!mod || typeof mod !== "object") continue;
     for (const [fnName, fn] of Object.entries(mod)) {
       if (typeof fn !== "function") continue;
@@ -168,10 +169,7 @@ const FN_TO_ID: Map<unknown, string> = (() => {
   return m;
 })();
 
-function identifierForExactKey(
-  leafType: string,
-  lowerKey: string,
-): string | undefined {
+function identifierForExactKey(leafType: string, lowerKey: string): string | undefined {
   const map = DEFAULT_KEY_MAP[leafType];
   if (!map) return undefined;
   const fn = map[lowerKey];
@@ -325,7 +323,10 @@ export function unwrapOptionalStep(ctx: PipelineStepContext): FieldResolution | 
     // optional/nullable fields — B16-R8).
     let inner = ctx.fieldSchema;
     let d = def(inner);
-    while ((d.type === "optional" || d.type === "nullable" || d.type === "default") && d.innerType) {
+    while (
+      (d.type === "optional" || d.type === "nullable" || d.type === "default") &&
+      d.innerType
+    ) {
       inner = d.innerType;
       d = def(inner);
     }
@@ -398,9 +399,7 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
   return {
     kind: "key-based",
     value:
-      ctx.fieldOverride !== undefined
-        ? ctx.fieldOverride
-        : applyModifiers(keyResult, innerSchema),
+      ctx.fieldOverride !== undefined ? ctx.fieldOverride : applyModifiers(keyResult, innerSchema),
   };
 }
 
@@ -483,7 +482,5 @@ export function walkPipeline(
     const r = step(ctx);
     if (r !== null) return r;
   }
-  throw new Error(
-    "pipeline did not resolve field — schema-based step regression",
-  );
+  throw new Error("pipeline did not resolve field — schema-based step regression");
 }

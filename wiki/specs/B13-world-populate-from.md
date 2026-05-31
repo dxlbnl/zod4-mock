@@ -18,7 +18,7 @@ world.populateFrom(ShippedOrderSummarySchema, OrderSchema, (o) => o.status === "
 ```
 
 This item adds the missing primitive. `populateFrom` is the natural counterpart to
-`populate` for derived schemas: it iterates a *source* bucket, calls
+`populate` for derived schemas: it iterates a _source_ bucket, calls
 `world.generate(derivedSchema, { source: record })` once per record (or per record matching
 an optional `predicate`), and returns `this` for fluent chaining. The whole behaviour
 delegates to `world.generate`'s existing `sourceOverride` branch — `populateFrom` is the
@@ -97,7 +97,7 @@ re-do. Reading the contracts together makes the surface area small:
 - **Snapshot semantics.** `populateFrom` reads the source bucket **once** at the start of
   the call (B13-R6). A matcher invoked during the iteration MAY store new source records
   via `world.registry.store(sourceSchema, ...)`, but those will NOT be picked up by the
-  same `populateFrom` call — they are visible to the *next* call. This mirrors
+  same `populateFrom` call — they are visible to the _next_ call. This mirrors
   B11-R5's "within-record snapshot is stable" but applied across the whole `populateFrom`
   call.
 
@@ -269,7 +269,7 @@ its own dedup logic and MUST NOT bypass the B8 upsert (it MUST NOT pass
   `const sAfter = world.registry.find(SummarySchema, (x) => x.orderId === o.id);`
   THEN `sAfter === s` (same reference — upsert hit). If `populateFrom` had bypassed the
   B8 upsert with `unique: false`, a fresh Summary would have been written and `sAfter
-  !== s`. The reference equality pins that `populateFrom` MUST NOT bypass the upsert.
+!== s`. The reference equality pins that `populateFrom` MUST NOT bypass the upsert.
 
 ### B13-R5: predicate parameter type alignment with B7 / B11
 
@@ -299,7 +299,7 @@ start of the call (e.g. `const sources = [...this.registry.all(sourceSchema)];`)
 Records added to the source bucket **during** the iteration — by a matcher's side
 effect, a derived `from:` chain's auto-provision under
 `world.generate(DerivedSchema, { source })`, or any other transitive write — MUST
-NOT extend the iteration of the *current* `populateFrom` call. They WILL be visible
+NOT extend the iteration of the _current_ `populateFrom` call. They WILL be visible
 to the **next** `populateFrom` call (B13-R4's idempotence still holds: the next call
 re-snapshots and the B8 upsert short-circuits already-derived records, while any
 newly-added source record produces a new derived record on that next call).
@@ -308,12 +308,10 @@ newly-added source record produces a new derived record on that next call).
   GIVEN
   `OrderSchema = z.object({ id: z.string(), amount: z.number() })`,
   `SummarySchema = z.object({ orderId: z.string(), label: z.string() })`,
-  and a world `createWorld({ seed: 1 }).withSchema(OrderSchema).withSchema(SummarySchema, { from: OrderSchema, matchers: { orderId: (ctx) => ctx.source.id, label: (ctx) => { if (world.registry.count(OrderSchema) < 5) { world.registry.store(OrderSchema, { id: \`extra-${world.registry.count(OrderSchema)}\`, amount: 0 }); } return "L"; } } });`
-  with exactly 3 orders pre-populated
-  WHEN the consumer calls `world.populateFrom(SummarySchema, OrderSchema);`
-  THEN `world.registry.count(SummarySchema) === 3` (only the 3 originally-snapshot
-  orders produced Summaries — the mid-loop side-effect inserts did NOT add to this
-  call's iteration), and `world.registry.count(OrderSchema)` MAY be greater than 3
+  and a world `createWorld({ seed: 1 }).withSchema(OrderSchema).withSchema(SummarySchema, { from: OrderSchema, matchers: { orderId: (ctx) => ctx.source.id, label: (ctx) => { if (world.registry.count(OrderSchema) < 5) { world.registry.store(OrderSchema, { id: \`extra-${world.registry.count(OrderSchema)}\`, amount: 0 }); } return "L"; } } });`with exactly 3 orders pre-populated
+WHEN the consumer calls`world.populateFrom(SummarySchema, OrderSchema);`THEN`world.registry.count(SummarySchema) === 3`(only the 3 originally-snapshot
+orders produced Summaries — the mid-loop side-effect inserts did NOT add to this
+call's iteration), and`world.registry.count(OrderSchema)` MAY be greater than 3
   (the side-effect inserts went through, just not into this iteration's pool).
 
 - Scenario: side-effect-added source records appear in the NEXT `populateFrom` call
@@ -385,8 +383,7 @@ source-driven by design.
   WHEN the consumer calls
   `world.populateFrom(SummarySchema, OrderSchema, undefined, (source) => ({ overrides: { label: \`summary-${source.id.slice(0, 6)}\` } }));`
   THEN `world.registry.count(SummarySchema) === 3`; for each Summary `s` there exists
-  a unique order `o` with `s.orderId === o.id && s.label === \`summary-${o.id.slice(0, 6)}\``
-  (the factory-supplied `overrides.label` wins on every record); and the factory was
+  a unique order `o` with `s.orderId === o.id && s.label === \`summary-${o.id.slice(0, 6)}\``(the factory-supplied`overrides.label` wins on every record); and the factory was
   invoked once per surviving source record.
 
 - Scenario: factory receives the source record (not an index)

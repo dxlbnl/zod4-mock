@@ -26,15 +26,15 @@ The fix is to thread the raw Zod checks into `generateFromKey()`:
 
 ```typescript
 // Current signature
-function generateFromKey(key: string, prng: Prng, ctx: GeneratorContext): unknown
+function generateFromKey(key: string, prng: Prng, ctx: GeneratorContext): unknown;
 
 // Proposed signature
 function generateFromKey(
   key: string,
   prng: Prng,
   ctx: GeneratorContext,
-  checks?: ZodCheck[],   // raw checks from the field's Zod schema
-): unknown
+  checks?: ZodCheck[], // raw checks from the field's Zod schema
+): unknown;
 ```
 
 Individual key-based generators then accept and apply the constraints:

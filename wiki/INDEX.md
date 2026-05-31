@@ -15,17 +15,17 @@ Every agent reads this page first, before doing anything else.
 
 ## Pages
 
-| Page | Purpose |
-|------|---------|
-| [vision.md](vision.md) | What the project is and why it exists. |
-| [requirements.md](requirements.md) | Functional requirements and constraints. |
-| [architecture.md](architecture.md) | Tech stack, package manager, test setup, structure, and the binding **Rules** index. |
-| [codebase-map.md](codebase-map.md) | Internal `src/` layout — file-by-file roles, the two generator axes (key-based vs schema-based), and the engine. |
-| [backlog/](backlog/) | Work items, arranged in four lanes (inbox → ready → doing → done). See `backlog/README.md`. |
-| [decisions.md](decisions.md) | Append-only ADR log of standing constraints (each ADR pairs with a one-line rule in `architecture.md`). |
-| [progress.md](progress.md) | Append-only run journal — what the agents have done. |
-| [specs/](specs/) | One spec page per feature/bug (`B<n>-<slug>.md`). Browse the directory; format in `specs/README.md`. |
-| [research/](research/overview.md) | Research reports grouped by topic (`engine/`, `text-generation/`, `reports/`). Start at `research/overview.md`; live status in `research/tracking.md`. |
+| Page                               | Purpose                                                                                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [vision.md](vision.md)             | What the project is and why it exists.                                                                                                                 |
+| [requirements.md](requirements.md) | Functional requirements and constraints.                                                                                                               |
+| [architecture.md](architecture.md) | Tech stack, package manager, test setup, structure, and the binding **Rules** index.                                                                   |
+| [codebase-map.md](codebase-map.md) | Internal `src/` layout — file-by-file roles, the two generator axes (key-based vs schema-based), and the engine.                                       |
+| [backlog/](backlog/)               | Work items, arranged in four lanes (inbox → ready → doing → done). See `backlog/README.md`.                                                            |
+| [decisions.md](decisions.md)       | Append-only ADR log of standing constraints (each ADR pairs with a one-line rule in `architecture.md`).                                                |
+| [progress.md](progress.md)         | Append-only run journal — what the agents have done.                                                                                                   |
+| [specs/](specs/)                   | One spec page per feature/bug (`B<n>-<slug>.md`). Browse the directory; format in `specs/README.md`.                                                   |
+| [research/](research/overview.md)  | Research reports grouped by topic (`engine/`, `text-generation/`, `reports/`). Start at `research/overview.md`; live status in `research/tracking.md`. |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,
 > `docs/getting-started.md`, `docs/concepts.md`, `docs/key-heuristics.md`,

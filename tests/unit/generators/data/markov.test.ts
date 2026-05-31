@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { sampleMarkov } from "../../../../src/generators/data/markov/sample.js";
 import type { MarkovModel } from "@zod4-mock/locale-core";
-import { enFirstNamesMaleModel, enFirstNamesFemaleModel, enLastNamesModel, enNounsModel } from "@zod4-mock/locale-en";
+import {
+  enFirstNamesMaleModel,
+  enFirstNamesFemaleModel,
+  enLastNamesModel,
+  enNounsModel,
+} from "@zod4-mock/locale-en";
 import { nlNounsModel } from "@zod4-mock/locale-nl";
 import { dutchMaleModel } from "@zod4-mock/locale-names/groups/dutch";
 import { createPrng } from "../../../../src/prng.js";
@@ -49,7 +54,12 @@ describe("sampleMarkov", () => {
     });
 
     it("default minLen=3 is respected across all trained models", () => {
-      const models = [enFirstNamesMaleModel, enFirstNamesFemaleModel, enLastNamesModel, enNounsModel];
+      const models = [
+        enFirstNamesMaleModel,
+        enFirstNamesFemaleModel,
+        enLastNamesModel,
+        enNounsModel,
+      ];
       for (const model of models) {
         for (let seed = 0; seed < 50; seed++) {
           expect(sampleMarkov(prng(seed), model).length).toBeGreaterThanOrEqual(3);
@@ -73,8 +83,12 @@ describe("sampleMarkov", () => {
     });
 
     it("male and female first-name models produce different names for the same seeds", () => {
-      const male = Array.from({ length: 20 }, (_, i) => sampleMarkov(prng(i), enFirstNamesMaleModel));
-      const female = Array.from({ length: 20 }, (_, i) => sampleMarkov(prng(i), enFirstNamesFemaleModel));
+      const male = Array.from({ length: 20 }, (_, i) =>
+        sampleMarkov(prng(i), enFirstNamesMaleModel),
+      );
+      const female = Array.from({ length: 20 }, (_, i) =>
+        sampleMarkov(prng(i), enFirstNamesFemaleModel),
+      );
       expect(male).not.toEqual(female);
     });
 
@@ -103,8 +117,8 @@ describe("sampleMarkov", () => {
         prior: 0,
         chars: "a$",
         table: {
-          "": [1.0, 1.0],  // always pick 'a' (CDF: 'a'=1.0, '$'=1.0 → 'a' wins at any r<1)
-          "a": [0.0, 1.0], // always pick '$' after 'a'
+          "": [1.0, 1.0], // always pick 'a' (CDF: 'a'=1.0, '$'=1.0 → 'a' wins at any r<1)
+          a: [0.0, 1.0], // always pick '$' after 'a'
         },
       };
       // With minLen=3 this will reset and try again — but 'a' then '$' always terminates at 1 char.

@@ -10,8 +10,8 @@ const world = createWorld({ seed: 1 }).withSchema(Product);
 world.populate(Product, 6);
 
 world.generate(Product.array().min(2).max(2)).length; // before: 6 — after: 2
-world.generate(Product.array().length(3)).length;     // before: 6 — after: 3
-world.generate(Product.array()).length;               // before: 6 — after: 6 (unchanged)
+world.generate(Product.array().length(3)).length; // before: 6 — after: 3
+world.generate(Product.array()).length; // before: 6 — after: 6 (unchanged)
 ```
 
 (closes #25)

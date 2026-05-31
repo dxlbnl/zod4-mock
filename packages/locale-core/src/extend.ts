@@ -9,14 +9,14 @@ export function extend(base: LocaleData, overrides: LocaleOverrides): LocaleData
   return {
     ...base,
     ...overrides,
-    person:   { ...base.person,   ...overrides.person },
-    address:  { ...base.address,  ...overrides.address },
+    person: { ...base.person, ...overrides.person },
+    address: { ...base.address, ...overrides.address },
     commerce: { ...base.commerce, ...overrides.commerce },
-    company:  { ...base.company,  ...overrides.company },
-    word:     { ...base.word,     ...overrides.word },
-    finance:  { ...base.finance,  ...overrides.finance },
-    date:     { ...base.date,     ...overrides.date },
-    color:    { ...base.color,    ...overrides.color },
-    phone:    { ...base.phone,    ...overrides.phone },
+    company: { ...base.company, ...overrides.company },
+    word: { ...base.word, ...overrides.word },
+    finance: { ...base.finance, ...overrides.finance },
+    date: { ...base.date, ...overrides.date },
+    color: { ...base.color, ...overrides.color },
+    phone: { ...base.phone, ...overrides.phone },
   };
 }

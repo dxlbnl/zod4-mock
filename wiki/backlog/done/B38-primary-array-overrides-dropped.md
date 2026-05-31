@@ -24,14 +24,14 @@ the top of a `setupX` becomes "give me whatever the registry already has".
 ```ts
 const ProductSchema = z.object({
   id: z.uuid(),
-  category: z.enum(['alpha', 'bravo', 'charlie']),
+  category: z.enum(["alpha", "bravo", "charlie"]),
   name: z.string(),
 });
 
 const world = createWorld({ seed: 1 });
 world.withSchema(ProductSchema);
 
-for (const category of ['alpha', 'bravo', 'charlie'] as const) {
+for (const category of ["alpha", "bravo", "charlie"] as const) {
   world.generate(ProductSchema.array().min(4).max(4), {
     overrides: Array.from({ length: 4 }, () => ({ category })),
   });

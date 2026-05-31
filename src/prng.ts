@@ -54,13 +54,16 @@ function seedToSfc32(seed: number): [number, number, number, number] {
  * SFC32 passes all standard statistical tests and has a period of ~3.4×10³⁸.
  */
 function sfc32(a: number, b: number, c: number, d: number): () => number {
-  let _a = a >>> 0, _b = b >>> 0, _c = c >>> 0, _d = d >>> 0;
+  let _a = a >>> 0,
+    _b = b >>> 0,
+    _c = c >>> 0,
+    _d = d >>> 0;
   return () => {
     const t = (_a + _b + _d) | 0;
     _d = (_d + 1) | 0;
     _a = _b ^ (_b >>> 9);
     _b = (_c + (_c << 3)) | 0;
-    _c = (_c << 21 | _c >>> 11);
+    _c = (_c << 21) | (_c >>> 11);
     _c = (_c + t) | 0;
     return (t >>> 0) / 4294967296;
   };

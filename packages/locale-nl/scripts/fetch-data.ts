@@ -42,14 +42,13 @@ try {
 
   // Threshold > 100 selects the Dutch-core corpus (~2k–4k names) and discards
   // low-frequency multicultural entries that pollute the Markov model.
-  const male   = names.filter((n) => n.Mannen  > 100).map((n) => n.Voornaam.toLowerCase());
+  const male = names.filter((n) => n.Mannen > 100).map((n) => n.Voornaam.toLowerCase());
   const female = names.filter((n) => n.Vrouwen > 100).map((n) => n.Voornaam.toLowerCase());
 
   // Keep only simple Latin-alphabet names the Markov trainer handles
-  const clean = (list: string[]) =>
-    [...new Set(list.filter((n) => /^[a-z]+$/.test(n)))].join("\n");
+  const clean = (list: string[]) => [...new Set(list.filter((n) => /^[a-z]+$/.test(n)))].join("\n");
 
-  writeFileSync(join(dataDir, "first-names-male.txt"),   clean(male),   "utf8");
+  writeFileSync(join(dataDir, "first-names-male.txt"), clean(male), "utf8");
   writeFileSync(join(dataDir, "first-names-female.txt"), clean(female), "utf8");
   console.log(`  ✓ first-names-male.txt (${male.length} names before filter)`);
   console.log(`  ✓ first-names-female.txt (${female.length} names before filter)`);
@@ -72,7 +71,9 @@ try {
     .map((l) => l.split(",")[0]?.toLowerCase().trim())
     .filter((n): n is string => !!n && /^[a-z ]+$/.test(n))
     // Strip "de ", "van ", "van den " etc. prefixes so trainer sees bare stems
-    .map((n) => n.replace(/^(de|van|van de[rn]?|van den|van der|ten|ter|den|der|het|'t)\s+/i, "").trim())
+    .map((n) =>
+      n.replace(/^(de|van|van de[rn]?|van den|van der|ten|ter|den|der|het|'t)\s+/i, "").trim(),
+    )
     .filter((n) => /^[a-z]{3,}$/.test(n));
 
   writeFileSync(join(dataDir, "last-names.txt"), [...new Set(names)].join("\n"), "utf8");

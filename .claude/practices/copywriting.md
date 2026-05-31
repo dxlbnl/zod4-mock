@@ -17,11 +17,11 @@ writing user-facing strings applies it.)
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "Copy is cosmetic." | Copy *is* the UX for most users — it's part of the contract, not decoration. |
-| "A placeholder is fine for now." | Ship real copy, or raise the wording as an **open question** — don't invent product voice silently. |
-| "Developers understand the message." | Write for the end user, not the author. |
+| Excuse                               | Reality                                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| "Copy is cosmetic."                  | Copy _is_ the UX for most users — it's part of the contract, not decoration.                        |
+| "A placeholder is fine for now."     | Ship real copy, or raise the wording as an **open question** — don't invent product voice silently. |
+| "Developers understand the message." | Write for the end user, not the author.                                                             |
 
 ## Red flags
 

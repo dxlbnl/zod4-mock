@@ -32,6 +32,7 @@ The two public methods become 6-line wrappers over `resolveRelationPool` +
 `prng.pick` / `prng.sample`. No behaviour change.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#10**.
 - Dimension: 1 #8.
 - Size: **S**.

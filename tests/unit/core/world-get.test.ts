@@ -108,10 +108,7 @@ describe("world.get — B6", () => {
       const again = world.get(productSchema, { sku: "WIDGET-42" });
 
       // Same instance as held in the registry (reference equality), not a copy.
-      const inRegistry = world.registry.find(
-        productSchema,
-        (p: Product) => p.sku === "WIDGET-42",
-      );
+      const inRegistry = world.registry.find(productSchema, (p: Product) => p.sku === "WIDGET-42");
       expect(again).toBe(inRegistry);
       expect(again).toBe(first);
       // No new record created by the find-path call.
@@ -158,10 +155,7 @@ describe("world.get — B6", () => {
       // Count increased by one.
       expect(world.registry.count(productSchema)).toBe(countBefore + 1);
       // Discoverable by a later find — and it is the same record.
-      const found = world.registry.find(
-        productSchema,
-        (p: Product) => p.sku === "GADGET-99",
-      );
+      const found = world.registry.find(productSchema, (p: Product) => p.sku === "GADGET-99");
       expect(found).toBe(result);
     });
 

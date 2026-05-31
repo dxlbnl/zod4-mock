@@ -46,7 +46,7 @@ not exist on disk today**: the GitHub-reported `@zod4-mock/locale-core@0.2.0` on
 registry is the stale published artifact, not the working tree.
 `packages/locale-core/package.json` is at version `0.2.0`, so a fresh release of
 `@zod4-mock/locale-core` will ship the methods the registry is missing — no source
-changes to the interface are required for B15-R2. What B15-R2 *does* add is a
+changes to the interface are required for B15-R2. What B15-R2 _does_ add is a
 **type-level assignability pin** so a future refactor cannot silently drop the methods
 from the shared interface without a test breaking.
 
@@ -146,12 +146,14 @@ Fisher-Yates `shuffle` returns a non-mutating permutation; `sample` is
   GIVEN a TypeScript file in `tests/unit/core/` that imports the exported `Prng` type
   from the root package (or from `@zod4-mock/locale-core`)
   WHEN the file declares a type-level assertion equivalent to
+
   ```ts
   type _PinShuffle = <T>(items: readonly T[]) => T[];
   type _PinSample = <T>(items: readonly T[], count: number) => T[];
   const _shuffle: _PinShuffle = (null as unknown as Prng).shuffle;
   const _sample: _PinSample = (null as unknown as Prng).sample;
   ```
+
   (or any equivalent assignability check that requires `Prng["shuffle"]` and
   `Prng["sample"]` to match the pinned signatures)
   THEN `pnpm typecheck` succeeds with both methods present on `Prng`, **and** removing

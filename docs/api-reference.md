@@ -89,17 +89,15 @@ interface WorldOptions {
 
 **`seed`** — master seed for all generation in this world. The same seed with the same builder chain and the same per-schema call sequence always produces byte-identical output. Call order across distinct schemas does not affect any value: `world.generate(X); world.generate(Y)` and `world.generate(Y); world.generate(X)` produce the same `X` and the same `Y` either way.
 
-**Pattern — hoist schemas to module scope.** Determinism is keyed on schema *reference* identity, not structural equality. If you construct a schema inline inside a factory or a per-test helper, two calls will see two different references and produce different output. Construct your schemas once (typically at module scope) and import them where needed — that's how the same seed gives the same output across separate `createWorld` calls.
+**Pattern — hoist schemas to module scope.** Determinism is keyed on schema _reference_ identity, not structural equality. If you construct a schema inline inside a factory or a per-test helper, two calls will see two different references and produce different output. Construct your schemas once (typically at module scope) and import them where needed — that's how the same seed gives the same output across separate `createWorld` calls.
 
 ```ts
 // ✗ inline construction inside `make` — separate references, different output
-const make = (seed: number) =>
-  createWorld({ seed }).generate(z.array(Person).length(3));
+const make = (seed: number) => createWorld({ seed }).generate(z.array(Person).length(3));
 
 // ✓ hoist the schema — both calls share the reference, identical output
 const ArrSchema = z.array(Person).length(3);
-const make = (seed: number) =>
-  createWorld({ seed }).generate(ArrSchema);
+const make = (seed: number) => createWorld({ seed }).generate(ArrSchema);
 ```
 
 **`optionalProbability`** — probability in [0, 1] that `z.optional()` or `z.nullable()` fields are omitted/nulled. Set to `0` to always generate optional fields; `1` to always omit them. Default `0.2`.
@@ -115,9 +113,9 @@ import { createWorld } from "zod4-mock";
 import { en } from "@zod4-mock/locale-en";
 import { nl } from "@zod4-mock/locale-nl";
 
-createWorld({ seed: 42 });              // minimal English default
-createWorld({ seed: 42, locale: en });  // full English (Markov)
-createWorld({ seed: 42, locale: nl });  // Dutch (Markov)
+createWorld({ seed: 42 }); // minimal English default
+createWorld({ seed: 42, locale: en }); // full English (Markov)
+createWorld({ seed: 42, locale: nl }); // Dutch (Markov)
 ```
 
 ---
@@ -357,13 +355,9 @@ const SearchBucketSchema = z.object({
   content: z.array(ItemSchema).length(10),
 });
 
-const world = createWorld({ seed: 1 })
-  .withSchema(ItemSchema)
-  .withSchema(SearchBucketSchema);
+const world = createWorld({ seed: 1 }).withSchema(ItemSchema).withSchema(SearchBucketSchema);
 
-http.get("/search", () =>
-  HttpResponse.json(world.generate(SearchBucketSchema, { store: false })),
-);
+http.get("/search", () => HttpResponse.json(world.generate(SearchBucketSchema, { store: false })));
 // world.registry.count(ItemSchema) === 0  — even after many hits
 ```
 
@@ -451,11 +445,7 @@ const world = createWorld({ seed: 1 })
 world.populate(OrderSchema, 30);
 
 // One declarative line — populates a Summary per shipped order:
-world.populateFrom(
-  ShippedOrderSummarySchema,
-  OrderSchema,
-  (o) => o.status === "shipped",
-);
+world.populateFrom(ShippedOrderSummarySchema, OrderSchema, (o) => o.status === "shipped");
 ```
 
 **`predicate`** — typed `(item: z.infer<TSource>) => boolean` (the **output** shape, matching registry reads and `relations.where`). Inside the body, source-record fields are typed exactly as Zod's inferred output — `z.coerce.date()` fields are `Date`, enum fields are the enum literal type, no cast required.
@@ -473,7 +463,7 @@ world.populateFrom(
 
 **Idempotence (B8 upsert).** Because `populateFrom` delegates to `world.generate(derivedSchema, { source })` per record, and that call is a per-`(derivedSchema, identity(source))` **upsert** by default, calling `populateFrom(...)` twice with the same arguments leaves the derived bucket **unchanged** after the first call — same record count, same references, same order. Re-running is safe (e.g. test setup or a dev server's re-init).
 
-**Snapshot semantics.** The source bucket is read **once** at the start of the call. Records added to it *during* the iteration — by a matcher's side effect or a transitive auto-provisioned source — are **not** picked up by the current call; they become visible to the **next** `populateFrom` call (the B8 upsert short-circuits the already-derived records on that next call, so only the newly-added sources produce new derived records).
+**Snapshot semantics.** The source bucket is read **once** at the start of the call. Records added to it _during_ the iteration — by a matcher's side effect or a transitive auto-provisioned source — are **not** picked up by the current call; they become visible to the **next** `populateFrom` call (the B8 upsert short-circuits the already-derived records on that next call, so only the newly-added sources produce new derived records).
 
 **Always writes.** Like `populate`, `populateFrom` has no `store: false` opt-out: a factory's `store: false` is silently stripped before the options reach the delegated `generate` call. Every derived record produced lands in the registry. (Use `world.generate(DerivedSchema, { source, store: false })` directly if you really want an ephemeral derived record.)
 
@@ -595,10 +585,7 @@ interface Registry {
   store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
   all<T extends ZodTypeAny>(schema: T): z.infer<T>[];
   pick<T extends ZodTypeAny>(schema: T): z.infer<T>;
-  filter<T extends ZodTypeAny>(
-    schema: T,
-    predicate: (item: z.infer<T>) => boolean,
-  ): z.infer<T>[];
+  filter<T extends ZodTypeAny>(schema: T, predicate: (item: z.infer<T>) => boolean): z.infer<T>[];
   find<T extends ZodTypeAny>(
     schema: T,
     predicate: (item: z.infer<T>) => boolean,
@@ -773,7 +760,7 @@ world.withSchema(caseSchema, {
   relations: { users: userSchema },
   matchers: {
     // Pick 2–4 distinct users; sibling matchers see the same set in the same order.
-    users:     (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)),
+    users: (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)),
     usernames: (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)).map((u) => u.username),
   },
 });
@@ -1020,12 +1007,12 @@ Locale data and types live in separate workspace packages, not in `zod4-mock`
 itself. This keeps the core library small and lets consumers install only the
 locales they need.
 
-| Package                  | Contents                                                              |
-| ------------------------ | --------------------------------------------------------------------- |
-| `@zod4-mock/locale-core` | `LocaleData`, `MarkovModel`, `Currency`, etc. types + `extend()`       |
-| `@zod4-mock/locale-en`   | Full English locale (`en`) with Markov-trained name & word models     |
-| `@zod4-mock/locale-nl`   | Full Dutch locale (`nl`) with Markov-trained models                   |
-| `@zod4-mock/locale-names`| Pre-trained Markov name models by cultural origin (shared dependency) |
+| Package                   | Contents                                                              |
+| ------------------------- | --------------------------------------------------------------------- |
+| `@zod4-mock/locale-core`  | `LocaleData`, `MarkovModel`, `Currency`, etc. types + `extend()`      |
+| `@zod4-mock/locale-en`    | Full English locale (`en`) with Markov-trained name & word models     |
+| `@zod4-mock/locale-nl`    | Full Dutch locale (`nl`) with Markov-trained models                   |
+| `@zod4-mock/locale-names` | Pre-trained Markov name models by cultural origin (shared dependency) |
 
 The `zod4-mock` package re-exports `extend` and the locale types for
 convenience, but **not** `en` or `nl` — import those from their packages.
@@ -1078,68 +1065,102 @@ The interface every locale must satisfy (defined in `@zod4-mock/locale-core`). K
 ```ts
 interface NameOriginSet {
   model: MarkovModel;
-  weight: number;        // relative probability weight (need not sum to 100)
+  weight: number; // relative probability weight (need not sum to 100)
 }
 
 interface LastNamePrefix {
-  prefix: string;        // e.g. "de", "van der"
-  weight: number;        // relative weight vs. implicit "no prefix" weight of 100
+  prefix: string; // e.g. "de", "van der"
+  weight: number; // relative weight vs. implicit "no prefix" weight of 100
 }
 
 interface Currency {
-  code: string;          // "USD"
-  name: string;          // "US Dollar"
-  symbol: string;        // "$"
-  numeric: string;       // "840"
+  code: string; // "USD"
+  name: string; // "US Dollar"
+  symbol: string; // "$"
+  numeric: string; // "840"
 }
 
 interface LocaleData {
   id: string;
   person: {
     // Markov-based names (full locales) — OR simple arrays (minimal locales).
-    firstNamesMale?:   readonly NameOriginSet[];
+    firstNamesMale?: readonly NameOriginSet[];
     firstNamesFemale?: readonly NameOriginSet[];
-    lastNames?:        readonly NameOriginSet[];
-    simpleFirstNamesMale?:   readonly string[];
+    lastNames?: readonly NameOriginSet[];
+    simpleFirstNamesMale?: readonly string[];
     simpleFirstNamesFemale?: readonly string[];
-    simpleLastNames?:        readonly string[];
+    simpleLastNames?: readonly string[];
     lastNamePrefixes?: readonly LastNamePrefix[]; // e.g. Dutch tussenvoegsels
     prefixes: { male: string[]; female: string[]; neutral: string[] };
     suffixes: string[];
     genders: string[];
-    jobTitles: string[]; jobAreas: string[]; jobTypes: string[]; jobDescriptors: string[];
+    jobTitles: string[];
+    jobAreas: string[];
+    jobTypes: string[];
+    jobDescriptors: string[];
     formatFullName: (first: string, last: string) => string;
     formatBio: (prng, parts: { jobTitle; jobArea; jobType }) => string;
   };
   word: {
-    nounModel?: MarkovModel;       // Markov — OR the `nouns` array below
+    nounModel?: MarkovModel; // Markov — OR the `nouns` array below
     adjectiveModel?: MarkovModel;
     nouns?: readonly string[];
     adjectives?: readonly string[];
     articles: string[]; /* ... other closed-class word lists */
   };
   address: {
-    cities; states; countries; countryCodes; continents; languages;
-    streetNames; streetSuffixes; cityPrefixes; cityCores;
-    buildingNumberSuffixes; timeZones; directions;
-    cardinalDirections; ordinalDirections;
-    streetFormats; zipFormat; secondaryAddressFormat;
-    phonePrefix; ibanPrefix; countryCode;
+    cities;
+    states;
+    countries;
+    countryCodes;
+    continents;
+    languages;
+    streetNames;
+    streetSuffixes;
+    cityPrefixes;
+    cityCores;
+    buildingNumberSuffixes;
+    timeZones;
+    directions;
+    cardinalDirections;
+    ordinalDirections;
+    streetFormats;
+    zipFormat;
+    secondaryAddressFormat;
+    phonePrefix;
+    ibanPrefix;
+    countryCode;
   };
   commerce: {
-    departments; materials; productAdjectives; currencyCode;
-    formatPrice; formatProductName; formatProductDescription;
+    departments;
+    materials;
+    productAdjectives;
+    currencyCode;
+    formatPrice;
+    formatProductName;
+    formatProductDescription;
   };
   company: {
-    prefixes; suffixes; buzzAdjectives; buzzNouns; buzzVerbLemmas;
-    catchPhraseAdjectives; catchPhraseDescriptors; catchPhraseNouns;
+    prefixes;
+    suffixes;
+    buzzAdjectives;
+    buzzNouns;
+    buzzVerbLemmas;
+    catchPhraseAdjectives;
+    catchPhraseDescriptors;
+    catchPhraseNouns;
     formatBuzzPhrase;
   };
   finance: {
-    bankCodes; bicLocations; currencies: readonly Currency[];
-    accountNames; transactionTypes; transactionDescriptions; formatIban;
+    bankCodes;
+    bicLocations;
+    currencies: readonly Currency[];
+    accountNames;
+    transactionTypes;
+    transactionDescriptions;
+    formatIban;
   };
-  date:  { months; monthsShort; weekdays; weekdaysShort; timeZones };
+  date: { months; monthsShort; weekdays; weekdaysShort; timeZones };
   color: { names: readonly string[] };
   phone: { mobilePrefix; landlinePrefixes; formatMobile; formatLandline };
 }
@@ -1160,9 +1181,9 @@ built-in default locale ships only the simple arrays.
 
 ```ts
 interface MarkovModel {
-  order: number;            // n-gram order (2 = bigram)
-  prior: number;            // Dirichlet smoothing (e.g. 0.01)
-  chars: string;            // alphabet + "$" end-of-word sentinel
+  order: number; // n-gram order (2 = bigram)
+  prior: number; // Dirichlet smoothing (e.g. 0.01)
+  chars: string; // alphabet + "$" end-of-word sentinel
   table: Record<string, number[]>; // n-gram state → CDF weights
 }
 ```

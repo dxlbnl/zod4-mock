@@ -83,6 +83,7 @@ primitive replace) cannot regress.
 
 **Architecture Rules ([wiki/architecture.md](../architecture.md)) and decisions
 ([wiki/decisions.md](../decisions.md)) compliance**:
+
 - D1 (no `any`) — the existing `deepMerge` already uses `unknown` parameters; the new
   `isPlainObject` predicate MUST follow suit. No `any`.
 - D1 (`.js` import extensions) — no new imports are needed; if any are added, they MUST

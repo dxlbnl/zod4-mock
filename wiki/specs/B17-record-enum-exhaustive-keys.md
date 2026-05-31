@@ -208,7 +208,7 @@ Per D6, a regression test for the exact failure in the item card MUST live under
 `schema/collection` describe block) and MUST assert the card's repro:
 
 ```ts
-const Status = z.enum(['PENDING', 'IN_PROGRESS', 'DONE']);
+const Status = z.enum(["PENDING", "IN_PROGRESS", "DONE"]);
 const schema = z.record(Status, z.number());
 const value = generate(schema);
 // → all three keys present

@@ -44,13 +44,13 @@ world.withSchema(Derived, {
 
 // Default store:true. With source override → stores (B8).
 const a = world.generate(Derived, { source: world.generate(Source) });
-world.registry.count(Derived);   // 1  ✓
+world.registry.count(Derived); // 1  ✓
 
 // Default store:true. No source override → auto-provisions a source AND stores it,
 // generates the derived record, but does NOT store the derived record.
 const b = world.generate(Derived);
-world.registry.count(Source);    // 2  ✓  (auto-provisioned source IS stored)
-world.registry.count(Derived);   // still 1  ✗  (derived record NOT stored)
+world.registry.count(Source); // 2  ✓  (auto-provisioned source IS stored)
+world.registry.count(Derived); // still 1  ✗  (derived record NOT stored)
 ```
 
 The natural mental model from B8's API surface is "derived generate stores by
@@ -89,6 +89,7 @@ Flagged `review` — this is a semantic / design choice the user should
 explicitly approve before tests are written.
 
 ## Notes
+
 - Discovered during B20's pipeline (see commit `96537da` and
   `wiki/specs/B20-store-false-empty-from-crash.md`'s `## Out of scope` note).
 - Related cards: B8 (with-source store-by-default), B10 (`{ store: false }`

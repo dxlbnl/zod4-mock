@@ -42,6 +42,7 @@ at `existingCount` for every iteration. Whenever the rolled `target` exceeds
 `existingCount`, `while (count < target)` is an infinite loop.
 
 The loop conflates two responsibilities:
+
 1. "how many records have I produced for this response" (the value-output dimension), and
 2. "how many records are in the registry" (the side-effect dimension).
 
@@ -55,20 +56,20 @@ const schema = z.object({ id: z.string(), name: z.string() });
 const world = createWorld({ seed: 1 });
 world.withSchema(schema, { matchers: { name: () => "x" } });
 
-world.generate(schema, { store: false });                  // returns
-world.generate(schema.array());                            // returns
-world.generate(schema.array(), { store: false });          // HANGS
+world.generate(schema, { store: false }); // returns
+world.generate(schema.array()); // returns
+world.generate(schema.array(), { store: false }); // HANGS
 ```
 
 All three conditions must hold simultaneously (per #26's matrix):
 
-| registration                         | call                                            | result    |
-|--------------------------------------|-------------------------------------------------|-----------|
-| unregistered (ad-hoc)                | `generate(schema.array(), { store:false })`     | returns (ad-hoc branch) |
-| `withSchema(schema, {})` no matcher  | `generate(schema.array(), { store:false })`     | returns (still primary, but rolled target may meet existingCount on lucky seeds) |
-| `withSchema(schema, { matchers })`   | `generate(schema, { store:false })` (single)    | returns (single-item path, not array) |
-| `withSchema(schema, { matchers })`   | `generate(schema.array())` (store:true)         | returns (registry advances) |
-| `withSchema(schema, { matchers })`   | `generate(schema.array(), { store:false })`     | **hangs** |
+| registration                        | call                                         | result                                                                           |
+| ----------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| unregistered (ad-hoc)               | `generate(schema.array(), { store:false })`  | returns (ad-hoc branch)                                                          |
+| `withSchema(schema, {})` no matcher | `generate(schema.array(), { store:false })`  | returns (still primary, but rolled target may meet existingCount on lucky seeds) |
+| `withSchema(schema, { matchers })`  | `generate(schema, { store:false })` (single) | returns (single-item path, not array)                                            |
+| `withSchema(schema, { matchers })`  | `generate(schema.array())` (store:true)      | returns (registry advances)                                                      |
+| `withSchema(schema, { matchers })`  | `generate(schema.array(), { store:false })`  | **hangs**                                                                        |
 
 ### Decision — fix the loop by decoupling progress from the registry under `store: false`
 
@@ -108,8 +109,8 @@ case "primary": {
 Argued, tied to the binding rules and adjacent specs:
 
 1. **Hang severity drives the fix shape.** A hang reads as a frozen CI/test runner
-   with no stack trace. The right fix is to *make the call return correct ephemeral
-   records*, not to throw. B10's existence (B10-R5 in particular) shows that
+   with no stack trace. The right fix is to _make the call return correct ephemeral
+   records_, not to throw. B10's existence (B10-R5 in particular) shows that
    `store: false` is a supported first-class opt-out for matchers and
    auto-provisioning paths — the hang is a missed branch in the array dispatcher,
    not a contract refusal.
@@ -118,7 +119,7 @@ Argued, tied to the binding rules and adjacent specs:
    `store: false` suppresses the registry write at the top-level call; B10-R4 says
    the suppression is transitive — nested generation beneath a `store: false` outer
    call also does not write. The current loop violates that goal indirectly by
-   *trying* to persist (so it can read back via `registry.all`) and then failing to
+   _trying_ to persist (so it can read back via `registry.all`) and then failing to
    persist (B10-R4 transitive suppression kicks in inside `generateAndStorePrimary`).
    The fix flips the data flow: produce `target` values directly via the array
    constructor's return, never consult `registry.count`, never depend on
@@ -146,8 +147,8 @@ Argued, tied to the binding rules and adjacent specs:
    as a first-class opt-out for matchers + locale + overrides + transform users.
    Throwing would contradict B10's contract and the very use case it exists to serve
    (search-bucket envelopes, ephemeral fixtures, paginated previews). B38 and B43
-   throw on call shapes that *would silently corrupt the registry-as-source-of-truth
-   response contract* (per-index overrides dropped; bounds dropped); B44's shape
+   throw on call shapes that _would silently corrupt the registry-as-source-of-truth
+   response contract_ (per-index overrides dropped; bounds dropped); B44's shape
    doesn't corrupt — it just hangs because the loop's progress counter was tied to
    the side effect. Different bug, different fix shape.
 
@@ -163,7 +164,7 @@ Argued, tied to the binding rules and adjacent specs:
   `store: false`; B44's new branch is never reached on a B43-throwing call (see
   B44-R8).
 - **B10** ([wiki/specs/B10-generate-store-opt-out.md](B10-generate-store-opt-out.md)):
-  B44 *restores* B10-R2 and B10-R4 for the primary-array dispatcher arm — the contract
+  B44 _restores_ B10-R2 and B10-R4 for the primary-array dispatcher arm — the contract
   these requirements pin is currently broken (hang) on this code path. The fix is the
   smallest change that makes the dispatcher honour the opt-out without changing
   observable behaviour anywhere else.
@@ -184,7 +185,7 @@ Argued, tied to the binding rules and adjacent specs:
   call at [src/world.ts:1258](../../src/world.ts#L1258) advances exactly once per
   `generateArray` call regardless of branch (unchanged from B38/B43). The PRNG draws
   inside the new branch are identical to the draws today: `genPrng.int(...)` is
-  consumed *once* by the rolled-`target` arithmetic on line 1320; under
+  consumed _once_ by the rolled-`target` arithmetic on line 1320; under
   `store: false`, the new branch reuses the already-rolled `target` value. Per-field
   draws inside each `generateAndStorePrimary(innerSchema, mode.reg)` call are
   unchanged (same `recordPrng` fork inside `generateAndStorePrimary`).
@@ -200,10 +201,10 @@ Argued, tied to the binding rules and adjacent specs:
 
 ### Test design note (informs B44-R1)
 
-Asserting "the call returns" is a *negative* assertion against an infinite loop. A
+Asserting "the call returns" is a _negative_ assertion against an infinite loop. A
 naive `expect(() => world.generate(...)).not.toThrow()` would also pass on the buggy
 implementation only if vitest's per-test timeout fires — at which point the suite is
-*red* (timeout), not *green*. So the regression test design relies on vitest's default
+_red_ (timeout), not _green_. So the regression test design relies on vitest's default
 5-second per-test timeout as the implicit bound: on the pre-B44 implementation, the
 test fails by **timeout**; on the post-B44 implementation, the call returns
 near-instantly and the body's `expect(result.length).toBeLessThanOrEqual(5)` /
@@ -239,6 +240,7 @@ default `defaultArrayLength` `[1, 5]`), the returned array's `length` MUST satis
 `existingCount = 0`).
 
 The regression test for this requirement MUST:
+
 - pin the exact #26 repro (schema, world, matcher, call shape);
 - assert `result.length >= 1 && result.length <= 5` (strict length-range check);
 - rely on vitest's default 5-second per-test timeout to bound the assertion (the
@@ -249,11 +251,13 @@ The regression test for this requirement MUST:
 
 - Scenario: exact #26 repro returns within the per-test timeout
   GIVEN
+
   ```ts
   const schema = z.object({ id: z.string(), name: z.string() });
   const world = createWorld({ seed: 1 });
   world.withSchema(schema, { matchers: { name: () => "x" } });
   ```
+
   on a fresh world with default `defaultArrayLength: [1, 5]` (omitted; default
   applies) and registry empty for `schema`
   WHEN the consumer calls `const result = world.generate(schema.array(), { store: false });`
@@ -485,6 +489,7 @@ hang into a correct return is a pure bug fix with no contract change. `patch` is
 correct semantic-versioning shape for this kind of fix.
 
 The changeset body MUST:
+
 - summarise the bug (`world.generate(primaryArraySchema, { store: false })` hangs
   forever when the rolled `target` exceeds `existingCount`);
 - describe the fix shape (decouple the loop's progress counter from
@@ -509,9 +514,8 @@ The item commit subject (when the manager commits the completed item) MUST inclu
 Per D5 (`architecture.md` Rules), `docs/api-reference.md` MUST be updated in the same
 step. The `.generate` subsection's array-return bullet (currently line 320 —
 `"If \`schema\` is an array: returns an array. ..."`) already mentions B38's throw on
-per-index overrides and B43's throw on `.min/.max/.length` for primary-registered
-inner schemas. B44 MUST add a short line noting that
-`world.generate(primaryArraySchema, { store: false })` returns ephemeral records (of
+per-index overrides and B43's throw on `.min/.max/.length`for primary-registered
+inner schemas. B44 MUST add a short line noting that`world.generate(primaryArraySchema, { store: false })` returns ephemeral records (of
 the auto-rolled length, no registry write), so the reader sees the full
 primary-registered-array surface in one place:
 

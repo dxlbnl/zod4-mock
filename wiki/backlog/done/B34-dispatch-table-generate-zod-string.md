@@ -36,6 +36,7 @@ The check-format chain stays a switch (it's order-sensitive). No behaviour
 change.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#12**.
 - Dimensions: 1 #5, 3 #7.
 - Size: **S**.

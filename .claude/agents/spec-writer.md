@@ -91,11 +91,11 @@ old patterns leak back in.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
+| Excuse                                                          | Reality                                                                                                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | "Loose criteria are fine — the test-writer will figure it out." | Each requirement needs exactly one RFC-2119 keyword and ≥1 scenario with an observable `THEN`. Ambiguity here becomes a guessed test downstream. |
-| "This open question isn't really blocking." | If the answer would change what gets built, it's blocking: set `flags: [review]` and stop the item advancing. |
-| "I'll fill the gap by inventing a requirement." | Work only from the wiki. List the gap under Open questions; don't invent. |
+| "This open question isn't really blocking."                     | If the answer would change what gets built, it's blocking: set `flags: [review]` and stop the item advancing.                                    |
+| "I'll fill the gap by inventing a requirement."                 | Work only from the wiki. List the gap under Open questions; don't invent.                                                                        |
 
 ## Red flags
 

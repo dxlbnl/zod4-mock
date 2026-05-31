@@ -8,13 +8,13 @@ Three layered improvements to the PRNG layer, ordered by impact.
 
 **Solution:** Replace with **SFC32** (Small Fast Counting 32-bit generator).
 
-| Property | Mulberry32 | SFC32 |
-|----------|-----------|-------|
-| State size | 32 bits | 128 bits |
-| Period | ~4 billion | ~3.4 × 10³⁸ |
+| Property          | Mulberry32 | SFC32                     |
+| ----------------- | ---------- | ------------------------- |
+| State size        | 32 bits    | 128 bits                  |
+| Period            | ~4 billion | ~3.4 × 10³⁸               |
 | Statistical tests | Fails some | Passes all standard tests |
-| Speed (ops/sec) | ~10.4M | ~7.4M |
-| JS implementation | 1 closure | 1 closure |
+| Speed (ops/sec)   | ~10.4M     | ~7.4M                     |
+| JS implementation | 1 closure  | 1 closure                 |
 
 The 30% speed difference is negligible at mock-data scale — the bottleneck is field-path hashing and object allocation, not the raw RNG.
 
@@ -22,13 +22,16 @@ The 30% speed difference is negligible at mock-data scale — the bottleneck is 
 // SFC32 — drop-in replacement for the mulberry32 call inside createPrng()
 function sfc32(a: number, b: number, c: number, d: number): () => number {
   return () => {
-    a |= 0; b |= 0; c |= 0; d |= 0;
-    const t = (a + b | 0) + d | 0;
-    d = d + 1 | 0;
-    a = b ^ b >>> 9;
-    b = c + (c << 3) | 0;
-    c = (c << 21 | c >>> 11);
-    c = c + t | 0;
+    a |= 0;
+    b |= 0;
+    c |= 0;
+    d |= 0;
+    const t = (((a + b) | 0) + d) | 0;
+    d = (d + 1) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    c = (c + t) | 0;
     return (t >>> 0) / 4294967296;
   };
 }
@@ -40,7 +43,11 @@ SFC32 requires 4 seed values. Derive them from the single FNV-1a field seed usin
 function seedToSfc32(seed: number): [number, number, number, number] {
   // splitmix32: a simple, fast way to expand one seed into four
   let s = seed;
-  const next = () => { s = Math.imul(s ^ s >>> 15, s | 1); s ^= s + Math.imul(s ^ s >>> 7, s | 61); return (s ^ s >>> 14) >>> 0; };
+  const next = () => {
+    s = Math.imul(s ^ (s >>> 15), s | 1);
+    s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
+    return (s ^ (s >>> 14)) >>> 0;
+  };
   return [next(), next(), next(), next()];
 }
 ```
@@ -59,12 +66,12 @@ function seedToSfc32(seed: number): [number, number, number, number] {
 
 ```typescript
 interface Prng {
-  random(): number;           // existing
-  int(min: number, max: number): number;  // existing
+  random(): number; // existing
+  int(min: number, max: number): number; // existing
   pick<T>(items: readonly [T, ...T[]]): T; // existing
-  fork(key: string): Prng;    // existing
+  fork(key: string): Prng; // existing
 
-  uint32(): number;           // NEW: raw 32-bit unsigned integer
+  uint32(): number; // NEW: raw 32-bit unsigned integer
   bytes(n: number): Uint8Array; // NEW: n random bytes
 }
 ```
@@ -79,7 +86,7 @@ for (let i = 0; i < 8; i++) hex += prng.int(0, 15).toString(16);
 
 // After: 1 call for 8 hex chars
 const u = prng.uint32();
-for (let i = 0; i < 8; i++) hex += ((u >>> (i * 4)) & 0xF).toString(16);
+for (let i = 0; i < 8; i++) hex += ((u >>> (i * 4)) & 0xf).toString(16);
 ```
 
 UUID goes from 32 `int()` calls → 4 `uint32()` calls (8× reduction).

@@ -14,8 +14,8 @@ The dispatch table that powers this lives in
 matchers / per-schema key maps / `withGenerators` and the schema-based fallback
 in [`src/generators/schema/router.ts`](../../src/generators/schema/router.ts)
 (`generateFromSchema`). All resolution decisions are field-local and made off
-the *field key* + the *leaf Zod type* — no PRNG state is consumed by the
-*decision* itself, only by the chosen generator.
+the _field key_ + the _leaf Zod type_ — no PRNG state is consumed by the
+_decision_ itself, only by the chosen generator.
 
 Two affordances are bundled in GitHub issue #17, both about discoverability of
 the same feature:
@@ -28,7 +28,7 @@ the same feature:
    and lists rules that no longer exist as written; it needs to be regenerated
    from the real source.
 2. A debug helper `world.explain(schema)` that returns, per field, the
-   identifier of the generator that *would* resolve that field and a short
+   identifier of the generator that _would_ resolve that field and a short
    reason — so "why is this field random?" and "did my field name almost match
    a key?" become one call away.
 
@@ -75,7 +75,7 @@ kind        → schema-based     (no key match, no matcher)
 architecture Rules apply unchanged: D1 (no `any`, `.js` import extensions),
 D4 (per-field PRNG determinism — `explain` does not allocate forks),
 D9 (cache short-circuits are PRNG/counter-neutral — applies here in the
-analogous sense: the `explain` path is *itself* a no-side-effect short-circuit
+analogous sense: the `explain` path is _itself_ a no-side-effect short-circuit
 of generation).
 
 > In this page, the keywords MUST, MUST NOT, SHOULD, and MAY are used as
@@ -191,6 +191,7 @@ themselves are surfaced.
 
 - Scenario: exact-key entry, matcher, no-match, and pattern in one schema
   GIVEN
+
   ```ts
   const UserSchema = z.object({
     id: z.string(),
@@ -204,6 +205,7 @@ themselves are surfaced.
     matchers: { kind: () => "admin" },
   });
   ```
+
   WHEN `const r = world.explain(UserSchema);` is called
   THEN
   - `r.fields.id.generator === 'string.uuid'` and
@@ -238,9 +240,9 @@ themselves are surfaced.
   - `createdAt`: `{ generator: 'date.anytime+toISOString', reason: 'key-pattern: ends with "at"' }`
   - `occurredAt`: `{ generator: 'date.anytime', reason: 'key-pattern: ends with "at"' }`
   - `millisAt`: `{ generator: 'date.anytime+getTime', reason: 'key-pattern: ends with "at"' }`
-  The identifier MUST carry the leaf-type-specific transform suffix (`+toISOString`
-  for the string pattern, `+getTime` for the number pattern; no suffix for the
-  raw `date` pattern) so the consumer can distinguish the three.
+    The identifier MUST carry the leaf-type-specific transform suffix (`+toISOString`
+    for the string pattern, `+getTime` for the number pattern; no suffix for the
+    raw `date` pattern) so the consumer can distinguish the three.
 
 ### B16-R3: `explain` covers the top-level object shape (shallow); nested object fields are summarised
 
@@ -266,6 +268,7 @@ returned shape.
 
 - Scenario: nested object summarised, top-level keys explained
   GIVEN
+
   ```ts
   const AddressSchema = z.object({ street: z.string(), city: z.string() });
   const UserSchema = z.object({
@@ -275,6 +278,7 @@ returned shape.
   });
   const world = createWorld({ seed: 1 });
   ```
+
   WHEN `const r = world.explain(UserSchema);` is called
   THEN
   - `Object.keys(r.fields)` is exactly `['id', 'address', 'tags']` (top-level
@@ -328,7 +332,9 @@ property on the returned object:
 ```ts
 interface ExplainResult<TSchema> {
   readonly fields: { readonly [K in keyof z.infer<TSchema> & string]: FieldExplanation };
-  readonly relations: { readonly [relName: string]: { readonly schema: string; readonly where: 'present' | 'none' } };
+  readonly relations: {
+    readonly [relName: string]: { readonly schema: string; readonly where: "present" | "none" };
+  };
   toString(): string;
 }
 ```
@@ -349,6 +355,7 @@ nullish guard.
 
 - Scenario: relation with `where` predicate is reported as present
   GIVEN
+
   ```ts
   const PostSchema = z.object({ id: z.string(), published: z.boolean() });
   const ActivitySchema = z.object({ id: z.string(), postId: z.string() });
@@ -359,6 +366,7 @@ nullish guard.
       matchers: { postId: (ctx) => ctx.related("post").id },
     });
   ```
+
   WHEN `const r = world.explain(ActivitySchema);` is called
   THEN
   - `r.fields.postId.generator === 'matcher:postId'` and
@@ -416,7 +424,7 @@ match the format
 where the column-1 width is `max(fieldNameLength) + 1` (one space minimum
 between the longest name and the arrow) and the column-2 width is
 `max(generatorLength) + 1`. Trailing spaces on each line MUST be trimmed
-*before* the arrow / parenthesis but the padding before the arrow MUST be
+_before_ the arrow / parenthesis but the padding before the arrow MUST be
 preserved (alignment is the point). Lines MUST be separated by `\n`.
 After the field lines, if `relations` has at least one entry, `toString()`
 MUST append a blank line followed by
@@ -448,12 +456,12 @@ GitHub issues.
   - `'createdAt   → date.anytime     (key-pattern: ends with "at")'`
   - `'homeAddress → schema-based     (no key match, no matcher)'`
   - `'kind        → matcher:kind     (matcher registered via withSchema)'`
-  AND `out.split('\n').length === 6` (no trailing blank line when there
-  are no relations). The per-field identifiers in this output MUST be
-  byte-identical to `r.fields[k].generator` — `toString()` is a pure
-  formatter over the structured `fields` map (no parallel display map,
-  no per-leaf-type re-rendering), so the structured form (B16-R2) and
-  the rendered form are guaranteed in lock-step.
+    AND `out.split('\n').length === 6` (no trailing blank line when there
+    are no relations). The per-field identifiers in this output MUST be
+    byte-identical to `r.fields[k].generator` — `toString()` is a pure
+    formatter over the structured `fields` map (no parallel display map,
+    no per-leaf-type re-rendering), so the structured form (B16-R2) and
+    the rendered form are guaranteed in lock-step.
 
 - Scenario: `toString()` includes a relations block when relations exist
   GIVEN the `ActivitySchema` world from B16-R5's first scenario
@@ -493,10 +501,12 @@ scoped to the `explain` call.
 
 - Scenario: `explain` is PRNG- and registry-neutral
   GIVEN two worlds created with the same seed:
+
   ```ts
   const A = createWorld({ seed: 7 }).withSchema(UserSchema);
   const B = createWorld({ seed: 7 }).withSchema(UserSchema);
   ```
+
   WHEN `A.explain(UserSchema)` is called, then `A.generate(UserSchema)`,
   while `B` only calls `B.generate(UserSchema)`
   THEN `A.generate(UserSchema)`'s result deep-equals
@@ -643,7 +653,7 @@ and MUST reference closing GitHub issue #17.
 - **Performance benchmarks / profiling.** `explain` is read-only and
   per-field, so its cost is `O(n_fields)`; no benchmark requirement is
   attached.
-- **UI / Playground integration.** The playground may *use* the new
+- **UI / Playground integration.** The playground may _use_ the new
   helper but this item ships no playground changes.
 - **Behaviour changes to `generateFromKey`, `DEFAULT_KEY_MAP`, or any
   generator.** B16 is read-side surfacing only; touching the dispatch

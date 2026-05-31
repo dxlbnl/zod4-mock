@@ -46,25 +46,25 @@ The caller sees no difference:
 
 ```typescript
 // These are equivalent — the second just benefits from the optimization
-const users = generate(z.array(UserSchema));          // small array
-const bulk  = generate(z.array(UserSchema).length(1000)); // batch path
+const users = generate(z.array(UserSchema)); // small array
+const bulk = generate(z.array(UserSchema).length(1000)); // batch path
 ```
 
 ## Expected Impact
 
 For a 50-field inner schema generating an array of 1,000 elements:
 
-| Approach | FNV-1a hash calls | String allocations |
-|----------|:-----------------:|:-----------------:|
-| Current (50,000 independent `fieldSeed` calls) | 50,000 | 50,000 |
-| Array batching (pre-compute + XOR) | 50 + 1,000 XORs | 50 |
+| Approach                                       | FNV-1a hash calls | String allocations |
+| ---------------------------------------------- | :---------------: | :----------------: |
+| Current (50,000 independent `fieldSeed` calls) |      50,000       |       50,000       |
+| Array batching (pre-compute + XOR)             |  50 + 1,000 XORs  |         50         |
 
 ## Determinism Guarantee
 
 The batched path must produce identical output to the current unbatched path. The invariant to test:
 
 ```typescript
-const batched   = generate(z.array(UserSchema).length(N));
+const batched = generate(z.array(UserSchema).length(N));
 const sequential = Array.from({ length: N }, (_, i) => generate(UserSchema, { subjectIndex: i }));
 expect(batched).toEqual(sequential);
 ```

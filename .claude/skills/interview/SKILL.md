@@ -7,7 +7,7 @@ disable-model-invocation: false
 # Interview discipline
 
 Reach **~95% confidence** that you can write the artifact well — the bootstrap wiki, or a
-backlog item card — *before* you write it. A question is far cheaper than building the wrong
+backlog item card — _before_ you write it. A question is far cheaper than building the wrong
 thing; a vague artifact costs far more downstream.
 
 ## The loop
@@ -20,7 +20,7 @@ thing; a vague artifact costs far more downstream.
    prompt. Put the recommended option first.
 3. **Track confidence out loud.** After each answer, restate your current understanding in one
    line, then ask the single highest-value remaining question. Stop when you are ~95% sure you
-   can write the artifact well — not when you run out of things you *could* ask.
+   can write the artifact well — not when you run out of things you _could_ ask.
 4. **Short-circuit is always available.** The user can say "that's enough, proceed" at any
    point. Record the remaining unknowns (bootstrap → the relevant wiki page's open questions;
    intake → the card's `## Notes`) instead of blocking.

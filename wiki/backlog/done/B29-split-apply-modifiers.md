@@ -32,6 +32,7 @@ Each pass becomes a named function (`overwritePass`, `formatAddPass`,
 then the only thing the caller has to read.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#7**.
 - Dimensions: 1 #2, 3 #4.
 - Size: **S**.

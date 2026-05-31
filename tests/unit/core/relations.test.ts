@@ -302,13 +302,15 @@ describe("B5: ctx.related.many", () => {
 
   // World where `count` users are pre-populated and CaseSchema picks `pick` of them.
   function caseSetup(seed: number, prePopulate: number, pick: number) {
-    const world = createWorld({ seed }).withSchema(UserSchema).withSchema(CaseSchema, {
-      relations: { users: UserSchema },
-      matchers: {
-        users: (ctx) => ctx.related.many("users", pick),
-        usernames: (ctx) => ctx.related.many("users", pick).map((u) => u.username),
-      },
-    });
+    const world = createWorld({ seed })
+      .withSchema(UserSchema)
+      .withSchema(CaseSchema, {
+        relations: { users: UserSchema },
+        matchers: {
+          users: (ctx) => ctx.related.many("users", pick),
+          usernames: (ctx) => ctx.related.many("users", pick).map((u) => u.username),
+        },
+      });
     if (prePopulate > 0) world.populate(UserSchema, prePopulate);
     return world;
   }
@@ -337,15 +339,17 @@ describe("B5: ctx.related.many", () => {
   it("B5-R1 / .many is present and is a function", () => {
     // Assert the observable presence of the new member from inside a matcher.
     let manyType: string | undefined;
-    const world = createWorld({ seed: 1 }).withSchema(UserSchema).withSchema(CaseSchema, {
-      relations: { users: UserSchema },
-      matchers: {
-        users: (ctx) => {
-          manyType = typeof ctx.related.many;
-          return ctx.related.many("users", 1);
+    const world = createWorld({ seed: 1 })
+      .withSchema(UserSchema)
+      .withSchema(CaseSchema, {
+        relations: { users: UserSchema },
+        matchers: {
+          users: (ctx) => {
+            manyType = typeof ctx.related.many;
+            return ctx.related.many("users", 1);
+          },
         },
-      },
-    });
+      });
     world.populate(UserSchema, 1);
     world.generate(CaseSchema);
     expect(manyType).toBe("function");

@@ -22,19 +22,19 @@ Rather than picking which dispatch order is "right" (Option A or B), the user ch
 const Person = z.object({ id: z.uuid(), name: z.string() });
 
 const world = createWorld({ seed: 1 });
-world.withSchema(Person);                          // OK — primary registration
-world.withSchema(Person, { from: Company });       // THROWS — already registered as primary
+world.withSchema(Person); // OK — primary registration
+world.withSchema(Person, { from: Company }); // THROWS — already registered as primary
 
 // Reversed order also throws
-world.withSchema(Person, { from: Company });       // OK — derived registration
-world.withSchema(Person);                          // THROWS — already registered as derived
+world.withSchema(Person, { from: Company }); // OK — derived registration
+world.withSchema(Person); // THROWS — already registered as derived
 ```
 
 ### What does NOT throw
 
 - Re-registering with the **same polarity** (two primary registrations of the same schema). Multi-primary semantics are unchanged — last-write-wins for matchers, per the existing `engine.ts:746` pattern. This is out of B47's scope (a separate axis).
 - A schema appearing in another schema's `relations:` declaration (B11 `RelationEntry`) — relations are not registrations.
-- A schema appearing in another schema's `from:` declaration (the *source* schema can itself be registered however the user wants — primary, derived from yet another, or unregistered).
+- A schema appearing in another schema's `from:` declaration (the _source_ schema can itself be registered however the user wants — primary, derived from yet another, or unregistered).
 
 ## Acceptance
 

@@ -7,12 +7,46 @@ import { defaultLocale } from "../../default-locale.js";
 // ---------------------------------------------------------------------------
 
 export const TECH_WORDS = [
-  "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel",
-  "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa",
-  "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whiskey",
-  "xray", "yankee", "zulu", "apple", "banana", "cherry", "data", "engine",
-  "frame", "graph", "handle", "image", "journey", "kernel", "layer",
-  "module", "network",
+  "alpha",
+  "bravo",
+  "charlie",
+  "delta",
+  "echo",
+  "foxtrot",
+  "golf",
+  "hotel",
+  "india",
+  "juliet",
+  "kilo",
+  "lima",
+  "mike",
+  "november",
+  "oscar",
+  "papa",
+  "quebec",
+  "romeo",
+  "sierra",
+  "tango",
+  "uniform",
+  "victor",
+  "whiskey",
+  "xray",
+  "yankee",
+  "zulu",
+  "apple",
+  "banana",
+  "cherry",
+  "data",
+  "engine",
+  "frame",
+  "graph",
+  "handle",
+  "image",
+  "journey",
+  "kernel",
+  "layer",
+  "module",
+  "network",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -50,7 +84,9 @@ export const word = noun;
  */
 export function adjective(prng: Prng, ctx?: GeneratorContext): string {
   const w = (ctx?.locale ?? defaultLocale).word;
-  return w.adjectiveModel ? sampleMarkov(prng, w.adjectiveModel) : cap(locPick(prng, w.adjectives ?? []));
+  return w.adjectiveModel
+    ? sampleMarkov(prng, w.adjectiveModel)
+    : cap(locPick(prng, w.adjectives ?? []));
 }
 
 // ---------------------------------------------------------------------------
@@ -89,14 +125,14 @@ export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
 /** Generates a grammatically structured sentence using the active locale. */
 export function sentence(prng: Prng, ctx?: GeneratorContext): string {
   const loc = (ctx?.locale ?? defaultLocale).word;
-  const art  = (): string => locPick(prng, loc.articles);
+  const art = (): string => locPick(prng, loc.articles);
   const pron = (): string => locPick(prng, loc.pronouns);
-  const pre  = (): string => locPick(prng, loc.prepositions);
-  const vrb  = (): string => locPick(prng, loc.verbs);
+  const pre = (): string => locPick(prng, loc.prepositions);
+  const vrb = (): string => locPick(prng, loc.verbs);
   const vrbp = (): string => locPick(prng, loc.verbsPlural);
   const conj = (): string => locPick(prng, loc.conjunctions);
-  const adj  = (): string => adjective(prng, ctx);
-  const n    = (): string => noun(prng, ctx);
+  const adj = (): string => adjective(prng, ctx);
+  const n = (): string => noun(prng, ctx);
 
   const templates: [() => string, ...(() => string)[]] = [
     // [Article] [Adjective] [Noun] [Verb] [Preposition] [Article] [Noun]

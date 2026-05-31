@@ -40,6 +40,7 @@ implementer runs. Best landed after the function-level refactors above
 (especially B23 + B24) so each new file is already smaller.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#6**.
 - Dimension: 2 #1.
 - Size: **L**, mechanical.

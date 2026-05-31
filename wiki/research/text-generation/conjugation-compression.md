@@ -6,8 +6,12 @@ Word generators currently store each form of a word separately. For verbs in `co
 
 ```typescript
 const BUZZ_VERBS = [
-  "Stroomlijnen", "Stroomlijnt", "Gestroomlijnd",   // "streamline"
-  "Optimaliseren", "Optimaliseert", "Geoptimaliseerd", // "optimize"
+  "Stroomlijnen",
+  "Stroomlijnt",
+  "Gestroomlijnd", // "streamline"
+  "Optimaliseren",
+  "Optimaliseert",
+  "Geoptimaliseerd", // "optimize"
   // ...
 ];
 ```
@@ -26,19 +30,19 @@ For mock data generation we only need a handful of forms. The rules for common c
 const VERBS = ["streamline", "optimize", "scale", "leverage", "deploy"];
 
 function verbPresent3ps(lemma: string): string {
-  if (lemma.endsWith("e")) return lemma + "s";   // optimize → optimizes
+  if (lemma.endsWith("e")) return lemma + "s"; // optimize → optimizes
   if (lemma.endsWith("y")) return lemma.slice(0, -1) + "ies"; // carry → carries
-  return lemma + "s";                            // scale → scales
+  return lemma + "s"; // scale → scales
 }
 
 function verbGerund(lemma: string): string {
   if (lemma.endsWith("e")) return lemma.slice(0, -1) + "ing"; // optimize → optimizing
-  return lemma + "ing";                          // scale → scaling
+  return lemma + "ing"; // scale → scaling
 }
 
 function verbPast(lemma: string): string {
-  if (lemma.endsWith("e")) return lemma + "d";   // optimize → optimized
-  return lemma + "ed";                           // scale → scaled
+  if (lemma.endsWith("e")) return lemma + "d"; // optimize → optimized
+  return lemma + "ed"; // scale → scaled
 }
 ```
 
@@ -52,7 +56,7 @@ const NL_VERBS = ["stroomlijnen", "optimaliseren", "schalen", "inzetten"];
 function dutchVerbPresent3ps(lemma: string): string {
   // Remove -en infinitive suffix, add -t
   const stem = lemma.endsWith("en") ? lemma.slice(0, -2) : lemma;
-  return stem + "t";   // stroomlijnen → stroomlijnt
+  return stem + "t"; // stroomlijnen → stroomlijnt
 }
 
 function dutchGerund(lemma: string): string {
@@ -67,9 +71,9 @@ One of the most useful rules for mock data — English adverbs are trivially der
 
 ```typescript
 function toAdverb(adjective: string): string {
-  if (adjective.endsWith("le")) return adjective.slice(0, -1) + "y";  // simple → simply
-  if (adjective.endsWith("y"))  return adjective.slice(0, -1) + "ily"; // easy → easily
-  return adjective + "ly";    // quick → quickly, smart → smartly
+  if (adjective.endsWith("le")) return adjective.slice(0, -1) + "y"; // simple → simply
+  if (adjective.endsWith("y")) return adjective.slice(0, -1) + "ily"; // easy → easily
+  return adjective + "ly"; // quick → quickly, smart → smartly
 }
 ```
 
@@ -77,16 +81,17 @@ This means the `adverb()` generator needs no word list at all — just the adjec
 
 ## Application to Current Generators
 
-| Generator | Current approach | After refactor |
-|-----------|-----------------|---------------|
-| `buzzVerb()` | Array of verb forms | Lemma list + `verbPresent3ps()` |
-| `adverb()` | Separate word list | Adjective list + `toAdverb()` rule |
-| `buzzPhrase()` | Picks from inflected arrays | Picks lemma, applies form per grammar slot |
-| `productDescription()` | Hardcoded phrases | Grammar template + inflected forms |
+| Generator              | Current approach            | After refactor                             |
+| ---------------------- | --------------------------- | ------------------------------------------ |
+| `buzzVerb()`           | Array of verb forms         | Lemma list + `verbPresent3ps()`            |
+| `adverb()`             | Separate word list          | Adjective list + `toAdverb()` rule         |
+| `buzzPhrase()`         | Picks from inflected arrays | Picks lemma, applies form per grammar slot |
+| `productDescription()` | Hardcoded phrases           | Grammar template + inflected forms         |
 
 ## Savings Estimate
 
 For a typical 20-verb list with 3 inflected forms each (60 stored strings → 20 lemmas + 3 tiny functions):
+
 - Storage: ~60 strings × avg 12 chars = ~720 bytes → ~240 bytes + negligible rule code
 - **~3× reduction** in stored word data per category
 
@@ -98,7 +103,9 @@ These simple suffix rules handle ~80% of common vocabulary. Irregular forms (Eng
 
 ```typescript
 const IRREGULAR_PAST: Record<string, string> = {
-  go: "went", make: "made", get: "got",
+  go: "went",
+  make: "made",
+  get: "got",
 };
 
 function verbPast(lemma: string): string {

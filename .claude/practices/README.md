@@ -1,7 +1,7 @@
 # Practices
 
 Reusable, stack-agnostic **practice knowledge** the pipeline loads **on demand**. A practice
-is *knowledge*, not a role: it tells an agent how to do a kind of work well (security review,
+is _knowledge_, not a role: it tells an agent how to do a kind of work well (security review,
 accessibility, debugging, …). Practices are plain reference docs — deliberately **not**
 registered skills — so they never clutter the slash-command / model-invocable list.
 
@@ -15,14 +15,14 @@ the whole library. See `.claude/skills/manager/SKILL.md` → "Practices".
 
 Rough mapping (the manager judges per item — not a hard table):
 
-| Signal on the item | Practice |
-|---|---|
-| auth, secrets, input handling, permissions | `security` |
-| any user-facing UI | `accessibility` |
-| a `bug` item / reproducing a failure | `debugging` |
-| hot paths, large data, latency budgets | `performance` |
-| user-facing copy, labels, error messages | `copywriting` |
-| UI scenarios in a browser-enabled project | `browser-testing` |
+| Signal on the item                         | Practice          |
+| ------------------------------------------ | ----------------- |
+| auth, secrets, input handling, permissions | `security`        |
+| any user-facing UI                         | `accessibility`   |
+| a `bug` item / reproducing a failure       | `debugging`       |
+| hot paths, large data, latency budgets     | `performance`     |
+| user-facing copy, labels, error messages   | `copywriting`     |
+| UI scenarios in a browser-enabled project  | `browser-testing` |
 
 ## Anatomy
 

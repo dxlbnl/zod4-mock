@@ -47,6 +47,7 @@ the B21 resolution direction (store-by-default vs. document the asymmetry)
 before tests/impl.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#2**.
 - Dimensions: 1 (164 LOC + 4 branches), 3 (long body, mode-flag mental load), 4 (single-item asymmetry).
 - Size: **M**.

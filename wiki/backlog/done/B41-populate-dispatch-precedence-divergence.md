@@ -44,8 +44,8 @@ world.withSchema(Derived, {
 // Now register Derived ALSO as a primary (rare but legal)
 world.withSchema(Derived); // ad-hoc style — adds a primary registration
 
-world.generate(Derived);     // → derived record (matches with-source path)
-world.populate(Derived, 5);  // → 5 primary records (primary-first path)
+world.generate(Derived); // → derived record (matches with-source path)
+world.populate(Derived, 5); // → 5 primary records (primary-first path)
 ```
 
 This is a pathological config — most users either register a schema as

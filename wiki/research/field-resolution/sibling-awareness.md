@@ -12,10 +12,10 @@ This makes generated objects coherent — the pieces fit together — rather tha
 
 ```typescript
 const PersonSchema = z.object({
-  gender:    z.string(),   // generated 1st
-  firstName: z.string(),   // ctx.current.gender is available here
-  lastName:  z.string(),   // ctx.current.gender + firstName are available here
-  email:     z.string(),   // ctx.current.gender + firstName + lastName are all available here
+  gender: z.string(), // generated 1st
+  firstName: z.string(), // ctx.current.gender is available here
+  lastName: z.string(), // ctx.current.gender + firstName are available here
+  email: z.string(), // ctx.current.gender + firstName + lastName are all available here
 });
 ```
 
@@ -45,11 +45,11 @@ Male and female name corpora have different character-level statistics. "James",
 
 Three models per locale, per name type:
 
-| Model | Trained on | Used when |
-|-------|-----------|-----------|
-| `enFirstNamesMaleModel` | Male name corpus | `gender` normalises to `"male"` |
+| Model                     | Trained on         | Used when                         |
+| ------------------------- | ------------------ | --------------------------------- |
+| `enFirstNamesMaleModel`   | Male name corpus   | `gender` normalises to `"male"`   |
 | `enFirstNamesFemaleModel` | Female name corpus | `gender` normalises to `"female"` |
-| `enFirstNamesModel` | Combined corpus | gender unknown or `"neutral"` |
+| `enFirstNamesModel`       | Combined corpus    | gender unknown or `"neutral"`     |
 
 At runtime, `firstName()` picks the model from `ctx.current`:
 
@@ -57,9 +57,11 @@ At runtime, `firstName()` picks the model from `ctx.current`:
 export function firstName(prng: Prng, ctx?: GeneratorContext): string {
   const g = extractGender(ctx);
   const model =
-    g === "male"   ? ctx!.locale.person.firstNamesMaleModel   :
-    g === "female" ? ctx!.locale.person.firstNamesFemaleModel :
-                     ctx!.locale.person.firstNamesModel;
+    g === "male"
+      ? ctx!.locale.person.firstNamesMaleModel
+      : g === "female"
+        ? ctx!.locale.person.firstNamesFemaleModel
+        : ctx!.locale.person.firstNamesModel;
   return generateMarkovWord(prng, model);
 }
 ```
@@ -91,10 +93,12 @@ Usage in `username`:
 
 ```typescript
 export function username(prng: Prng, ctx?: GeneratorContext): string {
-  const fn = (ctx ? siblingString(ctx, "firstName", "first_name", "voornaam") : undefined)
-    ?? firstName(prng, ctx);
-  const ln = (ctx ? siblingString(ctx, "lastName", "last_name", "achternaam", "surname") : undefined)
-    ?? lastName(prng);
+  const fn =
+    (ctx ? siblingString(ctx, "firstName", "first_name", "voornaam") : undefined) ??
+    firstName(prng, ctx);
+  const ln =
+    (ctx ? siblingString(ctx, "lastName", "last_name", "achternaam", "surname") : undefined) ??
+    lastName(prng);
 
   return prng.random() < 0.5
     ? `${fn.toLowerCase()}.${ln.toLowerCase().replace(/\s/g, "")}`
@@ -110,38 +114,38 @@ If the object has a `firstName` field already generated, the username references
 
 ### High value — implement in the initial pass
 
-| Derived field | Reads from sibling | What changes |
-|--------------|-------------------|-------------|
-| `firstName` | `gender` | Picks gendered Markov model |
-| `prefix` | `gender` | `Dhr.` vs `Mevr.` (already works, keep it) |
-| `username` | `firstName`, `lastName` | Username derived from actual name in the object |
-| `email` | `firstName`, `lastName` | Email derived from actual name (via username) |
-| `displayName` | `firstName`, `lastName` | Uses existing values, not new random ones |
-| `avatar` | `firstName`, `lastName` | URL slug matches the person's name |
-| `age` | `birthdate` | `Math.floor((now - birthdate) / ms_per_year)` — exact match |
-| `bio` | `jobTitle`, `jobArea`, `jobType` | Bio references the job already on the object |
-| `creditCardNumber` | `creditCardIssuer` | Visa → `4xxx`, Mastercard → `5xxx`, Amex → `34xx`/`37xx` |
-| `userAgent` | `platform`, `browser` | Matches the OS/browser fields if present |
+| Derived field      | Reads from sibling               | What changes                                                |
+| ------------------ | -------------------------------- | ----------------------------------------------------------- |
+| `firstName`        | `gender`                         | Picks gendered Markov model                                 |
+| `prefix`           | `gender`                         | `Dhr.` vs `Mevr.` (already works, keep it)                  |
+| `username`         | `firstName`, `lastName`          | Username derived from actual name in the object             |
+| `email`            | `firstName`, `lastName`          | Email derived from actual name (via username)               |
+| `displayName`      | `firstName`, `lastName`          | Uses existing values, not new random ones                   |
+| `avatar`           | `firstName`, `lastName`          | URL slug matches the person's name                          |
+| `age`              | `birthdate`                      | `Math.floor((now - birthdate) / ms_per_year)` — exact match |
+| `bio`              | `jobTitle`, `jobArea`, `jobType` | Bio references the job already on the object                |
+| `creditCardNumber` | `creditCardIssuer`               | Visa → `4xxx`, Mastercard → `5xxx`, Amex → `34xx`/`37xx`    |
+| `userAgent`        | `platform`, `browser`            | Matches the OS/browser fields if present                    |
 
 ### Medium value — implement with locale system
 
-| Derived field | Reads from sibling | What changes |
-|--------------|-------------------|-------------|
-| `phone` | `countryCode`, `country` | Phone prefix matches country |
-| `iban` | `countryCode`, `country` | IBAN prefix matches country |
-| `bic` | `countryCode` | BIC country chars match |
-| `zipCode` | `countryCode` | Format matches country (US: `12345`, NL: `1234 AB`) |
-| `vehicle.model` | `vehicle.manufacturer` | Model list filtered to that manufacturer's actual models |
-| `price` | `currency`, `currencyCode` | Format uses the currency's symbol and decimal convention |
+| Derived field   | Reads from sibling         | What changes                                             |
+| --------------- | -------------------------- | -------------------------------------------------------- |
+| `phone`         | `countryCode`, `country`   | Phone prefix matches country                             |
+| `iban`          | `countryCode`, `country`   | IBAN prefix matches country                              |
+| `bic`           | `countryCode`              | BIC country chars match                                  |
+| `zipCode`       | `countryCode`              | Format matches country (US: `12345`, NL: `1234 AB`)      |
+| `vehicle.model` | `vehicle.manufacturer`     | Model list filtered to that manufacturer's actual models |
+| `price`         | `currency`, `currencyCode` | Format uses the currency's symbol and decimal convention |
 
 ### Lower value — consider later
 
-| Derived field | Reads from sibling | What changes |
-|--------------|-------------------|-------------|
-| `state` | `city` | Would require a large city→state lookup table |
-| `city` | `country` | Cities filtered to the country (large dataset) |
-| `lastName` | `gender` | Some cultures have gendered surnames — low priority for mock data |
-| `nickname` | `firstName` | Shortened or variant of the actual first name |
+| Derived field | Reads from sibling | What changes                                                      |
+| ------------- | ------------------ | ----------------------------------------------------------------- |
+| `state`       | `city`             | Would require a large city→state lookup table                     |
+| `city`        | `country`          | Cities filtered to the country (large dataset)                    |
+| `lastName`    | `gender`           | Some cultures have gendered surnames — low priority for mock data |
+| `nickname`    | `firstName`        | Shortened or variant of the actual first name                     |
 
 ---
 
@@ -153,9 +157,9 @@ Sibling awareness solves this with a lookup map:
 
 ```typescript
 const MANUFACTURER_MODELS: Record<string, [string, ...string[]]> = {
-  "Tesla":          ["Model 3", "Model Y", "Model S", "Model X"],
-  "Volkswagen":     ["Golf", "Passat", "Tiguan", "Polo"],
-  "BMW":            ["X5", "3 Series", "5 Series", "M3"],
+  Tesla: ["Model 3", "Model Y", "Model S", "Model X"],
+  Volkswagen: ["Golf", "Passat", "Tiguan", "Polo"],
+  BMW: ["X5", "3 Series", "5 Series", "M3"],
   // ...
 };
 

@@ -82,7 +82,7 @@ The `tsconfig.json` enables `exactOptionalPropertyTypes` and `noUncheckedIndexed
 
 > **Docs vs. wiki:** end-user documentation (API reference, concepts, getting started,
 > key heuristics, recipes, schema coverage) lives in `docs/`. The `wiki/` below is the
-> Vibin workflow's single source of truth for *building* the project (vision,
+> Vibin workflow's single source of truth for _building_ the project (vision,
 > requirements, architecture/Rules, backlog, specs). Generator-overhaul research lives
 > in `wiki/research/better-gen/`.
 
@@ -140,7 +140,7 @@ and skill definitions in `.claude/agents/` and `.claude/skills/`.
   in response. The capturing agent files the item, tells the user, and continues the
   current item. The only exception is a trivial typo/comment fix adjacent to the
   current item, which is folded into the current item's commit. An **answer to an open
-  question** on the current item (including a decision a specialist needs) is *not* new
+  question** on the current item (including a decision a specialist needs) is _not_ new
   work: it is folded into that item's spec (re-dispatch `spec-writer`), never filed via
   `/intake`.
 - **Lite track** — a `feature`/`bug` may carry `mode: lite` to skip the spec page and
@@ -172,12 +172,13 @@ and skill definitions in `.claude/agents/` and `.claude/skills/`.
     `test-writer` / `implementer` flow, not a throwaway invocation.
   - Mutating environment, CI, build, or local-tool configuration → describe the
     change (file path + exact diff or shell command) and **ask the user** to apply it.
-    Committing a config *file* the project owns — `vite.config.ts`, `pyproject.toml`,
+    Committing a config _file_ the project owns — `vite.config.ts`, `pyproject.toml`,
     `Dockerfile`, a CI workflow yaml — is fine; that's product code.
 
   **Exception**: project-owned commands (`pnpm run …`, `pytest`, `tsc --noEmit`,
   `cargo test`, or a script the project has committed) are fine — those are the
   project's normal operations, not ad-hoc agent work.
+
 - **Package manager** — always use the one declared in `wiki/architecture.md`. Do not
   substitute another even if generated configs, READMEs, or model priors suggest one.
   If the declaration is missing or ambiguous, defer to the user.
@@ -205,7 +206,7 @@ and skill definitions in `.claude/agents/` and `.claude/skills/`.
 - **Decisions and rules** — a choice that establishes a **standing constraint**
   (something future work must obey — a dependency/tool, a pattern, an architectural
   boundary) is logged to `wiki/decisions.md` (ADR-style rationale) by the agent that made
-  it, *and* surfaced as a one-line RFC-2119 rule in `wiki/architecture.md`'s **Rules**
+  it, _and_ surfaced as a one-line RFC-2119 rule in `wiki/architecture.md`'s **Rules**
   section — the binding index agents read before coding. The **manager owns** the Rules
   section: subagents write the rationale and flag the constraint, the reviewer confirms a
   decision exists, and the manager promotes it to a rule when the item is done. Local,

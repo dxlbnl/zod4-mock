@@ -27,10 +27,7 @@ export interface Registry {
   store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
   all<T extends ZodTypeAny>(schema: T): z.infer<T>[];
   pick<T extends ZodTypeAny>(schema: T): z.infer<T>;
-  filter<T extends ZodTypeAny>(
-    schema: T,
-    predicate: (item: z.infer<T>) => boolean,
-  ): z.infer<T>[];
+  filter<T extends ZodTypeAny>(schema: T, predicate: (item: z.infer<T>) => boolean): z.infer<T>[];
   find<T extends ZodTypeAny>(
     schema: T,
     predicate: (item: z.infer<T>) => boolean,
@@ -41,9 +38,7 @@ export interface Registry {
 import type * as gen from "./generators/data/index.js";
 
 type BoundModule<T> = {
-  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R
-    ? (...args: P) => R
-    : T[K];
+  [K in keyof T]: T[K] extends (prng: Prng, ...args: infer P) => infer R ? (...args: P) => R : T[K];
 };
 
 export type CoreGenerators = {
@@ -103,10 +98,7 @@ export interface GeneratorContext<T = any> {
   /**
    * Generates a value using the full world engine (honoring matchers and registry).
    */
-  generate<S extends ZodTypeAny>(
-    schema: S,
-    options?: GenerateOptions<z.infer<S>>,
-  ): z.infer<S>;
+  generate<S extends ZodTypeAny>(schema: S, options?: GenerateOptions<z.infer<S>>): z.infer<S>;
   /**
    * Maximum recursion depth.
    */
@@ -144,10 +136,7 @@ export type MatcherCtx<
 // KeyGenerator: custom field-name generator
 // ---------------------------------------------------------------------------
 
-export type KeyGenerator<T = unknown> = (
-  schema: ZodTypeAny,
-  ctx: GeneratorContext,
-) => T;
+export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
 
 // ---------------------------------------------------------------------------
 // SchemaKeyMap: per-schema key overrides
@@ -161,9 +150,7 @@ export type SchemaKeyMap<TSchema extends ZodTypeAny> = {
 // Deep partial (for overrides)
 // ---------------------------------------------------------------------------
 
-export type DeepPartial<T> = T extends object
-  ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : T;
+export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 // ---------------------------------------------------------------------------
 // generate() options

@@ -7,13 +7,27 @@ describe("Sibling-aware internet generators", () => {
     it("incorporates firstName sibling", () => {
       const S = z.object({ firstName: z.string(), lastName: z.string(), username: z.string() });
       const result = createWorld({ seed: 1 }).generate(S);
-      const f = result.firstName.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
-      const l = result.lastName.split(" ").at(-1)!.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+      const f = result.firstName
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+      const l = result.lastName
+        .split(" ")
+        .at(-1)!
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
       expect(result.username.toLowerCase()).toMatch(new RegExp(f.length >= 2 ? f : l));
     });
 
     it("uses nickname sibling when present (takes priority over firstName)", () => {
-      const S = z.object({ firstName: z.string(), nickname: z.literal("jankie"), username: z.string() });
+      const S = z.object({
+        firstName: z.string(),
+        nickname: z.literal("jankie"),
+        username: z.string(),
+      });
       const result = createWorld({ seed: 1 }).generate(S);
       expect(result.username).toMatch(/^jankie(\d{2})?$/);
     });
@@ -29,13 +43,21 @@ describe("Sibling-aware internet generators", () => {
     it("uses firstName + lastName when available", () => {
       const S = z.object({ firstName: z.string(), lastName: z.string(), email: z.string() });
       const result = createWorld({ seed: 1 }).generate(S);
-      const f = result.firstName.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+      const f = result.firstName
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
       expect(result.email).toContain(f);
       expect(result.email).toContain("@");
     });
 
     it("uses nickname when present (takes priority over firstName)", () => {
-      const S = z.object({ firstName: z.string(), nickname: z.literal("speedy"), email: z.string() });
+      const S = z.object({
+        firstName: z.string(),
+        nickname: z.literal("speedy"),
+        email: z.string(),
+      });
       const result = createWorld({ seed: 1 }).generate(S);
       expect(result.email).toMatch(/^speedy@/);
     });
@@ -113,14 +135,19 @@ describe("creditCardNumber with issuer sibling", () => {
   });
 
   it("American Express is formatted 4-6-5", () => {
-    const S = z.object({ creditCardIssuer: z.literal("American Express"), creditCardNumber: z.string() });
+    const S = z.object({
+      creditCardIssuer: z.literal("American Express"),
+      creditCardNumber: z.string(),
+    });
     const n = createWorld({ seed: 1 }).generate(S).creditCardNumber;
     expect(n).toMatch(/^3[47]\d{2}-\d{6}-\d{5}$/);
   });
 
   it("fallback produces a Visa-style 16-digit card when no issuer sibling", () => {
     const S = z.object({ creditCardNumber: z.string() });
-    expect(createWorld({ seed: 1 }).generate(S).creditCardNumber).toMatch(/^4\d{3}-\d{4}-\d{4}-\d{4}$/);
+    expect(createWorld({ seed: 1 }).generate(S).creditCardNumber).toMatch(
+      /^4\d{3}-\d{4}-\d{4}-\d{4}$/,
+    );
   });
 });
 

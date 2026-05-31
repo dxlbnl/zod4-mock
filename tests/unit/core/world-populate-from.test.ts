@@ -120,11 +120,7 @@ describe("B13-R1: World.populateFrom is on the public interface and well-typed",
     // be inferred as `z.infer<typeof OrderSchema>`; reading `o.status` (the
     // enum literal type) without a cast and comparing to `"shipped"` MUST
     // compile with no `any`.
-    const returned = world.populateFrom(
-      SummarySchema,
-      OrderSchema,
-      (o) => o.status === "shipped",
-    );
+    const returned = world.populateFrom(SummarySchema, OrderSchema, (o) => o.status === "shipped");
 
     // Runtime guard: B13-R3 — returns the world.
     expect(returned).toBe(world);
@@ -178,12 +174,9 @@ describe("B13-R1: World.populateFrom is on the public interface and well-typed",
 
     // `undefined` predicate, factory present. Per spec both parameters are
     // independently omissible.
-    const returned = world.populateFrom(
-      SimpleSummarySchema,
-      SimpleOrderSchema,
-      undefined,
-      (s) => ({ overrides: { label: s.id } }),
-    );
+    const returned = world.populateFrom(SimpleSummarySchema, SimpleOrderSchema, undefined, (s) => ({
+      overrides: { label: s.id },
+    }));
 
     expect(returned).toBe(world);
   });
@@ -198,10 +191,7 @@ describe("B13-R2: iterates predicate-filtered source registry; one generate per 
     const world = makeOrderWorld(7, 30);
 
     // K — number of shipped orders — is recovered at runtime, never hard-coded.
-    const shipped = world.registry.filter(
-      OrderSchema,
-      (o) => o.status === "shipped",
-    );
+    const shipped = world.registry.filter(OrderSchema, (o) => o.status === "shipped");
     const K = shipped.length;
     expect(K).toBeGreaterThan(0); // sanity: the cycle produces some shipped orders
     expect(K).toBeLessThan(30); // sanity: the cycle also produces non-shipped
@@ -213,9 +203,7 @@ describe("B13-R2: iterates predicate-filtered source registry; one generate per 
 
     const shippedIds = new Set(shipped.map((o) => o.id));
     const nonShippedIds = new Set(
-      world.registry
-        .filter(OrderSchema, (o) => o.status !== "shipped")
-        .map((o) => o.id),
+      world.registry.filter(OrderSchema, (o) => o.status !== "shipped").map((o) => o.id),
     );
 
     for (const s of world.registry.all(SummarySchema)) {
@@ -252,10 +240,7 @@ describe("B13-R2: iterates predicate-filtered source registry; one generate per 
 
   it("B13-R2 / produced derived records appear in source-insertion order", () => {
     const world = makeOrderWorld(13, 10);
-    const shipped = world.registry.filter(
-      OrderSchema,
-      (o) => o.status === "shipped",
-    );
+    const shipped = world.registry.filter(OrderSchema, (o) => o.status === "shipped");
 
     world.populateFrom(SummarySchema, OrderSchema, (o) => o.status === "shipped");
 
@@ -273,11 +258,7 @@ describe("B13-R3: populateFrom returns the world for fluent chaining", () => {
   it("B13-R3 / returned reference equals the world", () => {
     const world = makeOrderWorld(1, 6);
 
-    const returned = world.populateFrom(
-      SummarySchema,
-      OrderSchema,
-      (o) => o.status === "shipped",
-    );
+    const returned = world.populateFrom(SummarySchema, OrderSchema, (o) => o.status === "shipped");
 
     expect(returned).toBe(world);
   });
@@ -295,9 +276,7 @@ describe("B13-R3: populateFrom returns the world for fluent chaining", () => {
     world.populate(OrderSchema, 2);
 
     // populateFrom -> populate -> still the same world reference.
-    const chained = world
-      .populateFrom(SummarySchema, OrderSchema)
-      .populate(OrderSchema, 1);
+    const chained = world.populateFrom(SummarySchema, OrderSchema).populate(OrderSchema, 1);
 
     expect(chained).toBe(world);
     expect(world.registry.count(OrderSchema)).toBe(3);
@@ -374,11 +353,7 @@ describe("B13-R5: predicate parameter is z.infer<TSource> (B7 / B11 alignment)",
 
     // No cast, no `any`. `o.placedAt` MUST be typed as `Date` (z.infer
     // shape, per B7); `.getTime()` must compile.
-    world.populateFrom(
-      DerivedSchema,
-      CoerceOrderSchema,
-      (o) => o.placedAt.getTime() > 0,
-    );
+    world.populateFrom(DerivedSchema, CoerceOrderSchema, (o) => o.placedAt.getTime() > 0);
 
     expect(world.registry.count(DerivedSchema)).toBeGreaterThan(0);
   });
@@ -493,10 +468,7 @@ describe("B13-R8: populateFrom always writes (factory's store: false ignored)", 
     expect(world.registry.count(LabelledSummarySchema)).toBe(4);
     // The factory's other fields still flow through — overrides win.
     for (const summary of world.registry.all(LabelledSummarySchema)) {
-      const order = world.registry.find(
-        SimpleOrderSchema,
-        (o) => o.id === summary.orderId,
-      );
+      const order = world.registry.find(SimpleOrderSchema, (o) => o.id === summary.orderId);
       expect(order).toBeDefined();
       expect(summary.label).toBe(order!.id);
     }
@@ -519,21 +491,13 @@ describe("B13-R9: factory invoked per source record; return flows through genera
       overrides: { id: `order-${i}-abcdef` },
     }));
 
-    world.populateFrom(
-      LabelledSummarySchema,
-      SimpleOrderSchema,
-      undefined,
-      (source) => ({
-        overrides: { label: `summary-${source.id.slice(0, 6)}` },
-      }),
-    );
+    world.populateFrom(LabelledSummarySchema, SimpleOrderSchema, undefined, (source) => ({
+      overrides: { label: `summary-${source.id.slice(0, 6)}` },
+    }));
 
     expect(world.registry.count(LabelledSummarySchema)).toBe(3);
     for (const summary of world.registry.all(LabelledSummarySchema)) {
-      const order = world.registry.find(
-        SimpleOrderSchema,
-        (o) => o.id === summary.orderId,
-      );
+      const order = world.registry.find(SimpleOrderSchema, (o) => o.id === summary.orderId);
       expect(order).toBeDefined();
       expect(summary.label).toBe(`summary-${order!.id.slice(0, 6)}`);
     }
@@ -549,19 +513,12 @@ describe("B13-R9: factory invoked per source record; return flows through genera
     world.populate(SimpleOrderSchema, 3);
 
     const seen: Array<z.infer<typeof SimpleOrderSchema>> = [];
-    world.populateFrom(
-      LabelledSummarySchema,
-      SimpleOrderSchema,
-      undefined,
-      (source) => {
-        seen.push(source);
-        return {};
-      },
-    );
+    world.populateFrom(LabelledSummarySchema, SimpleOrderSchema, undefined, (source) => {
+      seen.push(source);
+      return {};
+    });
 
     expect(seen).toHaveLength(3);
-    expect(seen.map((o) => o.id)).toEqual(
-      world.registry.all(SimpleOrderSchema).map((o) => o.id),
-    );
+    expect(seen.map((o) => o.id)).toEqual(world.registry.all(SimpleOrderSchema).map((o) => o.id));
   });
 });

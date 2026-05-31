@@ -63,14 +63,14 @@ describe("extend()", () => {
     const mixed = extend(en, {
       id: "en-nl-names",
       person: {
-        firstNamesMale:   nl.person.firstNamesMale!,
+        firstNamesMale: nl.person.firstNamesMale!,
         firstNamesFemale: nl.person.firstNamesFemale!,
-        lastNames:        nl.person.lastNames!,
+        lastNames: nl.person.lastNames!,
       },
     });
     expect(mixed.id).toBe("en-nl-names");
     expect(mixed.person.firstNamesMale).toBe(nl.person.firstNamesMale);
     expect(mixed.person.genders).toBe(en.person.genders); // en genders preserved
-    expect(mixed.word).toEqual(en.word);                  // en words preserved
+    expect(mixed.word).toEqual(en.word); // en words preserved
   });
 });

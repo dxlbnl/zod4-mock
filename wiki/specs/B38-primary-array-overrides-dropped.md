@@ -275,7 +275,7 @@ failure from the item card's `### Repro (from #22)` block, specifically:
 3. Assert that the loop throws on the **first** iteration (B38's chosen direction — throw
    immediately on a non-empty per-index overrides array against a primary-registered
    inner schema — fires on iteration 1, not iteration 2 as the original loose-A
-   reasoning would have suggested). Today's silent failure is captured by an *equivalent*
+   reasoning would have suggested). Today's silent failure is captured by an _equivalent_
    pre-B38 assertion in the docstring comment of the test: with the bug, the loop
    completes silently and `world.registry.count(ProductSchema) === 4`; after B38, the
    loop throws on iteration 1 and the test catches and asserts the error.
@@ -324,7 +324,7 @@ MUST be updated in the same step. Specifically:
 
 A changeset file at `.changeset/b38-primary-array-overrides-throw.md` MUST be added in
 the same step. The frontmatter MUST declare a **minor** bump for `zod4-mock` —
-rationale: while the silent no-op was never a *documented* contract (no spec or
+rationale: while the silent no-op was never a _documented_ contract (no spec or
 api-reference page said `world.generate(primaryArraySchema, { overrides })` was a no-op),
 real users in the wild (per #22) relied on the silent behaviour to not throw. Promoting
 that to a hard throw is a behavioural break for those callers; `minor` reflects that
@@ -396,7 +396,7 @@ The changeset body MUST:
   safer caller-respecting default.
 
 - **Throw also when `overrides.length === target - existingCount` (the "could have
-  worked under A" case). — Non-blocking.** B38-R1 throws on *any* non-empty
+  worked under A" case). — Non-blocking.** B38-R1 throws on _any_ non-empty
   `overrides` for a primary-registered inner. A more permissive variant would only
   throw when `overrides.length > target - existingCount`, silently honouring the
   overrides on the freshly-generated positions otherwise (direction A as a fallback).

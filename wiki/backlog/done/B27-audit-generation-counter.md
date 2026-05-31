@@ -56,6 +56,7 @@ Flagged `review` — has design implications; pause for user approval after the
 research lands, before any code change.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#5**, also discussed in `## Dimension 4 → Prng and fork(key) discipline (D4)`.
 - Dimension: 4 (PRNG / D4).
 - Size: **S** for the audit; **M** if option (b) becomes a follow-up `bug` fix.

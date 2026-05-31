@@ -35,9 +35,9 @@ The throw fires inside `WorldImpl.withSchema`
 `SchemaReg` is appended to `this.schemaRegs` (line 553). Polarity is determined by:
 
 - The **incoming** registration's polarity from the call arguments: `opts?.from !==
-  undefined` ⇒ derived; otherwise primary.
+undefined` ⇒ derived; otherwise primary.
 - The **existing** registrations' polarity from `findPrimaryRegs(this.schemaRegs,
-  schema).length > 0` and `findDerivedRegs(this.schemaRegs, schema).length > 0`
+schema).length > 0` and `findDerivedRegs(this.schemaRegs, schema).length > 0`
   ([src/world/registration.ts](../../src/world/registration.ts) lines 104–116).
 
 When the polarities differ, `withSchema` throws and the registration array is unchanged
@@ -58,8 +58,8 @@ the related specs:
 - **B10** (`{ store: false }` ephemeral opt-out) — orthogonal to registration polarity;
   preserved.
 - **B11** (`relations`) — a schema appearing in another schema's `relations: { name:
-  Schema }` declaration is **not** a registration of `Schema`; it is a relation target
-  referenced by the *outer* schema's registration. B11 is preserved.
+Schema }` declaration is **not** a registration of `Schema`; it is a relation target
+  referenced by the _outer_ schema's registration. B11 is preserved.
 - **B14** (`populate` factory) — the factory wires `GenerateOptions` into the
   dispatcher, and the dispatch precedence inside `populate` (B41 §1, Site 4) is what
   this throw makes irrelevant. B14's contract is preserved; the inverted-precedence
@@ -105,7 +105,7 @@ The behaviour MUST be symmetric with R1 — order-invariance is the point.
 
 - Scenario: covered jointly with R1
   See R1's scenario — the same test exercises both `withSchema(Person);
-  withSchema(Person, { from: Company });` and the reversed order
+withSchema(Person, { from: Company });` and the reversed order
   `withSchema(Person, { from: Company }); withSchema(Person);`, asserting both throw.
   Per the Minimum-tests directive (see Notes below), R1 and R2 share **one** test, not
   two — they are the same throw rule observed from opposite incoming polarities.
@@ -161,11 +161,11 @@ references it.
 Per the [[feedback-minimal-tests]] rule and the item card's reinforcement: this spec
 drives a test file with **~3 tests total**, not four. The covering test count is:
 
-| Test | Covers | What it asserts |
-|------|--------|-----------------|
-| 1 | R1 + R2 | Throws on polarity mismatch in **both** call orders (primary-then-derived and derived-then-primary). One test, two `expect(...).toThrow(Error)` assertions on two fresh worlds. |
-| 2 | R3 | Same-polarity re-registration does **not** throw (two primary + two derived sub-cases). |
-| 3 | R4 | Relation-target / from-source / mixed-role appearances do **not** throw. |
+| Test | Covers  | What it asserts                                                                                                                                                                 |
+| ---- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | R1 + R2 | Throws on polarity mismatch in **both** call orders (primary-then-derived and derived-then-primary). One test, two `expect(...).toThrow(Error)` assertions on two fresh worlds. |
+| 2    | R3      | Same-polarity re-registration does **not** throw (two primary + two derived sub-cases).                                                                                         |
+| 3    | R4      | Relation-target / from-source / mixed-role appearances do **not** throw.                                                                                                        |
 
 The test-writer MUST NOT split R1 and R2 into separate tests — they are the same throw
 rule observed from opposite incoming polarities; that fact is itself part of the
@@ -183,7 +183,7 @@ contract.
   preserved. B47 does **not** narrow this.
 - **A schema appearing in another schema's `relations:`.** Relations are not
   registrations of the relation target — B11's `RelationEntry` documents the relation
-  on the *outer* schema's registration. B47's throw does not consult the outer
+  on the _outer_ schema's registration. B47's throw does not consult the outer
   schema's `relations:` field.
 - **A schema appearing as another schema's `from:` source.** The source schema can
   itself be registered however the user wants — primary, derived from yet another

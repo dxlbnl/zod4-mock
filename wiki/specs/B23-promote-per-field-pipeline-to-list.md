@@ -144,14 +144,14 @@ are skipped.
 
 ```ts
 type FieldResolution =
-  | { kind: "override"; value: unknown }      // step 0: eager primitive/array override
-  | { kind: "matcher"; value: unknown }       // step 1: matcher hit
-  | { kind: "keymap"; value: unknown }        // step 2: per-schema key map hit
+  | { kind: "override"; value: unknown } // step 0: eager primitive/array override
+  | { kind: "matcher"; value: unknown } // step 1: matcher hit
+  | { kind: "keymap"; value: unknown } // step 2: per-schema key map hit
   | { kind: "absent"; value: undefined | null } // step 3: optional/nullable rolled absent (skip → undefined)
-  | { kind: "default"; value: unknown }       // step 3: .default() captured (or nullable → null fallback)
-  | { kind: "custom-gen"; value: unknown }    // step 4: world-level customKeyGenerators hit
-  | { kind: "key-based"; value: unknown }     // step 5: DEFAULT_KEY_MAP / DEFAULT_KEY_PATTERNS heuristic
-  | { kind: "schema-based"; value: unknown };  // step 6: schema-based generation (router.ts)
+  | { kind: "default"; value: unknown } // step 3: .default() captured (or nullable → null fallback)
+  | { kind: "custom-gen"; value: unknown } // step 4: world-level customKeyGenerators hit
+  | { kind: "key-based"; value: unknown } // step 5: DEFAULT_KEY_MAP / DEFAULT_KEY_PATTERNS heuristic
+  | { kind: "schema-based"; value: unknown }; // step 6: schema-based generation (router.ts)
 ```
 
 A step returns `null` when it does not apply (so the dispatcher falls through
@@ -289,19 +289,19 @@ context for steps 4-6.
 
 ```ts
 const PIPELINE: ReadonlyArray<PipelineStep> = [
-  overrideEagerStep,    // step 0
-  matcherStep,          // step 1
-  schemaKeyMapStep,     // step 2
-  unwrapOptionalStep,   // step 3
-  customKeyGenStep,     // step 4
-  keyHeuristicStep,     // step 5
-  schemaBasedStep,      // step 6
+  overrideEagerStep, // step 0
+  matcherStep, // step 1
+  schemaKeyMapStep, // step 2
+  unwrapOptionalStep, // step 3
+  customKeyGenStep, // step 4
+  keyHeuristicStep, // step 5
+  schemaBasedStep, // step 6
 ];
 
 const PIPELINE_NO_REGISTRATION: ReadonlyArray<PipelineStep> = [
-  unwrapOptionalStep,   // step 3
-  keyHeuristicStep,     // step 5
-  schemaBasedStep,      // step 6
+  unwrapOptionalStep, // step 3
+  keyHeuristicStep, // step 5
+  schemaBasedStep, // step 6
 ];
 ```
 
@@ -595,7 +595,7 @@ applies.
   GIVEN B23 implemented
   WHEN a test file declares `const sampleStep: PipelineStep = (ctx) => null;`
   and `const otherStep: PipelineStep = (ctx) => ({ kind: "key-based", value:
-  ctx.fieldOverride });`
+ctx.fieldOverride });`
   THEN `pnpm typecheck` passes; both declarations compile.
 
 ### B23-R3: `PIPELINE` list — exact seven named step functions in order
@@ -638,7 +638,7 @@ without a `SchemaReg` MUST execute only the three subset rungs.
 
 - Scenario: `generateZodObject` resolves a nested unregistered object via the subset
   GIVEN a world with no registration, and a top-level schema `Outer =
-  z.object({ inner: z.object({ first: z.string(), createdAt: z.string() }) })`
+z.object({ inner: z.object({ first: z.string(), createdAt: z.string() }) })`
   WHEN `world.generate(Outer)` is called
   THEN the resulting `inner.first` is a non-empty string (schema-based step
   fired); `inner.createdAt` is an ISO-formatted date string (key-heuristic
@@ -655,13 +655,13 @@ for any field MUST be byte-identical to the pre-B23 walk. Specifically:
   [`world.ts:1227`](../../src/world.ts#L1227). No step MUST refork from
   `recordPrng` for its own use.
 - `unwrapOptionalStep` MUST call `unwrapOptionalChainForField(fieldSchema,
-  fieldCtx.prng, optProb, fieldOverride === undefined)` with the same
+fieldCtx.prng, optProb, fieldOverride === undefined)` with the same
   arguments and call order as today's
   [`world.ts:1278-1283`](../../src/world.ts#L1278), consuming the same number
   of `prng.random()` rolls per wrapper layer (the existing
   `unwrapOptionalChainForField` contract preserves this).
 - `keyHeuristicStep` MUST call `generateFromKey(fieldName, innerSchema,
-  fieldCtx)` with the same arguments as today's
+fieldCtx)` with the same arguments as today's
   [`world.ts:1298`](../../src/world.ts#L1298); the post-call `applyModifiers`
   is preserved verbatim.
 - `schemaBasedStep` MUST preserve today's object-vs-non-object dispatch
@@ -686,7 +686,7 @@ test suite MUST stay green without changing any seeded snapshot assertion.
 
 - Scenario: byte-equivalence for a representative schema
   GIVEN `Sample = z.object({ name: z.string(), email: z.string(),
-  createdAt: z.string(), nested: z.object({ inner: z.number().int() }) })`
+createdAt: z.string(), nested: z.object({ inner: z.number().int() }) })`
   and `world = createWorld({ seed: 42 })`
   WHEN `const r = world.generate(Sample);`
   THEN `JSON.stringify(r)` equals the pre-B23 seed-42 snapshot exactly
@@ -721,7 +721,7 @@ fall through to later steps' merge.
 
 - Scenario: object override deep-merges on a matcher hit (B12 regression)
   GIVEN `Schema = z.object({ author: z.object({ id: z.string(), name:
-  z.string() }) })` registered with a matcher
+z.string() }) })` registered with a matcher
   `matchers: { author: () => ({ id: "matcher-id", name: "matcher-name" }) }`
   WHEN `world.generate(Schema, { overrides: { author: { name: "OVERRIDE" } } })`
   is called
@@ -864,7 +864,7 @@ grow.
   WHEN the body of `generateObjectFields` is inspected
   THEN it contains no `if (matcher)` line, no `if (keyMapFn !== undefined)`
   line, no `if (customGen !== undefined)` line, no `if (keyResult !==
-  undefined)` line, no `const fieldOverride = overrides?.[key]` line —
+undefined)` line, no `const fieldOverride = overrides?.[key]` line —
   every per-rung branch lives inside a step function body.
 
 ### B23-R10: `collection.ts:generateZodObject` walks `PIPELINE_NO_REGISTRATION`
@@ -899,7 +899,7 @@ the `current: result` propagation MUST be preserved (threaded via
 
 - Scenario: nested unregistered object behaviour byte-equivalent (regression)
   GIVEN `Outer = z.object({ inner: z.object({ name: z.string(),
-  createdAt: z.string() }) })` and `world = createWorld({ seed: 99 })` with
+createdAt: z.string() }) })` and `world = createWorld({ seed: 99 })` with
   no registration
   WHEN `const r = world.generate(Outer);`
   THEN `JSON.stringify(r)` equals the pre-B23 seed-99 snapshot for `Outer`
@@ -1015,7 +1015,7 @@ which paired its refactor with a behaviour-shifting B21 fix and took
   `PipelineStepContext` interface, and the seven step function bodies stay
   inside `src/world.ts`. The implementer MAY co-locate them in a dedicated
   module-private namespace at the top of the file (e.g. a `// ----
-  PIPELINE ----` section before `class WorldImpl`), but no new file is
+PIPELINE ----` section before `class WorldImpl`), but no new file is
   added. B28 will split them out later.
 - **Renaming the pipeline rungs** — the seven step names
   (`overrideEagerStep`, `matcherStep`, `schemaKeyMapStep`,
@@ -1033,8 +1033,8 @@ which paired its refactor with a behaviour-shifting B21 fix and took
 - **Lifting registration-mode dispatch into `PIPELINE`** — the
   `derivedRegs` / `primaryRegs` / ad-hoc cascade lives in
   `generateSingleItem` (post-B24, in the four decomposed methods). B23
-  operates on the per-field pipeline *inside* one record's generation; it
-  does not touch the *per-record* mode dispatch.
+  operates on the per-field pipeline _inside_ one record's generation; it
+  does not touch the _per-record_ mode dispatch.
 - **Promoting any standing constraint to a new ADR** — B23 establishes no
   new Rules. The Rules it preserves (D1, D3, D4, D5, D6, D8, D9, D10) are
   already binding. No `wiki/decisions.md` entry is added.
@@ -1082,7 +1082,7 @@ which paired its refactor with a behaviour-shifting B21 fix and took
   step 3's "no-resolution" side channel and refreshes the context for
   steps 4-6 with `inner` populated. The cleanest implementation form is
   ambiguous between (a) the step returns a `{ resolution: null; inner:
-  ZodTypeAny }` shape, (b) the step writes the inner to a
+ZodTypeAny }` shape, (b) the step writes the inner to a
   pre-allocated slot on a mutable context, or (c) the dispatcher
   pre-runs the unwrap loop before any step fires and threads `inner` from
   the start. The implementer picks the cleanest of (a) / (b) / (c); the
@@ -1095,7 +1095,7 @@ which paired its refactor with a behaviour-shifting B21 fix and took
 
 - **Whether `walkPipeline` is a free function or a class method —
   Non-blocking.** Default: free function (`function walkPipeline(pipeline,
-  ctx): FieldResolution`). It has no `this`-dependence, takes the
+ctx): FieldResolution`). It has no `this`-dependence, takes the
   context-with-tables-and-dryrun explicitly, and is more easily reused
   by `explain.ts` and `collection.ts`. A class method on `WorldImpl`
   would force them to import the class. The implementer picks; both

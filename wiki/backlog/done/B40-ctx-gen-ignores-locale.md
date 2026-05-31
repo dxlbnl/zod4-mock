@@ -27,9 +27,9 @@ falls back to `defaultLocale.word`.
 ### Repro (from #23)
 
 ```ts
-import { z } from 'zod';
-import { createWorld } from 'zod4-mock';
-import { nl } from '@zod4-mock/locale-nl';
+import { z } from "zod";
+import { createWorld } from "zod4-mock";
+import { nl } from "@zod4-mock/locale-nl";
 
 const Item = z.object({ id: z.uuid(), label: z.string() });
 

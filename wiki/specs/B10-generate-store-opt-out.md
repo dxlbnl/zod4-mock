@@ -365,11 +365,11 @@ mention the ephemeral / no-store use case with a short example illustrating
   Storage is the right default for `withSchema`-registered entities and for the
   find-or-create / relations flows that depend on it; flipping the default would surprise
   every existing caller and break find-or-create.
-- **Per-field opt-out** (suppressing the write of *one* nested record but storing
+- **Per-field opt-out** (suppressing the write of _one_ nested record but storing
   others). The flag is whole-call ephemeral; if a caller needs fine-grained mixing they
   compose two separate `generate` calls.
 - **Suppressing relation auto-provisioning of `from:` source records that the matcher
-  reads from.** `store: false` suppresses *registry writes*; it does not change how
+  reads from.** `store: false` suppresses _registry writes_; it does not change how
   relations resolve. Auto-provisioned records under a `store: false` outer call also
   don't write (B10-R4), so the relation matcher's `ctx.related(...)` returns the
   in-memory record without persisting it.
@@ -377,7 +377,7 @@ mention the ephemeral / no-store use case with a short example illustrating
   available as the standalone `generate(...)` export (`src/index.ts`); B10 deliberately
   keeps matchers + locale + overrides + transform active.
 - **`Registry.store` accepting an opt-out flag.** `store` remains the pure storage
-  primitive; the suppression lives at the *call site* (`generate`) where the intent is
+  primitive; the suppression lives at the _call site_ (`generate`) where the intent is
   expressed.
 - **Tightening the `Registry.store` signature** (B7-R2 keeps writes input-typed).
 - **Behaviour for an explicit invalid value** (e.g. `store: undefined` vs. omitted, or

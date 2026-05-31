@@ -60,7 +60,7 @@ See `.claude/skills/tdd-cycle/SKILL.md` for the full discipline. Your job is the
 
 ## What counts as a trivially-passing test
 
-A trivially-passing test is one that would pass *before* any implementation exists —
+A trivially-passing test is one that would pass _before_ any implementation exists —
 e.g. `assert True`, asserting against a constant the test sets itself, or checking
 "function exists" without exercising it. Every test you write must **fail when the
 feature is missing**, and the failure must trace to the missing feature. If a
@@ -84,12 +84,12 @@ a placeholder.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "This is too small to test." | If it has observable behavior, it gets a test. Size isn't the criterion — assertability is. |
-| "The test would just mirror the implementation." | Assert the scenario's observable `THEN` (inputs → outputs/state), never internals. If you can only restate the code, the `THEN` isn't observable — report it. |
-| "I'll assert it exists / returns truthy for now." | That's a trivially-passing test. Assert the actual scenario outcome. |
-| "I'll write the tests after I see the implementation." | Tests come first or RED is meaningless — a test written against existing code can't prove the feature was missing. |
+| Excuse                                                 | Reality                                                                                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "This is too small to test."                           | If it has observable behavior, it gets a test. Size isn't the criterion — assertability is.                                                                   |
+| "The test would just mirror the implementation."       | Assert the scenario's observable `THEN` (inputs → outputs/state), never internals. If you can only restate the code, the `THEN` isn't observable — report it. |
+| "I'll assert it exists / returns truthy for now."      | That's a trivially-passing test. Assert the actual scenario outcome.                                                                                          |
+| "I'll write the tests after I see the implementation." | Tests come first or RED is meaningless — a test written against existing code can't prove the feature was missing.                                            |
 
 ## Red flags
 

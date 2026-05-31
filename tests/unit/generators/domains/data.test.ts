@@ -304,7 +304,15 @@ describe("generators/data/finance", () => {
   });
 
   it("creditCardIssuer returns a known issuer name", () => {
-    const issuers = ["Visa", "Mastercard", "American Express", "Discover", "Maestro", "Diners Club", "JCB"];
+    const issuers = [
+      "Visa",
+      "Mastercard",
+      "American Express",
+      "Discover",
+      "Maestro",
+      "Diners Club",
+      "JCB",
+    ];
     expect(issuers).toContain(finance.creditCardIssuer(prng()));
   });
 
@@ -335,7 +343,24 @@ describe("generators/data/finance", () => {
 
 describe("generators/data/internet", () => {
   it("domainSuffix returns a known TLD", () => {
-    const tlds = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"];
+    const tlds = [
+      "com",
+      "net",
+      "org",
+      "nl",
+      "io",
+      "dev",
+      "ai",
+      "app",
+      "me",
+      "co",
+      "info",
+      "biz",
+      "eu",
+      "be",
+      "de",
+      "uk",
+    ];
     expect(tlds).toContain(internet.domainSuffix(prng()));
   });
 
@@ -416,7 +441,17 @@ describe("generators/data/internet", () => {
   });
 
   it("httpMethod returns a known method", () => {
-    const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"];
+    const methods = [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "PATCH",
+      "HEAD",
+      "OPTIONS",
+      "TRACE",
+      "CONNECT",
+    ];
     expect(methods).toContain(internet.httpMethod(prng()));
   });
 
@@ -684,9 +719,26 @@ describe("generators/data/color", () => {
 
 describe("generators/data/internet — urlPath and domainWord", () => {
   it("urlPath returns a known path segment", () => {
-    const paths = ["products", "dashboard", "profile", "settings", "articles",
-      "docs", "api", "blog", "about", "contact", "search", "help",
-      "orders", "invoices", "reports", "users", "admin", "status"];
+    const paths = [
+      "products",
+      "dashboard",
+      "profile",
+      "settings",
+      "articles",
+      "docs",
+      "api",
+      "blog",
+      "about",
+      "contact",
+      "search",
+      "help",
+      "orders",
+      "invoices",
+      "reports",
+      "users",
+      "admin",
+      "status",
+    ];
     expect(paths).toContain(internet.urlPath(prng()));
   });
 
@@ -719,7 +771,7 @@ describe("generators/data/person", () => {
   });
 
   it("male and female firstName use different models (differ across seeds)", () => {
-    const male   = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), "male"));
+    const male = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), "male"));
     const female = Array.from({ length: 20 }, (_, i) => person.firstName(prng(i), "female"));
     expect(male).not.toEqual(female);
   });
@@ -776,8 +828,20 @@ describe("generators/data/person", () => {
   });
 
   it("zodiacSign returns one of the 12 signs", () => {
-    const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-      "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+    const signs = [
+      "Aries",
+      "Taurus",
+      "Gemini",
+      "Cancer",
+      "Leo",
+      "Virgo",
+      "Libra",
+      "Scorpio",
+      "Sagittarius",
+      "Capricorn",
+      "Aquarius",
+      "Pisces",
+    ];
     expect(signs).toContain(person.zodiacSign(prng()));
   });
 

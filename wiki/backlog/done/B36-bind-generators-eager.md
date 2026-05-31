@@ -31,6 +31,7 @@ The per-namespace cache is good — keep it. Lose the Proxy machinery and the
 two `any` types. SDK consumers of `BoundGenerators` get full type-completion.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#14**.
 - Dimensions: 3 #10, cross-cutting #5 (`any` slipping in via Proxies).
 - Size: **S**.

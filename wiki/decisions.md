@@ -6,8 +6,8 @@
 > **What belongs here.** Only a decision that establishes or changes a **standing
 > constraint** — a choice future work must obey beyond the current item: a dependency or
 > tool to use (or a ban on an alternative), a pattern code must follow, or an
-> architectural boundary. Test: *would an agent building an unrelated future item need to
-> know this?* If yes, it belongs here **and** as a one-line rule in `architecture.md`'s
+> architectural boundary. Test: _would an agent building an unrelated future item need to
+> know this?_ If yes, it belongs here **and** as a one-line rule in `architecture.md`'s
 > Rules section (the manager adds the rule). If it is local to one item (how a single
 > function is shaped, a one-off value), it does **not** belong here — note it in
 > `progress.md` instead. This bar keeps the log tight and guarantees every entry has a
@@ -139,7 +139,7 @@
 - **Date**: 2026-05-28
 - **By**: reviewer (B14)
 - **Context**: B14's per-record factory passes `GenerateOptions` (including
-  `transform`) through `populate`'s helper path. The test asserts the *stored*
+  `transform`) through `populate`'s helper path. The test asserts the _stored_
   record reflects the transform — i.e. `world.registry.all(...).map(...)` reads
   post-transform values. Previously, `world.generate(schema, { transform })`
   returned the transformed value but stored the **pre**-transform value, so
@@ -217,7 +217,7 @@
   the Nth `world.generate(X)` call regardless of which other
   `world.generate(Y_i)` (for `Y_i !== X`) calls happened in between. The
   per-schema call index is held on a private `WeakMap<ZodTypeAny, number>` in
-  `WorldImpl`; the schema *identity* itself is a module-global
+  `WorldImpl`; the schema _identity_ itself is a module-global
   `WeakMap<ZodTypeAny, number>` so two independently constructed worlds give
   the same `ZodTypeAny` reference the same `<id>` (this is a deviation from
   B39-R3's "scoped to one world" language — the spec-writer's per-world map
@@ -245,7 +245,7 @@
   of existing fields", `tests/unit/generators/domains/collection.test.ts:209`
   "B17-R6 / appending an enum member only disturbs the new member's value",
   and `tests/integration/document-corpus/document-corpus.test.ts:148` "same
-  seed produces identical output"). All three compared two *distinct* schema
+  seed produces identical output"). All three compared two _distinct_ schema
   references (either inline `z.array(...)` re-constructions, or two object
   schemas constructed side-by-side for a "before/after add-a-field" pair)
   and relied on the pre-B39 counter coincidence (both got `counter=1` on a

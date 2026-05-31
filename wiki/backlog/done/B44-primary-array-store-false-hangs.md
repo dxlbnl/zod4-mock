@@ -57,20 +57,20 @@ const schema = z.object({ id: z.string(), name: z.string() });
 const world = createWorld({ seed: 1 });
 world.withSchema(schema, { matchers: { name: () => "x" } });
 
-world.generate(schema, { store: false });                  // ✅ returns
-world.generate(schema.array());                            // ✅ returns
-world.generate(schema.array(), { store: false });          // ❌ HANGS
+world.generate(schema, { store: false }); // ✅ returns
+world.generate(schema.array()); // ✅ returns
+world.generate(schema.array(), { store: false }); // ❌ HANGS
 ```
 
 All three conditions are required (per #26's matrix):
 
-| registration                         | call                                            | result    |
-|--------------------------------------|-------------------------------------------------|-----------|
-| unregistered (ad-hoc)                | `generate(schema.array(), { store:false })`     | ✅ returns |
-| `withSchema(schema, {})` no matcher  | `generate(schema.array(), { store:false })`     | ✅ returns |
-| `withSchema(schema, { matchers })`   | `generate(schema, { store:false })` (single)    | ✅ returns |
-| `withSchema(schema, { matchers })`   | `generate(schema.array())` (store:true)         | ✅ returns |
-| `withSchema(schema, { matchers })`   | `generate(schema.array(), { store:false })`     | ❌ **hangs** |
+| registration                        | call                                         | result       |
+| ----------------------------------- | -------------------------------------------- | ------------ |
+| unregistered (ad-hoc)               | `generate(schema.array(), { store:false })`  | ✅ returns   |
+| `withSchema(schema, {})` no matcher | `generate(schema.array(), { store:false })`  | ✅ returns   |
+| `withSchema(schema, { matchers })`  | `generate(schema, { store:false })` (single) | ✅ returns   |
+| `withSchema(schema, { matchers })`  | `generate(schema.array())` (store:true)      | ✅ returns   |
+| `withSchema(schema, { matchers })`  | `generate(schema.array(), { store:false })`  | ❌ **hangs** |
 
 ### Proposed fix (from #26)
 

@@ -67,6 +67,7 @@ B40-R4) yields three call-shape buckets:
 
    These three require the proxy to inject `boundCtx` at the correct
    trailing index (B40-R3 rule 2 — per-helper ctx-slot table).
+
 4. **No ctx at all** — pure prng-only helpers (`internet.{ip,ipv4,ipv6,port,mac,httpMethod,httpStatusCode,jwtAlgorithm,jwt,emoji,protocol,url,userAgent,urlPath,domainName,password}`,
    `string.{uuid,alphanumeric,hexadecimal,nanoid}`,
    `finance.{amount,accountNumber,pin,creditCardCVV,creditCardIssuer,routingNumber,bitcoinAddress,ethereumAddress,litecoinAddress}`,
@@ -140,6 +141,7 @@ helper capitalises before returning, yielding `"Thing"`, `"Object"`, …).
 
 - Scenario: `ctx.gen.word.noun()` with `locale: nl` produces Markov-Dutch
   GIVEN
+
   ```ts
   import { z } from "zod";
   import { createWorld } from "zod4-mock";
@@ -153,13 +155,13 @@ helper capitalises before returning, yielding `"Thing"`, `"Object"`, …).
     },
   });
   ```
+
   WHEN
+
   ```ts
-  const labels = Array.from(
-    { length: 5 },
-    () => world.generate(Item, { store: false }).label,
-  );
+  const labels = Array.from({ length: 5 }, () => world.generate(Item, { store: false }).label);
   ```
+
   is executed
   THEN
   - every `labels[i]` is a `string`;
@@ -235,21 +237,21 @@ above):
    ctx-slot table — exactly three entries — e.g.
    ```ts
    const CTX_SLOT: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-     word:     { words: 2, paragraph: 2 },
+     word: { words: 2, paragraph: 2 },
      commerce: { price: 3 },
    };
    ```
    and the per-namespace adapter for any helper listed there is
    `(...args) => {
-     const slot = CTX_SLOT[ns]?.[name];
-     if (slot !== undefined && args[slot] === undefined) {
-       const padded = [...args];
-       while (padded.length < slot) padded.push(undefined);
-       padded[slot] = boundCtx;
-       return fn(prng, ...padded);
-     }
-     return fn(prng, ...args);
-   }`. No `any` MAY appear in the table or its lookup.
+  const slot = CTX_SLOT[ns]?.[name];
+  if (slot !== undefined && args[slot] === undefined) {
+    const padded = [...args];
+    while (padded.length < slot) padded.push(undefined);
+    padded[slot] = boundCtx;
+    return fn(prng, ...padded);
+  }
+  return fn(prng, ...args);
+}`. No `any` MAY appear in the table or its lookup.
 3. **Bucket 4 — pure prng-only helpers** (no `ctx?` parameter). Untouched
    (B40-R4). The bucket-1 adapter's trailing-arg behaviour (`fn(prng, undefined, ...)`)
    has no effect on these helpers because JS positional-arg overflow is a
@@ -277,30 +279,32 @@ full ctx** — the issue body recommends exactly this.
   GIVEN a world `createWorld({ seed: 1, locale: nl })` and a matcher that
   exercises one helper from each affected namespace through `ctx.gen.<ns>.<fn>()`
   (no args), e.g.
+
   ```ts
   const Probe = z.object({
-    adj:        z.string(),
+    adj: z.string(),
     streetName: z.string(),
-    cityName:   z.string(),
-    pno:        z.string(),
-    iban:       z.string(),
-    dept:       z.string(),
-    coName:     z.string(),
-    month:      z.string(),
+    cityName: z.string(),
+    pno: z.string(),
+    iban: z.string(),
+    dept: z.string(),
+    coName: z.string(),
+    month: z.string(),
   });
   world.withSchema(Probe, {
     matchers: {
-      adj:        (ctx) => ctx.gen.word.adjective(),
+      adj: (ctx) => ctx.gen.word.adjective(),
       streetName: (ctx) => ctx.gen.location.street(),
-      cityName:   (ctx) => ctx.gen.location.city(),
-      pno:        (ctx) => ctx.gen.phone.number(),
-      iban:       (ctx) => ctx.gen.finance.iban(),
-      dept:       (ctx) => ctx.gen.commerce.department(),
-      coName:     (ctx) => ctx.gen.company.name(),
-      month:      (ctx) => ctx.gen.date.month(),
+      cityName: (ctx) => ctx.gen.location.city(),
+      pno: (ctx) => ctx.gen.phone.number(),
+      iban: (ctx) => ctx.gen.finance.iban(),
+      dept: (ctx) => ctx.gen.commerce.department(),
+      coName: (ctx) => ctx.gen.company.name(),
+      month: (ctx) => ctx.gen.date.month(),
     },
   });
   ```
+
   WHEN `world.generate(Probe, { store: false })` is called
   THEN every produced field is drawn from the `nl` locale's corresponding
   table — i.e. `dept` is one of `nl.commerce.departments`, `cityName` is one
@@ -315,6 +319,7 @@ full ctx** — the issue body recommends exactly this.
 
 - Scenario: bucket-3 helpers `word.words`, `word.paragraph`, `commerce.price` honour the locale
   GIVEN a world `createWorld({ seed: 1, locale: nl })` and a matcher
+
   ```ts
   matchers: {
     blurb:    (ctx) => ctx.gen.word.words(5),         // count = 5, ctx injected at index 2
@@ -322,6 +327,7 @@ full ctx** — the issue body recommends exactly this.
     priceTag: (ctx) => ctx.gen.commerce.price(1, 100), // min/max passed, ctx injected at index 3
   }
   ```
+
   WHEN one record is generated
   THEN
   - `blurb` is composed of five Dutch nouns (Markov-sampled from

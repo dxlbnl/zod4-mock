@@ -63,7 +63,7 @@ function train(
     }
     for (let i = 0; i <= padded.length; i++) {
       const state = padded.slice(Math.max(0, i - order), i);
-      const next  = i < padded.length ? padded[i]! : "$";
+      const next = i < padded.length ? padded[i]! : "$";
       recordNgram(state, next);
     }
   }
@@ -125,9 +125,13 @@ ${tableEntries},
 
 export async function trainMarkov(opts: TrainOptions): Promise<void> {
   const {
-    input, output, name,
-    order = 2, prior = 0.01,
-    minWordLen = 1, maxWordLen = Infinity,
+    input,
+    output,
+    name,
+    order = 2,
+    prior = 0.01,
+    minWordLen = 1,
+    maxWordLen = Infinity,
     typeImport = "@zod4-mock/locale-core",
   } = opts;
 
@@ -141,7 +145,9 @@ export async function trainMarkov(opts: TrainOptions): Promise<void> {
     .filter((w) => w.length >= minWordLen && w.length <= maxWordLen);
 
   const unique = [...new Set(words)];
-  console.log(`Training on ${unique.length} unique words (order=${order}, prior=${prior}, len=${minWordLen}–${maxWordLen === Infinity ? "∞" : maxWordLen}) …`);
+  console.log(
+    `Training on ${unique.length} unique words (order=${order}, prior=${prior}, len=${minWordLen}–${maxWordLen === Infinity ? "∞" : maxWordLen}) …`,
+  );
 
   const { chars, table } = train(unique, order, prior);
   const src = emit(name, order, prior, chars, table, typeImport);
@@ -162,11 +168,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return idx !== -1 ? args[idx + 1] : undefined;
   };
 
-  const input  = get("--input");
+  const input = get("--input");
   const output = get("--output");
-  const name   = get("--name");
-  const order  = Number(get("--order")   ?? "2");
-  const prior  = Number(get("--prior")   ?? "0.01");
+  const name = get("--name");
+  const order = Number(get("--order") ?? "2");
+  const prior = Number(get("--prior") ?? "0.01");
   const minWordLen = get("--min-len") ? Number(get("--min-len")) : undefined;
   const maxWordLen = get("--max-len") ? Number(get("--max-len")) : undefined;
   const typeImport = get("--type-import") ?? "@zod4-mock/locale-core";
@@ -174,14 +180,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (!input || !output || !name) {
     console.error(
       "Usage: npx tsx scripts/train-markov.ts " +
-      "--input <file> --output <file> --name <identifier> " +
-      "[--order N] [--prior P] [--min-len N] [--max-len N] [--type-import <pkg>]",
+        "--input <file> --output <file> --name <identifier> " +
+        "[--order N] [--prior P] [--min-len N] [--max-len N] [--type-import <pkg>]",
     );
     process.exit(1);
   }
 
   await trainMarkov({
-    input, output, name, order, prior, typeImport,
+    input,
+    output,
+    name,
+    order,
+    prior,
+    typeImport,
     ...(minWordLen !== undefined && { minWordLen }),
     ...(maxWordLen !== undefined && { maxWordLen }),
   });

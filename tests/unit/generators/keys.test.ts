@@ -801,7 +801,17 @@ describe("DEFAULT_KEY_MAP — finance string keys", () => {
 // ---------------------------------------------------------------------------
 
 describe("DEFAULT_KEY_MAP — text and content string keys", () => {
-  const textKeys = ["text", "note", "summary", "comment", "body", "content", "message", "omschrijving", "bericht"];
+  const textKeys = [
+    "text",
+    "note",
+    "summary",
+    "comment",
+    "body",
+    "content",
+    "message",
+    "omschrijving",
+    "bericht",
+  ];
 
   for (const key of textKeys) {
     it(`${key} key produces a non-empty string`, () => {

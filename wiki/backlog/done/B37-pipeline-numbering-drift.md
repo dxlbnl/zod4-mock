@@ -27,6 +27,7 @@ as a tracking marker so the drift doesn't get forgotten when B23 lands;
 unblock by removing `flags: [blocked]` once B23 is in `done/`.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#15**, also `## Dimension 4 → Drift between code and documentation`.
 - Dimension: 4 (drift).
 - Size: **XS** (post-unblock).

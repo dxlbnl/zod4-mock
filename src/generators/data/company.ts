@@ -36,7 +36,11 @@ export function buzzVerb(prng: Prng, ctx?: GeneratorContext): string {
 
 export function buzzPhrase(prng: Prng, ctx?: GeneratorContext): string {
   const locale = ctx?.locale ?? defaultLocale;
-  return locale.company.formatBuzzPhrase(buzzVerb(prng, ctx), buzzAdjective(prng, ctx), buzzNoun(prng, ctx));
+  return locale.company.formatBuzzPhrase(
+    buzzVerb(prng, ctx),
+    buzzAdjective(prng, ctx),
+    buzzNoun(prng, ctx),
+  );
 }
 
 export function catchPhraseAdjective(prng: Prng, ctx?: GeneratorContext): string {

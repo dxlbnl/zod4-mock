@@ -15,11 +15,11 @@ Load for items with hot paths, large data volumes, or an explicit latency/throug
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "This feels slow." | Feelings aren't data — measure before and after. |
-| "Micro-optimize everywhere to be safe." | Find the hotspot; most code isn't on the hot path. |
-| "Add a cache, it'll be faster." | Only with a measured need and an invalidation plan — else it's a bug source. |
+| Excuse                                  | Reality                                                                      |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| "This feels slow."                      | Feelings aren't data — measure before and after.                             |
+| "Micro-optimize everywhere to be safe." | Find the hotspot; most code isn't on the hot path.                           |
+| "Add a cache, it'll be faster."         | Only with a measured need and an invalidation plan — else it's a bug source. |
 
 ## Red flags
 

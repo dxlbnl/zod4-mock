@@ -89,7 +89,10 @@ function classifyByNgram(
   let bestScore = -1;
   for (const [origin, ref] of Object.entries(referenceVectors)) {
     const score = cosineSimilarity(v, ref);
-    if (score > bestScore) { bestScore = score; best = origin; }
+    if (score > bestScore) {
+      bestScore = score;
+      best = origin;
+    }
   }
   return { origin: best, score: bestScore };
 }
@@ -99,13 +102,7 @@ function classifyByNgram(
 // ---------------------------------------------------------------------------
 
 export function classifyCorpus(opts: ClassifyOptions): ClassifyResult {
-  const {
-    inputPath,
-    references,
-    outputDir,
-    suffix,
-    minConfidence = 0.1,
-  } = opts;
+  const { inputPath, references, outputDir, suffix, minConfidence = 0.1 } = opts;
 
   const input = readFileSync(inputPath, "utf8")
     .split("\n")
@@ -192,8 +189,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return idx !== -1 ? args[idx + 1] : undefined;
   };
 
-  const input  = get("--input");
-  const refsArg = get("--refs");   // "path:label,path:label"
+  const input = get("--input");
+  const refsArg = get("--refs"); // "path:label,path:label"
   const output = get("--output");
   const suffix = get("--suffix") ?? "names";
 

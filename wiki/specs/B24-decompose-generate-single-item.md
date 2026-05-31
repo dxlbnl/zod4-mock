@@ -62,8 +62,8 @@ no-source-derived branch generates a derived record and returns it but does
 (B8). Today's behaviour:
 
 ```ts
-world.generate(Derived, { source: x });   // count(Derived) → 1 (B8 stores)
-world.generate(Derived);                  // count(Derived) → still 1 (asymmetry)
+world.generate(Derived, { source: x }); // count(Derived) → 1 (B8 stores)
+world.generate(Derived); // count(Derived) → still 1 (asymmetry)
 ```
 
 The card's recommended direction is **A — make the no-source branch also store
@@ -85,7 +85,7 @@ This spec adopts direction A and pins it in B24-R3.
   introduced.
 - **D3 — Zod v4 internals via `_zod.def`**. Unchanged; the lazy-resolve `while`
   at lines 1351-1359 stays in the dispatcher and continues to read `d.type ===
-  "lazy"` / `d.getter!()` exactly as today.
+"lazy"` / `d.getter!()` exactly as today.
 - **D4 / D10 — per-schema identity-based fork keys**. The B39 call site at
   line 1486 (`this.nextSchemaSlot(schema)` in the ad-hoc branch) MUST move to
   `generateAdHoc` and continue to key on the **outer** `schema` reference, not
@@ -167,6 +167,7 @@ private generateAdHoc(
 ```
 
 The dispatcher `generateSingleItem` retains:
+
 - the recursion-depth check at lines 1338-1340,
 - the `derivedPairCounter++` increment at line 1346,
 - the lazy-resolve `while` at lines 1351-1359,
@@ -186,7 +187,7 @@ the refactor.
 ### Why this split, and why not the alternatives
 
 **Alternative (a): keep `generateSingleItem` as-is, only fix B21.** Rejected.
-The B21 fix in isolation adds *one more side-effect line* to an already-overloaded
+The B21 fix in isolation adds _one more side-effect line_ to an already-overloaded
 function (now ~165 LOC) and does nothing to resolve the underlying readability
 debt. B22's audit framed this exact bait — "the B21 asymmetry is currently easy
 to miss because it's buried in the cascade" — as the reason the larger
@@ -195,7 +196,7 @@ decomposition is the right vehicle for the fix.
 **Alternative (b): split into a single helper with case dispatch on a tagged
 mode union.** This is roughly B25's job (extract `resolveMode(schema):
 SchemaMode` and let every call site switch on the tag). It would require
-introducing the tagged union *and* the four cases in one item. B24 deliberately
+introducing the tagged union _and_ the four cases in one item. B24 deliberately
 stays scoped to `generateSingleItem`: extracting `resolveMode` cross-method
 involves `generateArray`, `populate`, `populateFrom` — out of scope here. The
 four-method split leaves room for B25 to convert the dispatcher's branch
@@ -338,6 +339,7 @@ semantics.
 - Scenario: closes B21 — no-source default-mode derived store lands in the registry
   GIVEN the B21 repro setup
   ([wiki/backlog/inbox/B21-derived-generate-no-source-not-stored.md](../backlog/inbox/B21-derived-generate-no-source-not-stored.md)):
+
   ```ts
   const Source = z.object({ id: z.uuid(), name: z.string() });
   const Derived = z.object({ sourceId: z.uuid(), label: z.string() });
@@ -345,6 +347,7 @@ semantics.
   world.withSchema(Source);
   world.withSchema(Derived, { from: Source, matchers: { sourceId: (ctx) => ctx.source.id } });
   ```
+
   with `world.registry.count(Source) === 0 && world.registry.count(Derived) === 0`
   WHEN the consumer calls `const r = world.generate(Derived);` (no `source`, no
   `store` option)
@@ -427,11 +430,11 @@ and MUST:
   `adhoc:${id}:${slot}` — D10 / B39 fixes this string format.
 - Dispatch on `def(targetSchema).type`:
   - If `"object"` — call `this.generateObjectFields(targetSchema, EMPTY_REG,
-    undefined, adHocPrng, recordId, fieldPath, options?.overrides as
-    Record<string, unknown>)`, exactly as today.
+undefined, adHocPrng, recordId, fieldPath, options?.overrides as
+Record<string, unknown>)`, exactly as today.
   - Otherwise — call `generateFromSchema(targetSchema,
-    this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath,
-    recordId))`, exactly as today.
+this.makeFieldCtx(EMPTY_REG, undefined, adHocPrng, adHocPrng, fieldPath,
+recordId))`, exactly as today.
 - Return the result; the dispatcher then applies the trailing
   `if (options?.overrides) result = deepMerge(...)` and
   `if (options?.transform && !transformApplied) result = options.transform(...)`
@@ -463,7 +466,7 @@ and MUST:
   WHEN the consumer calls
   `const r = world.generate(AdHocSchema, { overrides: { obj: { b: "B" } } });`
   THEN `r.obj.b === "B"` (override applied via deep-merge) AND `typeof r.obj.a
-  === "string"` (the schema-generated value for `a` is preserved) — identical
+=== "string"` (the schema-generated value for `a` is preserved) — identical
   to today.
 
 ### B24-R6: dispatcher (`generateSingleItem`) routes to the matching method
@@ -480,14 +483,14 @@ The dispatcher MUST:
 - Extract `sourceOverride = (options as any)?.source` (line 1373) unchanged.
 - Route by branch detection:
   - `sourceOverride !== undefined` → `generateWithSourceOverride(schema,
-    derivedRegs, sourceOverride, options)`
+derivedRegs, sourceOverride, options)`
   - else `derivedRegs.length > 0` → `generateDerivedAutoSource(schema,
-    derivedRegs, options)`
+derivedRegs, options)`
   - else `primaryRegs.length > 0` → `generatePrimary(schema,
-    primaryRegs[0]!, options)`
+primaryRegs[0]!, options)`
   - else → `generateAdHoc(schema, targetSchema, options)`
 - Apply the trailing `if (options?.overrides) result = deepMerge(result,
-  options.overrides)` line **only for branches that did not apply overrides
+options.overrides)` line **only for branches that did not apply overrides
   inside** — i.e. for the result of `generateAdHoc` (and effectively a no-op
   for the others, because their helpers already handled overrides). The
   implementer MAY express this as a per-branch `transformApplied`-style flag
@@ -506,7 +509,7 @@ The dispatcher MUST:
 - Scenario: `transform` applied exactly once across all four branches
   GIVEN four scenarios — with-source, no-source-derived, primary, ad-hoc —
   each invoking `world.generate(...)` with a counting `transform: (v) => ({
-  ...v, count: ((v as any).count ?? 0) + 1 })`
+...v, count: ((v as any).count ?? 0) + 1 })`
   WHEN each scenario is exercised once
   THEN each returned record has `count === 1` (no branch double-applies the
   transform); for branches that store, the stored record `===` the returned
@@ -536,7 +539,7 @@ new regression test MUST land alongside the B24 implementation and MUST:
   no-source-derived path now stores by default, closing B21.
 - Cover the with-source path in the same file to confirm
   `world.registry.count(Derived) === 1` after `world.generate(Derived, {
-  source });` hasn't regressed.
+source });` hasn't regressed.
 - Assert the `store: false` no-source path still produces
   `world.registry.count(Derived) === 0` — B20-R2's invariant is preserved by
   the `if (this.effectiveStore)` gate.
@@ -576,7 +579,7 @@ require any changes to their assertions:
   This is a deliberate, scoped behaviour change (B24 closes B21); the
   spec-writer flags it here so the test-writer / reviewer knows to update
   exactly this assertion, and only this one, in B20's test file. (Strictly,
-  B20-R2's "second scenario" wording in the B20 spec talks about *count* on
+  B20-R2's "second scenario" wording in the B20 spec talks about _count_ on
   the no-source default-mode follow-up; B24 changes the expected value at
   that exact line — see Open questions, "B20-R2 second scenario expected
   count change".)
@@ -633,7 +636,7 @@ A changeset MUST be created at
 - (b) the behaviour change in the no-source-derived path: `world.generate(D)`
   on a `from:`-registered schema with no `source` now stores the derived
   record by default (closes B21), symmetric with `world.generate(D, {
-  source })`;
+source })`;
 - (c) the unchanged opt-out semantics — `{ store: false }` still suppresses
   the new store call, B10's contract intact;
 - (d) the user-visible upgrade implication — `world.registry.count(D)` after
@@ -757,7 +760,7 @@ See Open questions.
   narrowly scoped. Recorded; not blocking.
 
 - **Whether the dispatcher's trailing `if (options?.overrides) result =
-  deepMerge(...)` line MAY be inlined into `generateAdHoc` and removed from
+deepMerge(...)` line MAY be inlined into `generateAdHoc` and removed from
   the dispatcher entirely — Non-blocking.** Default: leave it in the
   dispatcher. The line is a no-op for the three non-ad-hoc branches today
   (their helpers already handled overrides), so leaving it where it is

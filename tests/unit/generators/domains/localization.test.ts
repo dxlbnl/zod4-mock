@@ -50,9 +50,26 @@ describe("Localization", () => {
   describe("Commerce & Finance Generators (nl locale)", () => {
     it("generates Dutch department names", () => {
       const ALL_DUTCH_DEPARTMENTS = [
-        "Elektronica", "Kleding", "Huis", "Tuin", "Speelgoed", "Boeken", "Beauty",
-        "Auto", "Sport", "Gezondheid", "Schoenen", "Sieraden", "Horloges", "Muziek",
-        "Films", "Gereedschap", "Dierenbenodigdheden", "Baby", "Kantoorartikelen", "Levensmiddelen",
+        "Elektronica",
+        "Kleding",
+        "Huis",
+        "Tuin",
+        "Speelgoed",
+        "Boeken",
+        "Beauty",
+        "Auto",
+        "Sport",
+        "Gezondheid",
+        "Schoenen",
+        "Sieraden",
+        "Horloges",
+        "Muziek",
+        "Films",
+        "Gereedschap",
+        "Dierenbenodigdheden",
+        "Baby",
+        "Kantoorartikelen",
+        "Levensmiddelen",
       ];
       const dept = generators.commerce.department(prng, nlCtx);
       expect(ALL_DUTCH_DEPARTMENTS).toContain(dept);
@@ -65,7 +82,18 @@ describe("Localization", () => {
 
     it("generates Dutch transaction types", () => {
       const tt = generators.finance.transactionType(prng, nlCtx);
-      const dutchTTs = ["storting", "opname", "betaling", "factuur", "restitutie", "overschrijving", "incasso", "salaris", "rente", "dividend"];
+      const dutchTTs = [
+        "storting",
+        "opname",
+        "betaling",
+        "factuur",
+        "restitutie",
+        "overschrijving",
+        "incasso",
+        "salaris",
+        "rente",
+        "dividend",
+      ];
       expect(dutchTTs).toContain(tt);
     });
   });
@@ -73,8 +101,9 @@ describe("Localization", () => {
   describe("Locale Switching", () => {
     it("default world uses English locale for first names", () => {
       const schema = z.object({ firstName: z.string() });
-      const names = Array.from({ length: 10 }, (_, seed) =>
-        createWorld({ seed }).generate(schema).firstName,
+      const names = Array.from(
+        { length: 10 },
+        (_, seed) => createWorld({ seed }).generate(schema).firstName,
       );
       expect(names.every((n) => typeof n === "string" && n.length >= 2)).toBe(true);
       expect(names.every((n) => /^[A-Z]/.test(n))).toBe(true);
@@ -82,11 +111,13 @@ describe("Localization", () => {
 
     it("nl locale produces different names than default en locale", () => {
       const schema = z.object({ voornaam: z.string() });
-      const enNames = Array.from({ length: 10 }, (_, seed) =>
-        createWorld({ seed }).generate(schema).voornaam,
+      const enNames = Array.from(
+        { length: 10 },
+        (_, seed) => createWorld({ seed }).generate(schema).voornaam,
       );
-      const nlNames = Array.from({ length: 10 }, (_, seed) =>
-        createWorld({ seed, locale: nl }).generate(schema).voornaam,
+      const nlNames = Array.from(
+        { length: 10 },
+        (_, seed) => createWorld({ seed, locale: nl }).generate(schema).voornaam,
       );
       expect(enNames).not.toEqual(nlNames);
     });

@@ -16,18 +16,18 @@ this practice.
   "looks" right.
 - **Two complementary mechanisms:** committed **Playwright** tests for durable, CI re-runnable
   regression (written by the `test-writer` for UI scenarios); the **Chrome DevTools MCP** for
-  the reviewer to *drive and inspect the live app* (navigate/click/type, DOM + a11y tree,
+  the reviewer to _drive and inspect the live app_ (navigate/click/type, DOM + a11y tree,
   console + network, perf traces) and **capture a screenshot** as evidence.
 - **Never** drive the browser with ad-hoc `node`/`python` scripts — use Playwright or the MCP.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "The unit test passed, so the UI works." | Render it and exercise it — wiring, layout, and runtime errors only show in a browser. |
-| "A screenshot proves it." | A screenshot is evidence, not verification — *drive* the golden path and assert the outcome. |
-| "The console errors are unrelated." | A console error or failed request on the path is a finding; investigate, don't wave it through. |
-| "I'll assert the element is at x=240." | Assert by role/text; coordinates break on every layout tweak. |
+| Excuse                                   | Reality                                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| "The unit test passed, so the UI works." | Render it and exercise it — wiring, layout, and runtime errors only show in a browser.          |
+| "A screenshot proves it."                | A screenshot is evidence, not verification — _drive_ the golden path and assert the outcome.    |
+| "The console errors are unrelated."      | A console error or failed request on the path is a finding; investigate, don't wave it through. |
+| "I'll assert the element is at x=240."   | Assert by role/text; coordinates break on every layout tweak.                                   |
 
 ## Red flags
 

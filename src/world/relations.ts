@@ -33,9 +33,7 @@ export function relationCacheKey(
   relName: string,
   kind: RelationCacheKind,
 ): string {
-  return kind === "many"
-    ? `${recordId}:${relName}:many`
-    : `${recordId}:${relName}`;
+  return kind === "many" ? `${recordId}:${relName}:many` : `${recordId}:${relName}`;
 }
 
 /**
@@ -44,10 +42,7 @@ export function relationCacheKey(
  * prefix on the many path keeps its fork independent of the single path's
  * `rel:` fork — D4 / D10 byte-identical fork-key shape.
  */
-export function relationForkKey(
-  relName: string,
-  kind: RelationCacheKind,
-): string {
+export function relationForkKey(relName: string, kind: RelationCacheKind): string {
   return kind === "many" ? `rel-many:${relName}` : `rel:${relName}`;
 }
 

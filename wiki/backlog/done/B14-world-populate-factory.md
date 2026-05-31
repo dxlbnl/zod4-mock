@@ -9,6 +9,7 @@ spec: wiki/specs/B14-world-populate-factory.md
 ---
 
 ## Description
+
 `world.populate(schema, count)` generates `count` matcher-default records. For "N named
 records" you fall back to a loop calling `world.generate` per record — re-inventing the
 populate primitive. (GitHub issue #14.)
@@ -26,6 +27,7 @@ world.populate(UserSchema, USER_PROFILES.length, (i) => ({
 ```
 
 ## Proposal
+
 Overload `populate` to accept a per-record factory that returns `GenerateOptions`:
 
 ```ts
@@ -35,20 +37,22 @@ world.populate<TSchema extends ZodTypeAny>(
   factory?: (index: number) => GenerateOptions<TSchema>,
 ): this;
 ```
+
 The existing two-arg form remains. The factory receives the record index (0..count-1).
 
 ## Example
+
 ```ts
 const UserSchema = z.object({
   id: z.uuid(),
   username: z.string(),
-  role: z.enum(['admin', 'editor', 'viewer']),
+  role: z.enum(["admin", "editor", "viewer"]),
 });
 
 const USER_PROFILES = [
-  { username: 'admin',  role: 'admin'  },
-  { username: 'editor', role: 'editor' },
-  { username: 'viewer', role: 'viewer' },
+  { username: "admin", role: "admin" },
+  { username: "editor", role: "editor" },
+  { username: "viewer", role: "viewer" },
 ] as const;
 
 world.withSchema(UserSchema);
@@ -58,6 +62,7 @@ world.populate(UserSchema, USER_PROFILES.length, (i) => ({
 ```
 
 ## Pairs naturally with
+
 - **B8 identity-preserving derived schemas** — the factory could also return `{ source }`
   for derived schemas, making this a unified entry point for "populate this many, here's
   the per-record context."
@@ -70,6 +75,7 @@ world.populate(UserSchema, USER_PROFILES.length, (i) => ({
   ```
 
 ## Open questions (resolve in spec)
+
 - **Factory signature**: `(i: number) => GenerateOptions` (issue's proposal) vs.
   `(i: number) => Partial<input<T>>` (overrides-only sugar). The issue picks
   `GenerateOptions` for full control (overrides + transform + future flags). Adopt.
@@ -77,6 +83,7 @@ world.populate(UserSchema, USER_PROFILES.length, (i) => ({
   same seed. Document.
 
 ## Notes
+
 - Small surface, big readability win — removes the "if I want overrides I lose populate"
   friction.
 - Public API change → update `docs/api-reference.md`.

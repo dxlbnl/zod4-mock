@@ -26,9 +26,12 @@ This is a healthy start. The problems below are places where that composition br
 ## Problem 1: `domainWord` generates Dutch pseudo-words
 
 **Current:**
+
 ```typescript
 export function domainWord(prng: Prng): string {
-  return noun(prng).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return noun(prng)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 ```
 
@@ -52,7 +55,9 @@ export function domainWord(prng: Prng): string {
     return prng.pick(COMPANY_PREFIXES).toLowerCase();
   }
   // Fallback: Markov-generated word (after Markov implementation)
-  return noun(prng).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return noun(prng)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 ```
 
@@ -63,6 +68,7 @@ This makes `domainName()`, `url()`, and `email()` all look immediately more real
 ## Problem 2: `url()` path segment is also a pseudo-word
 
 **Current:**
+
 ```typescript
 export function url(prng: Prng): string {
   return `https://${domainName(prng)}/${domainWord(prng)}`;
@@ -75,9 +81,24 @@ The path (`/sloecht`) looks wrong for a URL. Real URL paths look like `/products
 
 ```typescript
 const URL_PATHS = [
-  "products", "dashboard", "profile", "settings", "articles",
-  "docs", "api", "blog", "about", "contact", "search", "help",
-  "orders", "invoices", "reports", "users", "admin", "status",
+  "products",
+  "dashboard",
+  "profile",
+  "settings",
+  "articles",
+  "docs",
+  "api",
+  "blog",
+  "about",
+  "contact",
+  "search",
+  "help",
+  "orders",
+  "invoices",
+  "reports",
+  "users",
+  "admin",
+  "status",
 ] as const;
 
 export function urlPath(prng: Prng): string {
@@ -129,9 +150,10 @@ Now `platform()` and `browser()` become usable standalone generators, available 
 ## Problem 4: `bio()` doesn't know anything about the person
 
 **Current:**
+
 ```typescript
 export function bio(prng: Prng): string {
-  return sentence(prng);   // a random Dutch pseudo-sentence
+  return sentence(prng); // a random Dutch pseudo-sentence
 }
 ```
 
@@ -142,10 +164,13 @@ A bio that doesn't reference the person's job, name, or any context feels hollow
 ```typescript
 export function bio(prng: Prng): string {
   const templates: [() => string, ...(() => string)[]] = [
-    () => `${jobType(prng)} ${jobTitle(prng).toLowerCase()} specialised in ${jobArea(prng).toLowerCase()}.`,
-    () => `Works as a ${jobTitle(prng).toLowerCase()} with a focus on ${jobArea(prng).toLowerCase()}.`,
+    () =>
+      `${jobType(prng)} ${jobTitle(prng).toLowerCase()} specialised in ${jobArea(prng).toLowerCase()}.`,
+    () =>
+      `Works as a ${jobTitle(prng).toLowerCase()} with a focus on ${jobArea(prng).toLowerCase()}.`,
     () => `${prng.int(2, 15)}+ years experience as a ${jobTitle(prng).toLowerCase()}.`,
-    () => `${jobDescriptor(prng)} ${jobTitle(prng).toLowerCase()} at the intersection of ${jobArea(prng).toLowerCase()} and ${jobArea(prng).toLowerCase()}.`,
+    () =>
+      `${jobDescriptor(prng)} ${jobTitle(prng).toLowerCase()} at the intersection of ${jobArea(prng).toLowerCase()} and ${jobArea(prng).toLowerCase()}.`,
   ];
   return prng.pick(templates)();
 }
@@ -169,8 +194,8 @@ export function name(prng: Prng): string {
     () => `${prng.pick(COMPANY_PREFIXES)} ${lastName(prng)}`,
     () => `${lastName(prng)} Systemen`,
     // NEW: tech-style naming
-    () => `${prng.pick(COMPANY_PREFIXES)}${prng.pick(BUZZ_NOUNS_EN)}`,  // "NexusPlatform"
-    () => `${prng.pick(TECH_WORDS_CAPITALIZED)} ${prng.pick(COMPANY_SUFFIXES)}`,  // "Delta Tech"
+    () => `${prng.pick(COMPANY_PREFIXES)}${prng.pick(BUZZ_NOUNS_EN)}`, // "NexusPlatform"
+    () => `${prng.pick(TECH_WORDS_CAPITALIZED)} ${prng.pick(COMPANY_SUFFIXES)}`, // "Delta Tech"
   ];
   return prng.pick(formats)();
 }
@@ -185,6 +210,7 @@ This also makes `domainWord` ↔ `company.name` composition richer: a company's 
 `vehicle.ts` has Dutch color names (`"Rood"`, `"Blauw"`, etc.) as `color()`. There is no generator for CSS/HTML colors used in UI contexts (`"#3a7bd5"`, `"rgb(58, 123, 213)"`, `"coral"`).
 
 These are two different things and shouldn't share a generator. After the color module is added:
+
 - `vehicle.color()` → locale-aware color name (Dutch for `nl`, English for `en`)
 - `color.hex()`, `color.rgb()`, `color.name()` → a new `color.ts` module for UI/CSS contexts
 
@@ -193,9 +219,11 @@ These are two different things and shouldn't share a generator. After the color 
 ## Problem 7: `jwt()` uses hex, not base64url
 
 **Current:**
+
 ```typescript
 export function jwt(prng: Prng): string {
-  const segment = (len: number) => Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
+  const segment = (len: number) =>
+    Array.from({ length: len }, () => prng.int(0, 15).toString(16)).join("");
   return `${segment(36)}.${segment(64)}.${segment(42)}`;
 }
 ```
@@ -205,7 +233,10 @@ Real JWTs are three base64url-encoded segments (header, payload, signature). The
 **Proposed:** Base64url-encode small deterministic blocks for each segment. The structure matters more than the content:
 
 ```typescript
-const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split("") as [string, ...string[]];
+const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split("") as [
+  string,
+  ...string[],
+];
 
 function base64urlSegment(prng: Prng, len: number): string {
   return Array.from({ length: len }, () => prng.pick(BASE64URL)).join("");
@@ -223,12 +254,13 @@ After the `prng.bytes()` implementation, this becomes: one `bytes()` call per se
 
 ## Summary of Proposed New Modules
 
-| New module | Key generators | Feeds into |
-|------------|---------------|-----------|
-| `system.ts` | `platform`, `browser`, `userAgent`, `mimeType`, `fileExtension`, `filePath`, `fileName`, `semver` | key map for OS/browser/file fields |
-| `color.ts` | `colorHex`, `colorRgb`, `colorHsl`, `colorName` | key map for `color`, `backgroundColor`, `textColor` fields |
+| New module  | Key generators                                                                                    | Feeds into                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `system.ts` | `platform`, `browser`, `userAgent`, `mimeType`, `fileExtension`, `filePath`, `fileName`, `semver` | key map for OS/browser/file fields                         |
+| `color.ts`  | `colorHex`, `colorRgb`, `colorHsl`, `colorName`                                                   | key map for `color`, `backgroundColor`, `textColor` fields |
 
 And one new generator function worth extracting from existing modules:
+
 - `internet.urlPath()` — currently inlined in `url()`; useful standalone
 
 ---

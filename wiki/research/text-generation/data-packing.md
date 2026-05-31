@@ -16,12 +16,12 @@ V8 skips string tokenization and calls `.split()` natively in optimized C++ code
 
 **Apply only to large static lists that will never be individually tree-shaken.** This is the key constraint.
 
-| Situation | Use packing? |
-|-----------|:---:|
-| A 500-name corpus in a built-in locale file | ✅ |
-| A 50-entry list inside a locale module users import whole | ✅ |
-| Individual exported `const` arrays users may import selectively | ❌ |
-| Any list under ~50 entries (parse overhead is trivial) | ❌ |
+| Situation                                                       | Use packing? |
+| --------------------------------------------------------------- | :----------: |
+| A 500-name corpus in a built-in locale file                     |      ✅      |
+| A 50-entry list inside a locale module users import whole       |      ✅      |
+| Individual exported `const` arrays users may import selectively |      ❌      |
+| Any list under ~50 entries (parse overhead is trivial)          |      ❌      |
 
 ## The Tree-Shaking Conflict
 
@@ -32,7 +32,7 @@ A packed string cannot be tree-shaken:
 const names = "Alice|Bob|Charlie|...".split("|");
 ```
 
-Individual exports *can* be tree-shaken:
+Individual exports _can_ be tree-shaken:
 
 ```typescript
 export const maleNames   = ["James", "John", "Robert", ...];

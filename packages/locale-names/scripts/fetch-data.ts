@@ -28,7 +28,7 @@ const dataDir = join(__dirname, "../data/training");
 // Names with fewer than this many registrations in the Dutch registry are
 // excluded from the Dutch corpus. Other-origin groups use a much lower bar
 // (ORIGIN_MIN_FREQ) because they're rare in Dutch regardless.
-const DUTCH_MIN_FREQ  = 500;
+const DUTCH_MIN_FREQ = 500;
 const ORIGIN_MIN_FREQ = 5;
 
 async function fetchText(url: string): Promise<string> {
@@ -55,10 +55,22 @@ try {
   );
 
   const groups = ["dutch", "arabic", "turkish", "south-asian", "frisian"] as const;
-  type Group = typeof groups[number];
+  type Group = (typeof groups)[number];
 
-  const male:   Record<Group, string[]> = { dutch: [], arabic: [], turkish: [], "south-asian": [], frisian: [] };
-  const female: Record<Group, string[]> = { dutch: [], arabic: [], turkish: [], "south-asian": [], frisian: [] };
+  const male: Record<Group, string[]> = {
+    dutch: [],
+    arabic: [],
+    turkish: [],
+    "south-asian": [],
+    frisian: [],
+  };
+  const female: Record<Group, string[]> = {
+    dutch: [],
+    arabic: [],
+    turkish: [],
+    "south-asian": [],
+    frisian: [],
+  };
 
   for (const entry of allNames) {
     const name = entry.Voornaam.toLowerCase();
@@ -69,12 +81,12 @@ try {
     if (group === "dutch") {
       // High threshold — only the most-used names pass. At this level the corpus
       // is overwhelmingly Dutch/Germanic; rare international names fall below it.
-      if (entry.Mannen  >= DUTCH_MIN_FREQ) male.dutch.push(name);
+      if (entry.Mannen >= DUTCH_MIN_FREQ) male.dutch.push(name);
       if (entry.Vrouwen >= DUTCH_MIN_FREQ) female.dutch.push(name);
     } else {
       // Other-origin names are already rare in the Dutch registry; a low floor
       // is enough to exclude obvious data errors.
-      if (entry.Mannen  >= ORIGIN_MIN_FREQ) male[group].push(name);
+      if (entry.Mannen >= ORIGIN_MIN_FREQ) male[group].push(name);
       if (entry.Vrouwen >= ORIGIN_MIN_FREQ) female[group].push(name);
     }
   }
@@ -84,7 +96,7 @@ try {
     const f = [...new Set(female[group])];
     if (m.length === 0 && f.length === 0) continue;
     mkdirSync(join(dataDir, group), { recursive: true });
-    if (m.length > 0) writeFileSync(join(dataDir, group, "male.txt"),   m.join("\n"), "utf8");
+    if (m.length > 0) writeFileSync(join(dataDir, group, "male.txt"), m.join("\n"), "utf8");
     if (f.length > 0) writeFileSync(join(dataDir, group, "female.txt"), f.join("\n"), "utf8");
     console.log(`  ✓ ${group}/male.txt (${m.length}), ${group}/female.txt (${f.length})`);
   }
@@ -102,7 +114,9 @@ try {
     .slice(1)
     .map((l) => l.split(",")[0]?.toLowerCase().trim())
     .filter((n): n is string => !!n && /^[a-z ]+$/.test(n))
-    .map((n) => n.replace(/^(de|van|van de[rn]?|van den|van der|ten|ter|den|der|het|'t)\s+/i, "").trim())
+    .map((n) =>
+      n.replace(/^(de|van|van de[rn]?|van den|van der|ten|ter|den|der|het|'t)\s+/i, "").trim(),
+    )
     .filter((n) => /^[a-z]{3,}$/.test(n));
 
   writeFileSync(join(dataDir, "dutch/last-names.txt"), [...new Set(names)].join("\n"), "utf8");
@@ -119,20 +133,26 @@ console.log("Fetching English first names (arineng/arincli)…");
 try {
   mkdirSync(join(dataDir, "english"), { recursive: true });
 
-  const clean = (text: string): string[] =>
-    [...new Set(
-      text.split("\n")
+  const clean = (text: string): string[] => [
+    ...new Set(
+      text
+        .split("\n")
         .map((n) => n.trim().toLowerCase())
         .filter((n) => /^[a-z]{3,10}$/.test(n)),
-    )];
+    ),
+  ];
 
-  const maleRaw   = await fetchText("https://raw.githubusercontent.com/arineng/arincli/master/lib/male-first-names.txt");
-  const femaleRaw = await fetchText("https://raw.githubusercontent.com/arineng/arincli/master/lib/female-first-names.txt");
+  const maleRaw = await fetchText(
+    "https://raw.githubusercontent.com/arineng/arincli/master/lib/male-first-names.txt",
+  );
+  const femaleRaw = await fetchText(
+    "https://raw.githubusercontent.com/arineng/arincli/master/lib/female-first-names.txt",
+  );
 
-  const maleNames   = clean(maleRaw);
+  const maleNames = clean(maleRaw);
   const femaleNames = clean(femaleRaw);
 
-  writeFileSync(join(dataDir, "english/male.txt"),   maleNames.join("\n"),   "utf8");
+  writeFileSync(join(dataDir, "english/male.txt"), maleNames.join("\n"), "utf8");
   writeFileSync(join(dataDir, "english/female.txt"), femaleNames.join("\n"), "utf8");
   console.log(`  ✓ english/male.txt   (${maleNames.length} names)`);
   console.log(`  ✓ english/female.txt (${femaleNames.length} names)`);

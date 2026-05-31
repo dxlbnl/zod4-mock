@@ -18,14 +18,14 @@ One world = one seed = one deterministic dataset. All schemas registered on a wo
 
 ### Options
 
-| Option                | Type                           | Default      | Description                                                     |
-| --------------------- | ------------------------------ | ------------ | --------------------------------------------------------------- |
-| `seed`                | `number`                       | _(required)_ | Master seed. Same seed → same output.                           |
+| Option                | Type                           | Default      | Description                                                                                                                                                                |
+| --------------------- | ------------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seed`                | `number`                       | _(required)_ | Master seed. Same seed → same output.                                                                                                                                      |
 | `locale`              | `LocaleData`                   | minimal `en` | Active locale. Defaults to a built-in minimal English locale; import a richer one from `@zod4-mock/locale-en` / `@zod4-mock/locale-nl`. See [Localization](#localization). |
-| `optionalProbability` | `number`                       | `0.2`        | Chance that `z.optional()` / `z.nullable()` fields are omitted. |
-| `defaultArrayLength`  | `[number, number]`             | `[1, 5]`     | Fallback array length when no `.min()` / `.max()` is set.       |
-| `generators`          | `Record<string, KeyGenerator>` | `{}`         | Custom key-based generators applied globally.                   |
-| `recursionLimit`      | `number`                       | `8`          | Max depth for self-referential / recursive schemas.             |
+| `optionalProbability` | `number`                       | `0.2`        | Chance that `z.optional()` / `z.nullable()` fields are omitted.                                                                                                            |
+| `defaultArrayLength`  | `[number, number]`             | `[1, 5]`     | Fallback array length when no `.min()` / `.max()` is set.                                                                                                                  |
+| `generators`          | `Record<string, KeyGenerator>` | `{}`         | Custom key-based generators applied globally.                                                                                                                              |
+| `recursionLimit`      | `number`                       | `8`          | Max depth for self-referential / recursive schemas.                                                                                                                        |
 
 ---
 
@@ -194,8 +194,8 @@ For realistic output, install a locale package and pass it to `createWorld`:
 
 ```ts
 import { createWorld } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";       // Markov-trained English
-import { nl } from "@zod4-mock/locale-nl";       // Markov-trained Dutch
+import { en } from "@zod4-mock/locale-en"; // Markov-trained English
+import { nl } from "@zod4-mock/locale-nl"; // Markov-trained Dutch
 
 createWorld({ seed: 42, locale: en });
 createWorld({ seed: 42, locale: nl });

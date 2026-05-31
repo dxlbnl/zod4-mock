@@ -64,11 +64,12 @@ title: <title>
 type: <type>
 priority: <priority>
 flags: <[review] | []>
-mode: lite              # OMIT this line for full (the default)
+mode: lite # OMIT this line for full (the default)
 created: <today YYYY-MM-DD>
 ---
 
 ## Description
+
 <the description from step 2, or "(to be elaborated by spec-writer)">
 
 ## Notes

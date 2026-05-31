@@ -18,7 +18,7 @@ is asymmetric**: reads expose the output shape (`z.infer<T>`), writes still acce
 input shape (`input<T>`). It mirrors how `z.coerce` works (input permissive, output
 fixed). Matchers and `GenerateOptions.overrides` stay input-shaped so a matcher on a
 `coerce.date()` field can still return `string | number | Date` — flexibility is kept
-where data flows *in*, fixity is gained where data flows *out*.
+where data flows _in_, fixity is gained where data flows _out_.
 
 This also **retrofits the just-landed B4 and B6 signatures**:
 [wiki/specs/B4-registry-find.md](B4-registry-find.md) (B4-R1) typed `registry.find` with
@@ -114,7 +114,7 @@ registry.
 `World.get` in `src/types.ts` MUST be retyped so its **return value** is `z.infer<TSchema>`
 (matching what the registry now returns from the find path and what `generate` returns on
 the create path). Its **`predicate` parameter** MUST remain `Partial<input<TSchema>>` —
-predicates flow *in*, mirroring matcher returns and the shape `overrides` accepts. This
+predicates flow _in_, mirroring matcher returns and the shape `overrides` accepts. This
 supersedes B6-R1's `input<TSchema>` return-type clause for `get`. The required signature
 is:
 

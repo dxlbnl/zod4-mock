@@ -8,7 +8,7 @@ exist." `registry.find` (B4, [wiki/specs/B4-registry-find.md](B4-registry-find.m
 `undefined` with no auto-create, and the caller must also remember to feed the predicate
 value back as an `overrides` when generating. `ctx.related` is for declared relationships,
 not ad-hoc lookups by domain key. This pattern recurs in MSW handlers — the URL carries a
-parameter (`/products/:sku`) and the handler wants the *same* mocked product every time
+parameter (`/products/:sku`) and the handler wants the _same_ mocked product every time
 that URL is hit. (Item card: [wiki/backlog/doing/B6-world-get-find-or-create.md](../backlog/doing/B6-world-get-find-or-create.md);
 GitHub issue #4.)
 
@@ -26,12 +26,12 @@ needs `world.generate` — matchers, overrides, and the full resolution pipeline
 `SchemaRegistry` is a pure data store (its constructor takes only a `Prng`, with no
 world/`generate` reference). Putting find-or-create on the registry would require injecting a
 `generate` back-reference into the store, creating a circular dependency. So `registry.find`
-(B4) stays the pure-lookup primitive and `World.get` *composes* `find` + `generate`. This
+(B4) stays the pure-lookup primitive and `World.get` _composes_ `find` + `generate`. This
 choice changes no requirement below — `get` was already specified on `World`; it is recorded
 here so the boundary is explicit.
 
 One implementation nuance that shapes the requirements below: `generate` only writes a
-record into the registry when the schema is registered as a *primary* schema (via
+record into the registry when the schema is registered as a _primary_ schema (via
 `withSchema`) or auto-provisioned through a relation. For an **unregistered, ad-hoc object
 schema**, `generate` takes its ad-hoc branch and does **not** store the result. Because
 `get`'s idempotence depends on the created record being discoverable by a later `find`,
@@ -85,7 +85,7 @@ matches (see B6-R9). The returned value MUST be the same instance held in the re
   GIVEN a world that has stored a `nodeSchema` record with `externalId === "ext-1"` and
   `tenantId === "t-1"`, and another with `externalId === "ext-1"` and `tenantId === "t-2"`
   WHEN `world.get(nodeSchema, { externalId: "ext-1", tenantId: "t-1" })` is called
-  THEN it returns the record whose `tenantId` is `"t-1"` (the one where *every* predicate key
+  THEN it returns the record whose `tenantId` is `"t-1"` (the one where _every_ predicate key
   matches), not the `"t-2"` record.
 
 ### B6-R3: create path — generate with predicate as overrides, store, and return
@@ -173,7 +173,7 @@ not by reference identity.
   GIVEN a world that has stored a `nodeSchema` record whose `meta` field deep-equals
   `{ region: "eu", zone: 1 }`
   WHEN `world.get(nodeSchema, { meta: { region: "eu", zone: 1 } })` is called with a
-  *different object instance* that deep-equals that `meta`
+  _different object instance_ that deep-equals that `meta`
   THEN it returns the existing stored record (a value match), and does not generate a new one
   (`registry.count(nodeSchema)` is unchanged).
 
@@ -218,7 +218,7 @@ throwing.)
 - Removing a record, updating an existing record's non-key fields to match a later predicate,
   or any mutation of already-stored records. `get` either returns an existing record as-is or
   creates a new one.
-- Cross-schema lookup, or lookup by schema *string* name — the registry is keyed by schema
+- Cross-schema lookup, or lookup by schema _string_ name — the registry is keyed by schema
   object reference (same constraint as B4).
 - Changes to `registry.find`, `generate`, `populate`, or the resolution-order pipeline beyond
   adding `get` and ensuring the created record is stored.

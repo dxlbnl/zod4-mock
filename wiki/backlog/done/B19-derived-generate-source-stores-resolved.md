@@ -8,16 +8,17 @@ created: 2026-05-28
 ---
 
 ## Description
+
 User reported (against 0.6.1) that `world.generate(DerivedSchema, { source: record })`
 returns a value but does not persist to the registry — asymmetric vs primary schemas
 where `generate` does store. The natural setup pattern was silently broken:
 
 ```ts
-for (const file of world.registry.filter(FileSchema, (f) => f.dataType === 'AUDIO')) {
+for (const file of world.registry.filter(FileSchema, (f) => f.dataType === "AUDIO")) {
   world.generate(AudioDetailsSchema, { source: file });
   //   ↑ returned but NOT stored
 }
-world.registry.count(AudioDetailsSchema);  // 0
+world.registry.count(AudioDetailsSchema); // 0
 ```
 
 (GitHub issue #20.)
@@ -61,6 +62,7 @@ Once closed on GitHub, move this card to `done/` with `flags: [cancelled]` (or r
 it entirely — it's bookkeeping).
 
 ## Notes
+
 - `flags: [cancelled]` — tracking marker, no code change. Implementation already shipped
   in B8 (commit `948bd71`, 0.7.0). Closed via `(closes #20)` on the cancel commit; GitHub
   auto-closes on next push.

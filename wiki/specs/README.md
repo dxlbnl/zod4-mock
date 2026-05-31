@@ -2,7 +2,7 @@
 
 Detailed feature and bug specs live here — **one page per item**, created and refined by
 the `spec-writer` agent from a backlog item card in `wiki/backlog/`. These are wiki
-pages, not a separate source of truth: the wiki *is* the spec.
+pages, not a separate source of truth: the wiki _is_ the spec.
 
 Each spec page is named after its backlog item (e.g. `B3-user-login.md`) and is linked
 from its item card's `spec:` frontmatter field. Individual specs are **not** listed in
@@ -15,30 +15,30 @@ When a new spec lands, append a row here with the spec's headline (the one-liner
 captures the bug fix or feature). Drop rows when the underlying behaviour is
 superseded.
 
-| Spec | Summary |
-|------|---------|
-| [B4](B4-registry-find.md) | `registry.find()` — single-record predicate lookup. |
-| [B5](B5-related-many.md) | `ctx.related.many(name, count)` — one-to-many relation picks in matchers. |
-| [B6](B6-world-get-find-or-create.md) | `world.get(schema, predicate)` — find-or-generate by predicate. |
-| [B7](B7-registry-output-typing.md) | Registry reads / `World.get` return `z.infer<T>` (output shape); writes stay `input<T>`. |
-| [B8](B8-derived-schemas-identity.md) | `world.generate(D, { source })` is per-pair upsert by source identity; `{ unique: false }` opt-out; `sourceKey` for look-alike identity. |
-| [B10](B10-generate-store-opt-out.md) | `world.generate(schema, { store: false })` ephemeral opt-out; propagates through nested generation. |
-| [B11](B11-relations-predicate-filter.md) | `relations` accepts `{ schema, where? }`; `where` filters the candidate pool; empty filtered pool throws. |
-| [B12](B12-nested-override-skips-matcher.md) | BUG: nested-object overrides skipped the matcher; fix deep-merges override on top of matcher result. |
-| [B13](B13-world-populate-from.md) | `world.populateFrom(derivedSchema, sourceSchema, predicate?, factory?)` — iterate source registry, idempotent via B8. |
-| [B14](B14-world-populate-factory.md) | `world.populate` accepts an optional per-record factory returning `GenerateOptions<TSchema>`. |
-| [B15](B15-prng-pick-readonly-and-verify-shuffle-sample.md) | `Prng.pick` accepts `readonly T[]`; pin `shuffle`/`sample` on the shared interface; `prepublishOnly` guard on locale packages. |
-| [B16](B16-surface-key-match-list.md) | `world.explain(schema)` debug helper + regenerated `docs/key-heuristics.md`. |
-| [B17](B17-record-enum-exhaustive-keys.md) | BUG: `z.record(z.enum([...]), V)` now emits one entry per enum member in declared order. |
-| [B18](B18-deepmerge-atomic-objects.md) | BUG: `deepMerge` recursed into `Date`/`Map`/`Set`/`RegExp`/class instances; fix adds a plain-object guard. |
-| [B20](B20-store-false-empty-from-crash.md) | BUG: `generate(D, { store: false })` with no `source` and empty `from:` registry crashed; fix captures auto-provisioned source locally. |
-| [B23](B23-promote-per-field-pipeline-to-list.md) | CHORE: per-field pipeline promoted to a canonical `PIPELINE` list in `src/pipeline.ts` (D11). |
-| [B24](B24-decompose-generate-single-item.md) | CHORE: `generateSingleItem` decomposed into four named methods; closes B21 by adding the missing no-source-derived store. |
-| [B38](B38-primary-array-overrides-dropped.md) | BUG: `generate(primaryArraySchema, { overrides })` silently dropped per-index overrides; fix throws + redirects to `populate`. |
-| [B39](B39-stable-identity-based-fork-keys.md) | BUG: replaced `generationCounter`-derived PRNG fork keys with stable per-schema identity-based ones (D10). |
-| [B40](B40-ctx-gen-ignores-locale.md) | BUG: `ctx.gen.<ns>.<fn>()` dropped the configured locale; fix injects the active `GeneratorContext` as a default `ctx` arg. |
-| [B44](B44-primary-array-store-false-hangs.md) | BUG: `generate(primaryArraySchema, { store: false })` hung forever; fix decouples the loop from `registry.count` under `!effectiveStore`. |
-| [B47](B47-forbid-dual-primary-derived-registration.md) | BUG: `withSchema` throws at registration time when a schema is registered as both primary and derived (resolves B41's silent dispatch divergence). |
+| Spec                                                       | Summary                                                                                                                                            |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [B4](B4-registry-find.md)                                  | `registry.find()` — single-record predicate lookup.                                                                                                |
+| [B5](B5-related-many.md)                                   | `ctx.related.many(name, count)` — one-to-many relation picks in matchers.                                                                          |
+| [B6](B6-world-get-find-or-create.md)                       | `world.get(schema, predicate)` — find-or-generate by predicate.                                                                                    |
+| [B7](B7-registry-output-typing.md)                         | Registry reads / `World.get` return `z.infer<T>` (output shape); writes stay `input<T>`.                                                           |
+| [B8](B8-derived-schemas-identity.md)                       | `world.generate(D, { source })` is per-pair upsert by source identity; `{ unique: false }` opt-out; `sourceKey` for look-alike identity.           |
+| [B10](B10-generate-store-opt-out.md)                       | `world.generate(schema, { store: false })` ephemeral opt-out; propagates through nested generation.                                                |
+| [B11](B11-relations-predicate-filter.md)                   | `relations` accepts `{ schema, where? }`; `where` filters the candidate pool; empty filtered pool throws.                                          |
+| [B12](B12-nested-override-skips-matcher.md)                | BUG: nested-object overrides skipped the matcher; fix deep-merges override on top of matcher result.                                               |
+| [B13](B13-world-populate-from.md)                          | `world.populateFrom(derivedSchema, sourceSchema, predicate?, factory?)` — iterate source registry, idempotent via B8.                              |
+| [B14](B14-world-populate-factory.md)                       | `world.populate` accepts an optional per-record factory returning `GenerateOptions<TSchema>`.                                                      |
+| [B15](B15-prng-pick-readonly-and-verify-shuffle-sample.md) | `Prng.pick` accepts `readonly T[]`; pin `shuffle`/`sample` on the shared interface; `prepublishOnly` guard on locale packages.                     |
+| [B16](B16-surface-key-match-list.md)                       | `world.explain(schema)` debug helper + regenerated `docs/key-heuristics.md`.                                                                       |
+| [B17](B17-record-enum-exhaustive-keys.md)                  | BUG: `z.record(z.enum([...]), V)` now emits one entry per enum member in declared order.                                                           |
+| [B18](B18-deepmerge-atomic-objects.md)                     | BUG: `deepMerge` recursed into `Date`/`Map`/`Set`/`RegExp`/class instances; fix adds a plain-object guard.                                         |
+| [B20](B20-store-false-empty-from-crash.md)                 | BUG: `generate(D, { store: false })` with no `source` and empty `from:` registry crashed; fix captures auto-provisioned source locally.            |
+| [B23](B23-promote-per-field-pipeline-to-list.md)           | CHORE: per-field pipeline promoted to a canonical `PIPELINE` list in `src/pipeline.ts` (D11).                                                      |
+| [B24](B24-decompose-generate-single-item.md)               | CHORE: `generateSingleItem` decomposed into four named methods; closes B21 by adding the missing no-source-derived store.                          |
+| [B38](B38-primary-array-overrides-dropped.md)              | BUG: `generate(primaryArraySchema, { overrides })` silently dropped per-index overrides; fix throws + redirects to `populate`.                     |
+| [B39](B39-stable-identity-based-fork-keys.md)              | BUG: replaced `generationCounter`-derived PRNG fork keys with stable per-schema identity-based ones (D10).                                         |
+| [B40](B40-ctx-gen-ignores-locale.md)                       | BUG: `ctx.gen.<ns>.<fn>()` dropped the configured locale; fix injects the active `GeneratorContext` as a default `ctx` arg.                        |
+| [B44](B44-primary-array-store-false-hangs.md)              | BUG: `generate(primaryArraySchema, { store: false })` hung forever; fix decouples the loop from `registry.count` under `!effectiveStore`.          |
+| [B47](B47-forbid-dual-primary-derived-registration.md)     | BUG: `withSchema` throws at registration time when a schema is registered as both primary and derived (resolves B41's silent dispatch divergence). |
 
 ## Spec ↔ item card pairing
 

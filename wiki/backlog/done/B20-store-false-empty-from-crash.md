@@ -24,8 +24,8 @@ populated the `from:` schema, with an opaque `TypeError` from inside the library
 ### Repro (from #21)
 
 ```ts
-import { z } from 'zod';
-import { createWorld } from 'zod4-mock';
+import { z } from "zod";
+import { createWorld } from "zod4-mock";
 
 const Source = z.object({ id: z.uuid(), name: z.string() });
 const Derived = z.object({ sourceId: z.uuid(), label: z.string() });
@@ -73,7 +73,7 @@ else if (derivedRegs.length > 0) {
 }
 ```
 
-The auto-provisioning intent is "make sure there's *something* to derive from",
+The auto-provisioning intent is "make sure there's _something_ to derive from",
 but it assumes `generateAndStorePrimary` stores unconditionally. Under
 `store: false` (B10 / B10-R2 — propagated `effectiveStore`), it doesn't, so the
 assumption breaks.
@@ -91,6 +91,7 @@ assumption breaks.
 spec-writer to decide and pin in the spec.
 
 ## Notes
+
 - GitHub issue: [#21](https://github.com/dxlbnl/zod4-mock/issues/21).
 - Related: B10 (the `{ store: false }` opt-out that introduced `effectiveStore`), B8
   (per-`(DerivedSchema, source)` upsert).

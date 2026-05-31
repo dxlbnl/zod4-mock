@@ -8,24 +8,68 @@ const PLATFORMS = ["windows", "macos", "linux", "ios", "android"] as const;
 const BROWSERS = ["chrome", "firefox", "safari", "edge"] as const;
 
 const FILE_EXTENSIONS = [
-  "pdf", "jpg", "png", "gif", "mp4", "csv", "json", "xml",
-  "zip", "docx", "xlsx", "txt", "md", "html", "ts", "js",
+  "pdf",
+  "jpg",
+  "png",
+  "gif",
+  "mp4",
+  "csv",
+  "json",
+  "xml",
+  "zip",
+  "docx",
+  "xlsx",
+  "txt",
+  "md",
+  "html",
+  "ts",
+  "js",
 ] as const;
 
 const MIME_TYPES = [
-  "application/json", "text/plain", "text/html", "image/jpeg",
-  "image/png", "video/mp4", "application/pdf", "text/csv",
-  "application/zip", "application/xml", "image/gif", "text/markdown",
+  "application/json",
+  "text/plain",
+  "text/html",
+  "image/jpeg",
+  "image/png",
+  "video/mp4",
+  "application/pdf",
+  "text/csv",
+  "application/zip",
+  "application/xml",
+  "image/gif",
+  "text/markdown",
 ] as const;
 
 const FILE_NAME_BASES = [
-  "document", "report", "invoice", "image", "photo", "backup",
-  "export", "data", "archive", "config", "notes", "log", "output",
+  "document",
+  "report",
+  "invoice",
+  "image",
+  "photo",
+  "backup",
+  "export",
+  "data",
+  "archive",
+  "config",
+  "notes",
+  "log",
+  "output",
 ] as const;
 
 const DIR_COMPONENTS = [
-  "documents", "downloads", "projects", "data", "config",
-  "logs", "backup", "exports", "assets", "uploads", "src", "dist",
+  "documents",
+  "downloads",
+  "projects",
+  "data",
+  "config",
+  "logs",
+  "backup",
+  "exports",
+  "assets",
+  "uploads",
+  "src",
+  "dist",
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -24,7 +24,10 @@ function resolveLazyChain(schema: ZodTypeAny, cache: WeakMap<ZodTypeAny, ZodType
   let s = schema;
   while (def(s).type === "lazy") {
     const cached = cache.get(s);
-    if (cached) { s = cached; continue; }
+    if (cached) {
+      s = cached;
+      continue;
+    }
     const resolved = def(s).getter();
     cache.set(s, resolved);
     s = resolved;
@@ -36,6 +39,7 @@ function resolveLazyChain(schema: ZodTypeAny, cache: WeakMap<ZodTypeAny, ZodType
 Cuts ~30 LOC and one drift risk. XS, mechanical.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#9**.
 - Dimension: 3 #5.
 - Size: **XS**.

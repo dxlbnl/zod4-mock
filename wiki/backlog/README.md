@@ -6,12 +6,12 @@ subdirectory the item file lives in. Items move from `inbox/` → `ready/` → `
 
 ## Lanes
 
-| Lane | Meaning |
-|---|---|
-| `inbox/` | Captured but not yet scoped. New items land here. |
+| Lane     | Meaning                                                                                                                                                  |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inbox/` | Captured but not yet scoped. New items land here.                                                                                                        |
 | `ready/` | Has the artifact its track needs to start work (spec for features/bugs; clear question for research; clear ask for chores). The manager pulls from here. |
-| `doing/` | Currently being worked. The manager moves at most one item here at a time. |
-| `done/` | Reviewer passed and the full test suite is green (one commit made). |
+| `doing/` | Currently being worked. The manager moves at most one item here at a time.                                                                               |
+| `done/`  | Reviewer passed and the full test suite is green (one commit made).                                                                                      |
 
 ## Item card format
 
@@ -21,18 +21,20 @@ One file per item: `wiki/backlog/<lane>/B<n>-<slug>.md`.
 ---
 id: B3
 title: User login
-type: feature           # feature | bug | research | chore
-priority: high          # high | medium | low
-flags: [review]         # optional; review = pause for approval, needs-answers = awaiting user answers, blocked = stuck
-mode: lite              # optional (feature/bug); lite = trivial behavior-neutral change, skip spec + tests-first. Omit for full (default)
+type: feature # feature | bug | research | chore
+priority: high # high | medium | low
+flags: [review] # optional; review = pause for approval, needs-answers = awaiting user answers, blocked = stuck
+mode: lite # optional (feature/bug); lite = trivial behavior-neutral change, skip spec + tests-first. Omit for full (default)
 created: 2026-05-14
-spec: wiki/specs/B3-user-login.md   # populated once the spec page exists
+spec: wiki/specs/B3-user-login.md # populated once the spec page exists
 ---
 
 ## Description
+
 <one paragraph in the user's voice — the "why" and rough "what">
 
 ## Notes
+
 <links, gotchas, history — agents append here as work progresses>
 ```
 
@@ -41,12 +43,12 @@ For non-feature items, replace `spec:` with the artifact path the track produces
 
 ## Tracks (the manager dispatches on `type:`)
 
-| Type | Track |
-|---|---|
-| `feature` | `spec-writer` → `test-writer` → `implementer` → `reviewer` |
-| `bug` | same as `feature`, plus `test-writer` MUST add a regression test for the reported failure; `reviewer` confirms it |
-| `research` | `researcher` specialist → `wiki/research/<topic>.md` → `reviewer` confirms findings answer the question |
-| `chore` | `implementer` → `reviewer` (no spec, no tests-first) — dep bumps, doc reorgs, infra |
+| Type       | Track                                                                                                             |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| `feature`  | `spec-writer` → `test-writer` → `implementer` → `reviewer`                                                        |
+| `bug`      | same as `feature`, plus `test-writer` MUST add a regression test for the reported failure; `reviewer` confirms it |
+| `research` | `researcher` specialist → `wiki/research/<topic>.md` → `reviewer` confirms findings answer the question           |
+| `chore`    | `implementer` → `reviewer` (no spec, no tests-first) — dep bumps, doc reorgs, infra                               |
 
 A `feature`/`bug` with **`mode: lite`** runs a lighter track — `implementer` →
 `reviewer (lite)`, no spec page, no tests-first — when it passes the lite gate below.
@@ -62,6 +64,7 @@ item may carry `mode: lite` to skip the spec page and tests-first; its contract 
 `## Description` plus a one-line acceptance note.
 
 **Lite gate — `mode: lite` is honored only if ALL hold:**
+
 - touches **≤ ~a handful of files** and adds **no new dependency**;
 - makes **no schema, API, or public-contract change**;
 - introduces **no new observable behavior that warrants a test**;
@@ -72,8 +75,8 @@ If any fails → **full**. When in doubt → **full**. A `bug` that fixes real b
 honoring lite and **auto-promotes to full** if a change turns out bigger; lite is never a
 tests-first bypass for real behavior.
 
-**`chore` vs `lite`:** `chore` is *non-product* work (dep bumps, infra, doc reorgs); `lite` is
-a *trivial product* change that's behavior-neutral. Keep them distinct.
+**`chore` vs `lite`:** `chore` is _non-product_ work (dep bumps, infra, doc reorgs); `lite` is
+a _trivial product_ change that's behavior-neutral. Keep them distinct.
 
 ## Conventions
 

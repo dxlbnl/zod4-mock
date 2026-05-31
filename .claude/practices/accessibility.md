@@ -14,11 +14,11 @@ Load for any item that ships user-facing UI.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
-| "Our users use a mouse." | Keyboard + screen-reader access is the contract for UI, not an extra. |
-| "We'll do a11y in a later pass." | Retrofitting is far costlier; bake it into the component now. |
-| "Screen readers are a niche." | Accessible names also drive tests, automation, and SEO. |
+| Excuse                           | Reality                                                               |
+| -------------------------------- | --------------------------------------------------------------------- |
+| "Our users use a mouse."         | Keyboard + screen-reader access is the contract for UI, not an extra. |
+| "We'll do a11y in a later pass." | Retrofitting is far costlier; bake it into the component now.         |
+| "Screen readers are a niche."    | Accessible names also drive tests, automation, and SEO.               |
 
 ## Red flags
 

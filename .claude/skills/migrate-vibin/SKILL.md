@@ -22,7 +22,7 @@ The seed repo contains two kinds of files. Classify every changed file before to
   project needs the latest version.
 - **Seed-meta (NEVER written into a project):** `migrations/**`, `CHANGELOG.md`, `docs/**`,
   and the repo-root `README.md`. These document Vibin's own evolution; a project needs only
-  the *effects* of a migration, not the migration files or Vibin's changelog/proposals. The
+  the _effects_ of a migration, not the migration files or Vibin's changelog/proposals. The
   skill **reads** `migrations/NNNN-*.md` from GitHub to learn each migration's content-aware
   steps and **applies** those steps, but it **never creates** these files in the project.
   (`.vibin-version` is the one marker a project keeps — this skill updates it.)
@@ -47,7 +47,7 @@ migration touches the wiki, so you must be working from the current source of tr
   than improvising `curl`/`python3 -c` calls — keeps it to one approval, deterministic, and
   CLAUDE.md-compliant (a committed project tool, not an ad-hoc invocation).
 - **The diff itself tells you what to run.** Which migrations apply = the
-  `migrations/NNNN-*.md` files that are *newly added* between BASE and LATEST. There is no
+  `migrations/NNNN-*.md` files that are _newly added_ between BASE and LATEST. There is no
   version-number arithmetic — the script stages each new migration so you read it and follow
   its content-aware steps (e.g. 0001 says to triage `wiki/decisions.md` and promote the
   standing constraints into `architecture.md`'s Rules section).
@@ -55,9 +55,11 @@ migration touches the wiki, so you must be working from the current source of tr
 ## Procedure
 
 ### 1. Run the planner (one command)
+
 ```
 python3 .claude/skills/migrate-vibin/migrate-plan.py
 ```
+
 This is the only network/diffing step. It reads BASE from `.vibin-version`, fetches LATEST
 (head of `dxlbnl/vibin` main), compares them, classifies every changed file, **applies the
 safe child-machinery files itself** (those unchanged locally — adopting LATEST is provably
@@ -82,17 +84,20 @@ the user for the commit the project was cloned from and re-run with it as an arg
 `python3 .claude/skills/migrate-vibin/migrate-plan.py <BASE_HASH>`.
 
 ### 2. Apply each new migration's content-aware steps
+
 For every file under `.vibin-migrate/migrations/`, read it and follow its
 `## Apply — project content` steps against the project's **own** wiki (`Read`/`Edit`/`Write`
 — no network). This is the judgment work the script deliberately leaves to you. **Never
 rewrite the body of a past `wiki/decisions.md` entry** (append-only).
 
 ### 3. Reconcile the customized files
+
 For each **RECONCILE** file, read `.vibin-migrate/base/<path>`, `.vibin-migrate/latest/<path>`,
 and the local file, and hand-merge the BASE→LATEST change into the local copy without losing
 the customization.
 
 ### 4. Verify (read-only — no Bash, no prompts)
+
 Run each applied migration's `## Verify` checks using the **`Grep`/`Read`/`Glob` tools**, not
 Bash. These tools are auto-allowed, so verification never triggers a permission prompt. Do
 **not** shell out to `grep`/`python3 -m py_compile`/`rm` for this — in particular, the planner
@@ -100,6 +105,7 @@ already ran in step 1 (so it provably works; no re-compile needed) and direct sc
 create no `__pycache__` to clean.
 
 ### 5. Record and commit
+
 - Write the **LATEST** hash (printed by the script) to `.vibin-version`.
 - Remove the staging dir with the same tool (already allow-listed, no extra prompt):
   `python3 .claude/skills/migrate-vibin/migrate-plan.py --clean`.
@@ -107,12 +113,14 @@ create no `__pycache__` to clean.
   `chore: migrate Vibin seed to <short-hash>`. Do not push unless the user asks.
 
 ### 6. Report
+
 State: BASE → LATEST hashes, files applied wholesale, files reconciled by hand (and how),
 content-aware wiki steps applied, and anything that needs the user's attention.
 
 ## Rules
+
 - **Never write seed-meta into the project.** `migrations/**`, `CHANGELOG.md`, `docs/**`,
-  and the repo-root `README.md` are Vibin's own evolution log — a project gets the *effects*
+  and the repo-root `README.md` are Vibin's own evolution log — a project gets the _effects_
   of a migration, never the files. Read migrations from GitHub for their steps; do not copy
   them, the changelog, the proposals, or Vibin's README into the project.
 - **The planner classifies; it only auto-writes the safe set.** It overwrites a

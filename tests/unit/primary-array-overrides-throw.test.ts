@@ -95,16 +95,15 @@ describe("B38-R1: throw when per-index overrides target a primary-registered arr
     // Sanity: registry is empty before the call.
     expect(world.registry.count(ProductSchema)).toBe(0);
 
-    const overrides: Array<{ category: "alpha" }> = Array.from(
-      { length: 4 },
-      () => ({ category: "alpha" as const }),
-    );
+    const overrides: Array<{ category: "alpha" }> = Array.from({ length: 4 }, () => ({
+      category: "alpha" as const,
+    }));
 
     // RED today: the call returns silently and writes 4 (un-overridden)
     // records. Post-B38: the call throws BEFORE any record is generated.
-    expect(() =>
-      world.generate(ProductSchema.array().min(4).max(4), { overrides }),
-    ).toThrow(/world\.populate\(schema, count, factory\)/);
+    expect(() => world.generate(ProductSchema.array().min(4).max(4), { overrides })).toThrow(
+      /world\.populate\(schema, count, factory\)/,
+    );
 
     // No partial write — the throw fires at the top of the branch, before
     // any record is generated. (Today, this assertion ALSO fails: the
@@ -115,10 +114,9 @@ describe("B38-R1: throw when per-index overrides target a primary-registered arr
   it("B38-R1 / error message is actionable (names the right API)", () => {
     const world = createWorld({ seed: 1 }).withSchema(ProductSchema);
 
-    const overrides: Array<{ category: "alpha" }> = Array.from(
-      { length: 4 },
-      () => ({ category: "alpha" as const }),
-    );
+    const overrides: Array<{ category: "alpha" }> = Array.from({ length: 4 }, () => ({
+      category: "alpha" as const,
+    }));
 
     let caught: unknown;
     try {
@@ -130,9 +128,7 @@ describe("B38-R1: throw when per-index overrides target a primary-registered arr
     // RED today: nothing is thrown, so `caught` is `undefined`.
     expect(caught).toBeDefined();
     expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toContain(
-      "world.populate(schema, count, factory)",
-    );
+    expect((caught as Error).message).toContain("world.populate(schema, count, factory)");
   });
 });
 
@@ -146,14 +142,10 @@ describe("B38-R2: empty / absent overrides keep today's behaviour byte-equivalen
   it("B38-R2 / no-options primary-array call is byte-equivalent across identically-seeded worlds (GUARD)", () => {
     // Two independent worlds, same seed, same registration order, same call.
     const a = createWorld({ seed: 1 }).withSchema(SimpleProductSchema);
-    const A = JSON.stringify(
-      a.generate(SimpleProductSchema.array().min(4).max(4)),
-    );
+    const A = JSON.stringify(a.generate(SimpleProductSchema.array().min(4).max(4)));
 
     const b = createWorld({ seed: 1 }).withSchema(SimpleProductSchema);
-    const B = JSON.stringify(
-      b.generate(SimpleProductSchema.array().min(4).max(4)),
-    );
+    const B = JSON.stringify(b.generate(SimpleProductSchema.array().min(4).max(4)));
 
     // No throw on either side, and the two captures are byte-identical.
     expect(A).toBe(B);
@@ -190,11 +182,7 @@ describe("B38-R3: ad-hoc array branch keeps per-element deepMerge semantics", ()
     const world = createWorld({ seed: 1 });
 
     const items: z.infer<typeof Item>[] = world.generate(Item.array().length(3), {
-      overrides: [
-        { label: "first" },
-        { label: "second" },
-        { label: "third" },
-      ],
+      overrides: [{ label: "first" }, { label: "second" }, { label: "third" }],
     });
 
     expect(items).toHaveLength(3);
@@ -239,9 +227,7 @@ describe("B38-R4: world.populate(schema, count, factory) is unaffected", () => {
     }
 
     expect(world.registry.count(ProductSchema)).toBe(12);
-    expect(
-      world.registry.all(ProductSchema).map((p) => p.category),
-    ).toEqual([
+    expect(world.registry.all(ProductSchema).map((p) => p.category)).toEqual([
       "alpha",
       "alpha",
       "alpha",

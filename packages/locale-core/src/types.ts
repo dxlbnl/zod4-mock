@@ -74,7 +74,10 @@ export interface LocaleData {
     jobDescriptors: readonly string[];
     formatFullName: (first: string, last: string) => string;
     /** Returns a bio sentence using a locale-specific template. */
-    formatBio: (prng: Prng, parts: { jobTitle: string; jobArea: string; jobType: string }) => string;
+    formatBio: (
+      prng: Prng,
+      parts: { jobTitle: string; jobArea: string; jobType: string },
+    ) => string;
   };
 
   address: {
@@ -109,7 +112,12 @@ export interface LocaleData {
     currencyCode: string;
     formatPrice: (amount: number) => string;
     formatProductName: (adjective: string, material: string, noun: string) => string;
-    formatProductDescription: (parts: { productName: string; adjective: string; noun: string; department: string }) => string;
+    formatProductDescription: (parts: {
+      productName: string;
+      adjective: string;
+      noun: string;
+      department: string;
+    }) => string;
   };
 
   company: {

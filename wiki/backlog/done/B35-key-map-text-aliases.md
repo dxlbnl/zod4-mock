@@ -18,9 +18,16 @@ Replace with a programmatic build:
 
 ```ts
 const TEXT_ALIASES = [
-  "text", "description", "note", "summary", "comment",
-  "body", "content", "message",
-  "omschrijving", "bericht",  // nl
+  "text",
+  "description",
+  "note",
+  "summary",
+  "comment",
+  "body",
+  "content",
+  "message",
+  "omschrijving",
+  "bericht", // nl
 ] as const;
 
 for (const k of TEXT_ALIASES) DEFAULT_KEY_MAP[k] = textWithLength;
@@ -31,6 +38,7 @@ Cuts ~80 LOC. Move the constant into a small `key-aliases.ts` data file so the
 table reads as data, not literal.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#13**.
 - Dimension: 2 #3.
 - Size: **XS**.

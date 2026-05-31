@@ -54,7 +54,7 @@ wiki/                # Vibin workflow source of truth (this directory)
   access is type-cast and intentional. (→ D3)
 - Generation **MUST** be deterministic per `(seed + schema reference + per-schema call slot)`;
   call order across distinct schemas **MUST NOT** affect any value. Determinism is keyed on
-  schema *reference* identity (a module-global `WeakMap<ZodTypeAny, number>`), not structural
+  schema _reference_ identity (a module-global `WeakMap<ZodTypeAny, number>`), not structural
   equality — two separately-constructed `z.object(...)`s produce independent fork keys. Within
   a single record, per-field PRNG `fork(fieldName)` ensures field-name order doesn't disturb
   other fields. Construct schemas once at module scope and reuse them for stable mock data

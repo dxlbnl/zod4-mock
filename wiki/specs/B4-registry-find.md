@@ -6,7 +6,7 @@ The `Registry` ([src/registry.ts](../../src/registry.ts), interface in
 [src/types.ts](../../src/types.ts)) is the in-memory store backing cross-API consistency
 (`wiki/requirements.md` R6: relations keep IDs consistent via the registry). It currently
 exposes `store`, `all`, `pick`, `filter`, and `count`. There is no first-class way to look
-up *one specific* stored record by a property: `pick` is random, `filter` returns a `T[]`,
+up _one specific_ stored record by a property: `pick` is random, `filter` returns a `T[]`,
 and `all` returns everything. Matchers that want "the one user named `admin`" or "the person
 with this `personId`" today write `filter(schema, pred)[0]`, which obscures intent and — via
 the `T[]` return — does not force the caller to handle the absence case.
@@ -18,7 +18,7 @@ item card: [wiki/backlog/doing/B4-registry-find.md](../backlog/doing/B4-registry
 (GitHub issue #2).
 
 The real `Registry` interface generic-binds the schema, not the record: each method is
-`<T extends ZodTypeAny>(schema: T, …)` and types records as `input<T>` — *not* the card's
+`<T extends ZodTypeAny>(schema: T, …)` and types records as `input<T>` — _not_ the card's
 illustrative `<T = unknown>`. `find` MUST follow the existing interface convention so the
 predicate parameter and return are typed `input<T>` with no `any` (Rules: no `any`). The
 implementation file uses `.js` import extensions (Rules: Node16 ESM); the new method adds no
@@ -106,7 +106,7 @@ same arguments MUST return the same record (no randomness, no determinism concer
 
 - A throwing variant (`findOrThrow`) — explicitly deferred to a possible later item per the
   issue; not added here.
-- Finding across multiple schemas at once, or by schema *string* name (the registry is keyed
+- Finding across multiple schemas at once, or by schema _string_ name (the registry is keyed
   by schema object reference, not by name).
 - `findLast`, `findIndex`, or returning all matches — `filter` already covers the multi-match
   case.

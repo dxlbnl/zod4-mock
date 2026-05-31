@@ -84,9 +84,7 @@ type RelationEntry = ZodTypeAny | WhereEntry<ZodTypeAny>;
 
 interface SchemaOptsBridged {
   readonly relations?: Readonly<Record<string, RelationEntry>>;
-  readonly matchers?: Readonly<
-    Record<string, (ctx: GeneratorContext) => unknown>
-  >;
+  readonly matchers?: Readonly<Record<string, (ctx: GeneratorContext) => unknown>>;
 }
 
 function withSchemaWhere<TSchema extends ZodTypeAny>(
@@ -96,10 +94,7 @@ function withSchemaWhere<TSchema extends ZodTypeAny>(
 ): World {
   // Single, scoped bridge cast through `unknown`. The eventual implementation
   // accepts this shape natively; the cast disappears with B11-R1.
-  return (world.withSchema as unknown as (
-    s: TSchema,
-    o: SchemaOptsBridged,
-  ) => World)(schema, opts);
+  return (world.withSchema as unknown as (s: TSchema, o: SchemaOptsBridged) => World)(schema, opts);
 }
 
 // Helper: pull `.id` off a relation pick without a call-site cast — the

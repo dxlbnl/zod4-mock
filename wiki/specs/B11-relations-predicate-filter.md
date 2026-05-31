@@ -25,9 +25,9 @@ carries a `where` predicate:
 ```ts
 world.withSchema(CommentSchema, {
   relations: {
-    post: { schema: PostSchema, where: (p) => p.kind === 'article' },
+    post: { schema: PostSchema, where: (p) => p.kind === "article" },
   },
-  matchers: { postId: (ctx) => ctx.related('post').id },
+  matchers: { postId: (ctx) => ctx.related("post").id },
 });
 ```
 
@@ -36,9 +36,9 @@ world.withSchema(CommentSchema, {
 ```ts
 world.withSchema(DigestSchema, {
   relations: {
-    items: { schema: PostSchema, where: (p) => p.kind === 'article' },
+    items: { schema: PostSchema, where: (p) => p.kind === "article" },
   },
-  matchers: { posts: (ctx) => ctx.related.many('items', 5) },
+  matchers: { posts: (ctx) => ctx.related.many("items", 5) },
 });
 ```
 
@@ -70,7 +70,7 @@ sketches:
   `z.infer<RelationSchema>[]`. The `where` parameter type is therefore
   `(item: z.infer<RelationSchema>) => boolean`. No cast at the matcher call site, no
   `any` (Rules → D1).
-- **Filter site.** The filter applies to the candidate pool *before* sampling — in
+- **Filter site.** The filter applies to the candidate pool _before_ sampling — in
   `resolveRelated` immediately before the `pickedIdx = relPrng.int(0, items.length - 1)`
   draw ([src/world.ts](../../src/world.ts) lines 442–478), and in
   `resolveRelatedMany` before `relPrng.sample(items, count)`
@@ -519,20 +519,20 @@ non-empty line MUST be `(closes #11)`, matching the convention of sibling change
 
 ## Open questions
 
-- **Predicate input type — `input<T>` vs `z.infer<T>`.** *Non-blocking.* Adopted as
+- **Predicate input type — `input<T>` vs `z.infer<T>`.** _Non-blocking._ Adopted as
   `z.infer<T>` (the **output** shape) per [B7](B7-registry-output-typing.md): the
   candidate pool is read from `registry.all(relSchema)`, which is output-typed under
   B7-R1; the predicate sees what the matcher consumes. No cast, no `any`. Recorded;
   not blocking.
 - **Evaluation timing — re-evaluate per record vs cache at registration / first
-  resolve.** *Non-blocking.* Adopted as **re-evaluate per record** (B11-R5): the
+  resolve.** _Non-blocking._ Adopted as **re-evaluate per record** (B11-R5): the
   filter is part of the per-record snapshot build, so records added to the registry
   between two record generations are observed by the second. Within a single record's
   generation, the snapshot is record-scoped and immutable (B5-R5 stability holds).
   This is consistent with how `relationPools` is already keyed per-record and is the
   simplest model for mutable registries. Recorded; not blocking.
 - **Empty filtered pool behaviour — throw vs ignore-predicate-on-auto-provision.**
-  *Non-blocking.* Adopted as **throw** (option (a), B11-R6): the predicate is the
+  _Non-blocking._ Adopted as **throw** (option (a), B11-R6): the predicate is the
   user's contract, and silently returning an arbitrary auto-provisioned record that
   fails `where` would break that contract. Option (b) (auto-provision ignoring the
   predicate) is rejected — it would couple the silent contract violation to an

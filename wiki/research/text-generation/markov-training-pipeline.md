@@ -40,22 +40,22 @@ Sourcing good training data is the most important step. Poor data → poor outpu
 
 ### English (`en`)
 
-| Data type | Source | Size | License |
-|-----------|--------|------|---------|
-| First names | US SSA baby names (ssa.gov/oact/babynames) | 100k+ names | Public domain |
-| Last names | US Census Bureau surname list (census.gov) | 150k+ names | Public domain |
-| Nouns / adjectives / verbs | WordNet lemma lists (wordnet.princeton.edu) | ~155k lemmas | Princeton WordNet license (permissive) |
-| Common words | CMU Pronouncing Dictionary | ~134k entries | Public domain |
+| Data type                  | Source                                      | Size          | License                                |
+| -------------------------- | ------------------------------------------- | ------------- | -------------------------------------- |
+| First names                | US SSA baby names (ssa.gov/oact/babynames)  | 100k+ names   | Public domain                          |
+| Last names                 | US Census Bureau surname list (census.gov)  | 150k+ names   | Public domain                          |
+| Nouns / adjectives / verbs | WordNet lemma lists (wordnet.princeton.edu) | ~155k lemmas  | Princeton WordNet license (permissive) |
+| Common words               | CMU Pronouncing Dictionary                  | ~134k entries | Public domain                          |
 
 The SSA baby names file is released annually as a zip of per-year CSVs. A pre-processing script should deduplicate across years and normalize casing.
 
 ### Dutch (`nl`)
 
-| Data type | Source | Size | License |
-|-----------|--------|------|---------|
+| Data type   | Source                                              | Size  | License   |
+| ----------- | --------------------------------------------------- | ----- | --------- |
 | First names | Meertens Instituut voornamenbank (meertens.knaw.nl) | ~10k+ | Open data |
-| Last names | CBS top-10,000 Nederlandse achternamen (cbs.nl) | 10k | Open data |
-| Words | OpenTaal woordenlijst (opentaal.org) | 350k | GPL / BSD |
+| Last names  | CBS top-10,000 Nederlandse achternamen (cbs.nl)     | 10k   | Open data |
+| Words       | OpenTaal woordenlijst (opentaal.org)                | 350k  | GPL / BSD |
 
 OpenTaal's word list is large enough to need filtering before training — use a frequency-filtered subset (top 20k lemmas) to keep the model focused on common vocabulary.
 
@@ -71,15 +71,16 @@ OpenTaal's word list is large enough to need filtering before training — use a
 //     --name   enFirstNamesModel
 
 interface CliOptions {
-  input:  string;   // path to newline-delimited word list
-  output: string;   // path to write the .ts file
-  order:  number;   // Markov order (default: 2)
-  prior:  number;   // Dirichlet smoothing value (default: 0.01)
-  name:   string;   // exported constant name
+  input: string; // path to newline-delimited word list
+  output: string; // path to write the .ts file
+  order: number; // Markov order (default: 2)
+  prior: number; // Dirichlet smoothing value (default: 0.01)
+  name: string; // exported constant name
 }
 ```
 
 The script:
+
 1. Reads the input file, lowercases, deduplicates
 2. Iterates all words, extracting n-gram → successor counts
 3. Applies Dirichlet smoothing to each row
@@ -93,13 +94,13 @@ The output file is pure data — no imports, no logic.
 ```typescript
 // src/types.ts (or src/generators/data/markov/types.ts)
 export interface MarkovModel {
-  order:  number;
-  prior:  number;
+  order: number;
+  prior: number;
   // Deduplicated character alphabet for this model
-  chars:  string;          // e.g. "abcdefghijklmnopqrstuvwxyz$"
+  chars: string; // e.g. "abcdefghijklmnopqrstuvwxyz$"
   // Transition table: bigram key → Float32Array of cumulative weights
   // Each Float32Array has the same length as chars
-  table:  Record<string, Float32Array>;
+  table: Record<string, Float32Array>;
 }
 ```
 
@@ -156,16 +157,21 @@ Run `pnpm verify` and look for these failure modes. Each has a specific cause an
 ### Failure: words are too long ("Risharoumas", "Rencorviccol")
 
 **Cause A — corpus pollution.** The training corpus contains very long entries (compound words, multi-part names) that teach the model long n-gram chains are valid. Check:
+
 ```bash
 awk '{ print length, $0 }' data/training/first-names-male.txt | sort -rn | head -20
 ```
+
 If you see entries > 10 chars ("Soerinderpersad", "Shailinderkumar"), those are poisoning the bigram table.
 
 **Fix: filter the corpus by length before training.** Add a `maxWordLen` option to the train call:
+
 ```typescript
 await trainMarkov({ ..., maxWordLen: 10 });  // drop any entry > 10 chars
 ```
+
 Inside `train-markov.ts`, apply this after deduplication:
+
 ```typescript
 .filter(w => w.length <= (opts.maxWordLen ?? Infinity))
 ```
@@ -173,14 +179,16 @@ Inside `train-markov.ts`, apply this after deduplication:
 **Cause B — no length steering in the sampler.** `sampleMarkov` follows the raw CDF until `maxLen`. For diverse corpora many states have low `$` probability — the sampler just runs to the wall.
 
 **Fix: add a length-bias check in `sampleMarkov`.** After the word exceeds a soft threshold, apply a progressive early-stop probability before the CDF draw:
+
 ```typescript
 // After the word reaches softMax, probability of stopping grows linearly to 1 at maxLen
-const softMax = Math.floor(maxLen * 0.6);   // e.g. 6 if maxLen=10
+const softMax = Math.floor(maxLen * 0.6); // e.g. 6 if maxLen=10
 if (word.length >= minLen && word.length >= softMax) {
   const stopProb = (word.length - softMax) / (maxLen - softMax);
   if (prng.random() < stopProb) break;
 }
 ```
+
 At `softMax` the stop probability is 0%; at `maxLen-1` it reaches ~90%. This produces a natural length distribution rather than a hard wall.
 
 ---
@@ -206,9 +214,10 @@ Order-3 increases state count from ~600 to ~3,000–6,000 for a typical name cor
 **Cause: corpus dominated by compound words.** Dutch compound nouns starting with `aan-`, `be-`, `ge-`, `ver-` etc. each appear once, but collectively they overwhelm the starting bigrams. If 30% of training nouns start with `aan`, the model starts 30% of generated nouns with `aan`.
 
 **Fix: strip compound words from the noun corpus.** Remove any word starting with a known Dutch compound prefix before training:
+
 ```typescript
 const COMPOUND_PREFIXES = ["aan", "be", "ge", "her", "ont", "over", "ver", "uit", "in"];
-const filtered = words.filter(w => !COMPOUND_PREFIXES.some(p => w.startsWith(p)));
+const filtered = words.filter((w) => !COMPOUND_PREFIXES.some((p) => w.startsWith(p)));
 ```
 
 Or, more robustly: filter to words appearing with high frequency in common Dutch text, discarding rare compound forms entirely.
@@ -220,24 +229,26 @@ Or, more robustly: filter to words appearing with high frequency in common Dutch
 **Cause: the corpus contains very short entries.** The training data may include nicknames, initials, or abbreviated forms (e.g. "a", "aa", "aad").
 
 **Fix: filter by minimum length** in the train script:
+
 ```typescript
 .filter(w => w.length >= (opts.minWordLen ?? 1))
 ```
+
 For first names set `minWordLen: 3`. For nouns, `minWordLen: 4`.
 
-The sampler's `minLen` parameter handles *generation* — but if the model was trained on short entries, it still learns high `$` probability at length 2–3, producing many short outputs even when `minLen` is set higher (since it resets and tries again, sometimes re-entering the same short path).
+The sampler's `minLen` parameter handles _generation_ — but if the model was trained on short entries, it still learns high `$` probability at length 2–3, producing many short outputs even when `minLen` is set higher (since it resets and tries again, sometimes re-entering the same short path).
 
 ---
 
 ## Recommended Parameters per Model Type
 
-| Model type | `order` | `maxWordLen` (corpus filter) | `minWordLen` (corpus filter) | `maxLen` (sampler) | `softMax` (sampler) |
-|------------|:-------:|:----------------------------:|:----------------------------:|:-------------------:|:--------------------:|
-| First names | 3 | 10 | 3 | 10 | 6 |
-| Last names | 2 | 12 | 3 | 12 | 7 |
-| Nouns | 2 | 8 | 4 | 8 | 5 |
-| Adjectives | 2 | 10 | 4 | 10 | 6 |
-| Verbs | 2 | 10 | 3 | 10 | 6 |
+| Model type  | `order` | `maxWordLen` (corpus filter) | `minWordLen` (corpus filter) | `maxLen` (sampler) | `softMax` (sampler) |
+| ----------- | :-----: | :--------------------------: | :--------------------------: | :----------------: | :-----------------: |
+| First names |    3    |              10              |              3               |         10         |          6          |
+| Last names  |    2    |              12              |              3               |         12         |          7          |
+| Nouns       |    2    |              8               |              4               |         8          |          5          |
+| Adjectives  |    2    |              10              |              4               |         10         |          6          |
+| Verbs       |    2    |              10              |              3               |         10         |          6          |
 
 The sampler parameters (`maxLen`, `softMax`) should be passed per call-site, not stored in the model — they are generation preferences, not corpus properties.
 

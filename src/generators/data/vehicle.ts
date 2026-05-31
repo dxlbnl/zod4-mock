@@ -68,7 +68,16 @@ const COLORS = [
   "Brons",
   "Matzwart",
 ] as const;
-const FUELS = ["Benzine", "Diesel", "Elektrisch", "Hybride", "Waterstof", "LPG", "CNG", "PHEV"] as const;
+const FUELS = [
+  "Benzine",
+  "Diesel",
+  "Elektrisch",
+  "Hybride",
+  "Waterstof",
+  "LPG",
+  "CNG",
+  "PHEV",
+] as const;
 
 const MODELS = [
   "Model 3",
@@ -104,7 +113,21 @@ const MODELS = [
   "Model S",
   "Model X",
 ] as const;
-const BICYCLE_BRANDS = ["Gazelle", "Batavus", "VanMoof", "Giant", "Specialized", "Trek", "Cortina", "Stella", "Koga", "Sparta", "Pegasus", "Canyon", "Cube"] as const;
+const BICYCLE_BRANDS = [
+  "Gazelle",
+  "Batavus",
+  "VanMoof",
+  "Giant",
+  "Specialized",
+  "Trek",
+  "Cortina",
+  "Stella",
+  "Koga",
+  "Sparta",
+  "Pegasus",
+  "Canyon",
+  "Cube",
+] as const;
 
 const VIN_CHARS = "0123456789ABCDEFGHJKLMNPRSTUVWXYZ".split("") as [string, ...string[]];
 const VRM_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("") as [string, ...string[]];

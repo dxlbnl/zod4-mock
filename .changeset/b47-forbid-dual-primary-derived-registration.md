@@ -9,14 +9,14 @@ Before:
 ```ts
 const Person = z.object({ id: z.uuid(), name: z.string() });
 const world = createWorld({ seed: 1 });
-world.withSchema(Person);                          // OK — primary
-world.withSchema(Person, { from: Company });       // silently accepted; dispatchers later disagreed
+world.withSchema(Person); // OK — primary
+world.withSchema(Person, { from: Company }); // silently accepted; dispatchers later disagreed
 ```
 
 After:
 
 ```ts
-world.withSchema(Person);                          // OK — primary
-world.withSchema(Person, { from: Company });       // THROWS — already registered as primary
+world.withSchema(Person); // OK — primary
+world.withSchema(Person, { from: Company }); // THROWS — already registered as primary
 // Reversed order throws symmetrically.
 ```

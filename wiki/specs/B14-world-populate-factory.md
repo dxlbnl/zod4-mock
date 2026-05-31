@@ -6,7 +6,7 @@
 [src/world.ts](../../src/world.ts) `WorldImpl.populate`) pre-generates `count` records of
 `schema` and stores them in the registry, returning `this` for chaining. It is the
 matcher-default primitive for "I just need N of these." The moment a caller needs
-*per-record* control — N **named** records, N records each with a different `overrides`
+_per-record_ control — N **named** records, N records each with a different `overrides`
 value — they fall out of `populate` into a `for`-loop calling `world.generate(schema, …)`
 per record. That loop **re-invents** what `populate` already does (count, ordering,
 registry storage, fluent chaining) for the sole reason that `populate` has no per-record
@@ -138,9 +138,7 @@ factory's return value.
   GIVEN `UserSchema = z.object({ id: z.uuid(), username: z.string() })` and a world
   `createWorld({ seed: 42 }).withSchema(UserSchema)`
   WHEN the consumer calls
-  `world.populate(UserSchema, 3, (i) => ({ transform: (u) => ({ ...u, username: \`u-${i}\` }) }))`
-  THEN `world.registry.all(UserSchema).map((u) => u.username)` deep-equals
-  `["u-0", "u-1", "u-2"]` — proving the factory's `transform` ran for each record,
+  `world.populate(UserSchema, 3, (i) => ({ transform: (u) => ({ ...u, username: \`u-${i}\` }) }))`THEN`world.registry.all(UserSchema).map((u) => u.username)`deep-equals`["u-0", "u-1", "u-2"]`— proving the factory's`transform` ran for each record,
   receiving the merged value and producing the final stored shape.
 
 ### B14-R4: no-factory form is unchanged

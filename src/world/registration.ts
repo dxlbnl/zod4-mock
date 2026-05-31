@@ -69,9 +69,7 @@ export type SchemaMode =
  */
 export function isZodSchema(value: unknown): value is ZodTypeAny {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "_zod" in (value as Record<string, unknown>)
+    typeof value === "object" && value !== null && "_zod" in (value as Record<string, unknown>)
   );
 }
 
@@ -86,32 +84,22 @@ export function normalizeRelationEntry(entry: unknown): NormalizedRelation {
   ) {
     const obj = entry as { schema: unknown; where?: (item: unknown) => boolean };
     if (!isZodSchema(obj.schema)) {
-      throw new Error(
-        "Invalid relations entry: `schema` must be a Zod schema reference.",
-      );
+      throw new Error("Invalid relations entry: `schema` must be a Zod schema reference.");
     }
     return { schema: obj.schema, where: obj.where ?? null };
   }
-  throw new Error(
-    "Invalid relations entry: expected a Zod schema or `{ schema, where? }` object.",
-  );
+  throw new Error("Invalid relations entry: expected a Zod schema or `{ schema, where? }` object.");
 }
 
 // ---------------------------------------------------------------------------
 // Registration lookups
 // ---------------------------------------------------------------------------
 
-export function findPrimaryRegs(
-  schemaRegs: readonly SchemaReg[],
-  schema: ZodTypeAny,
-): SchemaReg[] {
+export function findPrimaryRegs(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaReg[] {
   return schemaRegs.filter((r) => r.schema === schema && r.from === null);
 }
 
-export function findDerivedRegs(
-  schemaRegs: readonly SchemaReg[],
-  schema: ZodTypeAny,
-): SchemaReg[] {
+export function findDerivedRegs(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaReg[] {
   return schemaRegs.filter((r) => r.schema === schema && r.from !== null);
 }
 
@@ -126,10 +114,7 @@ export function findDerivedRegs(
  * callers handle the two-level (`schema` then `targetSchema`) fallback
  * themselves where they need it.
  */
-export function resolveMode(
-  schemaRegs: readonly SchemaReg[],
-  schema: ZodTypeAny,
-): SchemaMode {
+export function resolveMode(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaMode {
   const derivedRegs = findDerivedRegs(schemaRegs, schema);
   if (derivedRegs.length > 0) return { kind: "derived", regs: derivedRegs };
   const primaryRegs = findPrimaryRegs(schemaRegs, schema);

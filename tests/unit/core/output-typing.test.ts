@@ -27,12 +27,7 @@ import { describe, it, expect } from "vitest";
 import type { ZodTypeAny, input } from "zod";
 import { z } from "zod";
 import { createWorld, generate } from "../../../src/index.js";
-import type {
-  World,
-  Registry,
-  GenerateOptions,
-  SchemaOpts,
-} from "../../../src/types.js";
+import type { World, Registry, GenerateOptions, SchemaOpts } from "../../../src/types.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixture — coerce.date() makes input and output shapes diverge.
@@ -56,10 +51,7 @@ interface B7Registry {
   store<T extends ZodTypeAny>(schema: T, item: input<T>): void;
   all<T extends ZodTypeAny>(schema: T): z.infer<T>[];
   pick<T extends ZodTypeAny>(schema: T): z.infer<T>;
-  filter<T extends ZodTypeAny>(
-    schema: T,
-    predicate: (item: z.infer<T>) => boolean,
-  ): z.infer<T>[];
+  filter<T extends ZodTypeAny>(schema: T, predicate: (item: z.infer<T>) => boolean): z.infer<T>[];
   find<T extends ZodTypeAny>(
     schema: T,
     predicate: (item: z.infer<T>) => boolean,
@@ -100,8 +92,7 @@ describe("output-typing — B7-R1: registry reads return z.infer<T>", () => {
     // RED today: registry.find expects (item: input<T>) => boolean; a predicate
     // that requires output-shape (Date) is not assignable to input-shape (unknown).
     // GREEN after B7: predicate is (item: z.infer<T>) => boolean.
-    const predicate: (item: EventOut) => boolean = (e) =>
-      e.occurredAt.getTime() > 0;
+    const predicate: (item: EventOut) => boolean = (e) => e.occurredAt.getTime() > 0;
     const found: EventOut | undefined = world.registry.find(EventSchema, predicate);
 
     expect(found).toBeDefined();
@@ -114,8 +105,7 @@ describe("output-typing — B7-R1: registry reads return z.infer<T>", () => {
 
     // RED today: same reason as `find` above — predicate parameter is input<T>.
     // GREEN after B7: predicate is z.infer<T>.
-    const predicate: (item: EventOut) => boolean = (e) =>
-      e.occurredAt instanceof Date;
+    const predicate: (item: EventOut) => boolean = (e) => e.occurredAt instanceof Date;
     const items: EventOut[] = world.registry.filter(EventSchema, predicate);
 
     expect(items.length).toBeGreaterThan(0);
@@ -296,8 +286,7 @@ describe("output-typing — B7-R5: matchers and overrides stay input-typed", () 
 
 describe("output-typing — B7-R6: no runtime parse on store or read", () => {
   it("B7-R6 / store-then-read returns the exact value passed in (===)", () => {
-    const reg: Registry = createWorld({ seed: 1 }).withSchema(EventSchema)
-      .registry;
+    const reg: Registry = createWorld({ seed: 1 }).withSchema(EventSchema).registry;
 
     const item: EventIn = { id: "e1", occurredAt: "2024-01-01" };
     reg.store(EventSchema, item);

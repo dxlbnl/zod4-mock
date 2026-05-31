@@ -220,14 +220,10 @@ describe("B16-R3: nested object fields are summarised (shallow)", () => {
     // `'schema-based:object'` and reason
     // `'nested object — call explain(<FieldSchema>) for details'`.
     expect(r.fields.address.generator).toBe("schema-based:object");
-    expect(r.fields.address.reason).toBe(
-      "nested object — call explain(<FieldSchema>) for details",
-    );
+    expect(r.fields.address.reason).toBe("nested object — call explain(<FieldSchema>) for details");
 
     expect(r.fields.profile.generator).toBe("schema-based:object");
-    expect(r.fields.profile.reason).toBe(
-      "nested object — call explain(<FieldSchema>) for details",
-    );
+    expect(r.fields.profile.reason).toBe("nested object — call explain(<FieldSchema>) for details");
 
     // Leaf fields of the nested objects MUST NOT leak into the top-level map.
     expect(Object.keys(r.fields)).not.toContain("street");
@@ -343,24 +339,12 @@ describe("B16-R7: toString() — aligned, deterministic per-line output", () => 
     // padding or to the per-rule label will break this assertion — that is
     // the point: future formatter drift cannot silently change the output
     // users paste into GitHub issues.
-    expect(out).toContain(
-      'id          → string.uuid      (key-pattern: ends with "id")',
-    );
-    expect(out).toContain(
-      'firstName   → person.firstName (exact key: "firstname")',
-    );
-    expect(out).toContain(
-      'email       → internet.email   (exact key: "email")',
-    );
-    expect(out).toContain(
-      'createdAt   → date.anytime     (key-pattern: ends with "at")',
-    );
-    expect(out).toContain(
-      'homeAddress → schema-based     (no key match, no matcher)',
-    );
-    expect(out).toContain(
-      'kind        → matcher:kind     (matcher registered via withSchema)',
-    );
+    expect(out).toContain('id          → string.uuid      (key-pattern: ends with "id")');
+    expect(out).toContain('firstName   → person.firstName (exact key: "firstname")');
+    expect(out).toContain('email       → internet.email   (exact key: "email")');
+    expect(out).toContain('createdAt   → date.anytime     (key-pattern: ends with "at")');
+    expect(out).toContain("homeAddress → schema-based     (no key match, no matcher)");
+    expect(out).toContain("kind        → matcher:kind     (matcher registered via withSchema)");
 
     // No relations on `UserSchema` → no trailing relations block, no blank
     // line, exactly six output lines.

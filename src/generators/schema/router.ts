@@ -162,7 +162,9 @@ function generatePipe(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   if (dOut.type === "transform") {
     // This is a transform (post-process).
     const input = ctx.generate(pipeIn, ctx);
-    const transformFn = (dOut as ZodDef & { transform?: (v: unknown, c: { addIssue: () => void }) => unknown }).transform;
+    const transformFn = (
+      dOut as ZodDef & { transform?: (v: unknown, c: { addIssue: () => void }) => unknown }
+    ).transform;
     if (typeof transformFn === "function") {
       try {
         // Try to apply the transformation.

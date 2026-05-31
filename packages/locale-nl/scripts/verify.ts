@@ -14,11 +14,11 @@ import {
 } from "../src/models/index.js";
 
 const models = [
-  { model: nlFirstNamesMaleModel,   name: "nlFirstNamesMaleModel" },
+  { model: nlFirstNamesMaleModel, name: "nlFirstNamesMaleModel" },
   { model: nlFirstNamesFemaleModel, name: "nlFirstNamesFemaleModel" },
-  { model: nlLastNamesModel,        name: "nlLastNamesModel" },
-  { model: nlNounsModel,            name: "nlNounsModel" },
-  { model: nlAdjectivesModel,       name: "nlAdjectivesModel" },
+  { model: nlLastNamesModel, name: "nlLastNamesModel" },
+  { model: nlNounsModel, name: "nlNounsModel" },
+  { model: nlAdjectivesModel, name: "nlAdjectivesModel" },
 ];
 
 for (const { model, name } of models) {

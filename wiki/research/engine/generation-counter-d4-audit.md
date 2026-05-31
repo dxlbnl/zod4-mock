@@ -13,11 +13,11 @@ array's `genPrng` is seeded by `gen-${counter}`. The outer-wrapper optional/null
 at [world.ts:362](../../../src/world.ts#L362) is the third call site. The B22 report's
 characterisation is accurate.
 
-**However, the call-order dependence does *not* leak into the two paths that are
+**However, the call-order dependence does _not_ leak into the two paths that are
 actually load-bearing for the library's deterministic-fixtures value proposition.**
 Registered primary schemas seed their `recordPrng` from
 [`fieldSeed(rootSeed, "reg{regId}#{recordIndex}", "")`](../../../src/world.ts#L702-L703),
-where `recordIndex` is `registry.count(schema) + pending` — *not* the counter.
+where `recordIndex` is `registry.count(schema) + pending` — _not_ the counter.
 Registered derived schemas key off
 [`"dreg{regId}#{sourceIndex}"`](../../../src/world.ts#L740-L741) — also not the counter.
 So `world.populate(Person, N)`, `world.generate(RegisteredSchema)`, and the
@@ -29,7 +29,7 @@ mode (count + per-element PRNG)**.
 exactly what makes Option (b) hazardous: changing the fork keys would re-roll every
 ad-hoc generation and every array length/element in the test suite (and the
 integration tests do exercise both). Option (a) costs almost nothing, codifies the
-already-implicit contract that `docs/api-reference.md` and B8-R9 *already* state
+already-implicit contract that `docs/api-reference.md` and B8-R9 _already_ state
 ("same seed and same call order"), and leaves a clean path for Option (b) as a future
 breaking change tied to a major version. If we ever take Option (b), the right shape is
 sketched in §"Option (b)" below; file it as a separate `bug` item, not a fold-in to
@@ -57,7 +57,7 @@ The decision entry in [`wiki/decisions.md`](../../decisions.md):
 So D4's **letter** is narrow: "per-field `fork(key)`". Its **stated consequence** is
 "adding/removing a field does not disturb other fields". The phrase **"one world = one
 seed = one dataset"** is the part the B22 report reads as the unstated full intent —
-that the *seed alone* determines the data.
+that the _seed alone_ determines the data.
 
 ### What the docs actually promise
 
@@ -86,8 +86,7 @@ calls matters.
 
 The codebase-complexity report
 [wiki/research/reports/codebase-complexity.md](../reports/codebase-complexity.md) §"Dimension 4 → Prng
-and fork(key) discipline (D4)" (lines 197-208) and cross-cutting observation #4 (line
-230) called this out as the only audit finding that smells like a possible *correctness*
+and fork(key) discipline (D4)" (lines 197-208) and cross-cutting observation #4 (line 230) called this out as the only audit finding that smells like a possible _correctness_
 issue rather than a readability one. Proposed item #5 (line 247) gave the option-a /
 option-b split this audit resolves.
 
@@ -131,6 +130,7 @@ const v1 = w.generate(X);
 ```
 
 Code path:
+
 - `WorldImpl.generate` → schema is an object (not array, not optional/nullable at the
   outer level), so falls through to `generateSingleItem`.
 - `generateSingleItem` increments `generationCounter` from `0 → 1`.
@@ -155,13 +155,14 @@ const v1 = w.generate(X);
 ```
 
 Code path:
+
 - `withSchema(Y)` assigns `regId=1` to Y (X is `regId=0`).
 - `w.generate(Y)`: `generateSingleItem` increments counter `0 → 1`,
   `generateAndStorePrimary(Y)` runs with `recordId = "reg1#0"`. **No counter read.**
 - `w.generate(X)`: `generateSingleItem` increments counter `1 → 2`,
   `generateAndStorePrimary(X)` runs with `recordId = "reg0#0"`. **No counter read.**
 
-So `v1` in Scenario B *equals* `v1` in Scenario A. The registered-primary path is
+So `v1` in Scenario B _equals_ `v1` in Scenario A. The registered-primary path is
 counter-insensitive.
 
 **Scenario C** — same setup but X is **not** registered (ad-hoc):
@@ -170,12 +171,15 @@ counter-insensitive.
 const X = z.object({ x: z.number().int() });
 const Y = z.object({ y: z.number().int() });
 const w = createWorld({ seed: 42 }).withSchema(Y); // X NOT registered
-const v1 = w.generate(X);                          // counter goes 0 → 1
+const v1 = w.generate(X); // counter goes 0 → 1
 // elsewhere…
-const v1Prime = createWorld({ seed: 42 }).withSchema(Y).generate(Y).then(_ =>
-  // counter went 0 → 1 then 1 → 2; ad-hoc X seeds off `adhoc-2`
-  w2.generate(X)
-);
+const v1Prime = createWorld({ seed: 42 })
+  .withSchema(Y)
+  .generate(Y)
+  .then((_) =>
+    // counter went 0 → 1 then 1 → 2; ad-hoc X seeds off `adhoc-2`
+    w2.generate(X),
+  );
 ```
 
 Here `generateSingleItem` falls into the **ad-hoc** branch:
@@ -193,7 +197,7 @@ independent forks of the world PRNG with **different keys**, so `v1 !== v1Prime`
 
 **Scenario D** — arrays (both ad-hoc and registered):
 
-`generateArray` *always* derives its `genPrng` from `gen-${counter}`. That `genPrng`
+`generateArray` _always_ derives its `genPrng` from `gen-${counter}`. That `genPrng`
 picks the array length ([line 989](../../../src/world.ts#L989) primary mode and
 [line 1013](../../../src/world.ts#L1013) ad-hoc mode) and forks every per-element PRNG
 ([line 1016](../../../src/world.ts#L1016)). So if you add an intervening
@@ -202,8 +206,8 @@ length and every element's PRNG shift — even when the element type is a regist
 primary.
 
 The element bodies, if registered, recover their stable `recordId = "reg{id}#{i}"`
-inside `generateAndStorePrimary` — but the *array length* and the *element ordering
-order* still ride on the counter-derived `genPrng`. For ad-hoc array elements there is
+inside `generateAndStorePrimary` — but the _array length_ and the _element ordering
+order_ still ride on the counter-derived `genPrng`. For ad-hoc array elements there is
 no recovery: the entire element PRNG tree is rooted at the counter-derived `genPrng`.
 
 **Verdict**: the dependence is real on (ad-hoc generation) + (every array's length
@@ -233,7 +237,7 @@ participates in call-order state**. The test author understood the picture exact
 ## Intentional or incidental?
 
 The counter has three load-bearing uses, only one of which is unambiguously
-*intentional design*:
+_intentional design_:
 
 1. **Counter-as-round-robin in the derived-without-source path** (intentional,
    line 1171: `idx = (counter - 1) % pairs.length`). Here the counter gives the
@@ -244,7 +248,7 @@ The counter has three load-bearing uses, only one of which is unambiguously
    contract.
 
 2. **Counter-as-unique-name in the ad-hoc PRNG fork key** (incidental, line 1180:
-   `adhoc-${counter}`). The job of this key is *only* to give each top-level call a
+   `adhoc-${counter}`). The job of this key is _only_ to give each top-level call a
    distinct PRNG fork so that `w.generate(X); w.generate(X)` on an ad-hoc schema
    returns two different values. There is nothing about "counter" specifically that
    matters — any stable per-call identity would do. The counter was the cheapest
@@ -257,8 +261,8 @@ The counter has three load-bearing uses, only one of which is unambiguously
 
 D9's decision entry ([`wiki/decisions.md` D9](../../decisions.md), lines 167-196) is the
 only place the counter has been formally reasoned about in the wiki. D9 codifies the
-*compensation* rule (cache short-circuits roll back any counter increments) — i.e. it
-treats the counter as a load-bearing piece of state but does not justify *why* the
+_compensation_ rule (cache short-circuits roll back any counter increments) — i.e. it
+treats the counter as a load-bearing piece of state but does not justify _why_ the
 fork keys are counter-based in the first place. B8-R9 in
 [`wiki/specs/B8-derived-schemas-identity.md`](../../specs/B8-derived-schemas-identity.md)
 line 362 says "byte-identical across runs of the same world seed and **same call
@@ -274,7 +278,7 @@ report's complaint is about #2 and #3, not #1.
 **Letter**: per-field `fork(key)`, adding/removing a field does not disturb other
 fields. Both #2 and #3 above satisfy the letter: `gen-N` and `adhoc-N` are still
 `fork(key)` calls; adding a field to schema X does not perturb the values of other
-fields *within the same `generate(X)` call*.
+fields _within the same `generate(X)` call_.
 
 **Stated consequence**: "one world = one seed = one dataset". This is the phrase the
 B22 report reads as the unstated full intent. But this phrase appears in
@@ -317,7 +321,7 @@ Insert after the existing D4 rule, before D5:
 > seed, same `withSchema`/`withGenerators` chain, and same sequence of `generate` /
 > `populate` calls produce byte-identical output. Call order is part of the contract;
 > reordering `world.generate(X); world.generate(Y)` to `world.generate(Y);
-> world.generate(X)` MAY change the values of either. Registered-primary and
+world.generate(X)` MAY change the values of either. Registered-primary and
 > registered-derived records are call-order-insensitive within their own
 > `registry.count`-keyed slots; ad-hoc generation and array length/element rolls are
 > call-order-sensitive. (→ Dn)
@@ -366,15 +370,17 @@ Insert after the existing D4 rule, before D5:
 ### Pros / cons
 
 **Pros**:
+
 - Zero behavioural change; zero risk of test re-pins.
 - Codifies what the user docs already say.
-- Names the contract so future contributors don't introduce *new* counter-based fork
+- Names the contract so future contributors don't introduce _new_ counter-based fork
   keys without realising they are joining a load-bearing call-order chain.
 - Keeps Option (b) on the table as a future major-version change.
 
 **Cons**:
+
 - Codifies a slightly weaker contract than "seed alone determines data".
-  Anyone building a fixture system on top of this who *assumed* the stronger version
+  Anyone building a fixture system on top of this who _assumed_ the stronger version
   has to read the new rule. (Mitigation: no public surface exists today that exposes
   call-order independence as a feature; this is a documentation correction, not a
   removal.)
@@ -484,7 +490,7 @@ type belongs in the spec, not here.
    stronger one when we're ready.
 4. The B22 report's strongest charge — that the counter is "a hidden global,
    reads as call-order state" (cross-cutting observation #4) — is fixed by the
-   rename `generationCounter → callCounter`. The variable name *was* the
+   rename `generationCounter → callCounter`. The variable name _was_ the
    confusing part: "generation counter" reads as "number of records generated"
    when it actually counts top-level call sites.
 

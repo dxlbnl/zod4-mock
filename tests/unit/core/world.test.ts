@@ -736,8 +736,14 @@ describe("ctx.current propagation", () => {
   it("female and male gender siblings produce different firstName distributions", () => {
     const FemaleS = z.object({ gender: z.literal("female"), firstName: z.string() });
     const MaleS = z.object({ gender: z.literal("male"), firstName: z.string() });
-    const femaleNames = Array.from({ length: 20 }, (_, i) => createWorld({ seed: i }).generate(FemaleS).firstName);
-    const maleNames = Array.from({ length: 20 }, (_, i) => createWorld({ seed: i }).generate(MaleS).firstName);
+    const femaleNames = Array.from(
+      { length: 20 },
+      (_, i) => createWorld({ seed: i }).generate(FemaleS).firstName,
+    );
+    const maleNames = Array.from(
+      { length: 20 },
+      (_, i) => createWorld({ seed: i }).generate(MaleS).firstName,
+    );
     expect(femaleNames).not.toEqual(maleNames);
   });
 });

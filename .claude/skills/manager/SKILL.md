@@ -82,12 +82,12 @@ needs) is **not** new work: fold it into that item's spec (re-dispatch `spec-wri
 
 ## Tracks (dispatch on the item's `type:`)
 
-| `type:` | Stages |
-|---|---|
-| `feature` | `spec-writer` → `test-writer` → `implementer` → `reviewer` |
-| `bug` | `spec-writer` → `test-writer` (regression test for the reported failure) → `implementer` → `reviewer` (confirms the regression test is present) |
-| `research` | `general-purpose` researcher (writes `wiki/research/<topic>.md`) → `reviewer` (confirms findings answer the question, no implementation) |
-| `chore` | `implementer` → `reviewer` (no spec page, no tests-first) — dep bumps, doc reorgs, infra |
+| `type:`    | Stages                                                                                                                                          |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feature`  | `spec-writer` → `test-writer` → `implementer` → `reviewer`                                                                                      |
+| `bug`      | `spec-writer` → `test-writer` (regression test for the reported failure) → `implementer` → `reviewer` (confirms the regression test is present) |
+| `research` | `general-purpose` researcher (writes `wiki/research/<topic>.md`) → `reviewer` (confirms findings answer the question, no implementation)        |
+| `chore`    | `implementer` → `reviewer` (no spec page, no tests-first) — dep bumps, doc reorgs, infra                                                        |
 
 A `feature`/`bug` card may carry **`mode: lite`** to run the lite track (`implementer` →
 `reviewer (lite)`, no spec, no tests-first) — but only when it passes the **lite gate** below.
@@ -102,6 +102,7 @@ CSS tweak, trivial config). It is **gated**, and it is **never** a tests-first b
 behavior.
 
 **Lite gate — an item may run lite only if ALL hold:**
+
 - touches **≤ ~a handful of files** and adds **no new dependency**;
 - makes **no schema, API, or public-contract change**;
 - introduces **no new observable behavior that warrants a test** (cosmetic, copy, formatting,
@@ -110,7 +111,7 @@ behavior.
 
 If **any** condition fails → run **full**. When in doubt → **full**. A `bug` that fixes real
 behavior is **always full** (it needs a regression test). `chore` is non-product work (deps,
-infra, doc reorgs); `lite` is a *trivial product* change — keep them distinct.
+infra, doc reorgs); `lite` is a _trivial product_ change — keep them distinct.
 
 **Dispatch.** For a `mode: lite` item that passes the gate, dispatch **`implementer (lite)` →
 `reviewer (lite)`** only. Skip `spec-writer` and `test-writer` — and therefore steps 3 (open
@@ -131,7 +132,7 @@ promotion in `wiki/progress.md`. Likewise if `reviewer (lite)` FAILs with "needs
 For each item, top of the ordered work plan first:
 
 1. **Move the item card to `doing/`** with `git mv wiki/backlog/ready/<id>-<slug>.md
-   wiki/backlog/doing/`. Append a start line to `wiki/progress.md` (via `Edit`):
+wiki/backlog/doing/`. Append a start line to `wiki/progress.md` (via `Edit`):
    `## <YYYY-MM-DD HH:MM> — <id>: <title>` followed by `- manager: start, track: <type>`.
 2. **Dispatch by track** (above). Every `Task` prompt MUST name the **exact files** the
    agent should read and write — agents do not share your conversation. Read templates
@@ -147,7 +148,8 @@ For each item, top of the ordered work plan first:
      user in your report, and the item proceeds.
 
    A **specialist's needed decision** (e.g. a copywriter needing final copy) is an open
-   question on *this* item — route it through here, never `/intake`.
+   question on _this_ item — route it through here, never `/intake`.
+
 4. **Spec-validation gate (feature/bug, before `test-writer`)** — once no blocking question
    remains, re-read `wiki/specs/<id>-<slug>.md` and confirm:
    - every requirement has a `B<n>-R<k>` ID, **exactly one** RFC-2119 keyword
@@ -157,6 +159,7 @@ For each item, top of the ordered work plan first:
 
    If the spec fails any check, route it **back to `spec-writer`** with the specific gap
    (it does not go forward to `test-writer`). This is a manager step — no separate tooling.
+
 5. **Review checkpoint #2** — if the item is flagged `review`: after the spec passes the
    gate, re-read the artifact (the spec page, or the researcher's report), present it to
    the user, and pause for approval. Resume on approval. Unflagged items continue
@@ -207,14 +210,14 @@ apply — from its `type:`, spec, and risk — and **name the file(s) in the del
 so the subagent reads only what's relevant. Load the **same** practice into the `reviewer` so
 it checks against it. Never load the whole library. Rough mapping (judge per item):
 
-| Signal on the item | Practice |
-|---|---|
-| auth, secrets, input handling, permissions | `security` |
-| any user-facing UI | `accessibility` |
-| a `bug` item / diagnosing a failure | `debugging` |
-| hot paths, large data, latency budgets | `performance` |
-| user-facing copy, labels, error messages | `copywriting` |
-| UI scenarios in a browser-enabled project | `browser-testing` |
+| Signal on the item                         | Practice          |
+| ------------------------------------------ | ----------------- |
+| auth, secrets, input handling, permissions | `security`        |
+| any user-facing UI                         | `accessibility`   |
+| a `bug` item / diagnosing a failure        | `debugging`       |
+| hot paths, large data, latency budgets     | `performance`     |
+| user-facing copy, labels, error messages   | `copywriting`     |
+| UI scenarios in a browser-enabled project  | `browser-testing` |
 
 See `.claude/practices/README.md`. An item may need none, one, or a few.
 
@@ -231,6 +234,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 `Practices: read and apply .claude/practices/<name>.md` (omit when none applies).
 
 **spec-writer**:
+
 > Read `wiki/INDEX.md`, then `wiki/backlog/doing/<id>-<slug>.md` (the item card),
 > then `wiki/vision.md`, `wiki/requirements.md`, `wiki/architecture.md`, and any
 > existing `wiki/specs/` pages it cross-references. Write
@@ -245,6 +249,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > classification**.
 
 **spec-writer (incorporate answers)** — for a resumed `needs-answers` item:
+
 > Read `wiki/INDEX.md`, the item card at `wiki/backlog/doing/<id>-<slug>.md` (the user's
 > answers are in its `## Open questions`), and the draft spec at `wiki/specs/<id>-<slug>.md`.
 > For each answered question, fold the answer into the relevant requirement or Context and
@@ -253,6 +258,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > answers. Report back: what changed, and whether any blocking question remains.
 
 **test-writer**:
+
 > Read `wiki/INDEX.md`, `wiki/architecture.md` (for the package manager and test
 > command), `wiki/specs/<id>-<slug>.md`, and the item card at
 > `wiki/backlog/doing/<id>-<slug>.md`. Use the package manager declared in
@@ -264,6 +270,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > test for the reported failure is required.
 
 **implementer**:
+
 > Read `wiki/INDEX.md`, `wiki/specs/<id>-<slug>.md`, the test files at
 > <paths from test-writer>, `wiki/architecture.md` (for the package manager and
 > test command), and the item card at `wiki/backlog/doing/<id>-<slug>.md`. Use the
@@ -274,6 +281,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > Report back: files written, full-suite run summary, any flagged tests or spec gaps.
 
 **reviewer**:
+
 > Read `wiki/INDEX.md`, `wiki/specs/<id>-<slug>.md`, `wiki/requirements.md`,
 > `wiki/architecture.md`, the test files at <paths>, the implementation files at
 > <paths>, and the item card. Run the full test command `<command>` and confirm
@@ -283,6 +291,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > requirement ID + expected/actual + suggested fix on FAIL).
 
 **implementer (lite)** — for a `mode: lite` item (no spec, no tests):
+
 > Read `wiki/INDEX.md`, the item card at `wiki/backlog/doing/<id>-<slug>.md`, and
 > `wiki/architecture.md` (package manager + test command). There is **no** spec page or
 > failing test — the contract is the card's `## Description` + this acceptance note: <one
@@ -294,6 +303,7 @@ The exact files matter. Templates for each subagent. Where a practice applies, a
 > needs-full-track flag.
 
 **reviewer (lite)** — for a `mode: lite` item:
+
 > Read `wiki/INDEX.md`, `wiki/architecture.md`, the item card, and the changed files. There
 > is **no** spec page — do not look for requirement IDs. Verify: the change matches the card's
 > `## Description` + acceptance note; the **full** suite is green (run `<command>`); no scope

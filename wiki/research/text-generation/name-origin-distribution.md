@@ -23,15 +23,15 @@ Each origin is trained as an independent, linguistically homogeneous Markov mode
 ```typescript
 // @zod4-mock/locale-core
 interface NameOriginSet {
-  model:  MarkovModel;
-  weight: number;   // relative probability — does not need to sum to 100
+  model: MarkovModel;
+  weight: number; // relative probability — does not need to sum to 100
 }
 
 interface LocaleData {
   person: {
-    firstNamesMale?:   readonly NameOriginSet[];   // Markov path (full locales)
+    firstNamesMale?: readonly NameOriginSet[]; // Markov path (full locales)
     firstNamesFemale?: readonly NameOriginSet[];
-    lastNames?:        readonly NameOriginSet[];
+    lastNames?: readonly NameOriginSet[];
     // ... or simpleFirstNamesMale: string[] etc. for non-Markov locales
   };
 }
@@ -44,28 +44,28 @@ The `nl` locale definition:
 export const nl: LocaleData = {
   person: {
     firstNamesMale: [
-      { model: dutchMaleModel,    weight: 68 },
-      { model: arabicMaleModel,   weight: 12 },
-      { model: turkishMaleModel,  weight:  6 },
-      { model: englishMaleModel,  weight:  5 },
-      { model: frenchMaleModel,   weight:  4 },
-      { model: germanMaleModel,   weight:  3 },
-      { model: frisianMaleModel,  weight:  2 },
+      { model: dutchMaleModel, weight: 68 },
+      { model: arabicMaleModel, weight: 12 },
+      { model: turkishMaleModel, weight: 6 },
+      { model: englishMaleModel, weight: 5 },
+      { model: frenchMaleModel, weight: 4 },
+      { model: germanMaleModel, weight: 3 },
+      { model: frisianMaleModel, weight: 2 },
     ],
     firstNamesFemale: [
-      { model: dutchFemaleModel,   weight: 68 },
+      { model: dutchFemaleModel, weight: 68 },
       // ...
     ],
     lastNames: [
-      { model: dutchLastNamesModel,   weight: 72 },
-      { model: arabicLastNamesModel,  weight: 10 },
+      { model: dutchLastNamesModel, weight: 72 },
+      { model: arabicLastNamesModel, weight: 10 },
       // ...
     ],
   },
 };
 ```
 
-The weights reflect the actual demographic distribution of names in Dutch databases — not the population percentage, but the *name frequency distribution* in a Dutch context. Adjust them empirically after running `pnpm verify`.
+The weights reflect the actual demographic distribution of names in Dutch databases — not the population percentage, but the _name frequency distribution_ in a Dutch context. Adjust them empirically after running `pnpm verify`.
 
 ---
 
@@ -101,45 +101,45 @@ The shared-package approach means `dutchMaleModel` is trained once and reused by
 
 ### `nl` — Netherlands
 
-| Origin | Description | Corpus source |
-|--------|-------------|--------------|
-| `dutch` | Germanic Dutch names, high-frequency only (Mannen/Vrouwen > 100) | `open-nl-data/dutch-names-dataset` filtered |
-| `arabic` | Moroccan and Egyptian Arabic names | Baby name databases filtered to Arabic-script origin |
-| `turkish` | Turkish-origin names | Turkish Statistical Institute / curated list |
-| `english` | English/American names common in NL | SSA or ONS top-500, cross-referenced |
-| `french` | French-origin names (common in southern NL) | INSEE top-500 |
-| `german` | German-origin names (common near German border) | Statistisches Bundesamt top-500 |
-| `frisian` | Frisian regional names | Meertens Instituut — specifically Frisian name list |
+| Origin    | Description                                                      | Corpus source                                        |
+| --------- | ---------------------------------------------------------------- | ---------------------------------------------------- |
+| `dutch`   | Germanic Dutch names, high-frequency only (Mannen/Vrouwen > 100) | `open-nl-data/dutch-names-dataset` filtered          |
+| `arabic`  | Moroccan and Egyptian Arabic names                               | Baby name databases filtered to Arabic-script origin |
+| `turkish` | Turkish-origin names                                             | Turkish Statistical Institute / curated list         |
+| `english` | English/American names common in NL                              | SSA or ONS top-500, cross-referenced                 |
+| `french`  | French-origin names (common in southern NL)                      | INSEE top-500                                        |
+| `german`  | German-origin names (common near German border)                  | Statistisches Bundesamt top-500                      |
+| `frisian` | Frisian regional names                                           | Meertens Instituut — specifically Frisian name list  |
 
 ### `de` — Germany
 
-| Origin | Weight | Corpus source |
-|--------|:------:|--------------|
-| `german` | 80 | Gesellschaft für deutsche Sprache Vornamenliste |
-| `english` | 8 | SSA / ONS top-1000 |
-| `turkish` | 5 | Same as nl/turkish |
-| `french` | 4 | Same as nl/french |
-| `dutch` | 3 | Dutch-specific names common in German registration |
+| Origin    | Weight | Corpus source                                      |
+| --------- | :----: | -------------------------------------------------- |
+| `german`  |   80   | Gesellschaft für deutsche Sprache Vornamenliste    |
+| `english` |   8    | SSA / ONS top-1000                                 |
+| `turkish` |   5    | Same as nl/turkish                                 |
+| `french`  |   4    | Same as nl/french                                  |
+| `dutch`   |   3    | Dutch-specific names common in German registration |
 
 ### `fr` — France
 
-| Origin | Weight | Corpus source |
-|--------|:------:|--------------|
-| `french` | 78 | INSEE prénoms dataset (annual publication) |
-| `english` | 10 | SSA / ONS top-1000 |
-| `arabic` | 7 | Arabic-origin names in French registry |
-| `breton` | 3 | Breton regional names (Office Public de la Langue Bretonne) |
-| `basque` | 2 | Basque regional names |
+| Origin    | Weight | Corpus source                                               |
+| --------- | :----: | ----------------------------------------------------------- |
+| `french`  |   78   | INSEE prénoms dataset (annual publication)                  |
+| `english` |   10   | SSA / ONS top-1000                                          |
+| `arabic`  |   7    | Arabic-origin names in French registry                      |
+| `breton`  |   3    | Breton regional names (Office Public de la Langue Bretonne) |
+| `basque`  |   2    | Basque regional names                                       |
 
 ### `be` — Belgium
 
-| Origin | Weight | Corpus source |
-|--------|:------:|--------------|
-| `french-belgian` | 45 | Statbel prénoms (French community) |
-| `dutch-flemish` | 40 | Statbel prénoms (Flemish community) |
-| `arabic` | 8 | Same as nl/arabic |
-| `german` | 4 | Eupen/Malmedy German-speaking community |
-| `english` | 3 | International influence |
+| Origin           | Weight | Corpus source                           |
+| ---------------- | :----: | --------------------------------------- |
+| `french-belgian` |   45   | Statbel prénoms (French community)      |
+| `dutch-flemish`  |   40   | Statbel prénoms (Flemish community)     |
+| `arabic`         |   8    | Same as nl/arabic                       |
+| `german`         |   4    | Eupen/Malmedy German-speaking community |
+| `english`        |   3    | International influence                 |
 
 ---
 
@@ -151,8 +151,8 @@ The simplest win: change the frequency threshold in `fetch-data.ts` from `> 5` t
 
 ```typescript
 // fetch-data.ts — two output files from one source
-const dutchCore  = names.filter(n => n.Mannen > 100).map(n => n.Voornaam.toLowerCase());
-const allFiltered = names.filter(n => n.Mannen > 5).map(n => n.Voornaam.toLowerCase());
+const dutchCore = names.filter((n) => n.Mannen > 100).map((n) => n.Voornaam.toLowerCase());
+const allFiltered = names.filter((n) => n.Mannen > 5).map((n) => n.Voornaam.toLowerCase());
 ```
 
 `dutchCore` becomes the `dutch` origin model. The other origins are sourced separately.
@@ -160,6 +160,7 @@ const allFiltered = names.filter(n => n.Mannen > 5).map(n => n.Voornaam.toLowerC
 ### Length and character filtering
 
 All corpora apply the same filtering before training:
+
 - Remove entries outside `[minWordLen, maxWordLen]` (see [Markov Training Pipeline](markov-training-pipeline.md#recommended-parameters))
 - Remove compound entries (hyphens, spaces — treat as two separate names)
 - ASCII-lowercase only (accents normalized or stripped)
@@ -197,9 +198,7 @@ Usage in `person.ts`:
 export function firstName(prng: Prng, ctx?: GeneratorContext): string {
   const locale = ctx?.locale ?? en;
   const g = extractGender(ctx);
-  const sets = g === "female"
-    ? locale.person.firstNamesFemale
-    : locale.person.firstNamesMale;
+  const sets = g === "female" ? locale.person.firstNamesFemale : locale.person.firstNamesMale;
   return sampleWeighted(prng, sets);
 }
 ```
@@ -212,11 +211,11 @@ The `prng` passed to `sampleWeighted` is already forked per field — no additio
 
 With ~1,500 names per origin trained at order-2:
 
-| Model | Approx. states | Size (Float32Array) |
-|-------|:--------------:|:-------------------:|
-| Per origin model (order-2) | ~200–400 | ~25–50 KB |
-| 7 origins × 2 genders | ~14 models | ~350–700 KB for `nl` |
-| 4 origins × 2 genders (`en`) | ~8 models | ~200–400 KB for `en` |
+| Model                        | Approx. states | Size (Float32Array)  |
+| ---------------------------- | :------------: | :------------------: |
+| Per origin model (order-2)   |    ~200–400    |      ~25–50 KB       |
+| 7 origins × 2 genders        |   ~14 models   | ~350–700 KB for `nl` |
+| 4 origins × 2 genders (`en`) |   ~8 models    | ~200–400 KB for `en` |
 
 Compare to a single large all-origins model at order-3: ~3,000 states = ~325 KB. Multiple small homogeneous models at order-2 is competitive, and the quality improvement is substantial.
 

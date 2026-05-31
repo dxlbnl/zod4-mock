@@ -33,7 +33,7 @@ the same primary branch of `WorldImpl.generateArray`:
 - **B43** — `.min()` / `.max()` schema modifiers silently dropped on primary arrays.
 
 `.min()` / `.max()` are read internally to compute the auto-provision
-*target* (how many records to top the registry up to), but the return
+_target_ (how many records to top the registry up to), but the return
 value is unconditionally `registry.all(innerSchema)` — the entire registry,
 regardless of the caller's bounds.
 
@@ -76,14 +76,14 @@ if (primaryRegs.length > 0) {
   const existingCount = this.registry.count(innerSchema);
   const minRequired = resolveMinRequired(arraySchema, defMin);
   const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
-  const target = Math.max(existingCount, genPrng.int(
-    Math.min(minRequired, maxAllowed),
-    Math.max(minRequired, maxAllowed),
-  ));
+  const target = Math.max(
+    existingCount,
+    genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+  );
   while (this.registry.count(innerSchema) < target) {
     this.generateAndStorePrimary(innerSchema, reg);
   }
-  return this.registry.all(innerSchema);   // ← bounds never applied
+  return this.registry.all(innerSchema); // ← bounds never applied
 }
 ```
 
@@ -118,6 +118,7 @@ Recommend the spec-writer evaluate A vs B:
   silent path equivalent at the call site.
 
 If A is picked, must decide:
+
 - First N (simpler, matches current `.slice(0, N)` workaround semantics).
 - `prng.sample(items, N)` (more random, but breaks the "deterministic
   insertion-order" guarantee #25's author mentions).

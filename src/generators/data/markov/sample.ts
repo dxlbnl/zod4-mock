@@ -54,12 +54,7 @@ function sampleOnce(prng: Prng, model: MarkovModel, minLen: number, maxLen: numb
  * Words containing 4+ consecutive consonants (Markov dead-end artifacts) are
  * rejected and resampled, up to 8 attempts.
  */
-export function sampleMarkov(
-  prng: Prng,
-  model: MarkovModel,
-  minLen = 3,
-  maxLen = 12,
-): string {
+export function sampleMarkov(prng: Prng, model: MarkovModel, minLen = 3, maxLen = 12): string {
   for (let attempt = 0; attempt < 8; attempt++) {
     const word = sampleOnce(prng, model, minLen, maxLen);
     if (word.length >= minLen && !CONSONANT_RUN.test(word)) {

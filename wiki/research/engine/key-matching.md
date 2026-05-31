@@ -7,7 +7,7 @@ The key-based generator pipeline (step 2 in generation) matches a field name aga
 ```typescript
 // Simplified from key-map.ts
 const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-const generator  = DEFAULT_KEY_MAP[normalized];
+const generator = DEFAULT_KEY_MAP[normalized];
 ```
 
 Object property lookup on a plain JavaScript object is O(1) for exact matches, which is already fast. However, the key map also has **pattern-based fallback** via `DEFAULT_KEY_PATTERNS` — a list of regex patterns tested sequentially until one matches:
@@ -29,9 +29,9 @@ For the pattern-based fallback, compile the patterns into a **single merged rege
 ```typescript
 // Instead of looping 15 regex tests:
 const merged = /(?<uuid>.*(?:id|uuid|guid).*)|(?<url>.*(?:url|link).*)|.../i;
-const match  = merged.exec(normalizedKey);
+const match = merged.exec(normalizedKey);
 if (match?.groups) {
-  const kind = Object.keys(match.groups).find(k => match.groups![k] !== undefined);
+  const kind = Object.keys(match.groups).find((k) => match.groups![k] !== undefined);
   return kind ? PATTERN_GENERATORS[kind] : undefined;
 }
 ```

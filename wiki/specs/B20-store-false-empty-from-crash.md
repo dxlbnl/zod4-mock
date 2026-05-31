@@ -111,7 +111,7 @@ Rationale:
 
 The non-empty path (at least one `reg.from` source already in the registry) MUST be
 unchanged: the pair loop reads from the registry as today; the local-capture Map is only
-consulted for `reg`s whose `from:` registry is still empty *after* the auto-provision
+consulted for `reg`s whose `from:` registry is still empty _after_ the auto-provision
 loop has run (i.e. only the regs the auto-provision loop just generated for, when the
 outer call was `store: false`).
 
@@ -261,7 +261,7 @@ shifts the per-field forks.)
   `worldB.generate(Derived, { store: false });` (registry already has 1 source) then
   `const b = worldB.generate(Source);`
   THEN both calls return without throwing AND `Source.safeParse(a).success === true`
-  AND `Source.safeParse(b).success === true` (sanity), AND for the *same seed*,
+  AND `Source.safeParse(b).success === true` (sanity), AND for the _same seed_,
   `JSON.stringify(a) !== "undefined"` (sanity), AND the value of `a` is byte-identical
   to the value `worldB` would have produced on its very first `generate(Source)` call
   with no prior `populate` — i.e. the auto-provision PRNG fork sequence in `worldA`

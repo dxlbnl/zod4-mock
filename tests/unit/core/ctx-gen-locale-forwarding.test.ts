@@ -91,17 +91,13 @@ const PrngOnlyProbe = z.object({
 
 describe("B40-R1 / ctx.gen.word.noun() honours the configured locale", () => {
   it("regression #23 — ctx.gen.word.noun() honours nl locale", () => {
-    const world = createWorld({ seed: 1, locale: nl })
-      .withSchema(Item, {
-        matchers: {
-          label: (ctx) => ctx.gen.word.noun(),
-        },
-      });
+    const world = createWorld({ seed: 1, locale: nl }).withSchema(Item, {
+      matchers: {
+        label: (ctx) => ctx.gen.word.noun(),
+      },
+    });
 
-    const labels = Array.from(
-      { length: 5 },
-      () => world.generate(Item, { store: false }).label,
-    );
+    const labels = Array.from({ length: 5 }, () => world.generate(Item, { store: false }).label);
 
     // Every label is a string.
     expect(labels.every((l) => typeof l === "string" && l.length > 0)).toBe(true);
@@ -145,14 +141,8 @@ describe("B40-R2 / explicit ctx at the call-site keeps winning", () => {
       matchers: { label: (ctx) => ctx.gen.word.noun(ctx) }, // explicit workaround
     });
 
-    const a = Array.from(
-      { length: 5 },
-      () => worldA.generate(Item, { store: false }).label,
-    );
-    const b = Array.from(
-      { length: 5 },
-      () => worldB.generate(Item, { store: false }).label,
-    );
+    const a = Array.from({ length: 5 }, () => worldA.generate(Item, { store: false }).label);
+    const b = Array.from({ length: 5 }, () => worldB.generate(Item, { store: false }).label);
 
     expect(a).toEqual(b);
   });
@@ -165,21 +155,25 @@ describe("B40-R2 / explicit ctx at the call-site keeps winning", () => {
 
 describe("B40-R3 / locale forwards to bucket-1 and string helpers", () => {
   it("bucket-1 helpers across word/commerce/phone honour the locale", () => {
-    const enRecord = createWorld({ seed: 1 }).withSchema(Probe, {
-      matchers: {
-        adj: (ctx) => ctx.gen.word.adjective(),
-        prodName: (ctx) => ctx.gen.commerce.productName(),
-        pno: (ctx) => ctx.gen.phone.number(),
-      },
-    }).generate(Probe, { store: false });
+    const enRecord = createWorld({ seed: 1 })
+      .withSchema(Probe, {
+        matchers: {
+          adj: (ctx) => ctx.gen.word.adjective(),
+          prodName: (ctx) => ctx.gen.commerce.productName(),
+          pno: (ctx) => ctx.gen.phone.number(),
+        },
+      })
+      .generate(Probe, { store: false });
 
-    const nlRecord = createWorld({ seed: 1, locale: nl }).withSchema(Probe, {
-      matchers: {
-        adj: (ctx) => ctx.gen.word.adjective(),
-        prodName: (ctx) => ctx.gen.commerce.productName(),
-        pno: (ctx) => ctx.gen.phone.number(),
-      },
-    }).generate(Probe, { store: false });
+    const nlRecord = createWorld({ seed: 1, locale: nl })
+      .withSchema(Probe, {
+        matchers: {
+          adj: (ctx) => ctx.gen.word.adjective(),
+          prodName: (ctx) => ctx.gen.commerce.productName(),
+          pno: (ctx) => ctx.gen.phone.number(),
+        },
+      })
+      .generate(Probe, { store: false });
 
     // The configured locale must observably change every bucket-1 output.
     // Today (pre-fix), both records are byte-identical because the nl locale
@@ -196,21 +190,25 @@ describe("B40-R3 / locale forwards to bucket-1 and string helpers", () => {
 
 describe("B40-R3 / locale forwards to bucket-3 helpers (ctx slot past index 1)", () => {
   it("word.words(count) — ctx injected at slot 2; output is locale-specific", () => {
-    const enWord = createWorld({ seed: 1 }).withSchema(Bucket3Probe, {
-      matchers: {
-        blurb: (ctx) => ctx.gen.word.words(5),
-        intro: (ctx) => ctx.gen.word.paragraph(2),
-        priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
-      },
-    }).generate(Bucket3Probe, { store: false });
+    const enWord = createWorld({ seed: 1 })
+      .withSchema(Bucket3Probe, {
+        matchers: {
+          blurb: (ctx) => ctx.gen.word.words(5),
+          intro: (ctx) => ctx.gen.word.paragraph(2),
+          priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
+        },
+      })
+      .generate(Bucket3Probe, { store: false });
 
-    const nlWord = createWorld({ seed: 1, locale: nl }).withSchema(Bucket3Probe, {
-      matchers: {
-        blurb: (ctx) => ctx.gen.word.words(5),
-        intro: (ctx) => ctx.gen.word.paragraph(2),
-        priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
-      },
-    }).generate(Bucket3Probe, { store: false });
+    const nlWord = createWorld({ seed: 1, locale: nl })
+      .withSchema(Bucket3Probe, {
+        matchers: {
+          blurb: (ctx) => ctx.gen.word.words(5),
+          intro: (ctx) => ctx.gen.word.paragraph(2),
+          priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
+        },
+      })
+      .generate(Bucket3Probe, { store: false });
 
     // word.words(5) — five space-separated nouns. After the fix the nl
     // version is Markov-Dutch; pre-fix it equals the en record.
@@ -227,21 +225,25 @@ describe("B40-R3 / locale forwards to bucket-3 helpers (ctx slot past index 1)",
   });
 
   it("word.paragraph(sentenceCount) — ctx injected at slot 2", () => {
-    const enWord = createWorld({ seed: 1 }).withSchema(Bucket3Probe, {
-      matchers: {
-        blurb: (ctx) => ctx.gen.word.words(5),
-        intro: (ctx) => ctx.gen.word.paragraph(2),
-        priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
-      },
-    }).generate(Bucket3Probe, { store: false });
+    const enWord = createWorld({ seed: 1 })
+      .withSchema(Bucket3Probe, {
+        matchers: {
+          blurb: (ctx) => ctx.gen.word.words(5),
+          intro: (ctx) => ctx.gen.word.paragraph(2),
+          priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
+        },
+      })
+      .generate(Bucket3Probe, { store: false });
 
-    const nlWord = createWorld({ seed: 1, locale: nl }).withSchema(Bucket3Probe, {
-      matchers: {
-        blurb: (ctx) => ctx.gen.word.words(5),
-        intro: (ctx) => ctx.gen.word.paragraph(2),
-        priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
-      },
-    }).generate(Bucket3Probe, { store: false });
+    const nlWord = createWorld({ seed: 1, locale: nl })
+      .withSchema(Bucket3Probe, {
+        matchers: {
+          blurb: (ctx) => ctx.gen.word.words(5),
+          intro: (ctx) => ctx.gen.word.paragraph(2),
+          priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
+        },
+      })
+      .generate(Bucket3Probe, { store: false });
 
     // word.paragraph(2) — two sentences; locale must affect the result.
     expect(nlWord.intro).not.toEqual(enWord.intro);
@@ -250,13 +252,15 @@ describe("B40-R3 / locale forwards to bucket-3 helpers (ctx slot past index 1)",
   });
 
   it("commerce.price(min, max) — ctx injected at slot 3; Dutch comma decimal", () => {
-    const nlWord = createWorld({ seed: 1, locale: nl }).withSchema(Bucket3Probe, {
-      matchers: {
-        blurb: (ctx) => ctx.gen.word.words(5),
-        intro: (ctx) => ctx.gen.word.paragraph(2),
-        priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
-      },
-    }).generate(Bucket3Probe, { store: false });
+    const nlWord = createWorld({ seed: 1, locale: nl })
+      .withSchema(Bucket3Probe, {
+        matchers: {
+          blurb: (ctx) => ctx.gen.word.words(5),
+          intro: (ctx) => ctx.gen.word.paragraph(2),
+          priceTag: (ctx) => ctx.gen.commerce.price(1, 100),
+        },
+      })
+      .generate(Bucket3Probe, { store: false });
 
     // nl.commerce.formatPrice uses `€` and a comma decimal separator —
     // pre-fix, this returns a default-locale `$<n>.<dd>` string.
@@ -318,10 +322,7 @@ describe("B40-R5 / no-locale world keeps producing defaultLocale values", () => 
       matchers: { label: (ctx) => ctx.gen.word.noun() },
     });
 
-    const labels = Array.from(
-      { length: 5 },
-      () => world.generate(Item, { store: false }).label,
-    );
+    const labels = Array.from({ length: 5 }, () => world.generate(Item, { store: false }).label);
 
     for (const label of labels) {
       expect(

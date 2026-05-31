@@ -55,9 +55,7 @@ const USER_PROFILES = [
 describe("B14-R1: populate accepts an optional per-record factory", () => {
   it("B14-R1 / existing two-arg call still type-checks and behaves identically", () => {
     // Two-arg form — unchanged. This call type-checks both before and after B14.
-    const world = createWorld({ seed: 42 })
-      .withSchema(PersonSchema)
-      .populate(PersonSchema, 5);
+    const world = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 5);
 
     expect(world.registry.all(PersonSchema)).toHaveLength(5);
     // Each generated record is schema-valid (regression guard).
@@ -145,11 +143,7 @@ describe("B14-R3: factory output flows through generate (overrides + transform h
       transform: (u) => ({ ...u, username: `u-${i}` }),
     }));
 
-    expect(world.registry.all(UserSchema).map((u) => u.username)).toEqual([
-      "u-0",
-      "u-1",
-      "u-2",
-    ]);
+    expect(world.registry.all(UserSchema).map((u) => u.username)).toEqual(["u-0", "u-1", "u-2"]);
   });
 });
 
@@ -165,12 +159,8 @@ describe("B14-R4: no-factory form is unchanged", () => {
     // the implementer accidentally rewires the no-factory branch (e.g.
     // routes it through a new code path that calls generate differently),
     // this test will diverge.
-    const a = createWorld({ seed: 42 })
-      .withSchema(PersonSchema)
-      .populate(PersonSchema, 5);
-    const b = createWorld({ seed: 42 })
-      .withSchema(PersonSchema)
-      .populate(PersonSchema, 5);
+    const a = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 5);
+    const b = createWorld({ seed: 42 }).withSchema(PersonSchema).populate(PersonSchema, 5);
 
     expect(JSON.stringify(a.registry.all(PersonSchema))).toEqual(
       JSON.stringify(b.registry.all(PersonSchema)),
@@ -225,9 +215,7 @@ describe("B14-R6: populate keeps returning `this` for fluent chaining", () => {
   it("B14-R6 / chaining a three-arg populate then a two-arg populate", () => {
     const world = createWorld({ seed: 42 }).withSchema(UserSchema);
 
-    const chained = world
-      .populate(UserSchema, 2, () => ({}))
-      .populate(UserSchema, 1);
+    const chained = world.populate(UserSchema, 2, () => ({})).populate(UserSchema, 1);
 
     expect(chained).toBe(world);
     expect(world.registry.all(UserSchema)).toHaveLength(3);

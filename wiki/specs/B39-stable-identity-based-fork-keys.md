@@ -14,8 +14,7 @@ calls `generate(X)` directly and the other calls `generate(Y); generate(X)` prod
 §"The three call sites"): three PRNG fork keys in `WorldImpl` are derived from the
 per-world `generationCounter` field rather than from the schema's identity:
 
-1. **`generateSingleItem` ad-hoc branch** — `recordId = \`adhoc-${this.generationCounter}\``
-   then `this.prng.fork(recordId)`
+1. **`generateSingleItem` ad-hoc branch** — `recordId = \`adhoc-${this.generationCounter}\``then`this.prng.fork(recordId)`
    ([src/world.ts:1180](../../src/world.ts#L1180)).
 2. **`generateArray` (every mode — primary, derived, ad-hoc)** —
    `this.generationCounter++; const genPrng = this.prng.fork(\`gen-${this.generationCounter}\`)`
@@ -27,8 +26,7 @@ per-world `generationCounter` field rather than from the schema's identity:
 
 Two paths are **already** stable identity-based and must not regress:
 
-- Registered primary records — `recordId = \`reg${effectiveRegId}#${recordIndex}\``
-  ([src/world.ts:702](../../src/world.ts#L702)), where `recordIndex = registry.count(schema) + pending`.
+- Registered primary records — `recordId = \`reg${effectiveRegId}#${recordIndex}\``([src/world.ts:702](../../src/world.ts#L702)), where`recordIndex = registry.count(schema) + pending`.
 - Registered derived records — `recordId = \`dreg${reg.regId}#${sourceIndex}\``
   ([src/world.ts:740](../../src/world.ts#L740)).
 
@@ -53,14 +51,14 @@ requirements and enumerates the test churn cost.
   B8-R9 test
   ([tests/unit/core/derived-identity.test.ts:496-538](../../tests/unit/core/derived-identity.test.ts#L496))
   intentionally uses an unregistered ad-hoc schema to expose the counter dependence;
-  it remains valid under B39 because the *intent* (the upsert hit must consume no
+  it remains valid under B39 because the _intent_ (the upsert hit must consume no
   per-world PRNG state) is preserved — only the bookkeeping shifts from a single
   global counter to a per-schema slot.
 - **B10 — `{ store: false }` opt-out**
   ([wiki/specs/B10-generate-store-opt-out.md](B10-generate-store-opt-out.md)). B10-R7
   pins that `store: false` consumes no extra PRNG. The test pattern
   ([tests/unit/core/generate-store-opt-out.test.ts:382-406](../../tests/unit/core/generate-store-opt-out.test.ts#L382))
-  uses an *ad-hoc* `AdHocSchema = z.object({ x: z.number().int() })` to compare
+  uses an _ad-hoc_ `AdHocSchema = z.object({ x: z.number().int() })` to compare
   worlds — exactly the path B39 changes. Under B39 the test still passes because
   both worlds make the same number of `generate(AdHocSchema)` calls in the same
   order: the per-schema slot indices match.
@@ -251,7 +249,7 @@ const adHocPrng = this.prng.fork(recordId);
 ```
 
 The `schema` parameter is the one already in scope on `generateSingleItem` —
-the *outer* schema reference the caller invoked `generate(...)` with (not
+the _outer_ schema reference the caller invoked `generate(...)` with (not
 `targetSchema` after `lazy` resolution). Using the outer reference preserves
 identity even when `z.lazy(() => X)` re-resolves: the call always uses the same
 key for the same outer reference.
@@ -370,33 +368,33 @@ invariant.
 Detailed enumeration (every file that mentions `world.generate(` was inspected;
 findings classified):
 
-| Path | What it asserts | Classification | Reason |
-|------|------|----------------|--------|
-| `tests/unit/core/world.test.ts:300-304` ("same seed → same array") | `r1.toEqual(r2)` for two fresh-world `setup().generate(z.array(PersonSchema).length(3))` calls | **K** | Both worlds make the same single call → same per-schema slot → byte-identical under B39. |
-| `tests/unit/core/world.test.ts:308` | `world.generate(z.array(PersonSchema))).toHaveLength(3)` | **K** | Structural (length assertion only). |
-| `tests/unit/core/world.test.ts:327-340` (optional/nullable array distribution) | 30 worlds, each calls once; asserts both `undefined` AND array variants appear | **K** | 30 different seeds (`createWorld({ seed: i })`); the new fork key `wrap:<id>:1` differs per-seed → distribution preserved. |
-| `tests/unit/core/world.test.ts:621-642` (determinism describe block) | Two fresh-world equality; field-add invariance | **K** | Per-field determinism preserved; cross-world calls are 1:1 matching. |
-| `tests/unit/core/world.test.ts:750-758` (overrides on array) | `result[0].val).toBe(999)` from `overrides[0].val: 999` | **K** | Override-derived, not PRNG-derived. |
-| `tests/unit/core/derived-identity.test.ts:496-538` (B8-R9 ad-hoc lockstep) | Cross-world `JSON.stringify(aNext) === JSON.stringify(bNext)` on `worldA.generate(AdHocSchema)` vs `worldB.generate(AdHocSchema)` after an upsert hit on `worldB` | **K** | The test's purpose is exactly the call-order invariant B39 enforces. Both worlds make one `generate(AdHocSchema)` call after the same sequence of `UserProfileSchema` generations — under B39 the upsert short-circuit MUST rollback the `schemaCallCounts` entry (B39-R4 D9 scenario) so both worlds end with `schemaCallCounts.get(AdHocSchema) === 1` → same fork key → same value. |
-| `tests/unit/core/generate-store-opt-out.test.ts:382-406` (B10-R7 lockstep) | Two worlds; one with `store: false`, one without; both end with `worldA.generate(AdHocSchema)` and `worldB.generate(AdHocSchema)` and assert equality | **K** | Same as above — both worlds make 1 `generate(AdHocSchema)` call. Under B39 both produce the same key `adhoc:<id>:1`. |
-| `tests/unit/core/populate-factory.test.ts:161-179, 192-209` (B14 byte-equivalence) | `populate` byte-equivalence across two same-seed worlds | **K** | `populate` uses the registered-primary path (`reg{id}#{index}`), counter-independent today and tomorrow. |
-| `tests/unit/core/world-populate-from.test.ts:444-463` (B13-R7 byte-equivalence) | `populateFrom` byte-equivalence across two same-seed worlds | **K** | Registered-derived path (`dreg{id}#{sourceIndex}`), unaffected. |
-| `tests/unit/store-false-empty-from.test.ts:284-305` (B20 auto-provisioned source byte-equivalence) | `JSON.stringify(a) === JSON.stringify(c)` where `a` is `worldA.generate(Source)` after a `store: false` derived call and `c` is `worldC.registry.all(Source)[0]` after `worldC.populate(Source, 1)` | **K** | The compared values both flow through `generateAndStorePrimary` (`reg{id}#{index}`); see B20-R6 rationale. |
-| `tests/unit/primary-array-overrides-throw.test.ts:146-162` (B38-R2 byte-equivalence) | Two fresh worlds, both call `generate(SimpleProductSchema.array().min(4).max(4))` once | **K** | Both worlds make the same single call; the new array fork key matches on both sides. |
-| `tests/unit/primary-array-overrides-throw.test.ts:186-221` (B38-R3 ad-hoc array overrides) | `items.map(it => it.label)).toEqual(["first", "second", "third"])` — `label` from overrides | **K** | Override-derived. The `id` field is only checked for `typeof === "string"` and length > 0 (structural). |
-| `tests/integration/invoicing/invoicing.test.ts:140-148` (price multiples) | `line.unitPriceCents % 100 === 0` over many lines | **K** | Constraint-driven (matcher emits step-100 prices); structural. |
-| `tests/integration/invoicing/invoicing.test.ts:175-201` (determinism) | `a.toEqual(b)` for two same-seed builds; `inv.totalCents === expected` arithmetic invariant | **K** | Two-world cross-equality + matcher-driven invariant. |
-| `tests/integration/media-library/media-library.test.ts:120-130, 220-230` | type-tag matchers (`expect(r.type).toBe("text")`) and status filter `expect(r.status).toBe("failed")` | **K** | All assertions are matcher-derived or filter-derived; no specific PRNG bytes pinned. |
-| `tests/integration/document-corpus/document-corpus.test.ts:160-161` | Comparing `world1.generate(z.array(DocumentSchema).length(3))` to `world2.generate(z.array(DocumentSchema).length(3))` | **K** | Cross-world same-call lockstep. |
-| `tests/integration/nested-matchers.test.ts:30-57` | Matcher-pinned values like `"MATCHED STREET"`, `99999`, `12345` | **K** | Matcher-derived. |
-| `tests/integration/overrides-in-matchers.test.ts` | Override-pinned values | **K** | Override-derived. |
-| `tests/integration/inline-schema.test.ts` | Structural assertions | **K** | Structural. |
-| `tests/integration/scenarios/cascading-schemas.test.ts:48-82` | Matcher-pinned values (`"MATCHED_ENTERPRISE"`, etc.) | **K** | Matcher-derived. |
-| `tests/unit/bug-hunt.test.ts:48-58` (default-variety) | `world.generate(schema)` 20× on same world, asserts `new Set(...).size > 1` | **K** | Variety still produced (per-schema slot advances per call → different fork keys → different values). |
-| `tests/unit/generators/domains/collection.test.ts:40-65` (determinism) | Cross-world `a === b` style asserts on per-element arrays | **K** | Cross-world same-call lockstep. |
-| All `tests/unit/core/relations.test.ts` array calls | `toHaveLength(N)`, `length === N`, structural | **K** | Structural. |
-| All `tests/unit/core/cross-api.test.ts` array calls | Cross-API matcher-driven assertions | **K** | Matcher-derived (the test's whole purpose). |
-| All `tests/unit/core/subject.test.ts` array calls | `toHaveLength(N)` and matcher-driven content | **K** | Structural / matcher-derived. |
+| Path                                                                                               | What it asserts                                                                                                                                                                                     | Classification | Reason                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/unit/core/world.test.ts:300-304` ("same seed → same array")                                 | `r1.toEqual(r2)` for two fresh-world `setup().generate(z.array(PersonSchema).length(3))` calls                                                                                                      | **K**          | Both worlds make the same single call → same per-schema slot → byte-identical under B39.                                                                                                                                                                                                                                                                                               |
+| `tests/unit/core/world.test.ts:308`                                                                | `world.generate(z.array(PersonSchema))).toHaveLength(3)`                                                                                                                                            | **K**          | Structural (length assertion only).                                                                                                                                                                                                                                                                                                                                                    |
+| `tests/unit/core/world.test.ts:327-340` (optional/nullable array distribution)                     | 30 worlds, each calls once; asserts both `undefined` AND array variants appear                                                                                                                      | **K**          | 30 different seeds (`createWorld({ seed: i })`); the new fork key `wrap:<id>:1` differs per-seed → distribution preserved.                                                                                                                                                                                                                                                             |
+| `tests/unit/core/world.test.ts:621-642` (determinism describe block)                               | Two fresh-world equality; field-add invariance                                                                                                                                                      | **K**          | Per-field determinism preserved; cross-world calls are 1:1 matching.                                                                                                                                                                                                                                                                                                                   |
+| `tests/unit/core/world.test.ts:750-758` (overrides on array)                                       | `result[0].val).toBe(999)` from `overrides[0].val: 999`                                                                                                                                             | **K**          | Override-derived, not PRNG-derived.                                                                                                                                                                                                                                                                                                                                                    |
+| `tests/unit/core/derived-identity.test.ts:496-538` (B8-R9 ad-hoc lockstep)                         | Cross-world `JSON.stringify(aNext) === JSON.stringify(bNext)` on `worldA.generate(AdHocSchema)` vs `worldB.generate(AdHocSchema)` after an upsert hit on `worldB`                                   | **K**          | The test's purpose is exactly the call-order invariant B39 enforces. Both worlds make one `generate(AdHocSchema)` call after the same sequence of `UserProfileSchema` generations — under B39 the upsert short-circuit MUST rollback the `schemaCallCounts` entry (B39-R4 D9 scenario) so both worlds end with `schemaCallCounts.get(AdHocSchema) === 1` → same fork key → same value. |
+| `tests/unit/core/generate-store-opt-out.test.ts:382-406` (B10-R7 lockstep)                         | Two worlds; one with `store: false`, one without; both end with `worldA.generate(AdHocSchema)` and `worldB.generate(AdHocSchema)` and assert equality                                               | **K**          | Same as above — both worlds make 1 `generate(AdHocSchema)` call. Under B39 both produce the same key `adhoc:<id>:1`.                                                                                                                                                                                                                                                                   |
+| `tests/unit/core/populate-factory.test.ts:161-179, 192-209` (B14 byte-equivalence)                 | `populate` byte-equivalence across two same-seed worlds                                                                                                                                             | **K**          | `populate` uses the registered-primary path (`reg{id}#{index}`), counter-independent today and tomorrow.                                                                                                                                                                                                                                                                               |
+| `tests/unit/core/world-populate-from.test.ts:444-463` (B13-R7 byte-equivalence)                    | `populateFrom` byte-equivalence across two same-seed worlds                                                                                                                                         | **K**          | Registered-derived path (`dreg{id}#{sourceIndex}`), unaffected.                                                                                                                                                                                                                                                                                                                        |
+| `tests/unit/store-false-empty-from.test.ts:284-305` (B20 auto-provisioned source byte-equivalence) | `JSON.stringify(a) === JSON.stringify(c)` where `a` is `worldA.generate(Source)` after a `store: false` derived call and `c` is `worldC.registry.all(Source)[0]` after `worldC.populate(Source, 1)` | **K**          | The compared values both flow through `generateAndStorePrimary` (`reg{id}#{index}`); see B20-R6 rationale.                                                                                                                                                                                                                                                                             |
+| `tests/unit/primary-array-overrides-throw.test.ts:146-162` (B38-R2 byte-equivalence)               | Two fresh worlds, both call `generate(SimpleProductSchema.array().min(4).max(4))` once                                                                                                              | **K**          | Both worlds make the same single call; the new array fork key matches on both sides.                                                                                                                                                                                                                                                                                                   |
+| `tests/unit/primary-array-overrides-throw.test.ts:186-221` (B38-R3 ad-hoc array overrides)         | `items.map(it => it.label)).toEqual(["first", "second", "third"])` — `label` from overrides                                                                                                         | **K**          | Override-derived. The `id` field is only checked for `typeof === "string"` and length > 0 (structural).                                                                                                                                                                                                                                                                                |
+| `tests/integration/invoicing/invoicing.test.ts:140-148` (price multiples)                          | `line.unitPriceCents % 100 === 0` over many lines                                                                                                                                                   | **K**          | Constraint-driven (matcher emits step-100 prices); structural.                                                                                                                                                                                                                                                                                                                         |
+| `tests/integration/invoicing/invoicing.test.ts:175-201` (determinism)                              | `a.toEqual(b)` for two same-seed builds; `inv.totalCents === expected` arithmetic invariant                                                                                                         | **K**          | Two-world cross-equality + matcher-driven invariant.                                                                                                                                                                                                                                                                                                                                   |
+| `tests/integration/media-library/media-library.test.ts:120-130, 220-230`                           | type-tag matchers (`expect(r.type).toBe("text")`) and status filter `expect(r.status).toBe("failed")`                                                                                               | **K**          | All assertions are matcher-derived or filter-derived; no specific PRNG bytes pinned.                                                                                                                                                                                                                                                                                                   |
+| `tests/integration/document-corpus/document-corpus.test.ts:160-161`                                | Comparing `world1.generate(z.array(DocumentSchema).length(3))` to `world2.generate(z.array(DocumentSchema).length(3))`                                                                              | **K**          | Cross-world same-call lockstep.                                                                                                                                                                                                                                                                                                                                                        |
+| `tests/integration/nested-matchers.test.ts:30-57`                                                  | Matcher-pinned values like `"MATCHED STREET"`, `99999`, `12345`                                                                                                                                     | **K**          | Matcher-derived.                                                                                                                                                                                                                                                                                                                                                                       |
+| `tests/integration/overrides-in-matchers.test.ts`                                                  | Override-pinned values                                                                                                                                                                              | **K**          | Override-derived.                                                                                                                                                                                                                                                                                                                                                                      |
+| `tests/integration/inline-schema.test.ts`                                                          | Structural assertions                                                                                                                                                                               | **K**          | Structural.                                                                                                                                                                                                                                                                                                                                                                            |
+| `tests/integration/scenarios/cascading-schemas.test.ts:48-82`                                      | Matcher-pinned values (`"MATCHED_ENTERPRISE"`, etc.)                                                                                                                                                | **K**          | Matcher-derived.                                                                                                                                                                                                                                                                                                                                                                       |
+| `tests/unit/bug-hunt.test.ts:48-58` (default-variety)                                              | `world.generate(schema)` 20× on same world, asserts `new Set(...).size > 1`                                                                                                                         | **K**          | Variety still produced (per-schema slot advances per call → different fork keys → different values).                                                                                                                                                                                                                                                                                   |
+| `tests/unit/generators/domains/collection.test.ts:40-65` (determinism)                             | Cross-world `a === b` style asserts on per-element arrays                                                                                                                                           | **K**          | Cross-world same-call lockstep.                                                                                                                                                                                                                                                                                                                                                        |
+| All `tests/unit/core/relations.test.ts` array calls                                                | `toHaveLength(N)`, `length === N`, structural                                                                                                                                                       | **K**          | Structural.                                                                                                                                                                                                                                                                                                                                                                            |
+| All `tests/unit/core/cross-api.test.ts` array calls                                                | Cross-API matcher-driven assertions                                                                                                                                                                 | **K**          | Matcher-derived (the test's whole purpose).                                                                                                                                                                                                                                                                                                                                            |
+| All `tests/unit/core/subject.test.ts` array calls                                                  | `toHaveLength(N)` and matcher-driven content                                                                                                                                                        | **K**          | Structural / matcher-derived.                                                                                                                                                                                                                                                                                                                                                          |
 
 **Headline finding**: the codebase has been disciplined about never pinning
 PRNG-derived bytes on the three counter-bearing paths. The B39 behaviour change
@@ -558,11 +556,13 @@ The public-contract phrasing at
 reflect the strengthened contract:
 
 - Line 90 — the `seed` entry's tagline currently reads:
+
   > "master seed for all generation in this world. The same seed with the
   > same builder chain always produces byte-identical output."
 
   MUST become (proposed text — exact wording is the implementer's, but the
   contract MUST be the strengthened one):
+
   > "master seed for all generation in this world. The same seed with the
   > same builder chain and the same per-schema call sequence always produces
   > byte-identical output. Call order across distinct schemas does not
@@ -571,15 +571,17 @@ reflect the strengthened contract:
   > same `Y` either way."
 
 - Line 485 — the `world.get` determinism note currently reads:
+
   > "`get` is deterministic for a given seed and call sequence and
   > idempotent for a repeated predicate"
 
   MUST become:
+
   > "`get` is deterministic for a given seed and the per-schema call sequence
   > and idempotent for a repeated predicate"
 
 The "same builder chain" wording at line 90 remains — it is still required
-(reordering `withSchema(X)` vs `withSchema(Y)` *can* affect values because
+(reordering `withSchema(X)` vs `withSchema(Y)` _can_ affect values because
 it shifts which regId each schema gets, which feeds the registered-primary
 fork key shape). Only the "call sequence" framing changes.
 
@@ -595,6 +597,7 @@ but is non-binding under this requirement — the change to
 ### B39-R10: opportunistic CLAUDE.md drift fix
 
 `CLAUDE.md` line 52 currently reads:
+
 > "**PRNG** — Mulberry32 seeded PRNG with FNV-1a hashing for per-field
 > `fork(key)` derivation"
 
@@ -602,6 +605,7 @@ The PRNG was migrated from Mulberry32 to SFC32 (per
 [src/prng.ts:13](../../src/prng.ts#L13) and the B27 audit §"Out of scope"
 note). The B27 reviewer flagged this drift. B39's commit MUST update
 CLAUDE.md line 52 to read:
+
 > "**PRNG** — SFC32 seeded PRNG with FNV-1a hashing for per-field
 > `fork(key)` derivation"
 
@@ -627,7 +631,7 @@ audit) MAY be updated in the same commit; the manager will route a
   use stable `reg{id}#{index}` / `dreg{id}#{sourceIndex}` keys; no change.
 - **Decomposing `generateSingleItem` / `generateArray`** — that is B24 / B25's
   job; B39 lands the strengthened discipline first so the refactor inherits it.
-- **Touching `src/prng.ts`** — only the fork-key *inputs* change (the keys passed
+- **Touching `src/prng.ts`** — only the fork-key _inputs_ change (the keys passed
   to `prng.fork(...)`); the PRNG algorithm, the hash function, and the
   `Prng.fork(key)` API are unchanged.
 - **Adding a public API to control the per-schema counter** — none needed; the

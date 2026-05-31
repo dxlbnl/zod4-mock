@@ -15,14 +15,14 @@ The maintainer is unhappy with the current character-level Markov approach for
 plausible-gibberish — "Risharoumas" — which is why `sample.ts` needs rejection
 sampling, dead-end detection, and an `"x"` sentinel fallback) and **efficiency in
 time and size**. The goal of this research is to evaluate alternative techniques for
-generating *larger, more realistic* name/word sets that are efficient in **both**
+generating _larger, more realistic_ name/word sets that are efficient in **both**
 generation time and on-disk/bundle size, and to recommend a direction (with rough
 sizing) before any implementation item is spun off.
 
 The key reframing to validate: Markov's selling point is "tiny model, infinite
 variety," but the current models are **not tiny** (~540 KB for `locale-en` word
 models, ~3.5 MB across `locale-names` origins) and the variety is low-quality — so it
-may be losing on its own terms for a *mock-data* library that rarely needs infinite
+may be losing on its own terms for a _mock-data_ library that rarely needs infinite
 distinct values.
 
 ## Scope — alternatives to compare
@@ -37,7 +37,7 @@ uniqueness** and determinism (everything must consume the SFC32 PRNG via `fork(k
    uniqueness that Markov cannot. Likely the strongest fit for names.
 2. **Succinct storage for those lists** — DAWG/DAFSA (shared prefix+suffix merging,
    indexable k-th word), front-coding, or brotli/gzip'd newline lists loaded lazily per
-   locale. Target: land **under** the current 3.5 MB while shipping *real* data. Include
+   locale. Target: land **under** the current 3.5 MB while shipping _real_ data. Include
    rough sizing on the actual `locale-names` corpora.
 3. **Syllable-level composition / n-grams** — onset/nucleus/coda or whole-syllable
    n-grams instead of character n-grams: fewer states, far less gibberish, no dead-end
@@ -51,7 +51,7 @@ uniqueness** and determinism (everything must consume the SFC32 PRNG via `fork(k
    direction so it's settled.
 6. **Words specifically** — for nouns/adjectives, compare generated pseudo-words vs.
    real closed-vocabulary lists; for sentences, weighted PCFG/grammar templates over
-   *real* words vs. stitching Markov-invented words.
+   _real_ words vs. stitching Markov-invented words.
 
 ## Deliverable
 
@@ -68,7 +68,7 @@ follow-up implementation `feature`/`chore` (or a retrain) with user sign-off.
   `scripts/train-markov.ts` (training), `packages/locale-en/src/models/`,
   `packages/locale-names/src/groups/`, `src/prng.ts` (SFC32 + `fork(key)`).
 - Related items — **complementary, not duplicate**:
-  - **B2** (Markov character entropy for *unkeyed* synthetic strings) — narrower;
+  - **B2** (Markov character entropy for _unkeyed_ synthetic strings) — narrower;
     different surface (fields not covered by key heuristics).
   - **B42** (nl-locale Markov initial-letter distribution bias, issue #24) — a specific
     quality bug within the current Markov approach; a wholesale alternative here could

@@ -9,6 +9,7 @@ spec: wiki/specs/B16-surface-key-match-list.md
 ---
 
 ## Description
+
 Auto key-matching is one of zod4-mock's best features but is discoverable only by
 reading `key-map.js` in the package source. New users (and contributors evolving
 matchers) miss that `kenteken` produces a VRM, `bedrag` a finance amount, `*at`/`*date`
@@ -16,7 +17,9 @@ an ISO date string / `Date`, `*name` a fullName, etc. Two affordances would make
 leverage usable. (GitHub issue #17.)
 
 ## 1. Documentation surface
+
 A `docs/key-heuristics.md` (or expansion of the existing one) listing:
+
 - **Exact-key generators** for `string` and `number` types (the `DEFAULT_KEY_MAP`
   contents).
 - **Pattern generators** (suffix/prefix rules — `*at`, `*date`, `*url`, `*email`,
@@ -30,7 +33,9 @@ producing the markdown) would keep docs in lockstep with the code. The informati
 already there; nothing in the public docs surfaces it.
 
 ## 2. Debug helper: `world.explain(schema)`
+
 Print, per field, the resolved generator and why:
+
 ```ts
 const UserSchema = z.object({
   id: z.uuid(),
@@ -53,13 +58,14 @@ world.explain(UserSchema);
 ```
 
 Cheap to build — the resolution logic already exists in `generateFromKey`. Makes "why
-is this field random?" debugging instant, and surfaces near-misses where a user *meant*
+is this field random?" debugging instant, and surfaces near-misses where a user _meant_
 to hit an auto-key but the field name doesn't quite match (`homeAddress` line above).
 
 Could also work as a `world.generate(schema, { inspect: true })` flag — generate
 without storing and return per-field provenance instead of values.
 
 ## Open questions (resolve in spec)
+
 - **Output shape**: human-readable string lines (issue's proposal) vs. structured data
   (`Record<fieldName, { generator: string; reason: string }>`) for programmatic use.
   Adopt structured + a default `toString` formatter? **Decide.**
@@ -71,6 +77,7 @@ without storing and return per-field provenance instead of values.
   schemas — leave for a follow-up.
 
 ## Notes
+
 - Two affordances bundled in one issue, both about discoverability of the same feature.
   The spec-writer may split into two requirements within one spec.
 - Public API change (adds `World.explain`) → update `docs/api-reference.md`.

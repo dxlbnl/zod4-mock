@@ -17,12 +17,84 @@ function ascii(s: string): string {
 // Datasets
 // ---------------------------------------------------------------------------
 
-export const DOMAINS = ["example.com", "test.org", "demo.nl", "sample.io", "mock.dev", "website.com", "portal.net", "app.io", "service.co", "company.nl", "platform.dev", "startup.ai", "blog.me"] as const;
+export const DOMAINS = [
+  "example.com",
+  "test.org",
+  "demo.nl",
+  "sample.io",
+  "mock.dev",
+  "website.com",
+  "portal.net",
+  "app.io",
+  "service.co",
+  "company.nl",
+  "platform.dev",
+  "startup.ai",
+  "blog.me",
+] as const;
 const B64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-const DOMAIN_SUFFIXES = ["com", "net", "org", "nl", "io", "dev", "ai", "app", "me", "co", "info", "biz", "eu", "be", "de", "uk"] as const;
+const DOMAIN_SUFFIXES = [
+  "com",
+  "net",
+  "org",
+  "nl",
+  "io",
+  "dev",
+  "ai",
+  "app",
+  "me",
+  "co",
+  "info",
+  "biz",
+  "eu",
+  "be",
+  "de",
+  "uk",
+] as const;
 const PROTOCOLS = ["http", "https", "ftp", "ssh", "ws", "wss", "tcp", "udp"] as const;
-const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"] as const;
-export const EMOJIS = ["😀", "😂", "🚀", "🔥", "🌈", "💻", "✨", "🍕", "🍔", "🍦", "🎉", "❤️", "👍", "💡", "🤔", "🙌", "😎", "💯", "✅", "🌟", "🐱", "🐶", "🌺", "🌍", "🚗", "📱", "🎧", "⚽", "🏖️", "🍷"] as const;
+const HTTP_METHODS = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "HEAD",
+  "OPTIONS",
+  "TRACE",
+  "CONNECT",
+] as const;
+export const EMOJIS = [
+  "😀",
+  "😂",
+  "🚀",
+  "🔥",
+  "🌈",
+  "💻",
+  "✨",
+  "🍕",
+  "🍔",
+  "🍦",
+  "🎉",
+  "❤️",
+  "👍",
+  "💡",
+  "🤔",
+  "🙌",
+  "😎",
+  "💯",
+  "✅",
+  "🌟",
+  "🐱",
+  "🐶",
+  "🌺",
+  "🌍",
+  "🚗",
+  "📱",
+  "🎧",
+  "⚽",
+  "🏖️",
+  "🍷",
+] as const;
 
 const EXAMPLE_SUFFIXES = ["com", "net", "org", "nl", "io", "eu"] as const;
 
@@ -45,9 +117,24 @@ export function domainSuffix(prng: Prng): string {
 }
 
 const URL_PATHS = [
-  "products", "dashboard", "profile", "settings", "articles",
-  "docs", "api", "blog", "about", "contact", "search", "help",
-  "orders", "invoices", "reports", "users", "admin", "status",
+  "products",
+  "dashboard",
+  "profile",
+  "settings",
+  "articles",
+  "docs",
+  "api",
+  "blog",
+  "about",
+  "contact",
+  "search",
+  "help",
+  "orders",
+  "invoices",
+  "reports",
+  "users",
+  "admin",
+  "status",
 ] as const;
 
 export function domainWord(prng: Prng, ctx?: GeneratorContext): string {
@@ -58,7 +145,9 @@ export function domainWord(prng: Prng, ctx?: GeneratorContext): string {
     const prefixes = locale.company.prefixes;
     return prefixes[prng.int(0, prefixes.length - 1)]!.toLowerCase();
   }
-  return noun(prng, ctx).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return noun(prng, ctx)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 export function urlPath(prng: Prng): string {
@@ -70,9 +159,9 @@ export function domainName(prng: Prng): string {
 }
 
 export function username(prng: Prng, ctx?: GeneratorContext): string {
-  const nick  = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const nick = siblingString(ctx, "nickname", "nick", "bijnaam");
   const first = siblingString(ctx, "firstName", "first_name", "voornaam", "forename");
-  const last  = siblingString(ctx, "lastName", "last_name", "achternaam", "surname");
+  const last = siblingString(ctx, "lastName", "last_name", "achternaam", "surname");
 
   if (nick) {
     const base = ascii(nick);
@@ -91,7 +180,7 @@ export function username(prng: Prng, ctx?: GeneratorContext): string {
 
 export function displayName(prng: Prng, ctx?: GeneratorContext): string {
   const first = siblingString(ctx, "firstName", "voornaam", "forename");
-  const last  = siblingString(ctx, "lastName", "achternaam", "surname");
+  const last = siblingString(ctx, "lastName", "achternaam", "surname");
   if (first && last) return `${first} ${last}`;
   if (first) return first;
   if (last) return last;
@@ -101,9 +190,9 @@ export function displayName(prng: Prng, ctx?: GeneratorContext): string {
 export function email(prng: Prng, ctx?: GeneratorContext): string {
   const domain = () => DOMAINS[prng.int(0, DOMAINS.length - 1)]!;
 
-  const nick    = siblingString(ctx, "nickname", "nick", "bijnaam");
-  const first   = siblingString(ctx, "firstName", "first_name", "voornaam");
-  const last    = siblingString(ctx, "lastName", "last_name", "achternaam");
+  const nick = siblingString(ctx, "nickname", "nick", "bijnaam");
+  const first = siblingString(ctx, "firstName", "first_name", "voornaam");
+  const last = siblingString(ctx, "lastName", "last_name", "achternaam");
   const company = siblingString(ctx, "company", "companyName", "company_name", "bedrijf");
 
   if (nick) {
@@ -154,13 +243,13 @@ export function userAgent(prng: Prng): string {
     `X11; Ubuntu; Linux x86_64`,
     `iPhone; CPU iPhone OS ${prng.int(14, 18)}_${prng.int(0, 5)} like Mac OS X`,
     `iPad; CPU OS ${prng.int(14, 18)}_${prng.int(0, 5)} like Mac OS X`,
-    `Linux; Android ${prng.int(10, 14)}; SM-G${prng.int(900, 999)}B`
+    `Linux; Android ${prng.int(10, 14)}; SM-G${prng.int(900, 999)}B`,
   ]);
   const webkitVersion = `${prng.int(537, 605)}.${prng.int(1, 36)}`;
   const chromeVersion = `${prng.int(90, 130)}.0.${prng.int(4000, 6000)}.${prng.int(100, 200)}`;
   const firefoxVersion = `${prng.int(90, 120)}.0`;
   const safariVersion = `${prng.int(14, 17)}.${prng.int(0, 5)}`;
-  
+
   const browsers: [string, ...string[]] = [
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Chrome/${chromeVersion} Safari/${webkitVersion}`,
     `AppleWebKit/${webkitVersion} (KHTML, like Gecko) Version/${safariVersion} Safari/${webkitVersion}`,

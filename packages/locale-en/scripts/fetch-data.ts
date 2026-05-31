@@ -34,16 +34,20 @@ try {
   // Download names.zip and extract yob2023.txt via unzip
   execSync(
     `curl -sL "https://www.ssa.gov/oact/babynames/names.zip" -o /tmp/ssa-names.zip && ` +
-    `unzip -p /tmp/ssa-names.zip yob2023.txt > /tmp/yob2023.txt`,
+      `unzip -p /tmp/ssa-names.zip yob2023.txt > /tmp/yob2023.txt`,
     { stdio: "inherit" },
   );
 
   const raw = (await import("node:fs")).readFileSync("/tmp/yob2023.txt", "utf8");
   const lines = raw.split("\n").filter((l) => l.trim());
-  const male   = lines.filter((l) => l.split(",")[1] === "M").map((l) => l.split(",")[0]!.toLowerCase());
-  const female = lines.filter((l) => l.split(",")[1] === "F").map((l) => l.split(",")[0]!.toLowerCase());
+  const male = lines
+    .filter((l) => l.split(",")[1] === "M")
+    .map((l) => l.split(",")[0]!.toLowerCase());
+  const female = lines
+    .filter((l) => l.split(",")[1] === "F")
+    .map((l) => l.split(",")[0]!.toLowerCase());
 
-  writeFileSync(join(dataDir, "first-names-male.txt"),   [...new Set(male)].join("\n"),   "utf8");
+  writeFileSync(join(dataDir, "first-names-male.txt"), [...new Set(male)].join("\n"), "utf8");
   writeFileSync(join(dataDir, "first-names-female.txt"), [...new Set(female)].join("\n"), "utf8");
   console.log(`  ✓ first-names-male.txt (${male.length} names)`);
   console.log(`  ✓ first-names-female.txt (${female.length} names)`);
@@ -88,7 +92,21 @@ try {
     .filter((w) => /^[a-z]{4,12}$/.test(w));
 
   // Heuristic: adjectives often end in these suffixes
-  const adjSuffixes = ["ful", "less", "ous", "ive", "ible", "able", "al", "ic", "ish", "ary", "ory", "ent", "ant"];
+  const adjSuffixes = [
+    "ful",
+    "less",
+    "ous",
+    "ive",
+    "ible",
+    "able",
+    "al",
+    "ic",
+    "ish",
+    "ary",
+    "ory",
+    "ent",
+    "ant",
+  ];
   const adjectives = words.filter((w) => adjSuffixes.some((s) => w.endsWith(s))).slice(0, 3000);
   // Nouns: everything else (rough heuristic)
   const adjSet = new Set(adjectives);

@@ -137,9 +137,9 @@ import { createWorld } from "zod4-mock";
 import { en } from "@zod4-mock/locale-en";
 import { nl } from "@zod4-mock/locale-nl";
 
-createWorld({ seed: 42 });              // built-in minimal English
-createWorld({ seed: 42, locale: en });  // full English, Markov-generated
-createWorld({ seed: 42, locale: nl });  // Dutch
+createWorld({ seed: 42 }); // built-in minimal English
+createWorld({ seed: 42, locale: en }); // full English, Markov-generated
+createWorld({ seed: 42, locale: nl }); // Dutch
 ```
 
 Build custom locales by overriding individual sections with `extend()` — see the [API reference](docs/api-reference.md#localization).

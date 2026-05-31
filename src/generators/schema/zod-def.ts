@@ -134,9 +134,7 @@ export function resolveLazyChain(
  *       • `.optional()` absent with a previously captured fallback,
  *       • `.nullable()` absent (value = `null`).
  */
-export type UnwrappedAbsent =
-  | { kind: "skip" }
-  | { kind: "default"; value: unknown };
+export type UnwrappedAbsent = { kind: "skip" } | { kind: "default"; value: unknown };
 
 export function unwrapOptionalChainForField(
   fieldSchema: ZodTypeAny,
@@ -154,16 +152,13 @@ export function unwrapOptionalChainForField(
 
     if (isAbsent && allowAbsent) {
       if (d.type === "default") {
-        const value =
-          typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+        const value = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
         return { inner, absent: { kind: "default", value } };
       }
       if (d.type === "optional") {
         return {
           inner,
-          absent: hasFallback
-            ? { kind: "default", value: fallbackValue }
-            : { kind: "skip" },
+          absent: hasFallback ? { kind: "default", value: fallbackValue } : { kind: "skip" },
         };
       }
       // d.type === "nullable"
@@ -171,8 +166,7 @@ export function unwrapOptionalChainForField(
     }
 
     if (d.type === "default") {
-      fallbackValue =
-        typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
+      fallbackValue = typeof d.defaultValue === "function" ? d.defaultValue() : d.defaultValue;
       hasFallback = true;
     }
 

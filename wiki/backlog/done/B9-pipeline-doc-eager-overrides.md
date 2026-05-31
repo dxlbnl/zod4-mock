@@ -9,16 +9,18 @@ created: 2026-05-28
 ---
 
 ## Description
+
 The module-level doc-comment in `world.d.ts` (sourced from `src/world.ts`) lists the
 field-generation pipeline as steps 1–6, with `options.overrides` at step 5 (final
 deep-merge). The comment is silent about the **eager step 0** in
 `generateObjectFields` that assigns primitive/array overrides into `result[key]` before
 the matcher branch runs, which is why later sibling matchers can read overridden values
 via `ctx.current.<sibling>`. A reader concludes (incorrectly) that overrides apply
-*after* matchers and avoids an "override drives dependent matcher" pattern that in fact
+_after_ matchers and avoids an "override drives dependent matcher" pattern that in fact
 works correctly. (GitHub issue #9.)
 
 ## Acceptance
+
 Update the pipeline doc-comment in `src/world.ts` (and any mirror in `src/types.ts`) to
 include step 0:
 
@@ -38,6 +40,7 @@ include step 0:
 Zero behaviour change. No new tests needed — this is a doc-comment-only update.
 
 ## Notes
+
 - `mode: lite` — trivial, behavior-neutral product change: single comment in a source
   file, no API/schema change, no new behavior to assert.
 - If `docs/api-reference.md` or `docs/concepts.md` repeats the pipeline list, update

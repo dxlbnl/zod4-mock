@@ -9,6 +9,7 @@ created: 2026-05-27
 ---
 
 ## Description
+
 `ctx.related(name)` resolves a single related record — perfect for foreign keys (one
 document → one author). But one-to-many relationships (a case → many users, an order →
 many line items, a folder → many files) have no good primitive. Current workarounds both
@@ -17,25 +18,32 @@ fail:
 ```ts
 // Option A — registry.all + manual sampling. Bypasses the `relations:` declaration
 // entirely, so the schema no longer documents the relationship, and no auto-provision.
-matchers: { users: (ctx) => ctx.prng.sample(ctx.registry.all(userSchema), 3) }
+matchers: {
+  users: (ctx) => ctx.prng.sample(ctx.registry.all(userSchema), 3);
+}
 
 // Option B — call ctx.related repeatedly. ctx.related is record-scoped, so every call
 // within the same record returns the SAME pick.
-matchers: { users: (ctx) => [ctx.related('users'), ctx.related('users')] } // identical
+matchers: {
+  users: (ctx) => [ctx.related("users"), ctx.related("users")];
+} // identical
 ```
 
 Add a `.many()` method on `ctx.related`. (GitHub issue #3.)
 
 ## Proposal
+
 ```ts
 interface GeneratorContext<T = any> {
   related: {
-    <T = unknown>(relationName: string): T;            // existing single-pick
-    many<T = unknown>(relationName: string, count: number): T[];  // new
+    <T = unknown>(relationName: string): T; // existing single-pick
+    many<T = unknown>(relationName: string, count: number): T[]; // new
   };
 }
 ```
+
 Semantics:
+
 - Picks `count` **distinct** records from the related schema's registry.
 - If the registry has fewer than `count`, **auto-provisions the difference** (same
   auto-provision behavior as single `related`).
@@ -45,13 +53,14 @@ Semantics:
   consistent.
 
 ## Usage examples
+
 ```ts
 // Case has 2-4 users; sibling matchers see the same set in the same order
 withSchema(caseSchema, {
   relations: { users: userSchema },
   matchers: {
-    users: (ctx) => ctx.related.many('users', ctx.prng.int(2, 4)),
-    usernames: (ctx) => ctx.related.many('users', ctx.prng.int(2, 4)).map(u => u.username),
+    users: (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)),
+    usernames: (ctx) => ctx.related.many("users", ctx.prng.int(2, 4)).map((u) => u.username),
   },
 });
 
@@ -59,15 +68,15 @@ withSchema(caseSchema, {
 withSchema(orderSchema, {
   relations: { items: lineItemSchema },
   matchers: {
-    items: (ctx) => ctx.related.many('items', ctx.prng.int(1, 5)),
+    items: (ctx) => ctx.related.many("items", ctx.prng.int(1, 5)),
     totalCents: (ctx) =>
-      ctx.related.many('items', ctx.prng.int(1, 5))
-        .reduce((sum, item) => sum + item.priceCents, 0),
+      ctx.related.many("items", ctx.prng.int(1, 5)).reduce((sum, item) => sum + item.priceCents, 0),
   },
 });
 ```
 
 ## Open questions (resolve in spec)
+
 - **Distinctness**: distinct picks (recommended default) vs. allow repeats — document the
   choice.
 - **API shape**: `related.many()` (recommended — namespaces as the API grows:
@@ -77,6 +86,7 @@ withSchema(orderSchema, {
   doubling the API surface.
 
 ## Notes
+
 - Internal impl likely reuses `prng.sample` (issue #1, already landed).
 - No registry mutation beyond the auto-provisioning already documented for `related`.
 - Public API change (extends `GeneratorContext`) → update `docs/api-reference.md` in the

@@ -228,9 +228,7 @@ describe("B10-R3: default or explicit store: true is byte-equivalent", () => {
 
 describe("B10-R4: store: false propagates through nested generation", () => {
   it("B10-R4 / outer search-bucket — inner registered ItemSchema not stored", () => {
-    const world = createWorld({ seed: 1 })
-      .withSchema(ItemSchema)
-      .withSchema(SearchBucketSchema);
+    const world = createWorld({ seed: 1 }).withSchema(ItemSchema).withSchema(SearchBucketSchema);
 
     expect(world.registry.count(ItemSchema)).toBe(0);
     const before = world.registry.count(ItemSchema);
@@ -269,9 +267,7 @@ describe("B10-R4: store: false propagates through nested generation", () => {
   });
 
   it("B10-R4 / propagation is scoped to one call — subsequent default generate still writes", () => {
-    const world = createWorld({ seed: 1 })
-      .withSchema(ItemSchema)
-      .withSchema(SearchBucketSchema);
+    const world = createWorld({ seed: 1 }).withSchema(ItemSchema).withSchema(SearchBucketSchema);
 
     world.generate(SearchBucketSchema, { store: false });
     // Empty after the no-store call.
@@ -305,10 +301,7 @@ describe("B10-R5: world.get create path always stores and is idempotent under B1
     // Create-path write performed (B6-R3 / D8).
     expect(world.registry.count(ProductSchema)).toBe(before + 1);
     // Discoverable by a subsequent find.
-    const found = world.registry.find(
-      ProductSchema,
-      (p) => p.sku === "WIDGET-42",
-    );
+    const found = world.registry.find(ProductSchema, (p) => p.sku === "WIDGET-42");
     expect(found).toBe(created);
   });
 

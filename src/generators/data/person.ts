@@ -6,8 +6,18 @@ import { defaultLocale } from "../../default-locale.js";
 
 // Universal — not locale-dependent
 const ZODIAC_SIGNS = [
-  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -63,9 +73,9 @@ export function firstName(prng: Prng, genderOrCtx?: Gender | GeneratorContext): 
   const ctx = typeof genderOrCtx === "object" ? genderOrCtx : undefined;
   const g = extractGender(genderOrCtx);
   const p = (ctx?.locale ?? defaultLocale).person;
-  const male   = (): string => sampleName(prng, p.firstNamesMale,   p.simpleFirstNamesMale);
+  const male = (): string => sampleName(prng, p.firstNamesMale, p.simpleFirstNamesMale);
   const female = (): string => sampleName(prng, p.firstNamesFemale, p.simpleFirstNamesFemale);
-  if (g === "male")   return male();
+  if (g === "male") return male();
   if (g === "female") return female();
   return prng.random() < 0.5 ? male() : female();
 }
@@ -102,7 +112,7 @@ export function prefix(prng: Prng, genderOrCtx?: Gender | GeneratorContext): str
   const ctx = typeof genderOrCtx === "object" ? genderOrCtx : undefined;
   const g = extractGender(genderOrCtx);
   const locale = ctx?.locale ?? defaultLocale;
-  if (g === "male")   return pick(prng, locale.person.prefixes.male);
+  if (g === "male") return pick(prng, locale.person.prefixes.male);
   if (g === "female") return pick(prng, locale.person.prefixes.female);
   return pick(prng, locale.person.prefixes.neutral);
 }
@@ -147,8 +157,10 @@ export function zodiacSign(prng: Prng): string {
 
 export function bio(prng: Prng, ctx?: GeneratorContext): string {
   const locale = ctx?.locale ?? defaultLocale;
-  const title = siblingString(ctx, "jobTitle", "job_title", "jobtitle", "functie") ?? jobTitle(prng, ctx);
-  const area  = siblingString(ctx, "jobArea",  "job_area",  "jobarea",  "afdeling") ?? jobArea(prng, ctx);
-  const type  = siblingString(ctx, "jobType",  "job_type",  "jobtype") ?? "";
+  const title =
+    siblingString(ctx, "jobTitle", "job_title", "jobtitle", "functie") ?? jobTitle(prng, ctx);
+  const area =
+    siblingString(ctx, "jobArea", "job_area", "jobarea", "afdeling") ?? jobArea(prng, ctx);
+  const type = siblingString(ctx, "jobType", "job_type", "jobtype") ?? "";
   return locale.person.formatBio(prng, { jobTitle: title, jobArea: area, jobType: type });
 }

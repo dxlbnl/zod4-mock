@@ -6,9 +6,9 @@
 
 ```typescript
 function generatePseudoWord(prng: Prng): string {
-  const onset  = prng.pick(ONSETS);   // e.g. "str", "bl", "k"
-  const nucleus = prng.pick(NUCLEI);  // e.g. "aa", "ei", "oe"
-  const coda   = prng.pick(CODAS);    // e.g. "nd", "t", "rk"
+  const onset = prng.pick(ONSETS); // e.g. "str", "bl", "k"
+  const nucleus = prng.pick(NUCLEI); // e.g. "aa", "ei", "oe"
+  const coda = prng.pick(CODAS); // e.g. "nd", "t", "rk"
   return onset + nucleus + coda;
 }
 ```
@@ -39,14 +39,15 @@ The `nounModel`, `adjectiveModel`, and `verbModel` are carried in the locale obj
 
 This is the most important distinction in the word generator refactor:
 
-| Class | Examples | Generator |
-|-------|----------|-----------|
-| **Open-class** (content words) | nouns, adjectives, verbs, adverbs | Markov — infinite invented variety |
+| Class                             | Examples                                                      | Generator                                                            |
+| --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Open-class** (content words)    | nouns, adjectives, verbs, adverbs                             | Markov — infinite invented variety                                   |
 | **Closed-class** (function words) | articles, prepositions, conjunctions, pronouns, interjections | Real word lists in the locale — grammar requires specific real words |
 
 **Why closed-class must stay real:** Articles like "the" and "a" (English) or "de" and "het" (Dutch) have specific grammatical roles. An invented article ("blor") breaks the sentence structurally. These lists are tiny (10–30 words per locale) so there is no bundle cost to keeping them real.
 
 The current `word.ts` exports both types from the same file. After the refactor:
+
 - `noun()`, `adjective()`, `verb()`, `adverb()` → Markov models in locale
 - `conjunction()`, `preposition()`, `article()`, `pronoun()` → locale data arrays
 
@@ -65,16 +66,14 @@ Implemented as a small rule table with PRNG-driven optional expansions:
 ```typescript
 function sentence(prng: Prng, ctx: GeneratorContext): string {
   const loc = ctx.locale.word;
-  const det  = prng.pick(loc.articles);
-  const n    = noun(prng, ctx);
-  const v    = verb(prng, ctx);
+  const det = prng.pick(loc.articles);
+  const n = noun(prng, ctx);
+  const v = verb(prng, ctx);
 
   // NP VP, optionally with adjective and object NP
-  const adj  = prng.random() > 0.5 ? ` ${adjective(prng, ctx)}` : "";
+  const adj = prng.random() > 0.5 ? ` ${adjective(prng, ctx)}` : "";
   const hasObj = prng.random() > 0.5;
-  const obj  = hasObj
-    ? ` ${prng.pick(loc.articles)} ${noun(prng, ctx)}`
-    : "";
+  const obj = hasObj ? ` ${prng.pick(loc.articles)} ${noun(prng, ctx)}` : "";
 
   return capitalize(`${det}${adj} ${n} ${v}${obj}.`);
 }
@@ -85,6 +84,7 @@ This is a significant improvement over random word concatenation with a tiny rul
 ## Adverbs and Modifiers
 
 Adverbs in the current generator are Dutch-only. After the refactor:
+
 - English adverbs = Markov-generated from English word corpus + suffix rule: append `"ly"` to common adjective lemmas (e.g., `"quick"` → `"quickly"`)
 - Dutch adverbs = similar morphological rule or a small curated list
 

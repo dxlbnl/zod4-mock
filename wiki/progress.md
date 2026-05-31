@@ -20,12 +20,14 @@ it records the reason here AND states it in chat.
 <!-- entries start here -->
 
 ## 2026-05-29 23:15 — B45: Evaluate alternatives to char-level Markov for name/word generation
+
 - manager: start, track: research (flagged review)
 - manager: dispatch general-purpose researcher → wiki/research/text-generation/markov-alternatives.md
 - note: filed as B44 originally; renumbered to B45 to coexist with another session's concurrent B44
 - manager: researcher returned report; paused at review checkpoint (flagged review)
 
 ## 2026-05-27 — B4: Add `registry.find()` — single-record predicate lookup
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B4-registry-find.md (R1–R5); 1 non-blocking open question (return contract → T|undefined)
@@ -39,6 +41,7 @@ it records the reason here AND states it in chat.
 - result: done — commit e64e832
 
 ## 2026-05-27 — B5: Add `ctx.related.many(name, count)` for one-to-many relations
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B5-related-many.md (R1–R6); 3 non-blocking open questions (distinct/api-shape/range all resolved per card)
@@ -52,6 +55,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 12fa016
 
 ## 2026-05-27 — B6: Add `world.get(schema, predicate)` — find-or-create by domain key
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B6-world-get-find-or-create.md (R1–R9); 4 non-blocking open questions resolved
@@ -66,6 +70,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 925068b
 
 ## 2026-05-28 — B12: BUG — Nested-object overrides skip the matcher and don't deep-merge
+
 - manager: start, track: bug (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B12-nested-override-skips-matcher.md (R1–R4); 2 non-blocking open questions
@@ -80,6 +85,7 @@ it records the reason here AND states it in chat.
 - result: done — commit c21023e (closes #12)
 
 ## 2026-05-28 — B7: Registry read methods should return `infer<T>` (output shape), not `input<T>`
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B7-registry-output-typing.md (R1–R7); empirically verified no matcher round-trips pre-coerce values in src/ or tests/ — option (b) document-the-contract safe
@@ -93,6 +99,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 1b67a89 (closes #7, #16)
 
 ## 2026-05-28 — B15: `prng.pick` should accept `readonly T[]`; verify `shuffle`/`sample` shipped on the published `Prng` interface
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B15-…md (R1–R5). Diagnostic: shuffle/sample ALREADY in locale-core src/ + committed dist/; only the npm-published 0.2.0 is stale. R3 closes recurrence via prepublishOnly on 4 locale packages.
@@ -109,6 +116,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 45b45df (closes #15)
 
 ## 2026-05-28 — B14: `world.populate` should support a per-record factory for `GenerateOptions`
+
 - manager: start, track: feature (unflagged)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B14-world-populate-factory.md (R1–R7); 2 non-blocking open questions (factory shape = GenerateOptions; pure-factory determinism)
@@ -123,6 +131,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 9b2a80a (closes #14)
 
 ## 2026-05-28 — B10: Add an opt-out for registry storage on `world.generate`
+
 - manager: start, track: feature (unflagged)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B10-generate-store-opt-out.md (R1–R8); 2 non-blocking open questions resolved; D8 finding documented (makes B10-R5 mandatory — world.get must always store)
@@ -136,6 +145,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 63e88e7 (closes #10)
 
 ## 2026-05-28 — B8: Derived schemas (`from:`) should be 1:1 / identity-preserving with their source
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B8-derived-schemas-identity.md (R1–R11); 3 non-blocking open questions
@@ -154,6 +164,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 948bd71 (closes #8)
 
 ## 2026-05-28 — B11: `relations` should support a predicate to filter the candidate pool
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B11-relations-predicate-filter.md (R1–R10); 3 non-blocking open questions resolved (z.infer predicate, re-evaluate per record, empty-pool-throws)
@@ -163,10 +174,11 @@ it records the reason here AND states it in chat.
 - manager: dispatch implementer
 - implementer: added RelationEntry<T> discriminated union (src/types.ts) + isZodSchema/normalizeRelationEntry helpers; updated withSchema to normalize entries at registration; resolveRelated/Many filter snapshot once on cache-miss; throw with named relation when empty filtered pool (self-ref exemption); B10 store:false in-memory pool also filtered; docs + changeset added. GREEN: 922 tests, typecheck clean.
 - manager: dispatch reviewer (no git; pnpm test/typecheck only)
-- reviewer: PASS — R1–R10 met, 922 tests green, typecheck clean, discriminator robust (uses _zod brand per D3), D9 neutrality verified (whereCalls === 8), B10 store:false interaction confirmed, no scope creep, no new standing constraint
+- reviewer: PASS — R1–R10 met, 922 tests green, typecheck clean, discriminator robust (uses \_zod brand per D3), D9 neutrality verified (whereCalls === 8), B10 store:false interaction confirmed, no scope creep, no new standing constraint
 - result: done — commit 1a9603e (closes #11)
 
 ## 2026-05-28 — B13: Add `world.populateFrom(derivedSchema, sourceSchema, predicate?)`
+
 - manager: start, track: feature (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B13-world-populate-from.md (R1–R11); 2 non-blocking open questions resolved (z.infer predicate; ad-hoc source schemas accepted)
@@ -180,6 +192,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 30d1c17 (closes #13)
 
 ## 2026-05-28 — B16: Surface the auto key-match list (docs + a debug helper `world.explain`)
+
 - manager: start, track: feature (unflagged)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B16-surface-key-match-list.md (R1–R11); 3 non-blocking open questions resolved (structured+toString, standalone method, single-schema scope). Found localized aliases live in DEFAULT_KEY_MAP.string (src/generators/data/key-map.ts), not in locale packages.
@@ -203,17 +216,20 @@ it records the reason here AND states it in chat.
 - result: done — commit bc5558f (closes #17)
 
 ## 2026-05-28 21:44 — manager: planning pass
+
 - inbox: 6 items (B2, B3, B9, B17, B18, B19); ready: 0; doing: 0
 - B19 is a tracking marker (already resolved by B8 in 0.7.0) flagged blocked — not real work; bookkeeping pending GitHub-side close on issue #20
 - ordered work plan presented to user; pausing for approval
 
 ## 2026-05-28 21:45 — B19: BUG — `world.generate(derivedSchema, { source })` does not store (RESOLVED by B8 in 0.7.0)
+
 - manager: housekeeping pass — user approved "handle B19 first"
 - manager: no auth available for GitHub write API; falling back to card's Option 2 (close via commit subject on next push)
 - manager: swapped frontmatter flags: [blocked] → [cancelled], updated Notes; git mv inbox/ → done/
 - result: cancelled — commit d478d03 (closes #20)
 
 ## 2026-05-28 21:46 — B18: BUG — `deepMerge` recurses into `Date` / `Map` / `Set` / `RegExp` and loses the value
+
 - manager: start, track: bug (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B18-deepmerge-atomic-objects.md (R1–R5); resolved realm-check open question in-spec as (a) `Object.getPrototypeOf === Object.prototype || null` (Node-only library); 0 blocking open questions
@@ -227,6 +243,7 @@ it records the reason here AND states it in chat.
 - result: done — commit df963b6 (closes #19)
 
 ## 2026-05-28 21:55 — B17: BUG — `z.record(enum, V)` should generate all enum keys, not a random subset
+
 - manager: start, track: bug (flagged review)
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B17-record-enum-exhaustive-keys.md (R1–R8). Three out-of-scope decisions: z.map(enum) Option (b) unchanged (iterable, not strict-key parsed), z.nativeEnum (router unsupported), literal-union (def-walk brittle). All 3 open questions resolved non-blocking. Docs target: docs/zod4-schema-coverage.md (not api-reference; no API change).
@@ -240,6 +257,7 @@ it records the reason here AND states it in chat.
 - result: done — commit da72b78 (closes #18)
 
 ## 2026-05-28 22:10 — B9: Doc — pipeline comment in `world.d.ts` omits the eager-overrides step
+
 - manager: start, track: feature/lite (no review flag)
 - manager: lite gate re-check PASS (1–2 files, comment only, no API/schema/contract change, no observable behavior, no security)
 - manager: dispatch implementer (lite)
@@ -249,11 +267,13 @@ it records the reason here AND states it in chat.
 - result: done — commit 50f07e1 (closes #9)
 
 ## 2026-05-28 22:15 — manager: pausing run
+
 - 4 items completed this session: B19 (d478d03 cancel), B18 (df963b6), B17 (da72b78), B9 (50f07e1)
 - 2 items remain in inbox: B2 (research, low, review), B3 (feature, low, review) — both architecturally significant, deferred to a future session per user direction ("just B9. then I'll ship")
 - 4 unpushed commits on main: d478d03, df963b6, da72b78, 50f07e1 (issue auto-closes #20, #19, #18, #9 fire on push)
 
 ## 2026-05-29 — B20: BUG — `world.generate(derivedSchema, { store: false })` crashes when `from:` registry is empty
+
 - manager: filed via /intake from GitHub issue #21 (high priority — user said "fix asap"); promoted inbox → doing, track: bug
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B20-store-false-empty-from-crash.md (R1–R8). Chose **Fix B** (local-capture Map for auto-provisioned source) over Fix A (force `effectiveStore = true`) because B10-R4 already pins transitive `store: false` suppression of auto-provisioned siblings; Fix A would carve a contradicting exception. Two non-blocking open questions (multi-derivedReg sharing same `from:` reuse; defensive `pairs.length === 0` guard) — both recorded, do not block.
@@ -269,6 +289,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit b397fd6 (closes #21 on push)
 
 ## 2026-05-29 — B22: Research — deep complexity analysis of the codebase
+
 - manager: filed via /intake (user request, no GH issue); promoted inbox → doing, track: research. Scope confirmed with user via 3 questions: all 4 dimensions (cyclomatic+cognitive / module size+shape / structural-nesting / architectural-pipeline); depth = survey + top-N hotspots with recommendations; output = recommendations as backlog-item sketches, NOT auto-filed.
 - manager: dispatch researcher (general-purpose)
 - researcher: wrote wiki/research/reports/codebase-complexity.md (275 LOC). Headline: src/world.ts is the entire problem (1202 LOC, 7 concerns); generateSingleItem (164 LOC, 4 sub-pipelines glued by mutable result + transformApplied flag) is the clearest accidental-complexity offender; the per-field pipeline is re-implemented 3× with drift (world.ts + collection.ts:generateZodObject + explain.ts); generationCounter-derived PRNG fork keys make state depend on call order (soft D4 violation worth audit); three duplicated state-machines (optional/nullable unwrap, lazy-resolve while, mode dispatch). 15 proposed backlog items, NOT auto-filed. Updated INDEX.md Pages table. Gaps disclosed: true cognitive complexity unmeasured (no tool); cyclomatic counts are upper bounds due to `||` / `??` defaults.
@@ -277,6 +298,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit pending
 
 ## 2026-05-29 — B38: BUG — `world.generate(primaryArraySchema, { overrides })` silently drops per-index overrides
+
 - manager: filed via /intake from GitHub issue #22 (user-classified Mid; manager bumped to high — silent + plausible-looking result). Card flagged review (design choice A/B/C/D); promoted inbox → doing, track: bug.
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B38-primary-array-overrides-dropped.md (R1–R7). Chose **C+D combined** (throw + docs). B explicitly rejected by D8 (stored-equals-returned would forbid return-only override); A rejected as silent partial fix. Strict throw on any non-empty per-index overrides against primary-registered inner (vs permissive throw only when overrides.length > target - existingCount) for 1:1 call-shape → error mapping. Changeset bump: `minor` (conservative — users in #22 relied on silent no-op). 3 non-blocking open questions (bump minor vs patch; strict vs permissive; plain Error vs named subclass).
@@ -290,6 +312,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit 8703c0a (closes #22 on push)
 
 ## 2026-05-29 — B27: Research — audit `generationCounter`-derived PRNG fork keys (possible D4 soft violation)
+
 - manager: promoted inbox → doing, track: research (priority high — only correctness-adjacent backlog item). Card flagged review → checkpoint after researcher returns.
 - manager: dispatch researcher (general-purpose)
 - researcher: wrote wiki/research/engine/generation-counter-d4-audit.md. Headline: **nuanced — partly real**. Counter dependence IS real on three paths (ad-hoc generateSingleItem at src/world.ts:1180, every generateArray at line 927 via `gen-${counter}`, outer-wrapper optional/nullable roll at line 362). It is NOT real for registered primary records (seeded off `registry.count(schema)` via `"reg{id}#{index}"`) or registered derived records (seeded off `"dreg{id}#{sourceIndex}"`). Existing test (tests/unit/core/derived-identity.test.ts:496-538) already documents this mixed picture. **Recommends Option (a)** — rename `generationCounter → callCounter`, add a one-line Rule + ADR codifying "deterministic generation is per-(seed + builder chain + call sequence)". Reason: docs/api-reference.md already says "same builder chain" + "call sequence" (lines 90 + 485), so this is documentation alignment with the shipped contract; Option (b) (stable identity-based forks) re-pins every array/ad-hoc snapshot → major-version change, own pipeline. Updated INDEX.md Pages table. Two gaps disclosed: (1) did not enumerate which test snapshots shift under (b) — spec-writer job if greenlit; (2) flagged separate wiki-sync issue (CLAUDE.md + wiki/codebase-map.md still say Mulberry32, but src/prng.ts is now SFC32).
@@ -299,6 +322,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit b154da6; follow-up B39 filed (commit 7066903)
 
 ## 2026-05-29 — B39: BUG — replace `generationCounter`-derived PRNG fork keys with stable per-schema identity-based ones
+
 - manager: user asked to run autonomously through queue, **skip review checkpoints** until told to stop. B39's design choice (Option B) already has explicit user sign-off via B27 checkpoint, so the review flag on B39's card is satisfied — no checkpoint needed.
 - manager: promoted inbox → doing, track: bug
 - manager: dispatch spec-writer
@@ -310,7 +334,7 @@ it records the reason here AND states it in chat.
 - manager: dispatch implementer
 - implementer: made the WeakMap-ID + per-schema-slot changes in src/world.ts, renamed `generationCounter` → `derivedPairCounter`, updated docs/api-reference.md, CLAUDE.md (Mulberry32→SFC32), and wiki/decisions.md (D10 ADR). **Made schemaId WeakMap module-global** (not per-world) to satisfy B39-R1 — implementer's commentary in src/world.ts:50-72 explains why a per-world counter cannot satisfy B39-R1's cross-world equivalence. **Did not write changeset file.** Full suite: 1000 passed / **3 RED**, all in pre-existing tests the spec-writer's B39-R5 enumeration claimed would be untouched (K).
 - **MANAGER ESCALATION** — the 3 failing pre-existing tests expose a genuine spec gap, not an implementation bug:
-  1. `tests/unit/core/world.test.ts:633` — "adding a field does not change values of existing fields" — the **canonical D4 test**. Two separately-constructed `z.object(...)` schemas (SchemaA / SchemaB) get different WeakMap IDs under B39's reference-identity model, so their `name` and `email` fork keys differ → values differ → "adding `age` between them DOES change `name` and `email`." This is the foundational stability claim that D4 was *supposed* to protect.
+  1. `tests/unit/core/world.test.ts:633` — "adding a field does not change values of existing fields" — the **canonical D4 test**. Two separately-constructed `z.object(...)` schemas (SchemaA / SchemaB) get different WeakMap IDs under B39's reference-identity model, so their `name` and `email` fork keys differ → values differ → "adding `age` between them DOES change `name` and `email`." This is the foundational stability claim that D4 was _supposed_ to protect.
   2. `tests/integration/document-corpus/document-corpus.test.ts:151` — "same seed produces identical output" — two `make(42)` calls each construct a NEW `z.array(PersonSchema).length(3)` reference. Under module-global IDs, the second call's array schema gets a different ID than the first → different fork keys → different output. **Same-seed reproducibility across separate `createWorld` calls is broken.**
   3. `tests/unit/generators/domains/collection.test.ts:222` — B17-R6 "appending an enum member only disturbs the new member's value" — S1 and S2 contain separately-constructed `z.number()` instances, so their entry `A` and `B` value fork keys differ.
 - Root tension: B39-R1 ("same world + same schema reference → same Nth value, regardless of intervening calls") REQUIRES reference-identity. But three existing tests encode the (stronger, but seemingly already-shipped) claim "**structurally-identical-but-separately-constructed** schemas at the same seed produce the same value." These two claims are inconsistent.
@@ -327,6 +351,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit ba232fe; B40 filed commit 87e3134
 
 ## 2026-05-29 — B40: BUG — `ctx.gen.<ns>.<fn>()` ignores the configured locale (Markov silently falls back to `defaultLocale`)
+
 - manager: promoted inbox → doing, track: bug. **Review checkpoint skipped per user autonomous-run direction**; spec-writer to recommend Option A (issue body's recommendation) and proceed.
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B40-ctx-gen-ignores-locale.md (R1-R9). Chose **Direction A** (issue-recommended) — `bindGenerators` Proxy adapter injects boundCtx as default ctx; preserves `(prng, ctx?)` signature contract; explicit ctx wins (backwards compat). Surveyed all helpers across 4 buckets: Bucket 1 = ~50 `(prng, ctx?)` shape (gets locale forwarding); Bucket 2 = 4 `firstName/middleName/...` `(prng, genderOrCtx?: Gender|Ctx)` (only ctx-form forwards; Gender-string residual deferred to B36); Bucket 3 = 3 `(prng, ...intermediateArgs, ctx?)` (word.words, word.paragraph, commerce.price — adapter needs typed ctx-slot table); Bucket 4 = many pure prng-only (B40-R4 guards). 3 non-blocking open questions (Gender-residual deferred / full ctx vs subset / table location).
@@ -341,6 +366,7 @@ it records the reason here AND states it in chat.
 - result: done — moved card to wiki/backlog/done/, commit d30e0de (closes #23)
 
 ## 2026-05-29 — B24: Refactor — decompose `WorldImpl.generateSingleItem` into four named methods (closes B21)
+
 - manager: promoted inbox → doing, track: chore. **Review checkpoint skipped per user autonomous-run direction**. B24's card says it closes B21 naturally — manager will cancel B21 with B24's commit if B21's regression is included in B24's tests.
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B24-decompose-generate-single-item.md (R1-R10). Pinned 4-way decomposition: `generateWithSourceOverride`, `generateDerivedAutoSource`, `generatePrimary`, `generateAdHoc`, each as private method on WorldImpl. B21 closure pinned in R3 (no-source-derived path adds `if (effectiveStore) registry.store(schema, result)`) + R7 regression test (count(Derived) === 1 after `world.generate(Derived)` no-source; existing B8 with-source, B10 store:false, B20 empty-from-registry paths untouched). Dispatcher applies trailing overrides+transform. **B20-R2's second scenario assertion needs updating** (count(Derived) changes 0→1) — test-writer to handle. Changeset bump: **`minor`** (B21 closure shifts observable user-facing behaviour for the `for { generate(D) }` loop pattern, count goes 1→N). 6 non-blocking open questions (rollback location, parameter shapes, dispatcher boundary, B20 test update, bump choice, inlining vs dispatcher).
@@ -356,6 +382,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 0a1d5d2; **B21 cancelled** (moved inbox → done with `flags: [cancelled]`, Resolution section added pointing at B24)
 
 ## 2026-05-29 — B31: Refactor — extract `resolveLazyChain(schema, cache)` helper (removes 4 duplicate while loops)
+
 - manager: promoted inbox → doing, track: chore (XS, mechanical). No spec/tests-first; implementer → reviewer.
 - manager: dispatch implementer
 - implementer: added `resolveLazyChain(schema, cache?)` helper in src/generators/schema/zod-def.ts (~20 LOC, optional cache param). Replaced 4 sites: world.ts:584/1069/1367 + explain.ts:251 (card cited :350/780/1040 — line shift post-B24/B39 decomposition reconciled). Chose Option A (module-level fn with optional cache) over Option B (instance method) so the cacheless explain.ts site fits the same helper without forcing explainSchema onto WorldImpl. Cache semantics byte-identical. Added .changeset/b31-extract-resolve-lazy-chain.md (patch). Also updated wiki/codebase-map.md to list the new helper. GREEN: 1017/1017 tests, typecheck clean. No `any` (D1), no Zod internals beyond def() helper (D3), no fork-key disturbance (D4/D10).
@@ -364,6 +391,7 @@ it records the reason here AND states it in chat.
 - result: done — commit d3d9797
 
 ## 2026-05-29 — B33: Refactor — encapsulate `effectiveStore` state machine as `withEffectiveStore(value, fn)`
+
 - manager: promoted inbox → doing, track: chore (XS). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: added `private withEffectiveStore<R>(value: boolean | undefined, fn: () => R): R` at src/world.ts:707-716. Single call site `WorldImpl.generate` at :567. Helper short-circuits on undefined; sets+try/finally restores on true/false. Verified via grep: only 1 write site for effectiveStore (the card hinted at more — world.get and populate don't touch the flag; they use the GenerateOptions.store path or strip the option). Added .changeset/b33-with-effective-store-helper.md (patch). GREEN: 1017/1017 tests, typecheck clean.
@@ -372,6 +400,7 @@ it records the reason here AND states it in chat.
 - result: done — commit d4e9b0a
 
 ## 2026-05-29 — B30: Refactor — extract `unwrapOptionalChainForField` helper (removes 2 copies)
+
 - manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: added `unwrapOptionalChainForField(fieldSchema, prng, optProb, allowAbsent?)` helper in src/generators/schema/zod-def.ts:141-185 with `UnwrappedAbsent = { kind: "skip" } | { kind: "default"; value: unknown }` discriminated union. Replaced 2 sites: world.ts generateObjectFields step 3 (passes `allowAbsent = fieldOverride === undefined` — B12 override-suppresses-absent contract) + collection.ts generateZodObject (uses default `allowAbsent = true`). Sites were NOT byte-identical: world.ts had the extra `fieldOverride === undefined` guard. Helper preserves this via `allowAbsent` param + critical insight that `prng.random()` MUST still be consumed at every wrapper layer even when absent branch is gated off — preserves D4/D10 byte-identity. Tightened spec sketch's `{ kind, value? }` to proper discriminated union. Added .changeset/b30-extract-unwrap-optional-chain.md (patch). Updated wiki/codebase-map.md. GREEN: 1017/1017 tests (D4/D10 byte-identity confirmed), typecheck clean.
@@ -380,6 +409,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 631086a
 
 ## 2026-05-29 — B35: Refactor — build `key-map.ts` text aliases programmatically
+
 - manager: promoted inbox → doing, track: chore (XS). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: extracted shared `textWithLength: PrngGen<string>` closure + `TEXT_ALIASES` array in src/generators/data/key-map.ts. 10 keys populated programmatically via loop. Chose Option A (inline) over B (separate file) — no other data table would naturally migrate. Net 352→348 LOC (smaller than card's ~80 estimate due to added docs/comments). B16 explain contract preserved: explain emits `inline:${key}` keyed on lookup key, not function reference, so per-key `inline:text`/`inline:description`/etc. still surface correctly. Added .changeset/b35-key-map-text-aliases.md (patch). GREEN: 1017/1017 tests, typecheck clean.
@@ -388,6 +418,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 6e03302
 
 ## 2026-05-29 — B36: Refactor — replace `bindGenerators` Proxy with eager-bound object (drops 2 `any`s, supersedes B40 CTX_SLOTS machinery)
+
 - manager: promoted inbox → doing, track: chore (S). No spec/tests-first. B40 deliberately deferred the Gender-string `person.firstName("male")` locale-residual to B36; this item should fix it during the rewrite.
 - manager: dispatch implementer
 - implementer: added module-scope `bindNamespace<T>(prng, ctx, nsObj)` helper at world.ts:329-419; rewrote `bindGenerators` at :729-793 as eager object literal of 14 namespace entries (no Proxy, no cache). Approach A: kept CTX_SLOTS table. Both `any` casts dropped (Record cache + generatorsData cast). Non-function members (DOMAINS, TECH_WORDS, EMOJIS) forwarded verbatim via typeof-guard. Bucket-2 Gender-string residual PRESERVED per Option α — explicit JSDoc on the `"no-args-only"` branch documenting that `person.firstName("male")` still doesn't pick up locale (out of scope for chore). Added .changeset/b36-bind-generators-eager.md (patch). GREEN: 1017/1017 tests, typecheck clean, B40 file 10/10 green.
@@ -396,6 +427,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 9717326
 
 ## 2026-05-29 — B29: Refactor — split `applyModifiers` into string + number pipelines
+
 - manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: split applyModifiers in src/generators/schema/zod-def.ts into applyStringModifiers (L263, 5 passes: overwritePass/formatAddPass/lengthBoundsPass/formatRefixPass/overwriteRefixPass) + applyNumberModifiers (L304, 2 passes: intCoercePass/multipleOfPass). applyModifiers kept as thin 14-LOC runtime dispatcher (routes by def-type + typeof value) — three call sites still pass `unknown` so dispatcher avoids pushing typeof+def-check duplicates into them. Each pass takes only what it needs; checks iterated once per pipeline (down from 3× in the original string branch). Deviation from spec example: no `prng` parameter in pass signatures (none needed — these are pure string/number transforms); no `PASSES.reduce(...)` table (explicit call chain reads as the contract). Added .changeset/b29-split-apply-modifiers.md (patch). Updated codebase-map. GREEN: 1017/1017 tests, typecheck clean.
@@ -404,6 +436,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 66b25f1
 
 ## 2026-05-29 — B34: Refactor — replace `generateZodString`'s 22-arm `else if` chain with a format dispatch table
+
 - manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: added FORMAT_GENERATORS dispatch table at src/generators/schema/string.ts:142-162 with 19 entries (card said "22" — actual format-chain count is 19 + 4 check-format arms; the latter stay a switch as the card prescribed). All 19 generators are pure `(prng: Prng) => string` — none need ctx (these are local file helpers, not ctx.gen surfacing). Extracted `generateUrl` helper for the only inline composition. Check-format switch + base fallback byte-for-byte unchanged. Added .changeset/b34-dispatch-table-generate-zod-string.md (patch). GREEN: 1017/1017 tests, typecheck clean.
@@ -412,6 +445,7 @@ it records the reason here AND states it in chat.
 - result: done — commit dca70c3
 
 ## 2026-05-29 — B32: Refactor — extract `resolveRelationPool` shared between `resolveRelated` + `resolveRelatedMany`
+
 - manager: promoted inbox → doing, track: chore (S). No spec/tests-first.
 - manager: dispatch implementer
 - implementer: extracted `private resolveRelationPool(reg, recordPrng, recordId, relName, kind, count?): { items, prng }` at world.ts:958; reduced resolveRelated (lines 910-920, ~4 lines body) and resolveRelatedMany (922-938, ~3 stmts) to thin wrappers. Fork keys `rel:${relName}` / `rel-many:${relName}` preserved byte-identically. Cache keys `${recordId}:${relName}` / `${recordId}:${relName}:many` preserved. `where` filter applied once at snapshot build (D9 cache neutrality). Auto-provision branches on `kind` inside cache-miss (single → ensurePrimaryRecord if empty; many → shortfall loop up to count, gated by `!where`). Self-ref guard preserved. Added .changeset/b32-extract-resolve-relation-pool.md (patch). GREEN: 1017/1017 tests, typecheck clean. No `any` (D1).
@@ -420,6 +454,7 @@ it records the reason here AND states it in chat.
 - result: done — commit c2b7825
 
 ## 2026-05-29 — B25: Refactor — extract `resolveMode(schema): SchemaMode` and unify derived/primary/ad-hoc dispatch
+
 - manager: promoted inbox → doing, track: chore (M). No spec/tests-first; B24's decomposition leaves the dispatcher's `derivedRegs.length > 0 ? ... : primaryRegs.length > 0 ? ... : ad-hoc` cascade ripe for resolveMode unification, and the same pattern repeats in generateArray + populate + populateFrom.
 - manager: dispatch implementer
 - implementer: added `SchemaMode` discriminated union (line 128) + `private resolveMode(schema)` at world.ts:831-837 (derived-first, primary-second, ad-hoc default). Migrated 4 dispatch sites: generateSingleItem dispatcher (:1496-1548) with two-level lazy-resolve fallback retained in caller, generateArray (:1343-1416), populate (:597-636) with **inverted dispatch retained** (explicit `findPrimaryRegs` check BEFORE resolveMode + annotated-unreachable `case "primary"` to preserve byte-identical primary-first precedence), WorldImpl.get (:788). B39 fork keys + D9 derivedPairCounter rollback byte-identical. **Latent divergence flagged**: populate checks primary-first while generateSingleItem/generateArray check derived-first — pre-existing, NOT introduced by B25. Manager to file follow-up. world.ts net +60 LOC (structural -30 LOC offset by JSDoc + per-site explanatory comments documenting the preserved-behavior nuances). Added .changeset/b25-extract-resolve-mode.md (patch). GREEN: 1017/1017, typecheck clean.
@@ -428,6 +463,7 @@ it records the reason here AND states it in chat.
 - result: done — commit c4abb78; B41 filed commit 6ebfdbd
 
 ## 2026-05-29 — B26: Refactor — replace `generateFromSchema`'s 38-case switch with a typed dispatch table
+
 - manager: promoted inbox → doing, track: chore (M). Same pattern as B34 (string dispatch table) just shipped — 38-case switch → typed dispatch table.
 - manager: dispatch implementer
 - implementer: added `ZodDefType` local union (38 string literals at router.ts:62-100) + `DISPATCH: Record<ZodDefType, GenFn>` table. `generateFromSchema` now ~6 lines (lookup + `generateString` fallback). Lifted four non-trivial arms to named functions: generateXor (:106), generateUnion (:115, incl. discriminated-union), generateIntersection (:140), generatePipe (:147, incl. transform/preprocess). Smaller helpers extracted for modifier-style arms. `transform`/`discriminator`/`optionsMap` accessed via `ZodDef & { ... }` intersection casts at :120-123 and :165, NOT `as any` (pre-existing `as any` casts removed). Single widening cast at :274 `(DISPATCH as Record<string, GenFn | undefined>)[d.type]` — no `any` (D1). Exhaustiveness guaranteed: omitting an entry is a Record compile error. Added .changeset/b26-dispatch-table-generate-from-schema.md (patch). Updated codebase-map. GREEN: 1017/1017 tests, typecheck clean.
@@ -436,6 +472,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 61be65e
 
 ## 2026-05-29 — B23: Refactor — promote the per-field pipeline to a `PIPELINE` list of named steps (HEADLINE LEVER)
+
 - manager: promoted inbox → doing, track: chore (L, review). **Review checkpoint skipped per user autonomous-run direction**. B22's headline lever — all 4 dimensions; retires `explain.ts` mirrored ladder + `collection.ts:generateZodObject` partial duplication.
 - manager: dispatch spec-writer (this is L-sized — spec needed even for chore so the new PipelineStep shape + FieldResolution union are pinned before implementer runs)
 - spec-writer: wrote wiki/specs/B23-promote-per-field-pipeline-to-list.md (R1-R13). Pinned struct-arg `PipelineStep` signature, `applyObjectOverride` Pattern B (steps wrap their generator result; keyHeuristic+schemaBased preserve replace semantics; schemaBased object branch threads override into recursive call), 7 named step functions in pinned order, PIPELINE_NO_REGISTRATION as instance-equal subset at indices 3/5/6. 8 non-blocking open questions (co-location / threading shape / walkPipeline shape / step-body location / applyObjectOverride location / explain.ts ceiling / Partial<any> inherited / B37 fold-in). Updated INDEX.md.
@@ -448,6 +485,7 @@ it records the reason here AND states it in chat.
 - result: done — commit f9ea47d
 
 ## 2026-05-29 — manager: planning pass (post-0.8.0 release)
+
 - inbox: 7 items (B43 high, B28/B41/B42 medium, B2/B3/B37 low); ready: 0; doing: 0
 - working tree clean; last release 0.8.0 (3e2d5de); B39 changeset downgraded major→minor (bef2176) in keeping with 0.x SemVer convention; B42/B43 filed (a596a7a) from GH issues #24/#25
 - B37 unblocked since B23 landed (the PIPELINE list it pointed to is now real); flags: []
@@ -455,6 +493,7 @@ it records the reason here AND states it in chat.
 - user direction: do B43 first, then release, then B28
 
 ## 2026-05-29 — B43: BUG — `world.generate(primaryArraySchema.min(N).max(M))` silently ignores `.min`/`.max`
+
 - manager: promoted inbox → doing, track: bug (flagged review). Sibling of B38 (#22, just shipped) — same primary branch of generateArray. From GH issue #25.
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B43-primary-array-min-max-ignored.md (R1-R7). Direction B (throw + redirect to world.populate(schema, N) for writes / world.generate(schema.array()).slice(0, N) for reads) — symmetric with B38. Trigger: any of min_length/max_length/length_equals + primary-registered inner. Changeset minor (matches B38). 3 non-blocking open questions (slot-counter advance, loose-trigger predicate, message wording).
@@ -467,6 +506,7 @@ it records the reason here AND states it in chat.
 - manager: git mv B43 doing → ready (spec already written, parked for resumption after B44); mv B44 inbox → doing (carries [review] but coordination question is answered; will surface if spec-writer hits a real design choice)
 
 ## 2026-05-30 — B44: BUG — `world.generate(primaryArraySchema, { store: false })` hangs forever (infinite loop)
+
 - manager: filed from GH issue #26 (high priority, [review]); promoted to doing, track: bug
 - manager: dispatch spec-writer
 - spec-writer: wrote wiki/specs/B44-primary-array-store-false-hangs.md (R1-R10). Direction: under `!effectiveStore`, decouple loop from `registry.count` — generate `target` records via `Array.from(...)` + `generateAndStorePrimary`, return that array. Store-on path byte-identical (R5). B20 "Fix B" local-capture precedent (primary-array analogue of derived). B10-R2/R4 invariants restored. Orthogonal to B38 (overrides throw) and B43 (.min/.max throw); both throws still win on composed calls (R8). Patch bump. 4 non-blocking open questions.
@@ -477,6 +517,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 13fbd58
 
 ## 2026-05-30 — B43 (resumed): BUG — primaryArraySchema.min/.max silently ignored
+
 - manager: card git mv ready → doing; dispatch implementer for direction B (throw + redirect, per the spec written earlier this session)
 - implementer (round 1, direction B): added throw guard at src/world.ts:1331 + 3 regression tests asserting the throw + changeset + docs note. Surfaced 63 failing tests across 8 files (integration document-corpus/invoicing, unit world/relations/subject/derived-identity/cross-api, plus B38 setup tests) — all pinning the pre-existing `.min/.max` honour-the-bounds behaviour. Stopped, requested manager decision.
 - manager: surfaced the 63-test breakage to user, recommended option 1 (migrate tests to populate-then-generate); user pushed back on the entire premise — "max(2) call resulted in N fixtures.. thats undesirable. why overcomplicate things?" — i.e. direction B was wrong; direction A (honour the bounds, slice when registry exceeds caller's max) was what the user wanted from the start.
@@ -487,12 +528,14 @@ it records the reason here AND states it in chat.
 - result: done — commit 04a4f57
 
 ## 2026-05-30 — manager: pausing for release per user direction
+
 - 2 unpushed commits on main: 13fbd58 (B44, closes #26), 04a4f57 (B43, closes #25)
 - both changesets present (.changeset/b43-…honoured.md patch, .changeset/b44-…hangs.md patch)
 - working tree clean
 - next item on plan: B28 (split src/world.ts) — paused until user signals release done
 
 ## 2026-05-30 — B45 (resumed): research checkpoint resolution
+
 - manager: resumed from 2026-05-29 23:15 pause; research report committed at 0862a27 was awaiting review checkpoint #2 sign-off
 - manager: presented headline recommendation + 6 open questions to user via AskUserQuestion (Direction / B42 handling / Uniqueness / Determinism break)
 - user: accepted full direction; fold B42 in; det-break OK under 0.x minor bump
@@ -505,6 +548,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 2092eb9
 
 ## 2026-05-30 — manager: post-B45 planning pass
+
 - inbox: 7 items (B28/B41/B46 medium [review]; B2/B3 low [review]; B37 low; B42 medium [blocked by B45])
 - ready: 0; doing: 0
 - 4 unpushed commits on main (B43/B44/B45 + release-pause log) — 0.8.0 still last released
@@ -513,6 +557,7 @@ it records the reason here AND states it in chat.
 - B28 review flag satisfied by user direct selection; card pins module boundary exactly so no spec needed (chore track per skill)
 
 ## 2026-05-30 — B28: Refactor — split src/world.ts into world/{engine,relations,derived,registration}.ts
+
 - manager: promoted inbox → doing, track: chore (L, mechanical, [review] honored via user direct selection)
 - manager: dispatch implementer
 - implementer: created src/world/ with 5 new files — engine.ts (1670 LOC, WorldImpl class + all methods), registration.ts (138 LOC, pure SchemaReg/normalizeRelationEntry/findPrimaryRegs/findDerivedRegs/resolveMode), derived.ts (70 LOC, B8 upsert map + access helpers), relations.ts (80 LOC, pure cache-key/fork-key/error-message helpers), index.ts (barrel). Original src/world.ts kept as 15-LOC re-export shim so external imports resolve byte-identically. **Layout (a)+(b) combined**: flat src/world.ts barrel → src/world/index.ts barrel → engine.ts (the actual class). Strategy: WorldImpl methods stay on the class in engine.ts; pure helpers extracted as free functions in the concern-grouped files, called from thin wrappers (e.g. `private findPrimaryRegs(s) { return findPrimaryRegsPure(this.schemaRegs, s); }`). No class augmentation. B39 globalSchemaIds module-global WeakMap kept as single instance in engine.ts (not duplicated). All composition invariants preserved byte-identically. Updated wiki/codebase-map.md to reflect new layout. Updated tests/unit/core/pipeline.test.ts B23-R9 LOC-bound assertion path (src/world.ts → src/world/engine.ts; ≤60 LOC bound unchanged). Added .changeset/b28-split-world-ts.md (patch). GREEN: 1041/1041 tests, typecheck clean, lint clean (1 B28-introduced warning fixed inline — stray `let d = def(current)` in dispatcher removed).
@@ -522,6 +567,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 7fad4aa
 
 ## 2026-05-30 — B37: Chore — reconcile pipeline-numbering drift across docs/code/JSDoc
+
 - manager: promoted inbox → doing, track: chore (XS, no review). B23 landed → PIPELINE list in src/pipeline.ts is the canonical source (D11). Card body's "Blocked on B23" text is stale; frontmatter `flags: []` already unblocked per B23 closure.
 - manager: dispatch implementer (round 1) — INTERRUPTED. Initial prompt followed the card's "document in one place (docs/concepts.md), make everything else point at it" strategy, including a JSDoc pointer-to-docs from src/world/engine.ts. User vetoed: pointers from TypeScript JSDoc are dead text in IDE hovers/tooltips. Re-dispatched with corrected strategy: **inline the full canonical 7-step list at every audience-facing location, reconcile their contents to agree with src/pipeline.ts**.
 - implementer: reconciled the 7-step PIPELINE list across 4 locations — docs/concepts.md (~75-92, rewrote 6-step list to canonical 7 + 2 wrapping passes), src/world/engine.ts JSDoc (14-43, inlined the 7 steps + 2 wrapping passes in module-level @module block; executable code untouched), CLAUDE.md (43-56, replaced 6-step list with canonical 7 + 2; dropped stale src/generators/key-based.ts / src/generators/schema-based.ts path references that referenced non-existent files), wiki/codebase-map.md (9-10, pointer line now names src/pipeline.ts first, docs/concepts.md second; two-axis mental-model framing kept). Step names byte-identical across the three inline locations (Eager overrides / Matchers / Per-schema key map / Unwrap optional / World-level custom generators / Key-based heuristics / Schema-based fallback). Wrapping passes (Override deep-merge / Transform) named identically. Also folded in B22 cosmetic fold-ins from the codebase-complexity report: types.ts fan-in 26 → 25 (table-vs-prose reconciliation, line 74 vs 88), email LOC range 101-127/27 → 101-126/26 (line 56, cross-verified against src/generators/data/internet.ts), and pipeline rung-count narrative updates (lines 121, 216). Added .changeset/b37-pipeline-numbering-drift.md (patch). GREEN: 1041/1041 tests, typecheck clean, lint 0/0 (no executable code changed; tooling trivially preserved).
@@ -531,6 +577,7 @@ it records the reason here AND states it in chat.
 - result: done — commit 0328d07
 
 ## 2026-05-31 — B41: Research — populate dispatches primary-first while generateSingleItem/generateArray dispatch derived-first
+
 - manager: promoted inbox → doing, track: research (flagged review). Surfaced during B25 by the reviewer; report destination wiki/research/populate-dispatch-divergence.md (location TBD — researcher may place under engine/).
 - manager: dispatch researcher (general-purpose) — round 1 + 2 rejected by user for inadequate tooling-rule emphasis (multiple bash grep prompts); round 3 dispatched with concrete forbidden/allowed lists at the top.
 - researcher: wrote wiki/research/engine/populate-dispatch-divergence.md (researcher chose engine/ subfolder; card report: field updated to match). Headline: divergence is **incidental** — zero record in B14/B6 specs, decisions.md, or progress.md (only B25 reviewer's flag). Verified via Read: 4 dispatch sites named at engine.ts:1438 (generateSingleItem), :1261 (generateArray), :791 (get), :606-639 (populate with annotated-unreachable `case "primary":` at 629-631), plus pure resolveMode at registration.ts:129-138. **Zero tests** dual-register primary+derived for the same schema (closest neighbour tests/integration/media-library/world.ts:151-174 registers RawDataSchema as derived 3× only). **Zero docs** describe populate's primary-first behaviour. A/B/D all land without breaking any test. **Recommends Option D — forbid dual registration at withSchema time** (throw); follow-up as chore/bug, patch bump. Tooling note: researcher honestly disclosed 3 `wc -l` invocations (forbidden); root cause was the agent's Grep tool returning "not available" in their environment. No grep/find/cat/sed/etc.; only `wc` + `ls`.
@@ -544,6 +591,7 @@ it records the reason here AND states it in chat.
 - result: done — commit ea83ce9
 
 ## 2026-05-31 — B47: BUG — forbid dual primary+derived registration of the same schema at `withSchema`
+
 - manager: promoted inbox → doing, track: bug (no review flag — design pre-approved via B41 checkpoint). Card already lists R1-R4 acceptance and embeds minimum-test direction. Spec-writer to formalize as wiki/specs/B47-….md.
 - manager: dispatch spec-writer (with tooling rules + minimum-tests directive folded in)
 - spec-writer: wrote wiki/specs/B47-forbid-dual-primary-derived-registration.md (R1-R4 verbatim from card, no contradiction with B6/B8/B10/B11/B14). Spec includes ## Minimum tests directive section explicitly capping at ~3 tests (R1+R2 share one test via call-order variation; R3 + R4 each get one). Standing-constraint candidate (D12) sketched verbatim. 3 open questions all classified non-blocking (throw-message wording, bump, multi-primary tightening — all defaulted). Updated wiki/specs/README.md + card frontmatter `spec:` field. Zero forbidden Bash. Tooling cleanly observed.
@@ -558,4 +606,12 @@ it records the reason here AND states it in chat.
 - manager: appended ADR D12 to wiki/decisions.md (Context: B41 surfaced asymmetry, maintainer unaware dual registration was possible. Decision: forbid at config boundary via withSchema throw. Consequences include note that populate's pre-check at engine.ts:600-655 becomes dead code — cleanup is separate chore-class follow-up, NOT folded into B47). Added Rule line to architecture.md Rules section (one line, RFC-2119 MUST/MUST NOT, → D12 citation).
 - manager: filed B48 in inbox (chore + mode:lite gate analysis — 203 files but pure mechanical formatting, behaviour-neutral by construction). Lite gate may need re-judging at dispatch time per the card's explicit note.
 - manager: git mv wiki/backlog/doing/B47-…md → wiki/backlog/done/
+- result: done — commit d2a9d98
+
+## 2026-05-31 — chore: repo-wide oxfmt sweep + cancel B48 ticket
+- manager: user pushed back on me filing B48 as a backlog item for a `pnpm fmt` run — "I'm not happy you just making a ticket for a simple chore like a fmt sweep.. this is unnecessary. just do the fmt". Saved feedback to memory as [[feedback-no-ceremony-for-trivial-chores]]: trivial mechanical chores (one or two project-owned commands, zero design choices, behaviour-neutral) skip the Vibin pipeline entirely — the manager just runs them inline.
+- manager: ran `pnpm fmt` directly — 202 files reformatted in 2.4s (oxfmt across .changeset/, .claude/, CHANGELOG.md, CLAUDE.md, README.md, docs/, packages/, src/, tests/, wiki/, and similar). No behavioural change; pure whitespace.
+- manager: ran `pnpm validate` — clean across typecheck + test + lint + fmt:check (`All matched files use the correct format`). 1044/1044 tests still green.
+- manager: git rm wiki/backlog/inbox/B48-repo-wide-fmt-sweep.md (the ticket B47 had filed for this sweep — no longer needed; cancelled inline, not via the lite track).
+- manager: added .changeset/repo-wide-fmt-sweep.md (patch).
 - result: done — commit pending

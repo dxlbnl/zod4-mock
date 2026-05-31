@@ -23,7 +23,7 @@ function unwrapOptionalChainForField(
   fieldSchema: ZodTypeAny,
   prng: Prng,
   optProb: number,
-): { inner: ZodTypeAny; absent: { kind: "skip" | "default"; value?: unknown } | null }
+): { inner: ZodTypeAny; absent: { kind: "skip" | "default"; value?: unknown } | null };
 ```
 
 Each call site shrinks to ~5 lines. Removes the drift risk between the two
@@ -31,6 +31,7 @@ Each call site shrinks to ~5 lines. Removes the drift risk between the two
 collection.ts key-based-fallback version.
 
 ## Notes
+
 - Source: [B22 research report](../../research/reports/codebase-complexity.md), proposed item **#8**.
 - Dimensions: 3 #6, 4 (key-based vs schema-based convergence).
 - Size: **S**.

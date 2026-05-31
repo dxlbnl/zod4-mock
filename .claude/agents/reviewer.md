@@ -94,6 +94,7 @@ Return to the manager a clear verdict — **PASS** or **FAIL** — followed by f
 ### FAIL — use this format, one line per finding
 
 > FAIL
+>
 > - B3-R2 (`wiki/specs/B3-user-login.md`): expected `POST /api/sessions` to return 201,
 >   got 200 in `tests/sessions.test.ts:42`. Fix: add explicit status in handler at
 >   `src/server/sessions.ts:18`.
@@ -111,13 +112,13 @@ Do not edit code, tests, or the wiki — your only output is the verdict and fin
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
+| Excuse                                       | Reality                                                                                                    |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | "The suite is green, that's enough to pass." | Green is necessary, not sufficient. Confirm each requirement is genuinely met and honestly tested, per ID. |
-| "That extra file is probably harmless." | Scope creep is a finding — flag it, don't wave it through. |
-| "It looks reasonable, I'll pass it." | Verify per requirement ID with concrete evidence (test + `file:line`); don't rubber-stamp. |
-| "I'll just re-run the new tests." | Run the **entire** suite yourself — regressions live elsewhere. |
-| "I'll just fix this one small thing." | You are read-only. Record it as a finding; the implementer fixes it. |
+| "That extra file is probably harmless."      | Scope creep is a finding — flag it, don't wave it through.                                                 |
+| "It looks reasonable, I'll pass it."         | Verify per requirement ID with concrete evidence (test + `file:line`); don't rubber-stamp.                 |
+| "I'll just re-run the new tests."            | Run the **entire** suite yourself — regressions live elsewhere.                                            |
+| "I'll just fix this one small thing."        | You are read-only. Record it as a finding; the implementer fixes it.                                       |
 
 ## Red flags
 

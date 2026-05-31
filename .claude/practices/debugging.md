@@ -9,7 +9,7 @@ behaviour.
   attempting a fix. No repro means no proof you fixed anything.
 - **Isolate.** Shrink to a minimal case; bisect (recent changes, inputs, components) to localize
   the cause. Change one thing at a time.
-- **Root cause, not symptom.** Find *why* it fails. Patching the symptom (swallowing the error,
+- **Root cause, not symptom.** Find _why_ it fails. Patching the symptom (swallowing the error,
   special-casing the input) leaves the bug alive.
 - **Read the actual error** and check your assumptions against reality (logs, state) instead of
   guessing.
@@ -17,11 +17,11 @@ behaviour.
 
 ## Rationalizations → rebuttals
 
-| Excuse | Reality |
-|---|---|
+| Excuse                               | Reality                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
 | "I can see the fix, skip the repro." | Without a reproducing test you can't prove the fix — or prevent regressions. |
-| "It's probably this line." | "Probably" is a guess; confirm the cause before changing code. |
-| "I'll just patch the symptom." | The root cause will resurface elsewhere; fix the cause. |
+| "It's probably this line."           | "Probably" is a guess; confirm the cause before changing code.               |
+| "I'll just patch the symptom."       | The root cause will resurface elsewhere; fix the cause.                      |
 
 ## Red flags
 

@@ -47,8 +47,7 @@ Each of the three counter-derived sites switches to an identity-based key:
 
 - **Ad-hoc `generateSingleItem`** — key something like
   `\`adhoc{schemaIdentity}#${perSchemaAdhocCallIndex}\``, where
-  `schemaIdentity` is a stable identifier for the schema (a `WeakMap<ZodTypeAny, number>`
-  ID, or a `Symbol`/cache lookup) and `perSchemaAdhocCallIndex` is a counter
+`schemaIdentity`is a stable identifier for the schema (a`WeakMap<ZodTypeAny, number>`ID, or a`Symbol`/cache lookup) and `perSchemaAdhocCallIndex` is a counter
   scoped to this schema within this world.
 - **`generateArray`** — same pattern: `\`arr{schemaIdentity}#${perSchemaArrayCallIndex}\``.
 - **Outer-wrapper roll** — same pattern: `\`wrap{schemaIdentity}#${perSchemaWrapCallIndex}\``.
@@ -90,7 +89,7 @@ Once this lands, the rule in `wiki/architecture.md` becomes:
 
 And an ADR in `wiki/decisions.md` records: D4 was historically interpreted as
 "per-field fork(key) so adding/removing a field does not disturb other
-fields" (which holds today), but the B22 audit identified that the *spirit*
+fields" (which holds today), but the B22 audit identified that the _spirit_
 of D4 — seed + schema alone determines values — was incompletely realised:
 the counter-based fork keys made ad-hoc and array generation depend on call
 order. B39 strengthens the rule by making **call-order independence** an

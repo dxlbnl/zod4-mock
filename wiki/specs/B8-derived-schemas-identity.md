@@ -35,7 +35,7 @@ preserve:
 - **B10 — `{ store: false }` opt-out**
   ([wiki/specs/B10-generate-store-opt-out.md](B10-generate-store-opt-out.md)) — when
   `effectiveStore === false` for the outer call, B8 MUST suppress **both** the upsert
-  *lookup* and the upsert *write* (B8-R7). Otherwise a default-mode call after a
+  _lookup_ and the upsert _write_ (B8-R7). Otherwise a default-mode call after a
   `store: false` call could return a derived record whose entry says "in registry" but
   isn't — a fresh class of stored-vs-returned divergence that D8 was introduced to
   eliminate.
@@ -235,7 +235,9 @@ export interface SchemaOpts<
   /** Identity field on the source record. Defaults to reference equality on `source`. */
   sourceKey?: TSource extends ZodTypeAny ? keyof input<TSource> & string : never;
   relations?: TRelations;
-  matchers?: { /* unchanged */ };
+  matchers?: {
+    /* unchanged */
+  };
 }
 ```
 
@@ -428,7 +430,7 @@ on its final line, matching the convention of the sibling changesets
   B8 makes the underlying derivation 1:1, but B11's own filtering rules are out of
   scope for this spec.
 - **Auto-`unique: false` heuristics** — the upsert is always opt-in to bypass; there is
-  no behaviour that *infers* a need to break identity (e.g. by `overrides` content).
+  no behaviour that _infers_ a need to break identity (e.g. by `overrides` content).
   Callers who want a fresh record pass `unique: false` explicitly.
 - **Composite `sourceKey`** (an array of fields, or a function). `sourceKey` is a
   **single key name** on the source's input shape. If a future item needs composite

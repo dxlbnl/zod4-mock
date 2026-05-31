@@ -71,6 +71,7 @@ which dimension / hot spot they address). **Do not** auto-file them via
   paragraphs where appropriate.
 
 ## Notes
+
 - No GitHub issue tied to this card; this is a maintainer-initiated audit.
 - Companion docs in `docs/concepts.md` and `wiki/codebase-map.md` should be
   cross-referenced as the "official" picture the report compares actual code

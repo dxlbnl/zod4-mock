@@ -23,20 +23,13 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import {
-  PIPELINE,
-  PIPELINE_NO_REGISTRATION,
-  applyObjectOverride,
-} from "../../../src/pipeline.js";
+import { PIPELINE, PIPELINE_NO_REGISTRATION, applyObjectOverride } from "../../../src/pipeline.js";
 
 // ---------------------------------------------------------------------------
 // Repo-root helper (shared by R9 / R7 file-size assertions).
 // ---------------------------------------------------------------------------
 
-const REPO_ROOT = path.resolve(
-  fileURLToPath(import.meta.url),
-  "../../../..",
-);
+const REPO_ROOT = path.resolve(fileURLToPath(import.meta.url), "../../../..");
 
 // ---------------------------------------------------------------------------
 // B23-R3 — PIPELINE shape: exactly seven named step functions in pinned order
@@ -123,18 +116,14 @@ describe("B23-R6: applyObjectOverride — B12 deep-merge contract helper", () =>
   });
 
   it("B23-R6 / plain-object-override — deep-merges nested plain objects", () => {
-    expect(
-      applyObjectOverride({ a: { x: 1 } }, { a: { y: 2 } }),
-    ).toEqual({ a: { x: 1, y: 2 } });
+    expect(applyObjectOverride({ a: { x: 1 } }, { a: { y: 2 } })).toEqual({ a: { x: 1, y: 2 } });
   });
 
   it("B23-R6 / plain-object-override — override key wins on collision", () => {
     // When both target and source carry the same leaf key, the override
     // replaces the leaf (deepMerge falls through to source for non-plain
     // values, including primitives).
-    expect(
-      applyObjectOverride({ a: 1, b: 2 }, { b: 99 }),
-    ).toEqual({ a: 1, b: 99 });
+    expect(applyObjectOverride({ a: 1, b: 2 }, { b: 99 })).toEqual({ a: 1, b: 99 });
   });
 
   it("B23-R6 / primitive-override — replaces value verbatim", () => {
@@ -178,10 +167,7 @@ describe("B23-R6: applyObjectOverride — B12 deep-merge contract helper", () =>
 
 describe("B23-R9: generateObjectFields method body stays concise", () => {
   it("B23-R9 / loc-bound — body is ≤ 60 lines (signature + jsdoc tolerance over 50)", () => {
-    const src = readFileSync(
-      path.join(REPO_ROOT, "src/world/engine.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(path.join(REPO_ROOT, "src/world/engine.ts"), "utf-8");
     const match = src.match(/private generateObjectFields\([\s\S]*?\n  \}\n/);
     expect(match).not.toBeNull();
     const body = match![0];
@@ -196,10 +182,7 @@ describe("B23-R9: generateObjectFields method body stays concise", () => {
 
 describe("B23-R7: explain.ts shrinks by ≥ 100 LOC", () => {
   it("B23-R7 / loc-bound — src/explain.ts is ≤ 215 lines", () => {
-    const src = readFileSync(
-      path.join(REPO_ROOT, "src/explain.ts"),
-      "utf-8",
-    );
+    const src = readFileSync(path.join(REPO_ROOT, "src/explain.ts"), "utf-8");
     // Match `wc -l` semantics: count newline-terminated lines. A trailing
     // newline yields the same count as `wc -l` reports.
     const lineCount = src.split("\n").length - 1;

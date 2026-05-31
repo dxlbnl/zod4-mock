@@ -24,7 +24,7 @@ let the user short-circuit at any point. Cover, at minimum:
 - **Stack** — pick one: `TypeScript`, `Python`, `Rust`, `Go`, `Other`. Pin the
   specific version (e.g. TS 5.x on Node 20 LTS) and key frameworks/libraries.
 - **Package manager** (TypeScript projects only) — pick one:
-  - `pnpm` *(default, recommended — deterministic installs, workspace ergonomics)*
+  - `pnpm` _(default, recommended — deterministic installs, workspace ergonomics)_
   - `npm`
   - `yarn`
 
@@ -32,6 +32,7 @@ let the user short-circuit at any point. Cover, at minimum:
   default for deterministic installs and workspace ergonomics — proceed with
   npm/yarn anyway?") and confirm. For `Other` stacks, ask for the package manager,
   runtime, and test runner commands and treat them as a custom profile.
+
 - **Testing** — test runner, the exact full-suite test command, test file
   location/naming convention.
 - **Constraints** — platforms, performance budgets, dependencies to use or avoid,
@@ -68,12 +69,14 @@ heading; keep the headings themselves):
   ---
 
   ## Description
+
   <one paragraph in the user's voice — the "why" and rough "what">
 
   ## Notes
   ```
 
   Use `flags: [review]` for any item the user wants to approve before implementation.
+
 - `wiki/decisions.md` — add the first real entries: D1 the stack choice, D2 the
   package-manager choice (especially if the user overrode the pnpm default). Fill each
   entry's **Rule added/changed** field with the matching one-line rule you put in
@@ -102,7 +105,7 @@ they can add any pages they like. Do not proceed until they confirm.
   project; the project's own README comes from the stack scaffold below or a later item).
   Keep `.vibin-version`, `CLAUDE.md`, `.claude/**`, and `wiki/`. This is
   the same boundary `/migrate-vibin` enforces: a project gets the pipeline machinery and
-  the *effects* of migrations, never Vibin's changelog, proposals, or migration files.
+  the _effects_ of migrations, never Vibin's changelog, proposals, or migration files.
 - Create the project structure named in `wiki/architecture.md` (e.g. `src/`,
   `tests/`).
 - Set up the **minimal** test runner configuration for the chosen stack — just
@@ -144,16 +147,16 @@ Append the matching **stack permission profile** to `.claude/settings.json`'s
 `permissions.allow` array (do not replace the universal entries already there). Use
 the table below verbatim:
 
-| Stack key | Entries to append |
-|---|---|
-| `typescript-pnpm` | `Bash(pnpm:*)`, `Bash(pnpx:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)` |
-| `typescript-npm`  | `Bash(npm:*)`, `Bash(npx:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)` |
-| `typescript-yarn` | `Bash(yarn:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)` |
-| `python-uv`       | `Bash(uv:*)`, `Bash(python:*)`, `Bash(python3:*)`, `Bash(pytest:*)`, `Bash(ruff:*)`, `Bash(mypy:*)` |
+| Stack key         | Entries to append                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `typescript-pnpm` | `Bash(pnpm:*)`, `Bash(pnpx:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)`                         |
+| `typescript-npm`  | `Bash(npm:*)`, `Bash(npx:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)`                           |
+| `typescript-yarn` | `Bash(yarn:*)`, `Bash(node:*)`, `Bash(tsc:*)`, `Bash(tsx:*)`                                         |
+| `python-uv`       | `Bash(uv:*)`, `Bash(python:*)`, `Bash(python3:*)`, `Bash(pytest:*)`, `Bash(ruff:*)`, `Bash(mypy:*)`  |
 | `python-pip`      | `Bash(pip:*)`, `Bash(pip3:*)`, `Bash(python:*)`, `Bash(python3:*)`, `Bash(pytest:*)`, `Bash(ruff:*)` |
-| `rust`            | `Bash(cargo:*)`, `Bash(rustc:*)` |
-| `go`              | `Bash(go:*)`, `Bash(gofmt:*)` |
-| `other`           | Ask the user for the package manager / runtime / test runner commands and write a custom list. |
+| `rust`            | `Bash(cargo:*)`, `Bash(rustc:*)`                                                                     |
+| `go`              | `Bash(go:*)`, `Bash(gofmt:*)`                                                                        |
+| `other`           | Ask the user for the package manager / runtime / test runner commands and write a custom list.       |
 
 > For `typescript-pnpm`, **npm and yarn are deliberately omitted**. If an agent later
 > tries `npm install`, it hits a permission prompt and the user can deny. Combined
@@ -163,7 +166,7 @@ the table below verbatim:
 
 **Stamp the seed version.** Create `.vibin-version` (root) containing the **current head
 commit hash of `dxlbnl/vibin`** — query the GitHub API for it (e.g. `get_commit` /
-`list_commits` on the default branch). A fresh clone *is* the latest seed, so its head hash
+`list_commits` on the default branch). A fresh clone _is_ the latest seed, so its head hash
 is what the project's `.claude/**` and templates match. Get it from the API rather than
 `git rev-parse HEAD`, because projects are often cloned with `.git` wiped before bootstrap.
 `/migrate-vibin` later diffs this hash against the latest Vibin (via the GitHub compare API)
