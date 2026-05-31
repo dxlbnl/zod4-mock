@@ -81,7 +81,12 @@ a _trivial product_ change that's behavior-neutral. Keep them distinct.
 ## Conventions
 
 - **Filing new work** — run `/intake "<title>"`. It writes the item into `inbox/`. The
-  manager ranks/triages later. Never inline-patch a mid-run report — file it.
+  manager ranks/triages later. Never inline-patch a mid-run report — file it. **Exception:
+  trivial-chore gate** — a chore that is one or two project-owned commands plus
+  verification (`pnpm fmt`, a non-breaking dep bump, regenerating a derived file), with
+  zero design choices and no behaviour change, **is not filed** — the manager runs it
+  inline as a thin follow-up commit. See CLAUDE.md → Operational rules → Trivial-chore
+  gate.
 - **Moving an item** — use `git mv wiki/backlog/<from>/<file> wiki/backlog/<to>/`. Don't
   copy-and-delete; the rename preserves git history.
 - **Flags** —

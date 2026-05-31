@@ -143,6 +143,14 @@ and skill definitions in `.claude/agents/` and `.claude/skills/`.
   question** on the current item (including a decision a specialist needs) is _not_ new
   work: it is folded into that item's spec (re-dispatch `spec-writer`), never filed via
   `/intake`.
+- **Trivial-chore gate** — a chore that boils down to **one or two project-owned commands**
+  plus a verification step (`pnpm fmt`, a non-breaking dep bump, regenerating a derived
+  file, etc.), with **zero design choices**, **behaviour-neutral**, and a one-line commit
+  subject, **MUST NOT** be filed as a backlog item. The manager runs it inline as a thin
+  follow-up commit (no spec, no test-writer, no implementer dispatch). Verify with
+  `pnpm validate`, add a changeset if shippable, commit. The Vibin pipeline is for items
+  with genuine design content — `pnpm fmt` is not one of them. If you're tempted to
+  file `/intake "chore: run pnpm fmt"`, stop and just run the command.
 - **Lite track** — a `feature`/`bug` may carry `mode: lite` to skip the spec page and
   tests-first (`implementer` → `reviewer (lite)`), but **only** for a gate-passing,
   behavior-neutral product change: ≤ a handful of files, no new dependency, no schema/API/
