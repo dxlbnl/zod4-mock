@@ -6,8 +6,8 @@ Paths are relative to the repo root.
 
 ## Mental model
 
-Generation has **two axes**, tried in priority order per field (see the pipeline in
-`docs/concepts.md` / `CLAUDE.md`):
+Generation has **two axes**, tried in priority order per field (see the pipeline list
+in `src/pipeline.ts`; user-facing description in `docs/concepts.md`):
 
 1. **Matchers** — user functions from `world.withSchema(schema, { matchers })`.
 2. **Key-based ("data") generators** — keyed off the *field name* (`email`, `firstName`,

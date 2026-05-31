@@ -74,14 +74,22 @@ All three modes can be combined — a schema can have both `from` and `relations
 
 ## The generation pipeline
 
-For every field in a schema, values are resolved in this priority order:
+For every field in a schema, values are resolved in this priority order — the seven named steps of the canonical `PIPELINE` list in `src/pipeline.ts`. The first step that produces a value wins:
 
-0. **Overrides (eager)** — primitive/array entries in `options.overrides` land in `ctx.current` before sibling matchers run, so a matcher can read them via `ctx.current.<sibling>`.
-1. **Matchers** — explicit functions from `withSchema({ matchers })`. Always wins.
-2. **Key-based heuristics** — field name recognition. `email` → realistic email, `firstName` → first name, `createdAt` → a date. [Full list →](key-heuristics.md)
-3. **Schema-based generation** — Zod type introspection. `z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc.
-4. **Overrides (final deep-merge)** — covers nested-object overrides that step 0 didn't eagerly consume.
-5. **Transform** — function applied after overrides.
+0. **Eager overrides** — `options.overrides` primitive/array entries land in `ctx.current` so sibling matchers can read them via `ctx.current.<sibling>`.
+1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit per-field functions; first to win.
+2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the field name.
+3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent per layer; sets `ctx.inner` for downstream steps. Internal — does not produce a final value on its own.
+4. **World-level custom generators** — entries from `withKeyGen({ ... })` matched on the field name.
+5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key + `DEFAULT_KEY_PATTERNS` regex matches. `email` → realistic email, `firstName` → first name, `createdAt` → date. [Full list →](key-heuristics.md)
+6. **Schema-based fallback** — Zod type introspection. `z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc. Always resolves.
+
+### After the pipeline
+
+Once the pipeline returns a value for a field, two wrapping passes finish the record:
+
+- **Override deep-merge** — `options.overrides` is deep-merged onto the pipeline's value (covers nested-object slices step 0 didn't eagerly consume; B12 contract).
+- **Transform** — `options.transform` is called on the merged value.
 
 You only need to provide matchers for fields the pipeline can't resolve correctly on its own.
 

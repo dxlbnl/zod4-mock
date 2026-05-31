@@ -13,16 +13,34 @@
  *
  * ## Generation pipeline (per field)
  *
- * 0. `options.overrides` — eager per-field assignment. Primitive/array overrides
- *    land in `ctx.current` before sibling matchers run, so matchers can read
- *    them via `ctx.current.<sibling>`.
- * 1. Matchers registered via `withSchema`
- * 2. Per-schema key maps registered via `withKeyMap`
- * 3. Key-based generators (field name heuristics)
- * 4. Schema-based generator (Zod type introspection)
- * 5. `options.overrides` — final deep-merge (covers nested-object overrides
- *    that step 0 didn't eagerly consume)
- * 6. `options.transform` function
+ * The executable contract is the `PIPELINE` list in `src/pipeline.ts`. For every
+ * field of a registered schema, the engine walks these seven steps in order; the
+ * first step that produces a value wins.
+ *
+ * 0. **Eager overrides** — `options.overrides` primitive/array entries land in
+ *    `ctx.current` so sibling matchers can read them via `ctx.current.<sibling>`.
+ * 1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit
+ *    per-field functions; first to win.
+ * 2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the
+ *    field name.
+ * 3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent
+ *    per layer; sets `ctx.inner` for downstream steps. Internal — does not
+ *    produce a final value on its own.
+ * 4. **World-level custom generators** — entries from `withKeyGen({ ... })`
+ *    matched on the field name.
+ * 5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key +
+ *    `DEFAULT_KEY_PATTERNS` regex matches (`email` → realistic email,
+ *    `firstName` → first name, `createdAt` → date).
+ * 6. **Schema-based fallback** — Zod type introspection (`z.enum([...])` →
+ *    random member, `z.number().int().min(1).max(100)` → integer in range,
+ *    etc.). Always resolves.
+ *
+ * After the pipeline returns, two wrapping passes finish the record:
+ *
+ * - **Override deep-merge** — `options.overrides` is deep-merged onto the
+ *   pipeline's value (covers nested-object slices step 0 didn't eagerly
+ *   consume; B12 contract).
+ * - **Transform** — `options.transform` is called on the merged value.
  *
  * ## File layout (B28)
  *

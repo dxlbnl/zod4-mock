@@ -40,14 +40,20 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 
 **SubjectType** — an identity anchor representing a domain entity (Person, Company, TextFile, etc.). Defined with `defineSubjectType(name, zodObjectSchema)` ([src/subject.ts](src/subject.ts)). Subject instances get stable IDs (`person#1`, `person#2`, …) and their data is stored in the registry so matchers in other schemas can reference it.
 
-**Generation pipeline** — for each field of a registered schema, values are resolved in this order:
+**Generation pipeline** — for each field of a registered schema, values are resolved in this priority order — the seven named steps of the canonical `PIPELINE` list in [src/pipeline.ts](src/pipeline.ts) (the executable contract). The first step to produce a value wins:
 
-0. `options.overrides` — eager per-field assignment. Primitive/array overrides land in `ctx.current` before sibling matchers run, so matchers can read them via `ctx.current.<sibling>`.
-1. **Matchers** (explicit functions provided in `world.withSchema(..., matchers)`)
-2. **Key-based generators** — field name heuristics (e.g. `email`, `firstName`, fields ending in `id`) ([src/generators/key-based.ts](src/generators/key-based.ts))
-3. **Schema-based generators** — Zod type introspection (string, number, enum, object, array, etc.) ([src/generators/schema-based.ts](src/generators/schema-based.ts))
-4. `overrides` — final deep-merge (covers nested-object overrides that step 0 didn't eagerly consume)
-5. `transform` — final transform function
+0. **Eager overrides** — `options.overrides` primitive/array entries land in `ctx.current` so sibling matchers can read them via `ctx.current.<sibling>`.
+1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit per-field functions; first to win.
+2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the field name.
+3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent per layer; sets `ctx.inner` for downstream steps. Internal — does not produce a final value on its own.
+4. **World-level custom generators** — entries from `withKeyGen({ ... })` matched on the field name.
+5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key + `DEFAULT_KEY_PATTERNS` regex matches (`email` → realistic email, `firstName` → first name, `createdAt` → date).
+6. **Schema-based fallback** — Zod type introspection (`z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc.). Always resolves.
+
+After the pipeline returns, two wrapping passes finish the record:
+
+- **Override deep-merge** — `options.overrides` is deep-merged onto the pipeline's value (covers nested-object slices step 0 didn't eagerly consume; B12 contract).
+- **Transform** — `options.transform` is called on the merged value.
 
 **PRNG** — SFC32 seeded PRNG with FNV-1a hashing for per-field `fork(key)` derivation ([src/prng.ts](src/prng.ts)). Per-field seeding means adding/removing schema fields does not disturb values for other fields. The `Prng.fork(key)` method creates an independent child PRNG without consuming the parent's state.
 
