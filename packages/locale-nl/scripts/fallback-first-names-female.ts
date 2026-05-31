@@ -10,7 +10,7 @@
  * (~13 KB → ~4 KB) decompressed at module load.
  */
 
-export const firstNamesFemale: readonly string[] = [
+export const FALLBACK_FIRST_NAMES_FEMALE: readonly string[] = [
   "Aafje",
   "Aafke",
   "Aagje",

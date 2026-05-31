@@ -12,7 +12,7 @@
  * ~2 KB) decompressed at module load.
  */
 
-export const lastNames: readonly string[] = [
+export const FALLBACK_LAST_NAMES: readonly string[] = [
   "Jong",
   "Jansen",
   "Vries",

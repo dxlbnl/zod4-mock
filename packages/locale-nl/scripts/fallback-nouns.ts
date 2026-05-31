@@ -6,7 +6,7 @@
  * `packages/locale-nl/scripts/fetch-data.ts`.
  */
 
-export const nouns: readonly string[] = [
+export const FALLBACK_NOUNS: readonly string[] = [
   "ding",
   "voorwerp",
   "stuk",

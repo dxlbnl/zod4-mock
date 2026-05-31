@@ -6,7 +6,7 @@
  * `packages/locale-nl/scripts/fetch-data.ts`.
  */
 
-export const adjectives: readonly string[] = [
+export const FALLBACK_ADJECTIVES: readonly string[] = [
   "goed",
   "nieuw",
   "eerst",
