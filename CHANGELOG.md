@@ -1,5 +1,29 @@
 # zod4-mock
 
+## 0.9.2
+
+### Patch Changes
+
+- 387c884: Fix: unify `generateArray` mode arms + `populate` to apply bounds, overrides, and transform consistently.
+
+  Eight inconsistencies surfaced after B25 unified the classifier but each branch still hand-rolled its own bound logic. The user-visible bugs:
+
+  - `generateArray` derived mode silently ignored `.max()`, `.length()`, and the library-side `defaultArrayLength[1]` ceiling — returned one element per source pair regardless of bounds.
+  - `generateArray` primary mode under `{ store: false }` silently ignored `.max()` — the B44 store:false fix bypassed the B43 caller-max slice.
+  - `generateArray` primary mode silently dropped `options.transform` on both store-on and store-off paths.
+  - `generateArray` derived mode silently dropped `options.overrides` and `options.transform`.
+  - `populate(DerivedSchema, count)` silently truncated to `Math.min(count, sources.length)` instead of auto-provisioning sources.
+
+  Also: `populate`'s primary-first explicit pre-check is removed as dead code (D12 made the inversion-observable configuration unreachable), and `generateArray`'s ad-hoc arm now shares the `resolveMinRequired` / `resolveMaxAllowed` helpers instead of inlining the loop.
+
+  No API surface change. Patch bump.
+
+- 669ec04: Fix: per-index `options.overrides` on `world.generate(PrimarySchema.array(), ...)` now apply per record (field-level deep-merge via `generateAndStorePrimary`) instead of throwing.
+
+  The pre-B53 throw (added by B38) was a temporary loud-refusal of a call shape that was silently broken before B38 — overrides were silently dropped. B38 redirected callers to `world.populate(schema, count, factory)`, the API that already wired through per-record overrides. B52 unified the three array mode arms (derived, primary, ad-hoc) under a shared trailing pass, leaving the B38 throw as the only remaining asymmetry. B53 finishes the unification: the primary arm now applies `overrides[i]` per record via `generateAndStorePrimary`'s existing field-level merge path, exactly mirroring how `populate(S, N, factory)` works. D8 (registry stored = generate's return value) is preserved by construction — the merge happens BEFORE `registry.store`.
+
+  Pre-existing records in the registry are returned untouched (D8); overrides apply only to records produced by the current call (positions `[existingCount, target)` in the returned array). `options.transform` runs after the per-record override merge (B52-R3 ordering preserved). No public API surface change. Patch bump.
+
 ## 0.9.1
 
 ### Patch Changes
@@ -29,6 +53,7 @@
 ### Patch Changes
 
 - 7fad4aa: Internal refactor — split the 1202-LOC monolithic `src/world.ts` into a `src/world/` subdirectory grouped by concern:
+
   - `src/world/engine.ts` — `WorldImpl` class (the per-field pipeline, array / derived / primary generation, relation methods, B36 generator binding, B39 stable schema slot machinery).
   - `src/world/registration.ts` — pure registration types + helpers (`SchemaReg`, `SchemaMode`, `normalizeRelationEntry`, `findPrimaryRegs` / `findDerivedRegs` / `resolveMode`).
   - `src/world/derived.ts` — B8 derived-upsert map type + access helpers.
