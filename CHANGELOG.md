@@ -21,7 +21,6 @@
 ### Patch Changes
 
 - 7fad4aa: Internal refactor — split the 1202-LOC monolithic `src/world.ts` into a `src/world/` subdirectory grouped by concern:
-
   - `src/world/engine.ts` — `WorldImpl` class (the per-field pipeline, array / derived / primary generation, relation methods, B36 generator binding, B39 stable schema slot machinery).
   - `src/world/registration.ts` — pure registration types + helpers (`SchemaReg`, `SchemaMode`, `normalizeRelationEntry`, `findPrimaryRegs` / `findDerivedRegs` / `resolveMode`).
   - `src/world/derived.ts` — B8 derived-upsert map type + access helpers.
