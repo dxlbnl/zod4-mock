@@ -4,8 +4,11 @@
 
 - **Language**: TypeScript (`typescript@^6`), `strict` + `exactOptionalPropertyTypes` +
   `noUncheckedIndexedAccess`; ESM with Node16 module resolution (`.js` import extensions).
-- **Runtime / platform**: Node (`@types/node@^25`); published as an ESM library
-  (`dist/index.js`, `dist/index.d.ts`). The `playground/` is a Svelte app.
+- **Runtime / platform**: **isomorphic / universal** — the published ESM library
+  (`dist/index.js`, `dist/index.d.ts`) and the locale packages **MUST** run unmodified
+  in browsers, MSW, service workers, and edge runtimes as well as Node; shipped code
+  uses no `node:*` imports or Node-only globals (→ D13). `@types/node@^25` is a
+  build/test devDependency only. The `playground/` is a Svelte app.
 - **Key frameworks / libraries**: `zod@^4` (peer dependency — the schemas it mocks),
   `vitest` (tests), `oxlint`/`oxfmt` (lint/format), `tsup` (package builds), `changesets`
   (versioning/release).
@@ -68,3 +71,4 @@ wiki/                # Vibin workflow source of truth (this directory)
 - Generation cache short-circuits **MUST** be PRNG- and counter-neutral: a cache hit consumes zero PRNG state and advances no counter the generation pipeline reads from (roll back any increments the bypassed path made). (→ D9)
 - The per-field generation pipeline **MUST** be expressed as the canonical `PIPELINE` list in `src/pipeline.ts`; new rungs are added by editing the list, never by open-coding the ladder at a call site. `PIPELINE_NO_REGISTRATION` is the registration-less subset for non-`withSchema` paths. (→ D11)
 - A schema reference **MUST NOT** be registered as both primary and derived on the same world; `withSchema` **MUST** throw at registration time when an incoming registration's polarity (`opts?.from !== undefined` ⇒ derived; otherwise primary) conflicts with the polarity of an existing registration of the same schema reference. (→ D12)
+- Shipped (published) library and locale-package code **MUST** be runtime-agnostic: no `node:*` imports and no reliance on Node-only globals (`fs`, `zlib`, `Buffer`, `process`, `__dirname`); it **MUST** run unmodified in browsers, MSW, service workers, and edge runtimes. Build-time scripts (`packages/*/scripts/`), tests, and config are exempt. (→ D13)

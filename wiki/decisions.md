@@ -386,3 +386,50 @@ read-only inspector.
 
 - **Supersedes**: none (B41 research established that no prior decision pinned
   dispatch precedence either way; D12 removes the ambiguity that B41 surfaced).
+
+## D13: Shipped code must be isomorphic (universal-runtime); no `node:*` in published paths
+
+- **Date**: 2026-06-01
+- **By**: user direction (maintainer; manager recorded)
+- **Context**: 0.9.0 (B48 Phase 2) shipped the locale data layer as a brotli blob
+  decompressed eagerly at module load via `node:zlib` + `node:fs`
+  (`packages/locale-*/src/data/index.ts`). This library explicitly targets
+  **MSW, browser clients, servers, and edge runtimes** — the blob loader throws
+  in any non-Node runtime (no `node:zlib`), and the `.br` blob also fell outside
+  the package `files` allowlist, causing "blob not found" errors at runtime even
+  on Node. The maintainer established that isomorphism is a hard, standing
+  requirement, not a per-feature concern. (B46's spike recommended `fc+brotli`,
+  but that assumed Node's built-in `zlib`; that recommendation is void for any
+  shipped path under this decision.)
+- **Decision**: All **shipped (published)** library and locale-package code
+  **MUST** be runtime-agnostic — no `node:*` module imports and no reliance on
+  Node-only globals (`fs`, `zlib`, `Buffer`, `process`, `__dirname`, …). Locale
+  corpora ship as plain data (e.g. TypeScript `string[]` constants) that the
+  consumer's bundler can compress and tree-shake; any compression scheme applied
+  to a shipped artifact **MUST** decode in pure cross-runtime JavaScript (no
+  `node:*`), or be deferred to the consumer's bundler. **Build-time-only** code is
+  exempt because it never reaches consumers: fetch/generate scripts under
+  `packages/*/scripts/`, dev tooling, tests, and build/config files may use
+  `node:*` freely.
+- **Consequences**:
+  - The reviewer gains a standing check: shipped `src/` (the published entry of
+    each package, excluding `scripts/`/tests/config) **MUST** be free of `node:*`
+    imports and Node-only globals.
+  - Encoding choices for the corpora are now constrained to pure-JS-decodable
+    schemes; whether anything beats plain `string[]` on bundle size **and** load
+    speed under that constraint is an open research question (see B50).
+  - 0.x bump per the actual change (the in-flight data-layer fix is a patch:
+    `LocaleData` shape is preserved, no public API change).
+
+### Rule added
+
+`wiki/architecture.md` Rules section gains:
+
+> Shipped (published) library and locale-package code **MUST** be runtime-agnostic:
+> no `node:*` imports and no reliance on Node-only globals (`fs`, `zlib`, `Buffer`,
+> `process`, `__dirname`); it **MUST** run unmodified in browsers, MSW, service
+> workers, and edge runtimes. Build-time scripts (`packages/*/scripts/`), tests, and
+> config are exempt. (→ D13)
+
+- **Supersedes**: voids B46's `fc+brotli` recommendation for any shipped path
+  (that recommendation assumed Node's `zlib`).

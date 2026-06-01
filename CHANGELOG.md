@@ -1,5 +1,13 @@
 # zod4-mock
 
+## 0.9.1
+
+### Patch Changes
+
+- 7b21c1f: Fix: ship locale data as plain TypeScript constants instead of a brotli blob decompressed at module load. The previous shape (introduced in 0.9.0) used `node:fs` + `node:zlib` and could not run in browsers, MSW, service workers, or edge runtimes. It also shipped the brotli blob outside the package `files` allowlist, causing "blob not found" errors at runtime. Universal-runtime fix: the data layer is now a barrel of TypeScript `string[]` exports the consumer's bundler can compress as it sees fit. No public API change; the `LocaleData` shape pinned in 0.9.0 is preserved.
+- Updated dependencies [7b21c1f]
+  - @zod4-mock/locale-core@0.4.1
+
 ## 0.9.0
 
 ### Minor Changes
@@ -21,6 +29,7 @@
 ### Patch Changes
 
 - 7fad4aa: Internal refactor — split the 1202-LOC monolithic `src/world.ts` into a `src/world/` subdirectory grouped by concern:
+
   - `src/world/engine.ts` — `WorldImpl` class (the per-field pipeline, array / derived / primary generation, relation methods, B36 generator binding, B39 stable schema slot machinery).
   - `src/world/registration.ts` — pure registration types + helpers (`SchemaReg`, `SchemaMode`, `normalizeRelationEntry`, `findPrimaryRegs` / `findDerivedRegs` / `resolveMode`).
   - `src/world/derived.ts` — B8 derived-upsert map type + access helpers.
