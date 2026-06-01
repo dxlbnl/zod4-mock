@@ -468,6 +468,7 @@ read-only inspector.
   Rule line above are amended in place rather than superseded with a new D-number
   because the standing constraint hasn't changed — only one wording carveout
   was always meant to be temporary. See `wiki/specs/B53-primary-array-per-index-overrides.md`.
+
 - **Consequences**:
   - The reviewer gains a standing check: any future patch that touches one arm
     must justify why the other two don't need the change.
