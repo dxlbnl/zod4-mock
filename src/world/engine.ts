@@ -1360,19 +1360,6 @@ export class WorldImpl implements World {
       // Primary mode: generate N items, store in registry, return all
       // -------------------------------------------------------------------
       case "primary": {
-        // B38: per-index overrides on a primary-registered array schema are
-        // silently dropped today (generateAndStorePrimary is called without
-        // options). Refuse the unsafe call shape loudly so the caller is
-        // steered to `world.populate(schema, count, factory)` — the API that
-        // actually applies per-record overrides. The guard fires BEFORE any
-        // record is generated so no partial work lands in the registry.
-        if (Array.isArray(options?.overrides) && options.overrides.length > 0) {
-          throw new Error(
-            "Per-index overrides on a primary-registered array schema are not supported on world.generate. " +
-              "Use world.populate(schema, count, factory) instead — see docs/api-reference.md → .populate.",
-          );
-        }
-
         const existingCount = this.registry.count(innerSchema);
 
         const minRequired = resolveMinRequired(arraySchema, defMin);
@@ -1398,12 +1385,19 @@ export class WorldImpl implements World {
         // is allocated beyond what we will return (no while loop, B44 holds).
         if (!this.effectiveStore) {
           const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
-          primaryResult = Array.from({ length: storeOffLength }, () =>
-            this.generateAndStorePrimary(innerSchema, mode.reg),
+          const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
+          primaryResult = Array.from({ length: storeOffLength }, (_, i) =>
+            this.generateAndStorePrimary(innerSchema, mode.reg, {
+              overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
+            }),
           );
         } else {
+          const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
           while (this.registry.count(innerSchema) < target) {
-            this.generateAndStorePrimary(innerSchema, mode.reg);
+            const i = this.registry.count(innerSchema); // index of the about-to-be-produced record
+            this.generateAndStorePrimary(innerSchema, mode.reg, {
+              overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
+            });
           }
 
           const all = this.registry.all(innerSchema);
@@ -1414,9 +1408,10 @@ export class WorldImpl implements World {
             callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
         }
 
-        // B52-R3: apply trailing `options.transform` on BOTH primary paths.
-        // The B38 throw above already excluded the per-index overrides case,
-        // so only transform applies here.
+        // B52-R3 / B53: apply trailing `options.transform` on BOTH primary paths.
+        // Per-index `options.overrides` were already applied per-record inside
+        // `generateAndStorePrimary` (B53-R1) — the merge happened at field-level
+        // before `registry.store`, so D8 holds (stored = returned).
         if (options?.transform) {
           primaryResult = primaryResult.map(
             options.transform as unknown as (value: unknown, index: number) => unknown,

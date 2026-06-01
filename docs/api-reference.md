@@ -313,7 +313,7 @@ generate<TSchema extends ZodTypeAny>(
 
 Generates a value matching the schema. The return type is fully inferred.
 
-- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`. (per-index `overrides` → see [`.populate`](#populateschema-count-factory) for primary-registered inner schemas; `{ store: false }` against a primary-registered inner schema returns ephemeral records of the auto-rolled length, no registry write)
+- If `schema` is an array: returns an array. Length derived from Zod constraints, falling back to `defaultArrayLength`. Per-index `overrides` apply uniformly on every array dispatch arm (primary, derived, ad-hoc) via field-level deep-merge per record; on a primary-registered array with pre-existing registry records, override slots at indices `< existingCount` are ignored (records already stored under D8 are returned untouched — overrides apply to freshly-generated records). `{ store: false }` against a primary-registered inner schema returns ephemeral records of the auto-rolled length, no registry write.
 - If the schema has `from:` bindings (derived): generates one output per source in the registry.
 - If the schema is primary (registered or not): generates and stores a new record.
 - If `schema` is registered with `from:` and the call passes `{ source: x }`, the call is an **upsert** keyed by `(schema, identity(x))` — repeat calls with the same identity return the stored record by reference. See [`.withSchema`](#withschemaschema-opts) and the `unique` option below.
@@ -338,7 +338,7 @@ interface GenerateOptions<T> {
 }
 ```
 
-**`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`. **Note**: per-index `overrides` on a **primary-registered** array schema (`world.generate(RegisteredSchema.array(), { overrides: [...] })`) **throw** — use [`world.populate(schema, count, factory)`](#populateschema-count-factory) to per-record-override a registered schema.
+**`overrides`** — deep-partial merge. Nested objects are merged recursively; arrays are replaced entirely. Applied before `transform`. For an **array schema**, pass an array of per-index overrides (`{ overrides: [obj0, obj1, ...] }`): `overrides[i]` deep-merges into the i-th returned record on every array dispatch arm (primary, derived, ad-hoc). On a **primary-registered** array with pre-existing registry records, override slots at indices `< existingCount` are ignored — records already stored under D8 are returned untouched; overrides apply only to freshly-generated records. To override **every** record in a primary-registered schema (including pre-existing ones, by triggering fresh generation), see [`world.populate(schema, count, factory)`](#populateschema-count-factory).
 
 **`transform`** — receives the merged value; must return a value of the same type. Applied after `overrides`.
 
@@ -369,7 +369,7 @@ populate<TSchema extends ZodTypeAny>(
 ): this
 ```
 
-Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining. (This is also the supported way to per-record-override a registered schema — `world.generate(RegisteredSchema.array(), { overrides: [...] })` throws; see the `overrides` note under [`GenerateOptions`](#generateschema-options).)
+Pre-generates `count` instances of the schema and stores them in the registry. Returns `this` for fluent chaining. (For per-record overrides across **all** records — including any pre-existing ones, by triggering fresh generation — use `populate` with a factory. `world.generate(RegisteredSchema.array(), { overrides: [...] })` applies per-index overrides only to freshly-generated records, leaving pre-existing registry records untouched; see the `overrides` note under [`GenerateOptions`](#generateschema-options).)
 
 The simple two-arg form is unchanged:
 

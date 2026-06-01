@@ -438,7 +438,7 @@ read-only inspector.
 
 - **Date**: 2026-06-01
 - **By**: reviewer (B52); manager promoted on close
-- **Context**: B25 extracted `resolveMode` and unified the *classifier* every
+- **Context**: B25 extracted `resolveMode` and unified the _classifier_ every
   array-dispatch site uses to pick derived/primary/ad-hoc. But each arm of
   `generateArray` still hand-rolled its own bound logic, override application,
   and transform handling. Three sibling correctness fixes landed in close
@@ -447,17 +447,27 @@ read-only inspector.
   early-return) — each correct in isolation, each landing only in the primary
   arm, none re-unified into the other arms. The cumulative drift was a cluster
   of eight inconsistencies the user surfaced via `schema.array().min(6).max(6)`
-  + `store: false` returning more than 6 items (B52 §"Inconsistency inventory").
-  Without a standing rule, the next sibling fix on this surface will diverge
-  again.
+  - `store: false` returning more than 6 items (B52 §"Inconsistency inventory").
+    Without a standing rule, the next sibling fix on this surface will diverge
+    again.
 - **Decision**: All three `generateArray` mode arms (derived, primary, ad-hoc)
   **MUST** apply the same trailing pass in the same order: cap to
-  `callerMax ?? defMax`, apply per-index `options.overrides` (or throw per B38
-  on primary-registered inner schemas), then apply `options.transform`. New
-  behaviour added to one arm **MUST** be added to all three. The cap **MUST**
-  be applied at production time on the derived arm so that
-  `registry.count(Derived) === result.length` holds (preserves D8 for
-  `withSchema`-registered derived schemas).
+  `callerMax ?? defMax`, apply per-index `options.overrides` (deepMerge per
+  record), then apply `options.transform`. New behaviour added to one arm
+  **MUST** be added to all three. The cap **MUST** be applied at production
+  time on the derived arm so that `registry.count(Derived) === result.length`
+  holds (preserves D8 for `withSchema`-registered derived schemas).
+
+  **Amendment 2026-06-01 (B53)**: the original phrasing carried an "(or throw
+  per B38 on primary-registered inner schemas)" carveout that codified B38's
+  temporary loud-refusal of per-index overrides on the primary arm. B53 lifted
+  that throw — per-index overrides now deep-merge into the freshly-produced
+  records via `generateAndStorePrimary`'s existing field-level merge path,
+  exactly mirroring how `populate(S, N, factory)` works. D8 preserved by
+  construction (merge happens before `registry.store`). The Decision text and
+  Rule line above are amended in place rather than superseded with a new D-number
+  because the standing constraint hasn't changed — only one wording carveout
+  was always meant to be temporary. See `wiki/specs/B53-primary-array-per-index-overrides.md`.
 - **Consequences**:
   - The reviewer gains a standing check: any future patch that touches one arm
     must justify why the other two don't need the change.
@@ -476,9 +486,9 @@ read-only inspector.
 
 > All `generateArray` mode arms (derived, primary, ad-hoc) **MUST** apply the
 > same trailing pass in the same order: cap to `callerMax ?? defMax`, apply
-> per-index `options.overrides` (or throw per B38 on primary-registered inner
-> schemas), then apply `options.transform`. New behaviour added to one arm
-> **MUST** be added to all three. (→ D14)
+> per-index `options.overrides` (deepMerge per record), then apply
+> `options.transform`. New behaviour added to one arm **MUST** be added to all
+> three. (→ D14)
 
 - **Supersedes**: none (codifies the unification job B25 started for the
   classifier and extends it to the arms; coexists with D8 — the derived cap is

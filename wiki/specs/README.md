@@ -41,6 +41,7 @@ superseded.
 | [B47](B47-forbid-dual-primary-derived-registration.md)     | BUG: `withSchema` throws at registration time when a schema is registered as both primary and derived (resolves B41's silent dispatch divergence).                                                                                                                    |
 | [B48](B48-replace-markov-with-real-wordlists.md)           | Replace character-level Markov chains with real wordlists sampled by `prng.pick`; drop `@zod4-mock/locale-names`; reshape `LocaleData`; closes #24 (B42).                                                                                                             |
 | [B52](B52-generate-array-dispatch-inconsistencies.md)      | BUG: eight inconsistencies across `generateArray` / `populate` dispatch arms (derived bounds, primary `store:false` slice, transform/overrides per mode, populate auto-provision, dead-code removal); closes user-reported `.min(6).max(6) + store:false` regression. |
+| [B53](B53-primary-array-per-index-overrides.md)            | BUG: lift the B38 throw — per-index `overrides` on `world.generate(PrimarySchema.array(), { overrides: [...] })` now deep-merge per record via `generateAndStorePrimary` (D8 preserved); D14's "or throw" carveout removed.                                           |
 
 ## Spec ↔ item card pairing
 
