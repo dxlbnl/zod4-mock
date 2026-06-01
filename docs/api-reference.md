@@ -1097,6 +1097,13 @@ interface LocaleData {
     nouns?: readonly string[];
     adjectives?: readonly string[];
     articles: readonly string[]; /* ... other closed-class word lists */
+    // Optional per-locale sentence formatter. When present, `sentence()`
+    // delegates wholesale to this callback — the locale owns template
+    // selection, lemma picking, and any grammar-specific composition
+    // (inflection, pronoun agreement). When absent, `sentence()` falls
+    // back to the library's 5-template default against `verbs` /
+    // `verbsPlural`. See `formatSentence` below.
+    formatSentence?(prng, ctx?): string;
   };
   address: {
     cities;
@@ -1164,3 +1171,17 @@ Markov-model alternative — the Markov code path was removed in B48 in favour
 of constant-PRNG-cost sampling from real lists.
 
 `lastNamePrefixes` is optional. When present, `lastName()` prepends a prefix with probability `prefixWeightTotal / (prefixWeightTotal + 100)`, capitalised for standalone use. The prefix decision uses an independent `prng.fork("lastNamePrefix")` so the caller-visible per-call PRNG cost stays at exactly one draw. `formatFullName` in locales that have tussenvoegsels should lowercase the first character of the last name (Dutch convention: "Jan de Jong" not "Jan De Jong").
+
+### `formatSentence` (`word.formatSentence`)
+
+`LocaleData.word.formatSentence` is an optional per-locale sentence-formatter callback, mirroring the shape of `person.formatBio`, `commerce.formatProductName`, and `company.formatBuzzPhrase`. Signature:
+
+```ts
+formatSentence?(prng: Prng, ctx?: LocaleSentenceContext): string;
+```
+
+When the active locale defines `formatSentence`, the library's `sentence()` generator delegates to it wholesale — the locale owns template selection, lemma picking, and any grammar-specific composition (verb conjugation, plural-noun agreement, pronoun constraints). When the locale omits the field, `sentence()` falls back to the library's default 5-template English shape against `loc.verbs` / `loc.verbsPlural` / `loc.pronouns` / `loc.articles` / `loc.nouns` / `loc.adjectives`.
+
+This shape lets each locale express its own grammar without forcing a universal inflection interface. `@zod4-mock/locale-en` ships `formatSentence` with 3ps-conjugated verbs, plural-noun agreement on the last noun slot, and a 3ps-singular pronoun constraint on the relevant template — the inflection helpers themselves are package-internal (see locale-en's exported `inflect` namespace for matcher-author access).
+
+`verbsPlural` is marked `@deprecated` and will be removed in a future major; migrate locale-side sentence composition to `formatSentence`.

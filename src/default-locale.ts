@@ -1,4 +1,4 @@
-import type { LocaleData, Prng } from "@zod4-mock/locale-core";
+import { type LocaleData, type Prng } from "@zod4-mock/locale-core";
 
 /**
  * Minimal English locale used when no `locale` is passed to `createWorld()`.

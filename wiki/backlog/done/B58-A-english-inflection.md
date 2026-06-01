@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-01
 predecessor: B3
 report: wiki/research/text-generation/conjugation-compression.md
+spec: wiki/specs/B58-A-english-inflection.md
 ---
 
 ## Description
@@ -32,6 +33,67 @@ gender source; independent dispatch).
   common verbs lists (en); keep `verbsPlural` with `@deprecated`; export `inflect.*` as
   public locale-core API from day one; minor bump; single-commit snapshot re-pin;
   per-locale inflection module opt-in by presence of `verbLemmas`.
+
+## Wiring decisions (2026-06-01 review checkpoint)
+
+- **R6 Template 2 pronoun constraint** — Template 2 (`[Pronoun] [Verb] [Article] [Adjective] [Noun]`)
+  picks a pronoun from the full `loc.pronouns` array, so a fixed 3ps verb is ungrammatical
+  for `I` / `you` / `we` / `they`. Under the inflected path, `sentence()` constrains
+  Template 2's pronoun pick to a **3ps-singular closed list** (`he` / `she` / `it`, plus
+  `one` if available). The closed list ships **inline in `src/generators/data/word.ts`**
+  as a small local constant, not as a new `LocaleData.word.pronouns3ps?` field —
+  English-grammar-specific and tiny, no surface-area cost across locales. Folded into
+  spec R6.
+- **R8 (`buzzPhrase`) unchanged** — `formatBuzzPhrase` wraps the picked `buzzVerbLemmas`
+  entry in `inflect.en.conjugate(_, "3ps")` exactly as the original spec described. No
+  change to R8.
+- **`bio()` dropped from scope** — original R9 (`bio()` / `formatBio` wiring) is
+  removed. The B3 report §1.5 flagged `bio()` as a low realism gap; the three fixed
+  `formatBio` templates already read naturally with their hand-templated surface forms.
+  Recorded in spec `## Out of scope`. R10/R11/R12 renumbered to R9/R10/R11.
+
+The spec at `wiki/specs/B58-A-english-inflection.md` is the authoritative reference for
+the formalised R1–R11 list; the preliminary acceptance block below is kept for
+historical context and points at the same R-IDs.
+
+## Architecture revision (2026-06-01 post-checkpoint)
+
+User flagged the original spec's placement of English inflection rules in
+`@zod4-mock/locale-core` as wrong: inflection categories themselves differ
+per language (en `"3ps"|"past"|"gerund"|"participle"`, nl `"3ps"|"past_sg"|"past_pl"|"participle"`,
+Spanish person × number × tense × mood, …), so no honest universal `Inflector`
+interface exists. **Resolution: inflection helpers live per-locale; locale-core
+holds types only; library delegates to a new `loc.formatSentence` callback
+mirroring `formatBio` / `formatBuzzPhrase` / `formatProductName`.**
+
+User also clarified: since `inflect` lives in locale-en (not the core library),
+it does NOT belong in main `docs/`. Only the cross-cutting `LocaleData.word.formatSentence`
+type goes in `docs/api-reference.md`. The English-specific `inflect.*` helpers
+are documented inline via JSDoc on the exports (and optionally in locale-en's
+own README), NOT in the main docs directory.
+
+Concrete changes from the prior spec:
+
+- `inflect` namespace MOVED from `@zod4-mock/locale-core` to `@zod4-mock/locale-en`.
+- `LocaleData.word.verbLemmas` field DROPPED (library no longer reads it; locale-en owns data privately).
+- New `LocaleData.word.formatSentence?: (prng, ctx) => string` callback type added to locale-core.
+- locale-en's `formatSentence` owns the 5 sentence templates + lemma picks + inflection composition + Template 2 pronoun constraint.
+- locale-en's `adverbs` field is derived at module init from `adjectives` + reserved list (~3000 entries vs current 8); library `adverb()` is unchanged.
+- locale-en's `formatBuzzPhrase` uses its own private inflect.
+- Main `docs/` scope reduced to the `formatSentence` callback type; concepts.md / recipes.md untouched; locale-en handles its own helper docs.
+
+The spec's R-ID list is reshaped from R1–R11 (with R6 carrying multiple MUSTs) to
+R1–R12 with exactly one RFC-2119 keyword per R-ID, cleanly splitting the prior
+library-wiring R6 into "locale-en ships `formatSentence`" (R5) and "library
+delegates" (R6), and adding R12 (no `inflect` in locale-core) as a structural
+guard against regression.
+
+Possible new standing constraint: **"Library code in `src/` MUST NOT import from
+any locale package; the only library↔locale boundary is the set of optional
+locale callbacks typed in `@zod4-mock/locale-core` and implemented in each locale
+package. `@zod4-mock/locale-core` itself MUST contain types only."** Spec-writer
+recommends promotion. Manager + reviewer confirm at done time and promote as the
+next free `D-<n>` (→ D15).
 
 ## Preliminary acceptance (spec-writer formalises)
 

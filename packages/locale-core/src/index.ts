@@ -1,2 +1,2 @@
-export type { Prng, LastNamePrefix, Currency, LocaleData } from "./types.js";
+export type { Prng, LastNamePrefix, Currency, LocaleData, LocaleSentenceContext } from "./types.js";
 export { extend } from "./extend.js";

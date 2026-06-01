@@ -30,6 +30,18 @@ export interface Currency {
   numeric: string;
 }
 
+/**
+ * Minimal context shape consumed by per-locale `formatSentence` callbacks
+ * (and any future cross-cutting callbacks added to `LocaleData`). Captures
+ * only the field the locale needs — the active `locale` — without coupling
+ * locale-core to the library's full `GeneratorContext` (which carries
+ * registry, related, generate, etc.). The library's `GeneratorContext`
+ * structurally satisfies this shape, so it can be passed through directly.
+ */
+export interface LocaleSentenceContext {
+  readonly locale?: LocaleData;
+}
+
 export interface LocaleData {
   id: string;
 
@@ -119,9 +131,31 @@ export interface LocaleData {
     conjunctions: readonly string[];
     pronouns: readonly string[];
     verbs: readonly string[];
+    /**
+     * @deprecated Migrate to `formatSentence`, which owns sentence assembly
+     * (including plural-subject verb agreement) inside the locale package.
+     * The surface-form `verbsPlural` field is preserved for back-compat and
+     * will be removed in a future major.
+     */
     verbsPlural: readonly string[];
     adverbs: readonly string[];
     interjections: readonly string[];
+    /**
+     * Optional per-locale sentence formatter. When present, the library's
+     * `sentence()` generator delegates wholesale to this callback —
+     * locales own template selection, lemma picking, and any
+     * grammar-specific composition (inflection, pronoun agreement, etc.)
+     * internally. When absent, the library falls back to its default
+     * 5-template English shape against `verbs` / `verbsPlural` /
+     * `pronouns` / `articles` / `nouns` / `adjectives`.
+     *
+     * Mirrors `person.formatBio`, `commerce.formatProductName`, and
+     * `company.formatBuzzPhrase` in shape.
+     *
+     * Declared in method-shorthand form so callers may pass the library's
+     * richer `GeneratorContext` without a contravariance mismatch.
+     */
+    formatSentence?(prng: Prng, ctx?: LocaleSentenceContext): string;
   };
 
   finance: {

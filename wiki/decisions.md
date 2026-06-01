@@ -494,3 +494,45 @@ read-only inspector.
 - **Supersedes**: none (codifies the unification job B25 started for the
   classifier and extends it to the arms; coexists with D8 — the derived cap is
   applied at production time so `registry.count === result.length` holds).
+
+## D15: Library code MUST NOT import from any locale package; locale-core holds types only
+
+- **Date**: 2026-06-01
+- **By**: implementer (B58-A)
+- **Context**: The earlier draft of B58-A placed English inflection rules
+  (`pluralize` / `conjugate` / `adverbFromAdjective`) in `@zod4-mock/locale-core`
+  and let the library import them via `inflect.en`. The user flagged this as
+  the wrong boundary: inflection categories themselves differ per language
+  (en `"3ps" | "past" | "gerund" | "participle"`, nl `"3ps" | "past_sg" |
+"past_pl" | "participle"`, Spanish person × number × tense × mood, …) — no
+  honest universal `Inflector` interface exists that every locale can satisfy.
+  Without a standing constraint, a future agent could resurrect the
+  locale-core-knows-English pattern (it's the obvious shortcut every time the
+  library wants a string-shape helper), forcing a universal interface back
+  onto languages whose grammar categories don't fit.
+- **Decision**: Library code in `src/` **MUST NOT** import from any locale
+  package (`@zod4-mock/locale-en`, `@zod4-mock/locale-nl`, …). The only
+  library↔locale boundary is the set of optional locale callbacks
+  (`formatBio`, `formatBuzzPhrase`, `formatProductName`, `formatSentence`, …)
+  typed in `@zod4-mock/locale-core` and implemented in each locale package.
+  `@zod4-mock/locale-core` itself **MUST** contain types only — no
+  English-specific (or any locale-specific) rule implementations.
+- **Consequences**:
+  - Each locale owns its own grammar; locale-nl can ship Dutch-specific
+    `inflect.conjugate(verb, "3ps" | "past_sg" | "past_pl" | "participle")`
+    without forcing locale-en's shape to compromise.
+  - Adding a new cross-cutting realism axis (sentence assembly, paragraph
+    structure, …) is a new optional callback on `LocaleData`, not a new
+    helper namespace on locale-core.
+  - Matcher authors who want inflection import directly from the locale
+    package (`import { inflect } from "@zod4-mock/locale-en"`).
+  - The library's `src/generators/data/word.ts` `sentence()` no longer reads
+    `loc.verbLemmas` directly — it delegates to `loc.formatSentence`, and the
+    locale-core type drops `verbLemmas?` entirely.
+- **Rule added/changed**: Recommended for promotion to a one-line rule in
+  `architecture.md`'s Rules section by the manager: "Library code in `src/`
+  MUST NOT import from any locale package; the only library↔locale boundary is
+  the set of optional locale callbacks typed in `@zod4-mock/locale-core` and
+  implemented in each locale package. `@zod4-mock/locale-core` itself MUST
+  contain types only. (→ D15)"
+- **Supersedes**: none

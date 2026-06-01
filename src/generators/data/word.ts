@@ -118,9 +118,27 @@ export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
   return Array.from({ length: count }, () => noun(prng, ctx)).join(" ");
 }
 
-/** Generates a grammatically structured sentence using the active locale. */
+/**
+ * Generates a grammatically structured sentence using the active locale.
+ *
+ * Delegates to `loc.formatSentence` when the active locale defines it
+ * (locale-en's implementation owns the 5 English templates + 3ps inflection
+ * + Template 2 pronoun constraint). When absent, falls back to the
+ * back-compat 5-template surface-form path against `loc.verbs` /
+ * `loc.verbsPlural` (kept for custom `LocaleData` literals and tests).
+ *
+ * The library MUST NOT import from any locale package — delegation flows
+ * solely through the typed callback.
+ */
 export function sentence(prng: Prng, ctx?: GeneratorContext): string {
   const loc = (ctx?.locale ?? defaultLocale).word;
+  if (loc.formatSentence) {
+    return loc.formatSentence(prng, ctx);
+  }
+
+  // Back-compat fallback: surface-form templates against `verbs` /
+  // `verbsPlural`. No inflection applied here — that's the locale callback's
+  // responsibility.
   const art = (): string => locPick(prng, loc.articles);
   const pron = (): string => locPick(prng, loc.pronouns);
   const pre = (): string => locPick(prng, loc.prepositions);

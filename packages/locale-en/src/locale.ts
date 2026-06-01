@@ -1,7 +1,48 @@
-import type { LocaleData, Prng } from "@zod4-mock/locale-core";
-import { firstNamesMale, firstNamesFemale, lastNames, nouns, adjectives } from "./data/index.js";
+import { type LocaleData, type Prng } from "@zod4-mock/locale-core";
+import { inflect } from "./inflect/index.js";
+import {
+  firstNamesMale,
+  firstNamesFemale,
+  lastNames,
+  nouns,
+  adjectives,
+  verbLemmas,
+} from "./data/index.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Reserved closed-list adverbs that aren't `-ly`-derived from an adjective
+ * (`here`, `now`, `then`, `there`, …). Prepended to the derived list at
+ * module init time so the full `adverbs` field covers both pools.
+ */
+const RESERVED_ADVERBS = [
+  "quickly",
+  "often",
+  "always",
+  "never",
+  "now",
+  "then",
+  "here",
+  "there",
+] as const;
+
+/**
+ * English adverb pool: reserved closed list + `-ly`-derived from the open
+ * `adjectives` corpus via `inflect.adverbFromAdjective`. Computed once at
+ * module load (~3000 entries), exposed on `en.word.adverbs`.
+ */
+const adverbs: readonly string[] = [
+  ...RESERVED_ADVERBS,
+  ...adjectives.map((a) => inflect.adverbFromAdjective(a)),
+];
+
+/**
+ * 3ps-singular pronoun pool for Template 2 of `formatSentence`. Closed,
+ * English-grammar-specific, kept inline so subject–verb agreement holds
+ * under the always-3ps verb-form policy (Q-2).
+ */
+const PRONOUNS_3PS = ["he", "she", "it"] as const;
 
 export const en: LocaleData = {
   id: "en",
@@ -572,7 +613,7 @@ export const en: LocaleData = {
       "innovation",
     ],
     formatBuzzPhrase: (verb, adj, noun) =>
-      `${cap(verb)} ${adj.toLowerCase()} ${noun.toLowerCase()}`,
+      `${cap(inflect.conjugate(verb, "3ps"))} ${adj.toLowerCase()} ${noun.toLowerCase()}`,
   },
 
   word: {
@@ -584,8 +625,73 @@ export const en: LocaleData = {
     pronouns: ["he", "she", "they", "we", "I"],
     verbs: ["is", "has", "goes", "makes", "says", "sees", "comes", "becomes"],
     verbsPlural: ["are", "have", "go", "make", "say", "see", "come", "become"],
-    adverbs: ["quickly", "often", "always", "never", "now", "then", "here", "there"],
+    adverbs,
     interjections: ["hey", "oh", "yes", "no", "wow", "ah"],
+    /**
+     * English sentence formatter — owns the 5 sentence templates, the
+     * lemma-pick + 3ps-conjugate wrap, the plural-noun wrap, and the
+     * Template 2 3ps-singular pronoun constraint. Matches the PRNG budget
+     * of the library's default fallback path exactly: one `prng.pick`
+     * (template) plus one `prng.random()` per leaf slot via `locPick`.
+     */
+    formatSentence: (prng: Prng): string => {
+      const articles = ["the", "a", "an"] as const;
+      const prepositions = [
+        "in",
+        "on",
+        "at",
+        "for",
+        "with",
+        "of",
+        "to",
+        "from",
+        "by",
+        "about",
+      ] as const;
+      const conjunctions = ["and", "or", "but", "because", "so", "yet"] as const;
+      const pronounsAny = ["he", "she", "they", "we", "I"] as const;
+
+      const pickFrom = <T extends string>(arr: readonly T[]): T =>
+        arr[Math.floor(prng.random() * arr.length)] as T;
+
+      const art = (): string => pickFrom(articles);
+      const pre = (): string => pickFrom(prepositions);
+      const conj = (): string => pickFrom(conjunctions);
+      const pronAny = (): string => pickFrom(pronounsAny);
+      const pron3ps = (): string => pickFrom(PRONOUNS_3PS);
+      const vrb = (): string => inflect.conjugate(pickFrom(verbLemmas), "3ps");
+      // `vrbp()` (plural-subject verb slot in Template 5) keeps the bare
+      // lemma — the conjunction-joined subject is plural so 3ps wouldn't
+      // agree. Same PRNG budget as `vrb()`.
+      const vrbp = (): string => pickFrom(verbLemmas);
+      const adj = (): string => cap(pickFrom(adjectives));
+      const n = (): string => cap(pickFrom(nouns));
+      // Pluralised noun slot — capitalise the inflected form. Zero extra
+      // PRNG draws beyond the noun pick.
+      const npl = (): string => cap(inflect.pluralize(pickFrom(nouns)));
+
+      const templates: [() => string, ...(() => string)[]] = [
+        // [Article] [Adjective] [Noun] [Verb-3ps] [Preposition] [Article] [Noun-plural]
+        () => `${cap(art())} ${adj()} ${n()} ${vrb()} ${pre()} ${art()} ${npl()}.`,
+        // [Pronoun-3ps] [Verb-3ps] [Article] [Adjective] [Noun-plural]
+        () => `${cap(pron3ps())} ${vrb()} ${art()} ${adj()} ${npl()}.`,
+        // [Preposition] [Article] [Noun] [Verb-3ps] [Pronoun-any-obj] [Article] [Noun-plural]
+        () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pronAny()} ${art()} ${npl()}.`,
+        // [Article] [Noun] [Verb-3ps] [Adjective] [Preposition] [Noun-plural]
+        () => `${cap(art())} ${n()} ${vrb()} ${adj()} ${pre()} ${npl()}.`,
+        // [Article] [Noun] [Conj] [Article] [Noun] [Verb-bare-plural] [Preposition] [Article] [Noun-plural]
+        () =>
+          `${cap(art())} ${n()} ${conj()} ${art()} ${n()} ${vrbp()} ${pre()} ${art()} ${npl()}.`,
+      ];
+
+      let res = prng.pick(templates)();
+      // Ensure a reasonable minimum length (mirrors the library's fallback
+      // path so the en formatSentence output remains schema-friendly).
+      while (res.length < 15) {
+        res = res.replace(".", ` ${conj()} ${n()}.`);
+      }
+      return res;
+    },
   },
 
   finance: {
