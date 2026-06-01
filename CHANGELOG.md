@@ -1,5 +1,95 @@
 # zod4-mock
 
+## 0.9.0
+
+### Minor Changes
+
+- 617d8f5: Replace character-level Markov chains with real wordlists.
+
+  **`LocaleData` shape change** — `person.firstNamesMale`, `person.firstNamesFemale`, and `person.lastNames` are now `readonly string[]` (the `simple` prefix that previously distinguished real-list arrays from `NameOriginSet[]` Markov models is dropped); `word.nounModel` and `word.adjectiveModel` are removed (`word.nouns` and `word.adjectives` remain as `readonly string[]`). The exported types `MarkovModel` and `NameOriginSet` no longer exist.
+
+  **Runtime cleanup** — the entire Markov runtime is gone: `sampleMarkov`, `sampleWeighted`, the 4-consonant-run rejection regex, the up-to-8 retry loop, and the `"x"` sentinel fallback are all deleted. Leaf name/word generators now dispatch through `prng.pick(realList)`, so per-call PRNG consumption from name and open-class-word generators becomes **exactly one draw per call** (constant, was data-dependent up to 1+N+8 retries) — strictly stronger determinism under D4 / D10.
+
+  **Workspace change** — `packages/locale-names/` is deleted; Dutch first names + surnames now live in `@zod4-mock/locale-nl`. The 5 origin-classified slices (`dutch`, `english`, `arabic`, `frisian`, `turkish`, `south-asian`) are replaced by per-locale packages with proper native-language sources; restoring `arabic` / `frisian` / `turkish` / `south-asian` is a separate per-locale follow-up.
+
+  **Data sourcing** — English surnames are filtered to the top-10K by US Census 2010 frequency (B48-R6). Names and open-class words now ship as brotli-compressed JSON blobs under `packages/locale-{en,nl}/src/data/blobs/*.br`, decompressed eagerly at module load. Bundle weight: `locale-en` ≈ 71 KB, `locale-nl` ≈ 42 KB (well under the 100 KB-per-locale budget set in B48-R4).
+
+  **Migration**: code reading `locale.person.simpleFirstNamesMale` / `simpleFirstNamesFemale` / `simpleLastNames` should drop the `simple` prefix. Code reading `locale.word.nounModel` / `adjectiveModel` should switch to `locale.word.nouns` / `adjectives` (both already exist as `readonly string[]`). Seed→value mappings shift (a value previously "Risharoumas" becomes a real name); accepted under 0.x SemVer per the B45 / B39 precedent.
+
+  Closes #24 (B42, Dutch initial-letter A/B/C/D skew — closed by construction: under `prng.pick(realList)` the first-letter distribution IS the natural distribution of the source corpus).
+
+### Patch Changes
+
+- 7fad4aa: Internal refactor — split the 1202-LOC monolithic `src/world.ts` into a `src/world/` subdirectory grouped by concern:
+
+  - `src/world/engine.ts` — `WorldImpl` class (the per-field pipeline, array / derived / primary generation, relation methods, B36 generator binding, B39 stable schema slot machinery).
+  - `src/world/registration.ts` — pure registration types + helpers (`SchemaReg`, `SchemaMode`, `normalizeRelationEntry`, `findPrimaryRegs` / `findDerivedRegs` / `resolveMode`).
+  - `src/world/derived.ts` — B8 derived-upsert map type + access helpers.
+  - `src/world/relations.ts` — pure cache-key / fork-key / error-message helpers backing the relation methods.
+  - `src/world/index.ts` — barrel re-exporting `createWorld` + `WorldImpl`.
+
+  `src/world.ts` remains as a thin re-export shim so existing internal imports (`./world.js`) resolve byte-identically. **The public API surface is unchanged** — no consumer-visible diff. No behavior change; full 1041-test suite passes byte-identically.
+
+- 0328d07: Docs-only — reconcile pipeline-numbering drift across `docs/concepts.md`, `src/world/engine.ts` module-level JSDoc, `CLAUDE.md`, and `wiki/codebase-map.md`. `src/pipeline.ts`'s `PIPELINE` list is the executable contract; all audience-facing locations now inline the full canonical seven-step list (0–6) plus the two wrapping passes (override deep-merge, transform), with step names and order byte-identical across the three inline locations. No source behavior changes.
+- d11ed4b: Fix `world.generate(primaryArraySchema.min(N).max(M))` silently ignoring the caller's `.min()` / `.max()` / `.length()` modifiers on a primary-registered (`withSchema`) inner schema. `WorldImpl.generateArray`'s primary-mode arm used `.min` / `.max` only to compute the auto-provision **floor** (how many records to top the registry up to) but unconditionally returned the entire `registry.all(innerSchema)` — so `world.populate(S, 6)` followed by `world.generate(S.array().min(2).max(2))` returned 6 instead of 2. The fix honours caller-side bounds by slicing the returned array to the caller's `.max()` / `.length()`; the library-side `defaultArrayLength[1]` fallback is intentionally NOT applied, so an unbounded `world.generate(S.array())` against a 10-record registry still returns all 10.
+
+  ```ts
+  const Product = z.object({ id: z.uuid(), name: z.string() });
+  const world = createWorld({ seed: 1 }).withSchema(Product);
+  world.populate(Product, 6);
+
+  world.generate(Product.array().min(2).max(2)).length; // before: 6 — after: 2
+  world.generate(Product.array().length(3)).length; // before: 6 — after: 3
+  world.generate(Product.array()).length; // before: 6 — after: 6 (unchanged)
+  ```
+
+  (closes #25)
+
+- 4348323: Fix infinite-loop hang in `world.generate(primaryArraySchema, { store: false })` against a primary-registered (`withSchema`) inner schema. `generateArray`'s primary-mode arm bounded its `while` loop on `registry.count(innerSchema) < target`, but under `store: false` (B10-R2/R4 transitive suppression) `generateAndStorePrimary` never writes — so the count never advanced past `existingCount` and the loop spun forever whenever the rolled `target` exceeded `existingCount`. The fix decouples the loop's progress counter from the registry under `!effectiveStore`: generate `target` records directly via `Array.from` and return them. The store-on path is byte-identical.
+
+  Before:
+
+  ```ts
+  const schema = z.object({ id: z.string(), name: z.string() });
+  const world = createWorld({ seed: 1 });
+  world.withSchema(schema, { matchers: { name: () => "x" } });
+
+  world.generate(schema.array(), { store: false }); // HANGS forever
+  ```
+
+  After:
+
+  ```ts
+  const result = world.generate(schema.array(), { store: false });
+  // returns promptly; result.length in [1, 5] (default auto-roll range);
+  // result.every(r => r.name === "x") === true; registry untouched.
+  ```
+
+  (closes #26)
+
+- d2a9d98: Forbid dual primary+derived registration of the same schema reference on a world. `WorldImpl.withSchema` now throws when the incoming registration's polarity (`opts?.from !== undefined` ⇒ derived; otherwise primary) conflicts with the polarity of an existing registration of the same schema reference. The throw fires before the new `SchemaReg` is appended, so the failed call leaves the registration list unchanged. Same-polarity re-registration (two primary, or two derived from any source) is unchanged; appearing as another schema's `relations:` target or `from:` source is not a registration and is unaffected. The latent dispatch-precedence divergence between `populate` (primary-first) and `generate` / `get` (derived-first) was only observable in this forbidden configuration; converting it into a setup-time error closes the footgun.
+
+  Before:
+
+  ```ts
+  const Person = z.object({ id: z.uuid(), name: z.string() });
+  const world = createWorld({ seed: 1 });
+  world.withSchema(Person); // OK — primary
+  world.withSchema(Person, { from: Company }); // silently accepted; dispatchers later disagreed
+  ```
+
+  After:
+
+  ```ts
+  world.withSchema(Person); // OK — primary
+  world.withSchema(Person, { from: Company }); // THROWS — already registered as primary
+  // Reversed order throws symmetrically.
+  ```
+
+- b7630d3: Internal — repo-wide `pnpm fmt` (oxfmt) sweep. The format gate had drifted unnoticed across many sessions (none of the recent items ran `pnpm fmt:check`). 202 files reformatted; pure whitespace, no behavioural change. After this lands, `pnpm validate` exits 0 across all four stages (typecheck + test + lint + fmt:check).
+- Updated dependencies [617d8f5]
+  - @zod4-mock/locale-core@0.4.0
+
 ## 0.8.0
 
 ### Minor Changes

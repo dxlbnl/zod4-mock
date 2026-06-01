@@ -1,5 +1,18 @@
 # playground
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [7fad4aa]
+- Updated dependencies [0328d07]
+- Updated dependencies [d11ed4b]
+- Updated dependencies [4348323]
+- Updated dependencies [d2a9d98]
+- Updated dependencies [617d8f5]
+- Updated dependencies [b7630d3]
+  - zod4-mock@0.9.0
+
 ## 0.0.8
 
 ### Patch Changes

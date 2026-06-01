@@ -24,7 +24,11 @@
       "Bash(node:*)",
       "Bash(tsc:*)",
       "Bash(tsx:*)",
-      "Read(//home/dexter/.claude/practices/**)"
+      "Read(//home/dexter/.claude/practices/**)",
+      "Bash(curl -sSL --max-time 20 -o /dev/null -w \"HTTP %{http_code} size=%{size_download}\\\\n\" \"https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt\")",
+      "Bash(curl -sSL --max-time 30 -o /dev/null -w \"HTTP %{http_code} size=%{size_download}\\\\n\" \"https://www2.census.gov/topics/genealogy/2010surnames/Names_2010Census.csv\")",
+      "Bash(curl -sSL --max-time 10 -o /dev/null -w \"HTTP %{http_code} size=%{size_download}\\\\n\" \"https://www.ssa.gov/oact/babynames/names.zip\")",
+      "Bash(curl -sSL --max-time 15 -A \"Mozilla/5.0\" -o /dev/null -w \"HTTP %{http_code} size=%{size_download}\\\\n\" \"https://www.ssa.gov/oact/babynames/names.zip\")"
     ],
     "deny": []
   },
