@@ -433,3 +433,53 @@ read-only inspector.
 
 - **Supersedes**: voids B46's `fc+brotli` recommendation for any shipped path
   (that recommendation assumed Node's `zlib`).
+
+## D14: All `generateArray` mode arms share the same trailing pass
+
+- **Date**: 2026-06-01
+- **By**: reviewer (B52); manager promoted on close
+- **Context**: B25 extracted `resolveMode` and unified the *classifier* every
+  array-dispatch site uses to pick derived/primary/ad-hoc. But each arm of
+  `generateArray` still hand-rolled its own bound logic, override application,
+  and transform handling. Three sibling correctness fixes landed in close
+  succession on this surface — **B38** (primary-array overrides throw), **B43**
+  (primary-array caller-max slice), **B44** (primary-array store:false
+  early-return) — each correct in isolation, each landing only in the primary
+  arm, none re-unified into the other arms. The cumulative drift was a cluster
+  of eight inconsistencies the user surfaced via `schema.array().min(6).max(6)`
+  + `store: false` returning more than 6 items (B52 §"Inconsistency inventory").
+  Without a standing rule, the next sibling fix on this surface will diverge
+  again.
+- **Decision**: All three `generateArray` mode arms (derived, primary, ad-hoc)
+  **MUST** apply the same trailing pass in the same order: cap to
+  `callerMax ?? defMax`, apply per-index `options.overrides` (or throw per B38
+  on primary-registered inner schemas), then apply `options.transform`. New
+  behaviour added to one arm **MUST** be added to all three. The cap **MUST**
+  be applied at production time on the derived arm so that
+  `registry.count(Derived) === result.length` holds (preserves D8 for
+  `withSchema`-registered derived schemas).
+- **Consequences**:
+  - The reviewer gains a standing check: any future patch that touches one arm
+    must justify why the other two don't need the change.
+  - `populate`'s derived branch inherits the same auto-provision-to-target
+    behaviour by composition (B52-R5); the explicit pre-check `populate` carried
+    for primary precedence (pre-D12) is gone (B52-R6).
+  - The `effectiveStore` and `withEffectiveStore` machinery (B10) is untouched;
+    the cap is applied to the returned array's length, not to the registry
+    population.
+  - Patch bump per the actual B52 change (no public API surface change; only
+    correctness fixes against documented contracts).
+
+### Rule added
+
+`wiki/architecture.md` Rules section gains:
+
+> All `generateArray` mode arms (derived, primary, ad-hoc) **MUST** apply the
+> same trailing pass in the same order: cap to `callerMax ?? defMax`, apply
+> per-index `options.overrides` (or throw per B38 on primary-registered inner
+> schemas), then apply `options.transform`. New behaviour added to one arm
+> **MUST** be added to all three. (→ D14)
+
+- **Supersedes**: none (codifies the unification job B25 started for the
+  classifier and extends it to the arms; coexists with D8 — the derived cap is
+  applied at production time so `registry.count === result.length` holds).

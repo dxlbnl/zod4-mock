@@ -605,38 +605,44 @@ export class WorldImpl implements World {
         }
       : undefined;
 
-    // `populate` historically inverts the standard derived-first precedence:
-    // if a schema is registered as both primary and derived, the primary path
-    // wins here (whereas `generateSingleItem` and `generateArray` prefer
-    // derived). `resolveMode` returns derived-first; the explicit primary
-    // re-check below preserves byte-identical behaviour without forcing
-    // `resolveMode` to carry an order-flipping parameter.
-    const primaryRegs = this.findPrimaryRegs(schema);
-    if (primaryRegs.length > 0) {
-      for (let i = 0; i < count; i++) {
-        const opts = factoryOpts ? factoryOpts(i) : undefined;
-        this.generateAndStorePrimary(schema, primaryRegs[0]!, opts);
-      }
-      return this;
-    }
-
+    // B52-R6: the historical primary-first pre-check is dead code post-D12
+    // (`withSchema` throws on dual primary/derived registration, so the
+    // inversion-observable configuration cannot exist). Dispatch directly via
+    // `resolveMode` — matching how `generate`, `generateArray`, and `get`
+    // dispatch.
     const mode = this.resolveMode(schema);
     switch (mode.kind) {
       case "derived": {
         const reg = mode.regs[0]!;
-        const sources = this.registry.all(reg.from!);
-        // Use the count to limit how many we derive, or derive from all if count is large
-        const N = Math.min(count, sources.length);
-        for (let i = 0; i < N; i++) {
+        const fromSchema = reg.from!;
+        const sources = this.registry.all(fromSchema);
+        // B52-R5: auto-provision additional sources when sources.length < count,
+        // mirroring `generateArray`'s derived auto-provision. populate's
+        // always-write contract (B10-R6) writes the auto-provisioned sources
+        // to the source registry via `generateAndStorePrimary`.
+        const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
+        for (let i = 0; i < count; i++) {
+          let source: unknown;
+          if (i < sources.length) {
+            source = sources[i];
+          } else {
+            source = this.generateAndStorePrimary(fromSchema, fromReg);
+          }
           const opts = factoryOpts ? factoryOpts(i) : undefined;
-          const result = this.generateDerivedRecord(schema, reg, sources[i], i, opts);
+          const result = this.generateDerivedRecord(schema, reg, source, i, opts);
           this.registry.store(schema, result as input<TSchema>);
         }
         break;
       }
-      case "primary":
-        // Unreachable: the explicit primary check above returns first.
+      case "primary": {
+        // B52-R6: the new primary arm replaces the removed pre-check;
+        // observable behaviour identical.
+        for (let i = 0; i < count; i++) {
+          const opts = factoryOpts ? factoryOpts(i) : undefined;
+          this.generateAndStorePrimary(schema, mode.reg, opts);
+        }
         break;
+      }
       case "ad-hoc":
         // Default to primary if not registered
         for (let i = 0; i < count; i++) {
@@ -1311,9 +1317,43 @@ export class WorldImpl implements World {
           pairs.push({ source: newSource, reg, sourceIndex });
         }
 
-        return pairs.map(({ source, reg, sourceIndex }) =>
-          this.generateDerivedRecord(innerSchema, reg, source, sourceIndex),
-        );
+        // B52-R1 / B52-R8: cap at `callerMax ?? defMax` BEFORE production —
+        // never call `generateDerivedRecord` for pairs beyond the cap, never
+        // store records past the cap (D8: stored = returned). The floor
+        // (`minRequired`) wins when it exceeds the cap — mirror the primary
+        // arm's `Math.min(min, max), Math.max(min, max)` framing so an
+        // impossible `.min(6).max(3)` configuration collapses to a defined
+        // length rather than throwing.
+        const callerMax = readCallerMaxBound(arraySchema);
+        const upper = callerMax ?? defMax;
+        const cap = Math.max(minRequired, Math.min(upper, pairs.length));
+        const capped = pairs.slice(0, cap);
+
+        let result: unknown[] = capped.map(({ source, reg, sourceIndex }) => {
+          const record = this.generateDerivedRecord(innerSchema, reg, source, sourceIndex);
+          // D8 — every returned record is also stored, gated on
+          // `effectiveStore` so `{ store: false }` suppresses the write.
+          if (this.effectiveStore) {
+            this.registry.store(innerSchema, record as input<ZodTypeAny>);
+          }
+          return record;
+        });
+
+        // B52-R4: apply per-index overrides + transform on derived path
+        // (mirror the ad-hoc branch at the bottom of this method).
+        if (options?.overrides) {
+          const overrides = options.overrides as unknown[];
+          result = result.map((item, i) => {
+            const ov = overrides[i];
+            return ov !== undefined ? deepMerge(item, ov as Record<string, unknown>) : item;
+          });
+        }
+        if (options?.transform) {
+          result = result.map(
+            options.transform as unknown as (value: unknown, index: number) => unknown,
+          );
+        }
+        return result;
       }
 
       // -------------------------------------------------------------------
@@ -1342,34 +1382,47 @@ export class WorldImpl implements World {
           genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
         );
 
-        // B44: under store:false, the loop below would never terminate —
+        // B43 / B52-R2: honour caller-side `.max()` / `.length()` slice on
+        // BOTH store-on and store-off paths. Only slice when the caller
+        // actually wrote a bound — we MUST NOT slice on the library-side
+        // `defMax` fallback.
+        const callerMax = readCallerMaxBound(arraySchema);
+
+        let primaryResult: unknown[];
+
+        // B44: under store:false, the while-loop below would never terminate —
         // generateAndStorePrimary skips the registry write (B10-R4 transitive
         // suppression) so `registry.count(innerSchema)` never advances past
-        // `existingCount`. Generate `target` records directly via Array.from
-        // and return them; the store-on path below is byte-identical.
+        // `existingCount`. Generate directly via Array.from instead. The
+        // length already incorporates the B52-R2 callerMax cap so no work
+        // is allocated beyond what we will return (no while loop, B44 holds).
         if (!this.effectiveStore) {
-          return Array.from({ length: target }, () =>
+          const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
+          primaryResult = Array.from({ length: storeOffLength }, () =>
             this.generateAndStorePrimary(innerSchema, mode.reg),
           );
+        } else {
+          while (this.registry.count(innerSchema) < target) {
+            this.generateAndStorePrimary(innerSchema, mode.reg);
+          }
+
+          const all = this.registry.all(innerSchema);
+          // B43: D8 preserved — every returned record was first stored, so
+          // the slice is a read-only narrowing of an already-D8-consistent
+          // registry view.
+          primaryResult =
+            callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
         }
 
-        while (this.registry.count(innerSchema) < target) {
-          this.generateAndStorePrimary(innerSchema, mode.reg);
+        // B52-R3: apply trailing `options.transform` on BOTH primary paths.
+        // The B38 throw above already excluded the per-index overrides case,
+        // so only transform applies here.
+        if (options?.transform) {
+          primaryResult = primaryResult.map(
+            options.transform as unknown as (value: unknown, index: number) => unknown,
+          );
         }
-
-        const all = this.registry.all(innerSchema);
-
-        // B43: honour caller-side `.max()` / `.length()` by slicing the
-        // returned array. Only slice when the caller actually wrote a bound —
-        // we MUST NOT slice on the library-side `defMax` fallback (otherwise
-        // `world.generate(S.array())` would silently cap at `defaultArrayLength[1]`
-        // even after `world.populate(S, 10)`). `.min()` alone leaves the upper
-        // bound unconstrained; `.length(N)` is treated as `max = N`. D8 is
-        // preserved by construction: every returned record was first stored
-        // via `generateAndStorePrimary`, so the slice is a read-only narrowing
-        // of an already-D8-consistent registry view.
-        const callerMax = readCallerMaxBound(arraySchema);
-        return callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
+        return primaryResult;
       }
 
       // -------------------------------------------------------------------
@@ -1379,18 +1432,10 @@ export class WorldImpl implements World {
         break;
     }
 
-    let N = defMin;
-    let maxN = defMax;
-    for (const c of checks(arraySchema)) {
-      if (c.check === "length_equals") {
-        N = c.length!;
-        maxN = N;
-        break;
-      }
-      if (c.check === "min_length" && c.minimum !== undefined) N = Math.max(N, c.minimum);
-      if (c.check === "max_length" && c.maximum !== undefined) maxN = Math.min(maxN, c.maximum);
-    }
-    N = genPrng.int(Math.min(N, maxN), Math.max(N, maxN));
+    // B52-R7: share the bound-resolution helpers instead of inlining.
+    const minN = resolveMinRequired(arraySchema, defMin);
+    const maxN = resolveMaxAllowed(arraySchema, defMax);
+    const N = genPrng.int(Math.min(minN, maxN), Math.max(minN, maxN));
 
     let result = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);
