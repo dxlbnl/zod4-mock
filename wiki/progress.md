@@ -705,6 +705,13 @@ it records the reason here AND states it in chat.
 - manager: git mv wiki/backlog/doing/B52-…md → wiki/backlog/done/
 - result: done — commit pending
 
+## 2026-06-01 12:00 — manager: planning pass (resume)
+
+- progress.md drift since B53 (725-line note): 4 commits on main not journaled — 5a4a5c9 (B51 inbox card refinement, wiki-only), 10e328a (B54 filing in inbox), bebbacd (`pnpm fmt` sweep on wiki + CHANGELOG drift), a6f6443 (release 0.9.2). All were inline manager moves (no pipeline dispatches); noting them here for auditability rather than backfilling per-event entries.
+- inbox: 5 items (B2, B3, B49, B51, B54); ready: 0; doing: 0; tree clean.
+- two items pre-date B48 and need scope reassessment before any spec-writer dispatch — B2 (Markov character entropy) was the original char-Markov direction that B45 → B46 → B48 explicitly evaluated, rejected, and **deleted from the codebase** in B48 Phase 1; B3 (conjugation compression) was framed around the Markov-era bundle size ("30–50% reduction"), which no longer applies now that locale data ships as plain `string[]` post-B48 / D13 / B50.
+- ordered work plan presented to user; pausing for approval.
+
 ## 2026-06-01 — B53: BUG — per-index overrides on primary-registered arrays throw instead of applying
 
 - context: user surfaced another inconsistency: `world.generate(PrimarySchema.array(), { overrides: [...] })` throws (B38 guard at engine.ts:1369-1374) while ad-hoc/derived/single-record/`populate(S, N, factory)` all apply overrides correctly. "I want overrides to work reliably across all paths."
