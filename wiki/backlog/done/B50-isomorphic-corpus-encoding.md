@@ -14,7 +14,7 @@ The 0.9.0 data layer shipped each locale corpus as a `node:zlib` brotli blob
 decompressed at module load — which breaks isomorphism (D13: shipped code MUST run
 in browsers, MSW, service workers, edge). The in-flight fix reverts to plain
 TypeScript `string[]` constants the consumer's bundler can compress. That is correct
-and universal, but it is the *simplest* possible encoding.
+and universal, but it is the _simplest_ possible encoding.
 
 This item asks: **under the D13 isomorphism constraint, is there an encoding smarter
 than plain `string[]` arrays that meaningfully wins on bundle size and/or load speed —

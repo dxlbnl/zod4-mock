@@ -35,13 +35,13 @@ The per-key routing **already exists**; only the underlying distribution is unif
 - [src/generators/schema/number.ts](../../../src/generators/schema/number.ts) is the
   un-keyed fallback (`z.number()` with no telling name) — also uniform-in-bounds.
 
-So the change is mostly *inside* existing generators + a decision on the un-keyed fallback,
+So the change is mostly _inside_ existing generators + a decision on the un-keyed fallback,
 not new architecture.
 
 ## Mechanism — log-uniform sampling (Benford falls out for free)
 
 ```ts
-value = min * (max / min) ** u        // u = prng.random(); requires min > 0
+value = min * (max / min) ** u; // u = prng.random(); requires min > 0
 ```
 
 Draws uniformly across orders of magnitude → many small values, few large, and
@@ -54,11 +54,11 @@ extra nicety.
 
 ## Per-key distribution map (to validate)
 
-| Distribution | Keys (seed list) | Rationale |
-| --- | --- | --- |
-| **Log-uniform (Benford)** | amount, price, balance, total, subtotal, revenue, cost, fee, salary, fileSize, bytes, size, views, population, distance | scale-free, spans orders of magnitude |
-| **Bounded / shaped** | age (demographic curve), year (recent-skew), quantity/count (small; geometric → mostly 1–3), rating/score (bounded), percentage (0–100), latitude/longitude (uniform bounded) | single natural scale |
-| **Uniform / assigned** | port, zip, phone, ids | allocated, not measured |
+| Distribution              | Keys (seed list)                                                                                                                                                              | Rationale                             |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Log-uniform (Benford)** | amount, price, balance, total, subtotal, revenue, cost, fee, salary, fileSize, bytes, size, views, population, distance                                                       | scale-free, spans orders of magnitude |
+| **Bounded / shaped**      | age (demographic curve), year (recent-skew), quantity/count (small; geometric → mostly 1–3), rating/score (bounded), percentage (0–100), latitude/longitude (uniform bounded) | single natural scale                  |
+| **Uniform / assigned**    | port, zip, phone, ids                                                                                                                                                         | allocated, not measured               |
 
 ## The eligibility gate (mirrors B51's Zipf gate)
 

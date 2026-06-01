@@ -14,7 +14,7 @@ Two related levers on locale-data quality, both decided here:
 
 1. **Corpus size per field** — B50 established that list size (not encoding) is the
    dominant over-the-wire (OTW) cost. But it cuts both ways: the big-four corpora may be
-   *too big* (10K surnames ≈ 38–45 KB brotli), while **many smaller curated lists are
+   _too big_ (10K surnames ≈ 38–45 KB brotli), while **many smaller curated lists are
    too light** for realistic variety (`cities` = 35, `jobTitles` = 18). This item sets a
    **desired target size for every list field**, across all locales.
 2. **Draw distribution** — change the default pick from uniform to **Zipf-weighted**
@@ -32,24 +32,24 @@ open set tiny (35 cities) is the gap the maintainer flagged.
 
 Known current sizes (sampled this session — research confirms + fills the rest):
 
-| Domain | Field(s) | Current (en / nl) | Class | Note |
-| --- | --- | --- | --- | --- |
-| person | firstNamesMale / Female | ~3.4K / ~4.2K · ~4.2K / ~5.2K | open | well-sized |
-| person | **lastNames** | **10,000 / 854** | open | en likely *over*-sized; **nl light** (ties to B49) |
-| person | **jobTitles / jobAreas / jobTypes / jobDescriptors** | 18 / 18 / 10 / 10 | open | **light** — combinatorial, but base lists thin |
-| person | prefixes, suffixes, genders | 3–5 | closed | complete |
-| address | **cities / streetNames / cityCores / cityPrefixes** | cities **35** | open | **light** — big variety gap |
-| address | states / countries / countryCodes / continents / directions | states 50 | closed | enumerable; complete = target |
-| commerce | **departments / materials / productAdjectives** | (inventory) | open | **likely light** |
-| company | **buzz\* / catchPhrase\*** (6 lists) | (inventory) | open | **likely light** |
-| word | nouns / adjectives | 5K / 3K · 5K / 2K | open | well-sized |
-| word | articles / prepositions / conjunctions / pronouns / interjections | 6 / 20 / 12 / 10 / 12 | closed | complete by nature |
-| word | **verbs / verbsPlural / adverbs** | 32 / – / 16 | open-ish | semi-light; expand modestly |
-| finance | **accountNames / transactionDescriptions** | (inventory) | open | **likely light** |
-| finance | currencies / bankCodes / bicLocations | (inventory) | closed | real-world set |
-| date | months / weekdays (+short) | 12 / 7 | closed | complete |
-| color | **names** | (inventory) | open | **likely light** — colors are open-ended |
-| phone | landlinePrefixes | (inventory) | closed | real-world set |
+| Domain   | Field(s)                                                          | Current (en / nl)             | Class    | Note                                               |
+| -------- | ----------------------------------------------------------------- | ----------------------------- | -------- | -------------------------------------------------- |
+| person   | firstNamesMale / Female                                           | ~3.4K / ~4.2K · ~4.2K / ~5.2K | open     | well-sized                                         |
+| person   | **lastNames**                                                     | **10,000 / 854**              | open     | en likely _over_-sized; **nl light** (ties to B49) |
+| person   | **jobTitles / jobAreas / jobTypes / jobDescriptors**              | 18 / 18 / 10 / 10             | open     | **light** — combinatorial, but base lists thin     |
+| person   | prefixes, suffixes, genders                                       | 3–5                           | closed   | complete                                           |
+| address  | **cities / streetNames / cityCores / cityPrefixes**               | cities **35**                 | open     | **light** — big variety gap                        |
+| address  | states / countries / countryCodes / continents / directions       | states 50                     | closed   | enumerable; complete = target                      |
+| commerce | **departments / materials / productAdjectives**                   | (inventory)                   | open     | **likely light**                                   |
+| company  | **buzz\* / catchPhrase\*** (6 lists)                              | (inventory)                   | open     | **likely light**                                   |
+| word     | nouns / adjectives                                                | 5K / 3K · 5K / 2K             | open     | well-sized                                         |
+| word     | articles / prepositions / conjunctions / pronouns / interjections | 6 / 20 / 12 / 10 / 12         | closed   | complete by nature                                 |
+| word     | **verbs / verbsPlural / adverbs**                                 | 32 / – / 16                   | open-ish | semi-light; expand modestly                        |
+| finance  | **accountNames / transactionDescriptions**                        | (inventory)                   | open     | **likely light**                                   |
+| finance  | currencies / bankCodes / bicLocations                             | (inventory)                   | closed   | real-world set                                     |
+| date     | months / weekdays (+short)                                        | 12 / 7                        | closed   | complete                                           |
+| color    | **names**                                                         | (inventory)                   | open     | **likely light** — colors are open-ended           |
+| phone    | landlinePrefixes                                                  | (inventory)                   | closed   | real-world set                                     |
 
 Targets to recommend (with OTW cost): e.g. open variety lists → a few hundred to low-
 thousands where a real source exists; surnames → revisit the 10K (B46 §7.2 Q-B1; under a
@@ -88,7 +88,7 @@ one layer deep** in the data generators, engine/pipeline unchanged (B46 §4).
 ### Setting shape (to validate)
 
 Maintainer lean: ship the factor as a **locale setting** (`frequencyExponent`, default ~1).
-But the exponent is more *corpus-type*-specific than locale-specific (words ≈1, surnames
+But the exponent is more _corpus-type_-specific than locale-specific (words ≈1, surnames
 ≈0.6–0.7), so the recommended shape is a **locale default with optional per-corpus
 overrides**. Research validates exponents against real frequency data.
 
