@@ -17,15 +17,14 @@
  *   - First names: open-nl-data/dutch-names-dataset (MIT, B46 Q-S1).
  *     Fetched from a GitHub raw URL. Mannen > 100 / Vrouwen > 100 thresholds
  *     select the Dutch-core corpus and discard low-frequency entries.
- *   - Surnames:    **Best-effort — see NOTE below.** The B48-R5 spec says
+ *   - Surnames:    **ACCEPTED per B49 — re-evaluate when CBS publishes a bulk surname table.** The B48-R5 spec says
  *     surnames MUST be refetched from CBS (Statistics Netherlands) or Meertens
  *     directly. CBS does NOT publish a bulk Dutch-surname dataset through
  *     `opendata.cbs.nl` (their published surname work covers per-name frequency
  *     lookups but not a bulk top-N download); Meertens' NFB ships data as a
  *     paginated HTML browser UI, not as a bulk JSON/CSV download. Falls back
  *     to the previously-emitted slice (2007 Dutch top-1000 surname survey,
- *     Meertens NFB-derived). A CBS/Meertens bulk refetch is filed as a
- *     follow-up enhancement.
+ *     Meertens NFB-derived). A CBS/Meertens bulk refetch remains the long-term aspiration (B49 ACCEPT; re-evaluate if CBS Open Data publishes a bulk surname table).
  *   - Nouns/Adj:   OpenTaal opentaal-wordlist (BSD/GPL — Dutch open word
  *     list). Heuristic adjective filter (suffix-based) carried over.
  *

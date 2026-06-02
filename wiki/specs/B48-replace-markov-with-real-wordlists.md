@@ -138,13 +138,12 @@ this trivial). A runtime test would just be regex-checking the implementer's
 file layout. If the implementer reports the sum in the dispatch summary, the
 reviewer cross-checks against the diff.
 
-### B48-R5: `locale-nl` ships Dutch first names migrated from `locale-names`, plus refetched surnames
+### B48-R5: `locale-nl` ships Dutch first names migrated from `locale-names`, plus refetched surnames (amended per B49 — 2026-06-01)
 
 `@zod4-mock/locale-nl` MUST populate `person.firstNamesMale`,
 `person.firstNamesFemale` and `person.lastNames` from real wordlists shipped
 inside the locale-nl package (not imported from the deleted `locale-names`).
-The Dutch surname source MUST be refetched from CBS (Statistics Netherlands)
-or Meertens directly under their published open-data terms — the
+The Dutch surname source MUST trace to a CBS-authoritative publication (the 2007 `Familienamen Top-1000` is the canonical baseline; CC-BY-4.0 per the CBS Open Data Portal explicit license at `opendata.cbs.nl/portal.html` — verified 2026-06-02 under B59 Q-2). Refetching from a bulk CBS / Meertens endpoint remains the long-term aspiration but is **NOT** required because no such endpoint exists today. The
 digitalheir/family-names-in-the-netherlands mirror flagged at [B46 Q-S2](../research/text-generation/wordlist-sourcing-spike.md#71-corpora--licenses)
 as license-undeclared MUST NOT be the shipped source. The Dutch first-name
 source is `open-nl-data/dutch-names-dataset` (MIT) per [B46 Q-S1](../research/text-generation/wordlist-sourcing-spike.md#71-corpora--licenses).
