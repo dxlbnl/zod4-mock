@@ -52,6 +52,7 @@ Sibling: [B58-A](B58-A-english-inflection.md) — English inflection (independen
   Maintainer decides between Wiktionary (file new fetch script, license review) and
   rescope (faster, narrower realism win). Until that decision lands, B58-B stays
   `flags: [review, blocked]`.
+
 - All other Q-1 / Q-2 decisions from B58-A apply (always-fixed per call site; faker-style
   override stays available via `withGenerators`).
 
