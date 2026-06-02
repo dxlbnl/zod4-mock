@@ -1160,6 +1160,9 @@ interface LocaleData {
   date: { months; monthsShort; weekdays; weekdaysShort; timeZones };
   color: { names: readonly string[] };
   phone: { mobilePrefix; landlinePrefixes; formatMobile; formatLandline };
+  internet?: {
+    emailCompanyPrefixes?: readonly string[];
+  };
 }
 ```
 
@@ -1171,6 +1174,8 @@ Markov-model alternative — the Markov code path was removed in B48 in favour
 of constant-PRNG-cost sampling from real lists.
 
 `lastNamePrefixes` is optional. When present, `lastName()` prepends a prefix with probability `prefixWeightTotal / (prefixWeightTotal + 100)`, capitalised for standalone use. The prefix decision uses an independent `prng.fork("lastNamePrefix")` so the caller-visible per-call PRNG cost stays at exactly one draw. `formatFullName` in locales that have tussenvoegsels should lowercase the first character of the last name (Dutch convention: "Jan de Jong" not "Jan De Jong").
+
+`internet.emailCompanyPrefixes` is optional. When present, the `email()` generator can pair one of the entries (e.g. `info`, `contact`, `hello`, `support`) with a company-derived domain to produce `<prefix>@<company>.<tld>` style addresses when a `company` sibling is in scope. locale-en ships `["info","contact","hello","support","team","sales"]`; locale-nl ships `["info","contact","hallo","klantenservice","team","verkoop"]`. Whimsical fallback handles (when no name/company sibling is present) are composed at runtime from `word.adjectives` + `word.nouns` — there is no shipped handle list.
 
 ### `formatSentence` (`word.formatSentence`)
 

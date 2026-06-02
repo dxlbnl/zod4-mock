@@ -52,25 +52,76 @@ describe("Sibling-aware internet generators", () => {
       expect(result.email).toContain("@");
     });
 
-    it("uses nickname when present (takes priority over firstName)", () => {
+    it("uses nickname when present (nickname appears in the local-part)", () => {
       const S = z.object({
         firstName: z.string(),
         nickname: z.literal("speedy"),
         email: z.string(),
       });
+      // Format varies (e.g. `speedy@…`, `speedy42@…`, `speedy@<company>`) but
+      // the nickname token MUST appear in the local-part.
       const result = createWorld({ seed: 1 }).generate(S);
-      expect(result.email).toMatch(/^speedy@/);
+      const local = result.email.split("@")[0]!;
+      expect(local).toContain("speedy");
     });
 
     it("uses company sibling when no person name is present", () => {
       const S = z.object({ company: z.literal("Acme Corp"), email: z.string() });
+      // With only a company sibling, the local-part is either a
+      // configured company prefix (info / contact / hello / support / …) OR
+      // the company name itself is in the domain (e.g. info@acme.com).
       const result = createWorld({ seed: 1 }).generate(S);
-      expect(result.email).toMatch(/^(info|contact|hello|support)@/);
+      const [local, dom] = result.email.split("@") as [string, string];
+      const isCompanyPrefix = /^(info|contact|hello|support|team|sales)$/.test(local);
+      const companyInDomain = dom.includes("acme");
+      expect(isCompanyPrefix || companyInDomain).toBe(true);
     });
 
     it("falls back to random when no siblings", () => {
       const S = z.object({ email: z.string() });
       expect(createWorld({ seed: 1 }).generate(S).email).toContain("@");
+    });
+
+    it("derives from fullname sibling when neither firstName nor lastName is present", () => {
+      const S = z.object({ fullname: z.literal("Lisa Q. Smith"), email: z.string() });
+      const result = createWorld({ seed: 1 }).generate(S);
+      // First whitespace token → first, last token → last; middle token dropped.
+      // Local-part format varies (lisa.smith, lsmith, smith, lisa, …) — at
+      // minimum one of the parsed tokens MUST appear.
+      const local = result.email.split("@")[0]!;
+      expect(local).toMatch(/lisa|smith/);
+      // Middle token "q" MUST be dropped — fullname parsing keeps first + last only.
+      expect(local).not.toContain("q");
+    });
+
+    it("derives from full_name (snake_case) sibling — siblingString normalises", () => {
+      const S = z.object({ full_name: z.literal("John Doe"), email: z.string() });
+      const result = createWorld({ seed: 1 }).generate(S);
+      const local = result.email.split("@")[0]!;
+      expect(local).toMatch(/john|doe/);
+    });
+
+    it("fullname single-token derives a single-token local-part", () => {
+      const S = z.object({ fullName: z.literal("Cher"), email: z.string() });
+      const result = createWorld({ seed: 1 }).generate(S);
+      // Single token: first = "cher", last is empty → local-part contains cher.
+      const local = result.email.split("@")[0]!;
+      expect(local).toContain("cher");
+    });
+
+    it("firstName + lastName still take priority over fullname when all three are present", () => {
+      const S = z.object({
+        firstName: z.literal("alice"),
+        lastName: z.literal("zhang"),
+        fullname: z.literal("BOGUS NAME"),
+        email: z.string(),
+      });
+      const result = createWorld({ seed: 1 }).generate(S);
+      const local = result.email.split("@")[0]!;
+      // First/last take priority — at least one of them appears.
+      expect(local).toMatch(/alice|zhang/);
+      // The fullname tokens MUST NOT bleed through.
+      expect(local).not.toMatch(/bogus|name/i);
     });
 
     it("person name takes priority over company when both present", () => {

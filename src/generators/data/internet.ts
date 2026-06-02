@@ -187,31 +187,204 @@ export function displayName(prng: Prng, ctx?: GeneratorContext): string {
   return `${firstName(prng)} ${lastName(prng)}`;
 }
 
+// ---------------------------------------------------------------------------
+// Email local-part strategies
+//
+// Each strategy is a free, module-scope object declaring (a) what siblings it
+// needs and (b) how to build a local-part + domain when chosen. `email()`
+// gathers siblings, builds an `EmailCtx`, filters strategies by `needs`, picks
+// one at random, and runs `build` — values are only drawn for the strategy
+// that wins. No closures over per-call state; the context is passed in.
+// ---------------------------------------------------------------------------
+
+interface EmailCtx {
+  prng: Prng;
+  /** All ascii-normalised at gather time; "" when the sibling is absent. */
+  nick: string;
+  first: string;
+  last: string;
+  companySlug: string;
+  /** `<slug>.com` when companySlug is long enough; otherwise "". */
+  companyDomain: string;
+  companyPrefixes: readonly string[];
+  /** Pools used by the composed-handle fallback. */
+  adjPool: readonly string[];
+  nounPool: readonly string[];
+}
+
+interface EmailStrategy {
+  needs: (c: EmailCtx) => boolean;
+  build: (c: EmailCtx) => { local: string; domain: string };
+}
+
+const JOINERS = [".", "", "_"] as const;
+const LAST_INITIAL_JOINERS = [".", "_"] as const;
+
+function randomDomain(prng: Prng): string {
+  return DOMAINS[prng.int(0, DOMAINS.length - 1)]!;
+}
+
+function composeHandle(c: EmailCtx): string {
+  // Pattern is picked first so only the draws that pattern uses happen.
+  const pickAdj = (): string => ascii(c.adjPool[c.prng.int(0, c.adjPool.length - 1)]!);
+  const pickNoun = (): string => ascii(c.nounPool[c.prng.int(0, c.nounPool.length - 1)]!);
+  switch (c.prng.int(0, 4)) {
+    case 0:
+      return `${pickAdj()}_${pickNoun()}`;
+    case 1:
+      return `${pickAdj()}${pickNoun()}`;
+    case 2:
+      return `the_${pickNoun()}`;
+    case 3:
+      return `${pickNoun()}_${pickNoun()}`;
+    default:
+      return `${pickNoun()}_${c.prng.int(10, 999)}`;
+  }
+}
+
+const hasNick = (c: EmailCtx): boolean => c.nick.length >= 2;
+const hasFirst = (c: EmailCtx): boolean => c.first.length > 0;
+const hasLast = (c: EmailCtx): boolean => c.last.length > 0;
+const hasFirstAndLast = (c: EmailCtx): boolean => hasFirst(c) && hasLast(c);
+const hasCompany = (c: EmailCtx): boolean => c.companySlug.length >= 3;
+const hasOnlyFirst = (c: EmailCtx): boolean => hasFirst(c) && !hasLast(c);
+const hasOnlyLast = (c: EmailCtx): boolean => !hasFirst(c) && hasLast(c);
+const hasNoPersonalOrCompany = (c: EmailCtx): boolean =>
+  !hasNick(c) && !hasFirst(c) && !hasLast(c) && !hasCompany(c);
+
+const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
+  // ── nickname ──────────────────────────────────────────────────────────────
+  { needs: hasNick, build: (c) => ({ local: c.nick, domain: "" }) },
+  {
+    needs: hasNick,
+    build: (c) => ({ local: `${c.nick}${c.prng.int(10, 99)}`, domain: "" }),
+  },
+  // ── first + last ──────────────────────────────────────────────────────────
+  {
+    needs: hasFirstAndLast,
+    build: (c) => ({
+      local: `${c.first}${c.prng.pick(JOINERS)}${c.last}`,
+      domain: "",
+    }),
+  },
+  {
+    needs: hasFirstAndLast,
+    build: (c) => ({
+      local: `${c.first[0]}${c.prng.pick(JOINERS)}${c.last}`,
+      domain: "",
+    }),
+  },
+  {
+    needs: hasFirstAndLast,
+    build: (c) => ({
+      local: `${c.first}${c.prng.pick(JOINERS)}${c.last[0]}`,
+      domain: "",
+    }),
+  },
+  { needs: hasFirstAndLast, build: (c) => ({ local: c.last, domain: "" }) },
+  { needs: hasFirstAndLast, build: (c) => ({ local: c.first, domain: "" }) },
+  // ── first only ────────────────────────────────────────────────────────────
+  { needs: hasOnlyFirst, build: (c) => ({ local: c.first, domain: "" }) },
+  {
+    needs: hasOnlyFirst,
+    build: (c) => ({ local: `${c.first}${c.prng.int(10, 99)}`, domain: "" }),
+  },
+  // ── last only ─────────────────────────────────────────────────────────────
+  { needs: hasOnlyLast, build: (c) => ({ local: c.last, domain: "" }) },
+  {
+    needs: hasOnlyLast,
+    build: (c) => ({
+      local: `${c.last[0]}${c.prng.pick(LAST_INITIAL_JOINERS)}${c.last}`,
+      domain: "",
+    }),
+  },
+  // ── company-prefix @ company.com ──────────────────────────────────────────
+  {
+    needs: (c) => hasCompany(c) && c.companyPrefixes.length > 0,
+    build: (c) => ({
+      local: c.companyPrefixes[c.prng.int(0, c.companyPrefixes.length - 1)]!,
+      domain: c.companyDomain,
+    }),
+  },
+  // ── personal @ company.com ────────────────────────────────────────────────
+  {
+    needs: (c) => hasCompany(c) && hasFirstAndLast(c),
+    build: (c) => ({ local: `${c.first}.${c.last}`, domain: c.companyDomain }),
+  },
+  {
+    needs: (c) => hasCompany(c) && hasFirst(c),
+    build: (c) => ({ local: c.first, domain: c.companyDomain }),
+  },
+  {
+    needs: (c) => hasCompany(c) && hasNick(c),
+    build: (c) => ({ local: c.nick, domain: c.companyDomain }),
+  },
+  // ── first.company-slug @ random — playful "you + company" handle ─────────
+  {
+    needs: (c) => hasCompany(c) && hasFirst(c),
+    build: (c) => ({ local: `${c.first}.${c.companySlug}`, domain: "" }),
+  },
+  // ── composed handle (only when nothing else is eligible) ─────────────────
+  {
+    needs: (c) => hasNoPersonalOrCompany(c) && c.adjPool.length > 0 && c.nounPool.length > 0,
+    build: (c) => ({ local: composeHandle(c), domain: "" }),
+  },
+];
+
 export function email(prng: Prng, ctx?: GeneratorContext): string {
-  const domain = () => DOMAINS[prng.int(0, DOMAINS.length - 1)]!;
+  const loc = ctx?.locale ?? defaultLocale;
 
   const nick = siblingString(ctx, "nickname", "nick", "bijnaam");
-  const first = siblingString(ctx, "firstName", "first_name", "voornaam");
-  const last = siblingString(ctx, "lastName", "last_name", "achternaam");
+  let first = siblingString(ctx, "firstName", "first_name", "voornaam");
+  let last = siblingString(ctx, "lastName", "last_name", "achternaam");
+  // If neither firstName nor lastName is present but a fullname-style sibling is,
+  // split on whitespace: first token → first, last token → last (drop middle).
+  // `siblingString` already normalises case + underscores, so this matches
+  // `fullName` / `full_name` / `fullname` / `FULLNAME` / `volledigeNaam` (nl).
+  if (!first && !last) {
+    const full = siblingString(ctx, "fullName", "full_name", "volledigeNaam");
+    if (full) {
+      const tokens = full.trim().split(/\s+/);
+      if (tokens.length >= 2) {
+        first = tokens[0];
+        last = tokens.at(-1);
+      } else if (tokens.length === 1 && tokens[0]) {
+        first = tokens[0];
+      }
+    }
+  }
   const company = siblingString(ctx, "company", "companyName", "company_name", "bedrijf");
 
-  if (nick) {
-    const local = ascii(nick);
-    if (local.length >= 2) return `${local}@${domain()}`;
-  }
-  if (first ?? last) {
-    const f = ascii(first ?? "");
-    const l = ascii((last ?? "").split(" ").at(-1) ?? "");
-    const local = [f, l].filter(Boolean).join(".");
-    if (local.length >= 2) return `${local}@${domain()}`;
-  }
-  if (company) {
-    const prefix = prng.pick(["info", "contact", "hello", "support"] as const);
-    const slug = ascii(company.split(" ")[0]!);
-    const d = slug.length >= 3 ? `${slug}.nl` : domain();
-    return `${prefix}@${d}`;
-  }
-  return `${username(prng)}@${domainName(prng)}`;
+  // ALL company-name tokens contribute to the slug, joined with a random
+  // separator picked once per call. So "Karp Associates" yields karp.associates
+  // / karp_associates / karpassociates; "Hanley & Rizo" drops the `&` via
+  // ascii() and yields hanley.rizo / etc. Single-word names are unchanged.
+  const companyTokens = company
+    ? company
+        .split(/\s+/)
+        .map(ascii)
+        .filter((t) => t.length >= 2)
+    : [];
+  const companyJoiner = companyTokens.length > 1 ? ([".", "_", ""] as const)[prng.int(0, 2)]! : "";
+  const companySlug = companyTokens.join(companyJoiner);
+
+  const c: EmailCtx = {
+    prng,
+    nick: nick ? ascii(nick) : "",
+    first: first ? ascii(first) : "",
+    last: last ? ascii(last.split(" ").at(-1) ?? "") : "",
+    companySlug,
+    companyDomain: companySlug.length >= 3 ? `${companySlug}.${domainSuffix(prng)}` : "",
+    companyPrefixes: loc.internet?.emailCompanyPrefixes ?? [],
+    adjPool: loc.word.adjectives ?? [],
+    nounPool: loc.word.nouns ?? [],
+  };
+
+  const eligible = EMAIL_STRATEGIES.filter((s) => s.needs(c));
+  if (eligible.length === 0) return `${username(prng)}@${domainName(prng)}`;
+  const { local, domain } = eligible[prng.int(0, eligible.length - 1)]!.build(c);
+  const dom = domain || randomDomain(prng);
+  return local.length >= 2 ? `${local}@${dom}` : `${username(prng)}@${dom}`;
 }
 
 export function exampleEmail(prng: Prng, ctx?: GeneratorContext): string {

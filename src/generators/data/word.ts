@@ -139,14 +139,19 @@ export function sentence(prng: Prng, ctx?: GeneratorContext): string {
   // Back-compat fallback: surface-form templates against `verbs` /
   // `verbsPlural`. No inflection applied here — that's the locale callback's
   // responsibility.
+  //
+  // Pick adjectives/nouns directly from the locale arrays (NOT via the
+  // public `adjective()`/`noun()` helpers, which always capitalize their
+  // output for top-level callers). Mid-sentence words stay lowercase; only
+  // the leading template token gets `cap(...)` applied below.
   const art = (): string => locPick(prng, loc.articles);
   const pron = (): string => locPick(prng, loc.pronouns);
   const pre = (): string => locPick(prng, loc.prepositions);
   const vrb = (): string => locPick(prng, loc.verbs);
   const vrbp = (): string => locPick(prng, loc.verbsPlural);
   const conj = (): string => locPick(prng, loc.conjunctions);
-  const adj = (): string => adjective(prng, ctx);
-  const n = (): string => noun(prng, ctx);
+  const adj = (): string => locPick(prng, loc.adjectives ?? []);
+  const n = (): string => locPick(prng, loc.nouns ?? []);
 
   const templates: [() => string, ...(() => string)[]] = [
     // [Article] [Adjective] [Noun] [Verb] [Preposition] [Article] [Noun]
@@ -166,7 +171,21 @@ export function sentence(prng: Prng, ctx?: GeneratorContext): string {
   while (res.length < 15) {
     res = res.replace(".", ` ${conj()} ${n()}.`);
   }
-  return res;
+  return fixArticleAgreement(res);
+}
+
+/**
+ * Post-pass repair for English `a` / `an` agreement. Templates pick the
+ * article independently of the noun/adjective that follows, so the choice is
+ * wrong half the time ("An result" / "A item"). This regex pass corrects both
+ * directions and works on either case (`A` / `a`). Sound-based exceptions
+ * like "an honor" / "a university" are rare in mock-data output and are not
+ * handled — first-letter heuristic is a 90%-good approximation.
+ */
+function fixArticleAgreement(s: string): string {
+  return s
+    .replace(/\b([Aa])\s+([aeiouAEIOU])/g, "$1n $2") // add `n` before vowel
+    .replace(/\b([Aa])n\s+([^aeiouAEIOU\s])/g, "$1 $2"); // drop `n` before consonant
 }
 
 /** Generates a paragraph of structured sentences. */

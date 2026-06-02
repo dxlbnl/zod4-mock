@@ -186,4 +186,15 @@ export interface LocaleData {
     formatMobile: (prng: Prng) => string;
     formatLandline: (prng: Prng) => string;
   };
+
+  internet?: {
+    /**
+     * Locale-appropriate prefixes for `<prefix>@<company-domain>` style
+     * emails (e.g. `info` / `contact` / `hello` / `support` in English,
+     * `info` / `contact` / `hallo` / `klantenservice` in Dutch).
+     * Whimsical fallback handles are composed at runtime from the locale's
+     * existing `word.adjectives` + `word.nouns` arrays — no hardcoded list.
+     */
+    emailCompanyPrefixes?: readonly string[];
+  };
 }

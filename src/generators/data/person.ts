@@ -55,8 +55,15 @@ function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
  * locales that do not populate the relevant pool.
  */
 function sampleName(prng: Prng, pool: readonly string[] | undefined): string {
-  if (pool && pool.length > 0) return pick(prng, pool);
-  return "Unknown";
+  if (!pool || pool.length === 0) return "Unknown";
+  const raw = pick(prng, pool);
+  // Names are proper nouns. Capitalise each whitespace-separated token so
+  // locale data files may ship lowercase (locale-en: SSA lowercase entries)
+  // or title-cased (locale-nl) interchangeably — output is normalised here.
+  return raw
+    .split(" ")
+    .map((t) => (t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : t))
+    .join(" ");
 }
 
 // ---------------------------------------------------------------------------

@@ -8,18 +8,114 @@ const print = (label: string, data: unknown) => {
   console.log(JSON.stringify(data, null, 2));
 };
 
-import { nl } from "./src/locales/nl";
-describe.only("names", () => {
-  const schema = z.object({
-    gender: z.string(),
-    firstname: z.string().min(50),
-    lastname: z.string(),
+import { nl } from "@zod4-mock/locale-nl";
+import { inflect, en } from "@zod4-mock/locale-en";
+
+describe.only("B58-A: English Inflection (locale-internal)", () => {
+  it("inflect.* — direct helpers from @zod4-mock/locale-en", () => {
+    print("pluralize", {
+      cat: inflect.pluralize("cat"),
+      box: inflect.pluralize("box"),
+      city: inflect.pluralize("city"),
+      child: inflect.pluralize("child"),
+      sheep: inflect.pluralize("sheep"),
+    });
+    print("conjugate(verb, form)", {
+      "walk / 3ps": inflect.conjugate("walk", "3ps"),
+      "go / 3ps": inflect.conjugate("go", "3ps"),
+      "go / past": inflect.conjugate("go", "past"),
+      "make / gerund": inflect.conjugate("make", "gerund"),
+      "write / participle": inflect.conjugate("write", "participle"),
+    });
+    print("adverbFromAdjective", {
+      easy: inflect.adverbFromAdjective("easy"),
+      simple: inflect.adverbFromAdjective("simple"),
+      dramatic: inflect.adverbFromAdjective("dramatic"),
+      good: inflect.adverbFromAdjective("good"),
+      quick: inflect.adverbFromAdjective("quick"),
+    });
   });
 
-  print(
-    "names",
-    generate(schema.array().length(30), { locale: nl }).map((o) => Object.values(o).join(" ")),
-  );
+  it("sentence() — library delegates to en.word.formatSentence (3ps verb + plural noun + Template 2 pronoun constraint)", () => {
+    const SentencesSchema = z.object({
+      a: z.string(),
+      b: z.string(),
+      c: z.string(),
+      d: z.string(),
+      e: z.string(),
+    });
+    const world = createWorld().withSchema(SentencesSchema, {
+      matchers: {
+        a: (ctx) => ctx.gen.word.sentence(),
+        b: (ctx) => ctx.gen.word.sentence(),
+        c: (ctx) => ctx.gen.word.sentence(),
+        d: (ctx) => ctx.gen.word.sentence(),
+        e: (ctx) => ctx.gen.word.sentence(),
+      },
+    });
+    print(
+      "5 inflected sentences (en)",
+      Object.values(world.generate(SentencesSchema, { locale: en })),
+    );
+  });
+
+  it("adverbs — derived at module init from adjectives + 8 reserved (~3000 vs 8 before)", () => {
+    const sample = Array.from(
+      { length: 10 },
+      (_, i) => en.word.adverbs[(i * 311) % en.word.adverbs.length],
+    );
+    print("adverb pool", {
+      total: en.word.adverbs.length,
+      sample,
+      reservedIncluded: en.word.adverbs.includes("now"),
+    });
+  });
+
+  it("buzzPhrase — 10 real random samples (3ps verb wrap on each)", () => {
+    const Schema = z.object({
+      a: z.string(),
+      b: z.string(),
+      c: z.string(),
+      d: z.string(),
+      e: z.string(),
+      f: z.string(),
+      g: z.string(),
+      h: z.string(),
+      i: z.string(),
+      j: z.string(),
+    });
+    const world = createWorld({ seed: 1 }).withSchema(Schema, {
+      matchers: Object.fromEntries(
+        Object.keys(Schema.shape).map((k) => [k, (ctx) => ctx.gen.company.buzzPhrase()]),
+      ),
+    });
+    print("10 random buzz phrases (en)", Object.values(world.generate(Schema, { locale: en })));
+  });
+
+  it("email — current sibling lookup misses lowercase firstname / lastname / fullname (B64)", () => {
+    // Schema with all-lowercase name fields (common in DB-derived shapes)
+    const SchemaLower = z.object({
+      company: z.string(),
+      firstname: z.string(),
+      lastname: z.string(),
+      email: z.string().email(),
+    });
+    // Schema with camelCase (current generator catches these)
+    const SchemaCamel = z.object({
+      company: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      email: z.string().email(),
+    });
+    print(
+      "lowercase firstname/lastname (broken today — falls through to random)",
+      generate(SchemaLower.array().length(5), { seed: 1, locale: en }),
+    );
+    print(
+      "camelCase firstName/lastName (works today)",
+      generate(SchemaCamel.array().length(5), { seed: 1, locale: en }),
+    );
+  });
 });
 
 // ---------------------------------------------------------

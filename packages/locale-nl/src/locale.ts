@@ -758,4 +758,8 @@ export const nl: LocaleData = {
       return `${prefix}-${num.slice(0, 3)} ${num.slice(3)}`;
     },
   },
+
+  internet: {
+    emailCompanyPrefixes: ["info", "contact", "hallo", "klantenservice", "team", "verkoop"],
+  },
 };

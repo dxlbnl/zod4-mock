@@ -664,11 +664,12 @@ export const en: LocaleData = {
       // lemma — the conjunction-joined subject is plural so 3ps wouldn't
       // agree. Same PRNG budget as `vrb()`.
       const vrbp = (): string => pickFrom(verbLemmas);
-      const adj = (): string => cap(pickFrom(adjectives));
-      const n = (): string => cap(pickFrom(nouns));
-      // Pluralised noun slot — capitalise the inflected form. Zero extra
-      // PRNG draws beyond the noun pick.
-      const npl = (): string => cap(inflect.pluralize(pickFrom(nouns)));
+      // Mid-sentence adjectives/nouns stay lowercase — only the leading
+      // template token gets `cap(...)` applied (e.g. `cap(art())` at slot 0).
+      const adj = (): string => pickFrom(adjectives);
+      const n = (): string => pickFrom(nouns);
+      // Pluralised noun slot. Zero extra PRNG draws beyond the noun pick.
+      const npl = (): string => inflect.pluralize(pickFrom(nouns));
 
       const templates: [() => string, ...(() => string)[]] = [
         // [Article] [Adjective] [Noun] [Verb-3ps] [Preposition] [Article] [Noun-plural]
@@ -690,7 +691,12 @@ export const en: LocaleData = {
       while (res.length < 15) {
         res = res.replace(".", ` ${conj()} ${n()}.`);
       }
-      return res;
+      // Repair `a` / `an` agreement post-template — the article was picked
+      // without knowing what would follow. First-letter heuristic; minor
+      // sound-based exceptions ("an honor", "a university") not handled.
+      return res
+        .replace(/\b([Aa])\s+([aeiouAEIOU])/g, "$1n $2") // add `n` before vowel
+        .replace(/\b([Aa])n\s+([^aeiouAEIOU\s])/g, "$1 $2"); // drop `n` before consonant
     },
   },
 
@@ -836,5 +842,9 @@ export const en: LocaleData = {
       const num = Array.from({ length: 7 }, () => prng.int(0, 9)).join("");
       return `(${area}) ${num.slice(0, 3)}-${num.slice(3)}`;
     },
+  },
+
+  internet: {
+    emailCompanyPrefixes: ["info", "contact", "hello", "support", "team", "sales"],
   },
 };

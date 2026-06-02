@@ -496,4 +496,8 @@ export const defaultLocale: LocaleData = {
       return `(${area}) ${num.slice(0, 3)}-${num.slice(3)}`;
     },
   },
+
+  internet: {
+    emailCompanyPrefixes: ["info", "contact", "hello", "support"],
+  },
 };
