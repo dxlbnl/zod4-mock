@@ -74,7 +74,13 @@ import type {
 import { SchemaRegistry } from "../registry.js";
 import { createPrng, fieldSeed } from "../prng.js";
 import { generateFromSchema } from "../generators/schema/index.js";
-import { def, checks, unwrap, resolveLazyChain } from "../generators/schema/zod-def.js";
+import {
+  def,
+  checks,
+  unwrap,
+  resolveLazyChain,
+  stripOuterOptionalNullable,
+} from "../generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "../utils/merge.js";
 import * as generatorsData from "../generators/data/index.js";
 import { defaultLocale } from "../default-locale.js";
@@ -519,18 +525,12 @@ export class WorldImpl implements World {
     return this.withEffectiveLocale(options?.locale, () =>
       this.withEffectiveUniqueMode(options?.unique, () =>
         this.withEffectiveStore(options?.store, () => {
-          let current: ZodTypeAny = schema;
-          let d = def(current);
-          const outerWrappers: Array<"optional" | "nullable"> = [];
-
-          while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
-            outerWrappers.push(d.type);
-            current = d.innerType;
-            d = def(current);
-          }
+          const stripped = stripOuterOptionalNullable(schema);
+          let current: ZodTypeAny = stripped.inner;
+          const outerWrappers = stripped.wrappers;
 
           current = resolveLazyChain(current, this.lazyCache);
-          d = def(current);
+          const d = def(current);
 
           if (d.type === "array") {
             if (outerWrappers.length > 0) {
@@ -655,13 +655,14 @@ export class WorldImpl implements World {
   // Tagged union over the three registration modes. Replaces the
   // `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
   // ? ... : ad-hoc` cascade that previously appeared in `generateSingleItem`,
-  // `generateArray`, and `populate` (with `populate` using the inverted
-  // primary-first precedence — see its call site for the explicit handling).
+  // `generateArray`, `populate`, and `get`.
   //
-  // Derived-first precedence matches `generateSingleItem` and `generateArray`'s
-  // historical dispatch order. Operates on whatever schema reference it is
-  // given — callers handle the two-level (`schema` then `targetSchema`)
-  // fallback themselves where they need it.
+  // Derived-first precedence is uniform across all four dispatchers
+  // post-D12/B52 — `withSchema` forbids dual primary+derived registration at
+  // registration time (so the inversion-observable config cannot exist) and
+  // `populate`'s former primary-first pre-check was removed. Operates on
+  // whatever schema reference it is given — callers handle the two-level
+  // (`schema` then `targetSchema`) fallback themselves where they need it.
   // -------------------------------------------------------------------------
 
   private resolveMode(schema: ZodTypeAny): SchemaMode {

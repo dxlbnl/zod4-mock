@@ -11,7 +11,12 @@
  */
 
 import type { ZodTypeAny } from "zod";
-import { def, getLeafDef, resolveLazyChain } from "./generators/schema/zod-def.js";
+import {
+  def,
+  getLeafDef,
+  resolveLazyChain,
+  stripOuterOptionalNullable,
+} from "./generators/schema/zod-def.js";
 import type {
   ExplainResult,
   FieldExplanation,
@@ -48,14 +53,9 @@ export function explainSchema<TSchema extends ZodTypeAny>(
 ): ExplainResult<TSchema> {
   // Mirror the unwrapping `WorldImpl.generate` does for the outer schema:
   // strip optional / nullable / lazy wrappers to reach an object.
-  let current: ZodTypeAny = schema;
-  let d = def(current);
-  while ((d.type === "optional" || d.type === "nullable") && d.innerType !== undefined) {
-    current = d.innerType;
-    d = def(current);
-  }
+  let current: ZodTypeAny = stripOuterOptionalNullable(schema).inner;
   current = resolveLazyChain(current);
-  d = def(current);
+  const d = def(current);
 
   const fields: Record<string, FieldExplanation> = {};
   if (d.type === "object" && d.shape) {

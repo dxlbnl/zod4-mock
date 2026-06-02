@@ -108,11 +108,13 @@ export function findDerivedRegs(schemaRegs: readonly SchemaReg[], schema: ZodTyp
  * the `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
  * ? ... : ad-hoc` cascade at the dispatcher sites.
  *
- * Derived-first precedence matches `generateSingleItem` and `generateArray`'s
- * historical dispatch order. `populate` inverts this (see its explicit
- * primary-first re-check); operates on whatever schema reference it is given —
- * callers handle the two-level (`schema` then `targetSchema`) fallback
- * themselves where they need it.
+ * Derived-first precedence is uniform across all four dispatchers
+ * (`generateSingleItem`, `generateArray`, `populate`, `get`) post-D12/B52 —
+ * `withSchema` forbids dual primary+derived registration at registration
+ * time, so the inversion-observable config can't exist and `populate`'s
+ * former primary-first pre-check was removed. Operates on whatever schema
+ * reference it is given — callers handle the two-level (`schema` then
+ * `targetSchema`) fallback themselves where they need it.
  */
 export function resolveMode(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaMode {
   const derivedRegs = findDerivedRegs(schemaRegs, schema);

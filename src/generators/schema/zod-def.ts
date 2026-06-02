@@ -74,6 +74,30 @@ export function getLeafDef(schema: ZodTypeAny): ZodDef {
 }
 
 /**
+ * B63 — strip outer `optional` / `nullable` wrappers, returning the inner
+ * schema and the list of stripped wrapper types in outer-to-inner order.
+ *
+ * Shared by `WorldImpl.generate` (which rolls absent per wrapper) and
+ * `explainSchema` (which discards the list). Restricted to
+ * `optional`/`nullable` (not `default`/`readonly`/`catch`/`brand`) to match
+ * the byte-identical pre-extraction loop semantics at both sites.
+ */
+export function stripOuterOptionalNullable(schema: ZodTypeAny): {
+  inner: ZodTypeAny;
+  wrappers: Array<"optional" | "nullable">;
+} {
+  let current = schema;
+  let d = def(current);
+  const wrappers: Array<"optional" | "nullable"> = [];
+  while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
+    wrappers.push(d.type);
+    current = d.innerType;
+    d = def(current);
+  }
+  return { inner: current, wrappers };
+}
+
+/**
  * B31 — collapses the `while (d.type === "lazy")` loop that previously
  * appeared in four near-identical places (`world.ts` ×3 + `explain.ts` ×1).
  *
