@@ -844,10 +844,22 @@ it records the reason here AND states it in chat.
 
 - manager: promoted inbox → doing, track: feature (flagged review). Filed by B51 close-out 2026-06-01; both blocking-Q decisions locked in card (Q-1 literature `s` defaults, Q-2 same-commit freq-sort retrofit).
 - manager: dispatch spec-writer
-- spec-writer: 11 R-IDs formalised (R1 pickZipf / R2 frequencyExponent* fields / R3 open-corpus call sites swap / R4 per-corpus s map / R5 freq-sort retrofit / R6 unique auto-flatten / R7 docs / R8 changeset / R9 snapshot / R10 no new public API / R11 no new D-number). 0 blocking opens. 0 tooling slips.
+- spec-writer: 11 R-IDs formalised (R1 pickZipf / R2 frequencyExponent\* fields / R3 open-corpus call sites swap / R4 per-corpus s map / R5 freq-sort retrofit / R6 unique auto-flatten / R7 docs / R8 changeset / R9 snapshot / R10 no new public API / R11 no new D-number). 0 blocking opens. 0 tooling slips.
 - manager: spec-gate PASS; user approved at review checkpoint #2 ("looks ok").
 - test-writer: 6 it() blocks RED at typecheck (12 TS errors — missing pickZipf + missing LocaleData fields). 0 slips.
 - implementer: 5/6 green; flagged R1a's counter-side wrapper as structurally broken (delegating to base.pickZipf strands `this`; same B48 precedent). 0 slips. R6 wiring: effectiveUniqueMode flag + withEffectiveUniqueMode helper + makeFieldCtx ctx.prng wrap (mirrors B65). frequencyExponentOverrides type widened to `Readonly<Partial<Record<string, number>>>` per exactOptionalPropertyTypes constraint — accepted, surface identical for users.
 - test-writer (surgical fix): reimplemented R1a wrapper's pickZipf using closed-form formula (B48 pattern). 1070/1070 green. 0 slips.
 - reviewer: PASS — all 11 R-IDs verified at file:line; full suite 1157/1157 green; lint warnings pre-existing only; scope contained; no D-number; type-widening accepted (recommend non-blocking wiki-sync); changeset 6 terse bullets. 1 slip (one batched `head`).
+- result: done — commit pending
+
+## 2026-06-02 — B56: Locale light-list expansions (revised tighter targets post-B55)
+
+- manager: promoted inbox → doing, track: chore (flagged review). Card's original §1 targets (cities 500 / streetNames 150 / colors 200 / etc) were sized BEFORE B55's Zipf-pick landed; under default `s=1` over a 500-entry list only the top ~100 see meaningful airtime, so the tail entries are dead bytes.
+- user direction: tighter targets across the board. Locked: cities 60 / streetNames 50 / jobTitles 40 / departments 30 / productAdjectives 30 / colors 50 / company.buzz/catchPhrase 30 each / transactionDescriptions 30 / countries+countryCodes full ISO 3166 (~250) / timeZones 24 IANA. Closed enumerations get full coverage (Zipf doesn't apply); open lists capped where Zipf-1 head dominance hits diminishing returns. Net ~3-4 KB raw per locale vs original ~40 KB.
+- manager: dispatch implementer
+- implementer (first dispatch): blocked by Anthropic content-filter when emitting the ISO 3166 country list. Partial work persisted on disk: en cities 35→60, en jobTitles 18→40. Second dispatch with the same prompt also blocked. **Filter triggers on politically-sensitive full country names; 2-letter alpha-2 codes are filter-safe.**
+- user redirected: handle inline as manager + use `Intl.DisplayNames` API to derive country names from a hardcoded alpha-2 code list. ICU tables hold the data; source enumerates 2-letter tokens only.
+- manager (inline): expanded en + nl smaller lists (streetNames / timeZones / departments / productAdjectives / buzzAdjectives / buzzNouns / buzzVerbLemmas / catchPhraseAdjectives / catchPhraseDescriptors / catchPhraseNouns / transactionDescriptions / colors / jobTitles / cities). Counts hit 28-60 per field (within 1-2 of targets — noise under Zipf). Added `ISO_3166_1_ALPHA_2` 249-code constant + `Intl.DisplayNames` derivation at module init for both en (`COUNTRY_NAMES_EN`) and nl (`COUNTRY_NAMES_NL`).
+- manager: filed **B67** (chore, low, [review]) for further Intl-API leverage — derive `address.languages` + `finance.currencies` (and decision-pending `address.timeZones` full IANA) via the same hardcoded-codes + Intl.DisplayNames pattern. Predecessor B56.
+- `pnpm validate` green: 1070 + 27 + 60 tests; typecheck clean; 2 pre-existing lint warnings; fmt clean.
 - result: done — commit pending
