@@ -50,7 +50,10 @@
  *   - `./registration.js` — `SchemaReg`, `EMPTY_REG`, `normalizeRelationEntry`,
  *     `findPrimaryRegs`, `findDerivedRegs`, `resolveMode`.
  *   - `./derived.js`       — derived-upsert map access helpers (B8).
- *   - `./relations.js`     — relation cache-key / fork-key / error-message helpers.
+ *   - `./relations.js`     — relation cache-key / fork-key / error-message helpers,
+ *                             and the `RelationResolver` collaborator (B62) that owns
+ *                             `resolveRelated` / `resolveRelatedMany` / `resolveRelationPool` /
+ *                             `ensurePrimaryRecord`. `WorldImpl` calls via `this.relations.X(...)`.
  */
 
 import { z } from "zod";
@@ -94,12 +97,7 @@ import {
   setDerivedUpsert,
   type DerivedUpsertMap,
 } from "./derived.js";
-import {
-  relationCacheKey,
-  relationEmptyPoolMessage,
-  relationForkKey,
-  relationShortPoolMessage,
-} from "./relations.js";
+import { RelationResolver } from "./relations.js";
 import { bindNamespace } from "./bind-generators.js";
 
 // ---------------------------------------------------------------------------
@@ -284,6 +282,14 @@ export class WorldImpl implements World {
    */
   private effectiveUniqueMode = false;
 
+  /**
+   * B62 — relation-resolution collaborator. Owns `relationPools` (shared with
+   * this `WorldImpl` via the deps surface) and hosts `resolveRelated` /
+   * `resolveRelatedMany` / `resolveRelationPool` / `ensurePrimaryRecord`. The
+   * `WorldImpl` remains the public face; this field is module-private.
+   */
+  private readonly relations: RelationResolver;
+
   constructor(private readonly options: WorldOptions = {}) {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
@@ -291,6 +297,13 @@ export class WorldImpl implements World {
     for (const [k, fn] of Object.entries(options.generators ?? {})) {
       this.customKeyGenerators.set(k.toLowerCase(), fn);
     }
+    this.relations = new RelationResolver({
+      registry: this.registry,
+      relationPools: this.relationPools,
+      findPrimaryReg: (schema) => this.findPrimaryRegs(schema)[0] ?? null,
+      generateAndStorePrimary: (schema, reg) => this.generateAndStorePrimary(schema, reg),
+      isStoreActive: () => this.effectiveStore,
+    });
   }
 
   /**
@@ -777,9 +790,14 @@ export class WorldImpl implements World {
     current?: Record<string, unknown>,
   ): GeneratorContext {
     const related = (<T = Record<string, unknown>>(relName: string): T =>
-      this.resolveRelated<T>(reg, recordPrng, recordId, relName)) as GeneratorContext["related"];
+      this.relations.resolveRelated<T>(
+        reg,
+        recordPrng,
+        recordId,
+        relName,
+      )) as GeneratorContext["related"];
     related.many = <T = unknown>(relName: string, count: number): T[] =>
-      this.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
+      this.relations.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
     // B55-R6 — when the outer `generate` call passes `unique: true`,
     // `effectiveUniqueMode` is true for the duration of the call. Wrap
     // `fieldPrng` so its `pickZipf` substitutes `s = 0` regardless of the
@@ -839,164 +857,12 @@ export class WorldImpl implements World {
 
   // -------------------------------------------------------------------------
   // Private: relation resolution
+  //
+  // B62 — the four entangled methods (`resolveRelated`, `resolveRelatedMany`,
+  // `resolveRelationPool`, `ensurePrimaryRecord`) now live on the
+  // `RelationResolver` collaborator in `./relations.js`. Call sites in this
+  // file go through `this.relations.X(...)`.
   // -------------------------------------------------------------------------
-
-  private resolveRelated<T = Record<string, unknown>>(
-    reg: SchemaReg,
-    recordPrng: ReturnType<typeof createPrng>,
-    recordId: string,
-    relName: string,
-  ): T {
-    const { items, prng } = this.resolveRelationPool(reg, recordPrng, recordId, relName, "single");
-    if (items.length === 0) return undefined as T;
-    const pickedIdx = prng.int(0, items.length - 1);
-    return items[pickedIdx]! as T;
-  }
-
-  private resolveRelatedMany<T = unknown>(
-    reg: SchemaReg,
-    recordPrng: ReturnType<typeof createPrng>,
-    recordId: string,
-    relName: string,
-    count: number,
-  ): T[] {
-    const { items, prng } = this.resolveRelationPool(
-      reg,
-      recordPrng,
-      recordId,
-      relName,
-      "many",
-      count,
-    );
-    return prng.sample(items, count) as T[];
-  }
-
-  /**
-   * Shared snapshot+fork pipeline for `ctx.related` (kind="single") and
-   * `ctx.related.many` (kind="many"). Builds the per-record candidate pool —
-   * applying `where` once before caching (B11-R3 / B11-R4 / B11-R7) — and
-   * returns it alongside a per-relation PRNG fork.
-   *
-   * Diverges by `kind`:
-   * - cache key suffix (`""` vs `":many"`),
-   * - auto-provision: single calls `ensurePrimaryRecord` when the registry is
-   *   empty; many runs an explicit shortfall loop up to `count` (and skips
-   *   under `where`, since auto-provision cannot guarantee the predicate),
-   * - PRNG fork key (`rel:<name>` vs `rel-many:<name>`),
-   * - empty-pool throw threshold (`< 1` vs `< count`).
-   *
-   * Self-referential relations are exempt from auto-provision (would recurse)
-   * and from the empty-pool throw (B5-R6 / B11-R6); callers handle the empty
-   * pool themselves.
-   */
-  private resolveRelationPool(
-    reg: SchemaReg,
-    recordPrng: ReturnType<typeof createPrng>,
-    recordId: string,
-    relName: string,
-    kind: "single" | "many",
-    count?: number,
-  ): { items: unknown[]; prng: Prng } {
-    const rel = reg.relations[relName];
-    if (!rel) {
-      throw new Error(
-        `Relation '${relName}' is not defined. Declare it in the relations option of withSchema().`,
-      );
-    }
-    const relSchema = rel.schema;
-    const where = rel.where;
-    const isSelfRef = relSchema === reg.schema;
-
-    const cacheKey = relationCacheKey(recordId, relName, kind);
-    let items = this.relationPools.get(cacheKey);
-
-    if (!items) {
-      if (kind === "single") {
-        if (this.registry.count(relSchema) === 0) {
-          // A self-referential relation (the schema relates to itself, e.g. a
-          // category whose parent is another category) must NOT auto-provision:
-          // generating a new record would re-enter this matcher with the
-          // registry still empty and recurse forever. Instead the first record
-          // simply has no related instance yet — later records reference the
-          // earlier ones already stored. The matcher handles the empty case
-          // (e.g. `ctx.related("parent")?.id ?? null`).
-          if (isSelfRef) {
-            this.relationPools.set(cacheKey, []);
-            items = [];
-          } else {
-            const provisioned = this.ensurePrimaryRecord(relSchema);
-            // B10-R4: when the outer call opted out of storage, the
-            // auto-provisioned record was NOT written to the registry. Use
-            // the in-memory value directly so the matcher still sees a
-            // related instance.
-            if (!this.effectiveStore && provisioned !== undefined) {
-              items = [provisioned];
-            }
-          }
-        }
-      } else {
-        // kind === "many": auto-provision the shortfall until at least `count`
-        // records exist — except for self-referential relations (would recurse,
-        // see the single guard above). Under `where`, auto-provision cannot
-        // guarantee the predicate is satisfied (B11-R6) — we do not attempt to
-        // coax matchers into producing predicate-satisfying records; if the
-        // filtered pool falls short, we throw below.
-        const want = count ?? 0;
-        if (!isSelfRef && !where) {
-          const relReg = this.findPrimaryRegs(relSchema)[0] ?? null;
-          if (!this.effectiveStore) {
-            // B10-R4: under `store: false`, the registry is not written;
-            // collect provisioned records directly into the pool so the
-            // matcher still sees them.
-            const pool: unknown[] = [...this.registry.all(relSchema)];
-            while (pool.length < want) {
-              const provisioned = this.generateAndStorePrimary(relSchema, relReg);
-              pool.push(provisioned);
-            }
-            items = pool;
-          } else {
-            while (this.registry.count(relSchema) < want) {
-              this.generateAndStorePrimary(relSchema, relReg);
-            }
-          }
-        }
-      }
-      if (!items) {
-        items = [...this.registry.all(relSchema)];
-      }
-      // B11-R3 / B11-R4 / B11-R7: apply `where` once, here, when building the
-      // snapshot. Filtering before caching means subsequent cache hits do not
-      // re-evaluate the predicate (D9 — cache neutrality).
-      if (where) {
-        items = items.filter((it) => where(it));
-      }
-      // B11-R6: empty / undersupplied filtered pool throws for
-      // non-self-referential relations. The throw happens before the PRNG fork
-      // so no PRNG state is consumed.
-      if (where && !isSelfRef) {
-        if (kind === "single" && items.length === 0) {
-          throw new Error(relationEmptyPoolMessage(relName));
-        }
-        if (kind === "many" && items.length < (count ?? 0)) {
-          throw new Error(relationShortPoolMessage(relName, count ?? 0, items.length));
-        }
-      }
-      this.relationPools.set(cacheKey, items);
-    }
-
-    // Derive a stable per-relation PRNG so all fields in one record pick the
-    // same related entity (single) or set (many). The `rel-many:` prefix on
-    // the many path keeps its fork independent of the single path's `rel:`
-    // fork — D4 / D10 byte-identical fork-key shape.
-    const prng = recordPrng.fork(relationForkKey(relName, kind));
-    return { items, prng };
-  }
-
-  private ensurePrimaryRecord(schema: ZodTypeAny): unknown | undefined {
-    if (this.registry.count(schema) > 0) return undefined;
-    const reg = this.findPrimaryRegs(schema)[0] ?? null;
-    return this.generateAndStorePrimary(schema, reg);
-  }
 
   // -------------------------------------------------------------------------
   // Private: primary record generation
