@@ -30,6 +30,28 @@ Sibling: [B58-A](B58-A-english-inflection.md) — English inflection (independen
   database (~5 KB OTW). **Gates this card** — implementation cannot proceed until the
   OpenTaal corpus is verified available with a compatible license (BSD / GPL — same as
   the existing OpenTaal sources B48 already uses).
+
+  **2026-06-02 Q-3 verification result (B58-B remains blocked)**: WebFetch against
+  `github.com/OpenTaal/opentaal-wordlist` confirms OpenTaal does NOT publish a
+  noun-gender database today. Their wordlists (`wordlist.txt`, `basiswoorden-gekeurd.txt`,
+  `flexies-ongekeurd.txt`) ship word forms without `de`/`het` tagging. Their docs note
+  gender info "may become available in future releases" but is not currently available.
+  Alternative sources to evaluate before this card unblocks:
+  - **Wiktionary Dutch noun categories** — `nl.wiktionary.org` tags entries by `de-woord` /
+    `het-woord`; bulk-downloadable as a CC-BY-SA dump. License compatible.
+  - **CBG Meertens NFB** — known to maintain gender data but ships paginated HTML (B49
+    flagged similar bulk-fetch problem for surnames).
+  - **BabelNet** — multilingual lexical network with gender annotations; license is
+    research-only / commercial separate. Likely incompatible with the project's
+    permissive-only stance.
+  - **Rescope option**: drop adjective `-e` agreement from B58-B entirely (skip R8, the
+    adjective agreement requirement). Ship verb conjugation (`'t kofschip` + sterke-
+    werkwoorden) + plural rules only. Card scope shrinks to R1–R7 + R9–R12, no gender
+    data needed.
+
+  Maintainer decides between Wiktionary (file new fetch script, license review) and
+  rescope (faster, narrower realism win). Until that decision lands, B58-B stays
+  `flags: [review, blocked]`.
 - All other Q-1 / Q-2 decisions from B58-A apply (always-fixed per call site; faker-style
   override stays available via `withGenerators`).
 

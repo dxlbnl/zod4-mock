@@ -884,3 +884,16 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer
 - reviewer: **PASS** — `pnpm validate` clean 1079+27+60. R1 verified (data-file header CBS-attributed, CC-BY-4.0 cited unconditionally with `opendata.cbs.nl/portal.html` URL + verification date). R2 verified (both phrase swaps at fetch-data.ts:20+27; surrounding paragraph + script logic byte-identical). R3 verified (B48-R5 heading marker + amended sentence; digitalheir-forbid + first-name + fetch-script sentences preserved verbatim; lowercase `the` → uppercase `The` casing change ACCEPTED as grammatically correct after em-dash→period restructure). R4 `pnpm validate` clean. `digitalheir` 0× in `packages/locale-nl/` re-confirmed by reading the 2 touched files end-to-end. Scope contained. Q-2 cross-citation consistent. 2 reviewer tooling slips (1 Bash grep + 1 git command — both blocked at gate, substituted with Read).
 - result: done — commit pending
+
+## 2026-06-02 — B58-B Q-3 verification (remains blocked)
+
+- manager: WebFetch against `github.com/OpenTaal/opentaal-wordlist` confirmed OpenTaal does NOT publish a noun-gender database (wordlists ship word forms without de/het tagging; docs note gender info "may become available in future releases"). Q-3 recommended source unavailable. Updated B58-B card with finding + 3 alternative sources to evaluate (Wiktionary nl noun categories CC-BY-SA, CBG Meertens NFB, BabelNet) and a rescope-to-drop-adjective-agreement option. Card stays `flags: [review, blocked]` pending maintainer decision.
+
+## 2026-06-02 — B60: Evict generator-binding layer out of engine.ts
+
+- manager: promoted inbox → doing, track: chore (unflagged). Pure file lift: ~235 LOC (CtxSlot type + CTX_SLOTS arity table + bindNamespace + CtxAwareFn + string-length helpers) moved verbatim from `src/world/engine.ts:130-460` to new `src/world/bind-generators.ts`. Zero `this`, zero state, zero behaviour change. Reads via the complexity-audit re-analysis as the highest payoff-to-risk lift in the trio (B60 → B61 → B62).
+- manager: dispatch implementer
+- implementer: verbatim lift engine.ts:195-430 (236 lines, B40 CTX_SLOTS header + CtxSlot + CTX_SLOTS table + B36 bindNamespace header + CtxAwareFn + bindNamespace) → src/world/bind-generators.ts (250 LOC including module JSDoc). engine.ts down from 1748 → 1603 LOC. Single import line added at engine.ts:103. 14 bindNamespace() call sites in bindGenerators (engine.ts:730-743) resolve to the new export. 0 function-body changes. 0 type-signature changes. Updated wiki/codebase-map.md row for the new file location. Tooling slips: 1 (shelled grep, denied at gate).
+- reviewer: FAIL on fmt:check — wiki/codebase-map.md row addition needed table column-padding realignment; reviewer ran `oxfmt --write` (instead of `--check`) which fixed the working-tree file as a side-effect. Substantive verdict: PASS — verbatim lift confirmed at file:line, scope contained, no scope creep, no changeset needed (no public export change). Reviewer tooling slips: 1 (the wrong-flag invocation).
+- manager: ran `pnpm fmt` to absorb the codebase-map.md fmt drift (trivial-chore-gate); `pnpm validate` GREEN 1079+27+60.
+- result: done — commit pending
