@@ -75,6 +75,7 @@ import { def, checks, unwrap, resolveLazyChain } from "../generators/schema/zod-
 import { deepMerge, deepEqual } from "../utils/merge.js";
 import * as generatorsData from "../generators/data/index.js";
 import { defaultLocale } from "../default-locale.js";
+import type { LocaleData } from "@zod4-mock/locale-core";
 import { explainSchema } from "../explain.js";
 import { PIPELINE, walkPipeline } from "../pipeline.js";
 import {
@@ -487,6 +488,16 @@ export class WorldImpl implements World {
    */
   private effectiveStore = true;
 
+  /**
+   * B65 — per-call locale, set when the caller passes `{ locale }` to
+   * `world.generate(...)`. Read by {@link makeFieldCtx} so matcher closures
+   * see the per-call locale on `ctx.locale` (and therefore through
+   * `ctx.gen.*` calls). When `undefined`, `makeFieldCtx` falls back to the
+   * world-construction `options.locale`. Push/pop in
+   * {@link withEffectiveLocale} mirrors {@link withEffectiveStore}.
+   */
+  private effectiveLocale: LocaleData | undefined = undefined;
+
   constructor(private readonly options: WorldOptions = {}) {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
@@ -706,49 +717,51 @@ export class WorldImpl implements World {
     // top-level call is unaffected. B10-R5: explicit `store: true` overrides
     // an inherited `store: false` (used by `world.get` to force storage on its
     // create-path delegate call).
-    return this.withEffectiveStore(options?.store, () => {
-      let current: ZodTypeAny = schema;
-      let d = def(current);
-      const outerWrappers: Array<"optional" | "nullable"> = [];
+    return this.withEffectiveLocale(options?.locale, () =>
+      this.withEffectiveStore(options?.store, () => {
+        let current: ZodTypeAny = schema;
+        let d = def(current);
+        const outerWrappers: Array<"optional" | "nullable"> = [];
 
-      while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
-        outerWrappers.push(d.type);
-        current = d.innerType;
+        while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
+          outerWrappers.push(d.type);
+          current = d.innerType;
+          d = def(current);
+        }
+
+        current = resolveLazyChain(current, this.lazyCache);
         d = def(current);
-      }
 
-      current = resolveLazyChain(current, this.lazyCache);
-      d = def(current);
-
-      if (d.type === "array") {
-        if (outerWrappers.length > 0) {
-          // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
-          // outer `schema` reference (the `.optional()` wrapper) so the Nth
-          // call to the same `.optional()` schema reuses the same fork key
-          // regardless of intervening `generate(Y)` calls.
-          const { id, slot } = this.nextSchemaSlot(schema);
-          const prng = this.prng.fork(`wrap:${id}:${slot}`);
-          const optProb = this.options.optionalProbability ?? 0.2;
-          for (const wrapper of outerWrappers) {
-            if (prng.random() < optProb) {
-              // No counter mutation on skip — the per-schema slot was already
-              // advanced by `nextSchemaSlot` above (the next call gets slot+1).
-              return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+        if (d.type === "array") {
+          if (outerWrappers.length > 0) {
+            // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
+            // outer `schema` reference (the `.optional()` wrapper) so the Nth
+            // call to the same `.optional()` schema reuses the same fork key
+            // regardless of intervening `generate(Y)` calls.
+            const { id, slot } = this.nextSchemaSlot(schema);
+            const prng = this.prng.fork(`wrap:${id}:${slot}`);
+            const optProb = this.options.optionalProbability ?? 0.2;
+            for (const wrapper of outerWrappers) {
+              if (prng.random() < optProb) {
+                // No counter mutation on skip — the per-schema slot was already
+                // advanced by `nextSchemaSlot` above (the next call gets slot+1).
+                return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+              }
             }
           }
+          return this.generateArray(
+            d.element!,
+            current,
+            options as GenerateOptions<unknown[]> | undefined,
+          ) as z.infer<TSchema>;
         }
-        return this.generateArray(
-          d.element!,
-          current,
-          options as GenerateOptions<unknown[]> | undefined,
-        ) as z.infer<TSchema>;
-      }
 
-      return this.generateSingleItem(
-        schema,
-        options as GenerateOptions<unknown>,
-      ) as z.infer<TSchema>;
-    });
+        return this.generateSingleItem(
+          schema,
+          options as GenerateOptions<unknown>,
+        ) as z.infer<TSchema>;
+      }),
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -879,6 +892,24 @@ export class WorldImpl implements World {
     }
   }
 
+  /**
+   * B65 — push/pop {@link effectiveLocale} for the duration of `fn`. When
+   * `value` is `undefined` no push/pop happens (the call inherits the ambient
+   * locale); when `value` is provided the per-call locale is set for the
+   * duration of `fn` and restored in `finally`. Mirrors
+   * {@link withEffectiveStore}.
+   */
+  private withEffectiveLocale<R>(value: LocaleData | undefined, fn: () => R): R {
+    if (value === undefined) return fn();
+    const previous = this.effectiveLocale;
+    this.effectiveLocale = value;
+    try {
+      return fn();
+    } finally {
+      this.effectiveLocale = previous;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Private: generators binding
   // -------------------------------------------------------------------------
@@ -963,7 +994,10 @@ export class WorldImpl implements World {
       },
       recursionLimit: this.options.recursionLimit ?? 5,
       current: (current ?? {}) as Partial<any>,
-      locale: this.options.locale ?? defaultLocale,
+      // B65: per-call `generate(S, { locale })` wins over the world-level
+      // construction option. `withEffectiveLocale` set it in scope; without it,
+      // fall back to the world's `options.locale`, then `defaultLocale`.
+      locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
     };
     (ctx as { gen: BoundGenerators }).gen = this.bindGenerators(fieldPrng, ctx);
     return ctx;

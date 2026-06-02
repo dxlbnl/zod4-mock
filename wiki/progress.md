@@ -832,3 +832,10 @@ it records the reason here AND states it in chat.
 - Regression test: `tests/unit/B66-sentence-object-pronouns.test.ts` (2 tests, 200 seeds each — defaultLocale fallback path + locale-en formatSentence; assert mid-sentence subject-only pronouns ["they", "we", "I"] never appear in object position).
 - `pnpm validate` green. Changeset `patch` on `zod4-mock` + `@zod4-mock/locale-en`.
 - result: done — commit pending
+
+## 2026-06-02 — B65: BUG — `locale` doesn't thread into `ctx.gen.*` calls inside matchers
+
+- manager: closed inline. Engine fix: added `effectiveLocale: LocaleData | undefined` instance field + `withEffectiveLocale(value, fn)` push/pop helper mirroring B10's `withEffectiveStore` pattern. Wrapped `generate()`'s body in `withEffectiveLocale(options?.locale, () => withEffectiveStore(...))`. `makeFieldCtx` reads `this.effectiveLocale ?? this.options.locale ?? defaultLocale` so matcher ctxs (and ctx.gen.\*) see the per-call locale.
+- Regression test: `tests/unit/B65-locale-threads-into-ctx-gen.test.ts` (1 test asserting `ctx.locale === en` inside a matcher after `world.generate(S, { locale: en })`).
+- `pnpm validate` green. Changeset `patch` on `zod4-mock`.
+- result: done — commit pending
