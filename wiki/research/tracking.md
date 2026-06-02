@@ -31,3 +31,10 @@ Items are ordered by implementation priority within each pillar.
 - [ ] **Markov character entropy** — character-level Markov chains for synthetic string fields not covered by key heuristics ([algorithmic-entropy.md](text-generation/algorithmic-entropy.md))
 - [x] **Markov training pipeline** — `train-markov.ts` / `verify-markov.ts` CLI tooling for building and inspecting locale models; training data in `data/training/` ([markov-training-pipeline.md](text-generation/markov-training-pipeline.md))
 - [ ] **Conjugation compression** — store only lemmas and derive inflected forms algorithmically to reduce corpus size 30–50% ([conjugation-compression.md](text-generation/conjugation-compression.md))
+
+---
+
+## Complexity & consistency reports
+
+- [x] **Complexity audit (2026-05-29)** — baseline; flagged `world.ts` (1202 LOC) + 15 items (B23–B37, all done) ([reports/codebase-complexity.md](reports/codebase-complexity.md))
+- [x] **Complexity & consistency re-analysis (2026-06-01)** — delta pass: B23–B53 landed; `engine.ts` now 1748 LOC (top win = lift array/relations/bindGenerators out); codepaths verdict CONSISTENT bar one by-design pipeline subset + two stale-comment/`any` cleanups ([reports/codebase-complexity-2026-06-01.md](reports/codebase-complexity-2026-06-01.md))
