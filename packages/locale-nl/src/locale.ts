@@ -1,7 +1,28 @@
-import type { LocaleData, LastNamePrefix, Prng } from "@zod4-mock/locale-core";
+import type { Currency, LocaleData, LastNamePrefix, Prng } from "@zod4-mock/locale-core";
+import { ISO_4217_NUMERIC } from "@zod4-mock/locale-core";
 import { firstNamesMale, firstNamesFemale, lastNames, nouns, adjectives } from "./data/index.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Extract the currency symbol for `code` in `locale` via `Intl.NumberFormat`
+ * (ECMA-402). Picks the `currency`-typed formatted part — the runtime's
+ * preferred symbol for that locale — and falls back to the code itself
+ * if the runtime can't translate. Wrapped in `try`/`catch` so an
+ * unsupported code never throws at module init.
+ */
+function extractSymbol(locale: string, code: string): string {
+  try {
+    const parts = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: code,
+    }).formatToParts(0);
+    const symbolPart = parts.find((p) => p.type === "currency");
+    return symbolPart?.value ?? code;
+  } catch {
+    return code;
+  }
+}
 
 /**
  * ISO 3166-1 alpha-2 country codes (public domain). Localised display names
@@ -265,6 +286,224 @@ const COUNTRY_NAMES_NL: readonly string[] = (() => {
   return ISO_3166_1_ALPHA_2.map((code) => display.of(code) ?? code);
 })();
 
+/**
+ * ISO 639-1 alpha-2 language codes (public domain). Dutch display names
+ * are derived at module init via `Intl.DisplayNames(['nl'])` so we never
+ * have to hardcode language names. ECMA-402, D13-isomorphic.
+ */
+const ISO_639_1: readonly string[] = [
+  "aa",
+  "ab",
+  "ae",
+  "af",
+  "ak",
+  "am",
+  "an",
+  "ar",
+  "as",
+  "av",
+  "ay",
+  "az",
+  "ba",
+  "be",
+  "bg",
+  "bh",
+  "bi",
+  "bm",
+  "bn",
+  "bo",
+  "br",
+  "bs",
+  "ca",
+  "ce",
+  "ch",
+  "co",
+  "cr",
+  "cs",
+  "cu",
+  "cv",
+  "cy",
+  "da",
+  "de",
+  "dv",
+  "dz",
+  "ee",
+  "el",
+  "en",
+  "eo",
+  "es",
+  "et",
+  "eu",
+  "fa",
+  "ff",
+  "fi",
+  "fj",
+  "fo",
+  "fr",
+  "fy",
+  "ga",
+  "gd",
+  "gl",
+  "gn",
+  "gu",
+  "gv",
+  "ha",
+  "he",
+  "hi",
+  "ho",
+  "hr",
+  "ht",
+  "hu",
+  "hy",
+  "hz",
+  "ia",
+  "id",
+  "ie",
+  "ig",
+  "ii",
+  "ik",
+  "io",
+  "is",
+  "it",
+  "iu",
+  "ja",
+  "jv",
+  "ka",
+  "kg",
+  "ki",
+  "kj",
+  "kk",
+  "kl",
+  "km",
+  "kn",
+  "ko",
+  "kr",
+  "ks",
+  "ku",
+  "kv",
+  "kw",
+  "ky",
+  "la",
+  "lb",
+  "lg",
+  "li",
+  "ln",
+  "lo",
+  "lt",
+  "lu",
+  "lv",
+  "mg",
+  "mh",
+  "mi",
+  "mk",
+  "ml",
+  "mn",
+  "mr",
+  "ms",
+  "mt",
+  "my",
+  "na",
+  "nb",
+  "nd",
+  "ne",
+  "ng",
+  "nl",
+  "nn",
+  "no",
+  "nr",
+  "nv",
+  "ny",
+  "oc",
+  "oj",
+  "om",
+  "or",
+  "os",
+  "pa",
+  "pi",
+  "pl",
+  "ps",
+  "pt",
+  "qu",
+  "rm",
+  "rn",
+  "ro",
+  "ru",
+  "rw",
+  "sa",
+  "sc",
+  "sd",
+  "se",
+  "sg",
+  "si",
+  "sk",
+  "sl",
+  "sm",
+  "sn",
+  "so",
+  "sq",
+  "sr",
+  "ss",
+  "st",
+  "su",
+  "sv",
+  "sw",
+  "ta",
+  "te",
+  "tg",
+  "th",
+  "ti",
+  "tk",
+  "tl",
+  "tn",
+  "to",
+  "tr",
+  "ts",
+  "tt",
+  "tw",
+  "ty",
+  "ug",
+  "uk",
+  "ur",
+  "uz",
+  "ve",
+  "vi",
+  "vo",
+  "wa",
+  "wo",
+  "xh",
+  "yi",
+  "yo",
+  "za",
+  "zh",
+  "zu",
+];
+
+// languages: ISO 639-1 codes + Intl.DisplayNames at module init (ECMA-402, D13-isomorphic).
+const LANGUAGE_NAMES_NL: readonly string[] = (() => {
+  const display = new Intl.DisplayNames(["nl"], { type: "language" });
+  return ISO_639_1.map((code) => display.of(code) ?? code);
+})();
+
+/**
+ * `finance.currencies` derived at module init:
+ *   - codes via `Intl.supportedValuesOf('currency')` (ECMA-402, ~300 codes),
+ *   - localised Dutch names via `Intl.DisplayNames(['nl'], { type: 'currency' })`,
+ *   - symbols via `Intl.NumberFormat` `formatToParts` (see `extractSymbol`),
+ *   - numeric codes via the hardcoded {@link ISO_4217_NUMERIC} map (Intl
+ *     does not expose ISO 4217 numeric codes).
+ * D13-isomorphic across browsers / Node / edge runtimes.
+ */
+const CURRENCIES_NL: readonly Currency[] = (() => {
+  const codes = Intl.supportedValuesOf("currency");
+  const nameDisplay = new Intl.DisplayNames(["nl"], { type: "currency" });
+  return codes.map((code) => ({
+    code,
+    name: nameDisplay.of(code) ?? code,
+    symbol: extractSymbol("nl", code),
+    numeric: ISO_4217_NUMERIC[code] ?? "000",
+  }));
+})();
+
 export const nl: LocaleData = {
   id: "nl",
 
@@ -501,18 +740,8 @@ export const nl: LocaleData = {
       "Oceanië",
       "Zuid-Amerika",
     ],
-    languages: [
-      "Nederlands",
-      "Engels",
-      "Duits",
-      "Frans",
-      "Spaans",
-      "Italiaans",
-      "Portugees",
-      "Deens",
-      "Zweeds",
-      "Noors",
-    ],
+    // languages: ISO 639-1 codes + Intl.DisplayNames at module init (ECMA-402, D13-isomorphic).
+    languages: LANGUAGE_NAMES_NL,
     streetNames: [
       "Eiken",
       "Beuken",
@@ -1026,18 +1255,10 @@ export const nl: LocaleData = {
   finance: {
     bankCodes: ["ABNA", "INGB", "RABO", "SNSB", "TRIO", "KNAB", "BUNQ", "ASNB", "AEGO", "NNBA"],
     bicLocations: ["2U", "33", "88", "2A", "9A", "21"],
-    currencies: [
-      { code: "EUR", name: "Euro", symbol: "€", numeric: "978" },
-      { code: "USD", name: "Amerikaanse Dollar", symbol: "$", numeric: "840" },
-      { code: "GBP", name: "Britse Pond", symbol: "£", numeric: "826" },
-      { code: "JPY", name: "Japanse Yen", symbol: "¥", numeric: "392" },
-      { code: "CHF", name: "Zwitserse Frank", symbol: "CHF", numeric: "756" },
-      { code: "CAD", name: "Canadese Dollar", symbol: "C$", numeric: "124" },
-      { code: "AUD", name: "Australische Dollar", symbol: "A$", numeric: "036" },
-      { code: "CNY", name: "Chinese Yuan", symbol: "¥", numeric: "156" },
-      { code: "SEK", name: "Zweedse Kroon", symbol: "kr", numeric: "752" },
-      { code: "NZD", name: "Nieuw-Zeelandse Dollar", symbol: "NZ$", numeric: "554" },
-    ],
+    // currencies: Intl.supportedValuesOf + Intl.DisplayNames + Intl.NumberFormat
+    // at module init; numeric codes via the hardcoded ISO_4217_NUMERIC map
+    // (ECMA-402, D13-isomorphic).
+    currencies: CURRENCIES_NL,
     accountNames: [
       "Spaarrekening",
       "Betaalrekening",
