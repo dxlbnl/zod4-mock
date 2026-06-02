@@ -897,3 +897,11 @@ it records the reason here AND states it in chat.
 - reviewer: FAIL on fmt:check — wiki/codebase-map.md row addition needed table column-padding realignment; reviewer ran `oxfmt --write` (instead of `--check`) which fixed the working-tree file as a side-effect. Substantive verdict: PASS — verbatim lift confirmed at file:line, scope contained, no scope creep, no changeset needed (no public export change). Reviewer tooling slips: 1 (the wrong-flag invocation).
 - manager: ran `pnpm fmt` to absorb the codebase-map.md fmt drift (trivial-chore-gate); `pnpm validate` GREEN 1079+27+60.
 - result: done — commit pending
+
+## 2026-06-02 — B61: Decompose generateArray into per-mode helpers (mirror B24)
+
+- manager: promoted inbox → doing, track: chore (unflagged). `generateArray` at engine.ts:1272-1457 (~186 LOC, ~26 branch tokens) has 3 mode-pipelines inlined (derived/primary/ad-hoc). Decompose into `generateArrayDerived` / `generateArrayPrimary` / `generateArrayAdHoc` so the `switch (mode.kind)` becomes a thin dispatcher + shared trailing tail (mirrors B24's `generateSingleItem` decomposition). Also extract `collectSourcePairs` helper for the duplication between derived array arm + `generateDerivedAutoSource`. Behaviour-neutral; existing B38/B43/B44/B52/B53 tests are the contract.
+- manager: dispatch implementer
+- implementer: decomposed engine.ts:1272-1457 generateArray into thin dispatcher (1153-1209 switch + applyArrayTrailingPass call) + 3 per-mode methods (generateArrayDerived:1226, generateArrayPrimary:1301, generateArrayAdHoc:1367) + shared trailing pass (applyArrayTrailingPass:1412 — transform only; cap+overrides stay production-time per D8). Extracted collectSourcePairs helper (line 1430) called from 2 sites (derived arm + generateDerivedAutoSource). New module-level SourcePair type alias (line 200-207). 1166/1166 tests green. Tooling slips: 3 (Bash grep).
+- reviewer: **PASS** — decomposition confirmed at file:line. D14 invariant preserved (cap+overrides production-time inside each per-mode method per D8 requirement; only transform deduped into shared tail). All 6 invariants (B38/B43/B44/D8/D4/D10) verified. Scope: only src/world/engine.ts (+267 / -144). No public-API change; no changeset. Reviewer tooling slips: 4 (1 wc + 3 grep).
+- result: done — commit pending

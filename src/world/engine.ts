@@ -194,6 +194,19 @@ function readCallerMaxBound(schema: ZodTypeAny): number | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Derived array source pair
+// ---------------------------------------------------------------------------
+
+/**
+ * One source record paired with the derived `SchemaReg` it feeds and the
+ * index it occupies in its source registry. Built by `collectSourcePairs`
+ * and consumed by both `generateArrayDerived` (one derived record per pair,
+ * up to the cap) and `generateDerivedAutoSource` (single-item round-robin
+ * pick by `derivedPairCounter`).
+ */
+type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
+
+// ---------------------------------------------------------------------------
 // WorldImpl
 // ---------------------------------------------------------------------------
 
@@ -1124,6 +1137,19 @@ export class WorldImpl implements World {
   // Private: array generation
   // -------------------------------------------------------------------------
 
+  /**
+   * Thin dispatcher: resolves recursion-depth, the array PRNG fork, and the
+   * inner-schema mode, then delegates to one of three per-mode methods. The
+   * shared trailing pass ({@link applyArrayTrailingPass}) closes the D14
+   * sequence (cap → overrides → transform) by applying `options.transform`
+   * uniformly across all three arms — the cap and per-index overrides are
+   * already applied AT PRODUCTION TIME inside each per-mode method, where
+   * D8 (stored == returned) requires they precede `registry.store`.
+   *
+   * Mirrors {@link generateSingleItem}'s B24 decomposition: dispatcher + named
+   * branch helpers, with the trailing tail in one shared place so any new
+   * cross-arm behaviour added per D14 lands once.
+   */
   private generateArray(
     innerSchema: ZodTypeAny,
     arraySchema: ZodTypeAny,
@@ -1144,150 +1170,214 @@ export class WorldImpl implements World {
     const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5];
     const mode = this.resolveMode(innerSchema);
 
+    let result: unknown[];
     switch (mode.kind) {
-      // -------------------------------------------------------------------
-      // Derived mode: one output per source record
-      // -------------------------------------------------------------------
-      case "derived": {
-        // Collect all (source, reg, sourceIndex) pairs from existing sources
-        type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
-        const pairs: SourcePair[] = [];
-
-        for (const reg of mode.regs) {
-          const sources = this.registry.all(reg.from!);
-          for (let i = 0; i < sources.length; i++) {
-            pairs.push({ source: sources[i], reg, sourceIndex: i });
-          }
-        }
-
-        // Auto-provision more sources if min constraint requires it
-        const minRequired = resolveMinRequired(arraySchema, defMin);
-        while (pairs.length < minRequired) {
-          const regIdx = pairs.length % mode.regs.length;
-          const reg = mode.regs[regIdx]!;
-          const fromSchema = reg.from!;
-          const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
-          const sourceIndex = this.registry.count(fromSchema);
-          const newSource = this.generateAndStorePrimary(fromSchema, fromReg);
-          pairs.push({ source: newSource, reg, sourceIndex });
-        }
-
-        // B52-R1 / B52-R8: cap at `callerMax ?? defMax` BEFORE production —
-        // never call `generateDerivedRecord` for pairs beyond the cap, never
-        // store records past the cap (D8: stored = returned). The floor
-        // (`minRequired`) wins when it exceeds the cap — mirror the primary
-        // arm's `Math.min(min, max), Math.max(min, max)` framing so an
-        // impossible `.min(6).max(3)` configuration collapses to a defined
-        // length rather than throwing.
-        const callerMax = readCallerMaxBound(arraySchema);
-        const upper = callerMax ?? defMax;
-        const cap = Math.max(minRequired, Math.min(upper, pairs.length));
-        const capped = pairs.slice(0, cap);
-
-        let result: unknown[] = capped.map(({ source, reg, sourceIndex }) => {
-          const record = this.generateDerivedRecord(innerSchema, reg, source, sourceIndex);
-          // D8 — every returned record is also stored, gated on
-          // `effectiveStore` so `{ store: false }` suppresses the write.
-          if (this.effectiveStore) {
-            this.registry.store(innerSchema, record as input<ZodTypeAny>);
-          }
-          return record;
-        });
-
-        // B52-R4: apply per-index overrides + transform on derived path
-        // (mirror the ad-hoc branch at the bottom of this method).
-        if (options?.overrides) {
-          const overrides = options.overrides as unknown[];
-          result = result.map((item, i) => {
-            const ov = overrides[i];
-            return ov !== undefined ? deepMerge(item, ov as Record<string, unknown>) : item;
-          });
-        }
-        if (options?.transform) {
-          result = result.map(
-            options.transform as unknown as (value: unknown, index: number) => unknown,
-          );
-        }
-        return result;
-      }
-
-      // -------------------------------------------------------------------
-      // Primary mode: generate N items, store in registry, return all
-      // -------------------------------------------------------------------
-      case "primary": {
-        const existingCount = this.registry.count(innerSchema);
-
-        const minRequired = resolveMinRequired(arraySchema, defMin);
-        const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
-        const target = Math.max(
-          existingCount,
-          genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+      case "derived":
+        result = this.generateArrayDerived(
+          innerSchema,
+          arraySchema,
+          mode.regs,
+          defMin,
+          defMax,
+          options,
         );
-
-        // B43 / B52-R2: honour caller-side `.max()` / `.length()` slice on
-        // BOTH store-on and store-off paths. Only slice when the caller
-        // actually wrote a bound — we MUST NOT slice on the library-side
-        // `defMax` fallback.
-        const callerMax = readCallerMaxBound(arraySchema);
-
-        let primaryResult: unknown[];
-
-        // B44: under store:false, the while-loop below would never terminate —
-        // generateAndStorePrimary skips the registry write (B10-R4 transitive
-        // suppression) so `registry.count(innerSchema)` never advances past
-        // `existingCount`. Generate directly via Array.from instead. The
-        // length already incorporates the B52-R2 callerMax cap so no work
-        // is allocated beyond what we will return (no while loop, B44 holds).
-        if (!this.effectiveStore) {
-          const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
-          const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
-          primaryResult = Array.from({ length: storeOffLength }, (_, i) =>
-            this.generateAndStorePrimary(innerSchema, mode.reg, {
-              overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
-            }),
-          );
-        } else {
-          const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
-          while (this.registry.count(innerSchema) < target) {
-            const i = this.registry.count(innerSchema); // index of the about-to-be-produced record
-            this.generateAndStorePrimary(innerSchema, mode.reg, {
-              overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
-            });
-          }
-
-          const all = this.registry.all(innerSchema);
-          // B43: D8 preserved — every returned record was first stored, so
-          // the slice is a read-only narrowing of an already-D8-consistent
-          // registry view.
-          primaryResult =
-            callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
-        }
-
-        // B52-R3 / B53: apply trailing `options.transform` on BOTH primary paths.
-        // Per-index `options.overrides` were already applied per-record inside
-        // `generateAndStorePrimary` (B53-R1) — the merge happened at field-level
-        // before `registry.store`, so D8 holds (stored = returned).
-        if (options?.transform) {
-          primaryResult = primaryResult.map(
-            options.transform as unknown as (value: unknown, index: number) => unknown,
-          );
-        }
-        return primaryResult;
-      }
-
-      // -------------------------------------------------------------------
-      // Ad-hoc: no registration — pure schema-based generation
-      // -------------------------------------------------------------------
+        break;
+      case "primary":
+        result = this.generateArrayPrimary(
+          innerSchema,
+          arraySchema,
+          mode.reg,
+          defMin,
+          defMax,
+          genPrng,
+          options,
+        );
+        break;
       case "ad-hoc":
+        result = this.generateArrayAdHoc(
+          innerSchema,
+          arraySchema,
+          defMin,
+          defMax,
+          genPrng,
+          options,
+        );
         break;
     }
 
+    return this.applyArrayTrailingPass(result, options);
+  }
+
+  /**
+   * Derived arm — one output per source record across all derived `mode.regs`.
+   *
+   * Preserved contracts:
+   *   - Auto-provisions sources via `generateAndStorePrimary` until pair count
+   *     reaches `minRequired` (B52-R1 framing).
+   *   - B52-R8 / D14: caps at `callerMax ?? defMax` BEFORE production so no
+   *     `generateDerivedRecord` runs and no record is stored past the cap
+   *     (preserves D8: `registry.count(Derived) === result.length`).
+   *   - B52-R4: applies per-index `options.overrides` via post-production
+   *     `deepMerge` — matching the existing semantics (the stored record is
+   *     the pre-merge value; returned record is post-merge).
+   *   - Returns the result PRE-transform; the dispatcher's shared trailing
+   *     pass applies `options.transform`.
+   */
+  private generateArrayDerived(
+    innerSchema: ZodTypeAny,
+    arraySchema: ZodTypeAny,
+    derivedRegs: SchemaReg[],
+    defMin: number,
+    defMax: number,
+    options: GenerateOptions<unknown[]> | undefined,
+  ): unknown[] {
+    const pairs = this.collectSourcePairs(derivedRegs);
+
+    // Auto-provision more sources if min constraint requires it
+    const minRequired = resolveMinRequired(arraySchema, defMin);
+    while (pairs.length < minRequired) {
+      const regIdx = pairs.length % derivedRegs.length;
+      const reg = derivedRegs[regIdx]!;
+      const fromSchema = reg.from!;
+      const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
+      const sourceIndex = this.registry.count(fromSchema);
+      const newSource = this.generateAndStorePrimary(fromSchema, fromReg);
+      pairs.push({ source: newSource, reg, sourceIndex });
+    }
+
+    // B52-R1 / B52-R8: cap at `callerMax ?? defMax` BEFORE production —
+    // never call `generateDerivedRecord` for pairs beyond the cap, never
+    // store records past the cap (D8: stored = returned). The floor
+    // (`minRequired`) wins when it exceeds the cap — mirror the primary
+    // arm's `Math.min(min, max), Math.max(min, max)` framing so an
+    // impossible `.min(6).max(3)` configuration collapses to a defined
+    // length rather than throwing.
+    const callerMax = readCallerMaxBound(arraySchema);
+    const upper = callerMax ?? defMax;
+    const cap = Math.max(minRequired, Math.min(upper, pairs.length));
+    const capped = pairs.slice(0, cap);
+
+    let result: unknown[] = capped.map(({ source, reg, sourceIndex }) => {
+      const record = this.generateDerivedRecord(innerSchema, reg, source, sourceIndex);
+      // D8 — every returned record is also stored, gated on
+      // `effectiveStore` so `{ store: false }` suppresses the write.
+      if (this.effectiveStore) {
+        this.registry.store(innerSchema, record as input<ZodTypeAny>);
+      }
+      return record;
+    });
+
+    // B52-R4: apply per-index overrides on derived path (mirror the ad-hoc
+    // arm's post-production `deepMerge`). Transform lives in the shared
+    // trailing pass.
+    if (options?.overrides) {
+      const overrides = options.overrides as unknown[];
+      result = result.map((item, i) => {
+        const ov = overrides[i];
+        return ov !== undefined ? deepMerge(item, ov as Record<string, unknown>) : item;
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Primary arm — generate N items, store each in the registry, return all.
+   *
+   * Preserved contracts:
+   *   - Target length is `max(existingCount, int(min, max))` so previously
+   *     populated records are respected.
+   *   - B43 / B52-R2 / D14: honours caller `.max()` / `.length()` on BOTH
+   *     store-on and store-off paths; does NOT slice on the library-side
+   *     `defMax` fallback.
+   *   - B44: under `store: false`, allocates `Array.from(length=callerMax-capped)`
+   *     directly (the while-loop would never terminate because
+   *     `registry.count` never advances).
+   *   - B53 / D8: per-index `options.overrides` are threaded into
+   *     `generateAndStorePrimary`, merging at field-level BEFORE
+   *     `registry.store` (stored == returned).
+   *   - Returns the result PRE-transform; the dispatcher's shared trailing
+   *     pass applies `options.transform`.
+   */
+  private generateArrayPrimary(
+    innerSchema: ZodTypeAny,
+    arraySchema: ZodTypeAny,
+    primaryReg: SchemaReg,
+    defMin: number,
+    defMax: number,
+    genPrng: ReturnType<typeof createPrng>,
+    options: GenerateOptions<unknown[]> | undefined,
+  ): unknown[] {
+    const existingCount = this.registry.count(innerSchema);
+
+    const minRequired = resolveMinRequired(arraySchema, defMin);
+    const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
+    const target = Math.max(
+      existingCount,
+      genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+    );
+
+    // B43 / B52-R2: honour caller-side `.max()` / `.length()` slice on
+    // BOTH store-on and store-off paths. Only slice when the caller
+    // actually wrote a bound — we MUST NOT slice on the library-side
+    // `defMax` fallback.
+    const callerMax = readCallerMaxBound(arraySchema);
+    const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
+
+    // B44: under store:false, the while-loop below would never terminate —
+    // generateAndStorePrimary skips the registry write (B10-R4 transitive
+    // suppression) so `registry.count(innerSchema)` never advances past
+    // `existingCount`. Generate directly via Array.from instead. The
+    // length already incorporates the B52-R2 callerMax cap so no work
+    // is allocated beyond what we will return (no while loop, B44 holds).
+    if (!this.effectiveStore) {
+      const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
+      return Array.from({ length: storeOffLength }, (_, i) =>
+        this.generateAndStorePrimary(innerSchema, primaryReg, {
+          overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
+        }),
+      );
+    }
+
+    while (this.registry.count(innerSchema) < target) {
+      const i = this.registry.count(innerSchema); // index of the about-to-be-produced record
+      this.generateAndStorePrimary(innerSchema, primaryReg, {
+        overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
+      });
+    }
+
+    const all = this.registry.all(innerSchema);
+    // B43: D8 preserved — every returned record was first stored, so
+    // the slice is a read-only narrowing of an already-D8-consistent
+    // registry view.
+    return callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
+  }
+
+  /**
+   * Ad-hoc arm — no registration; pure schema-based generation.
+   *
+   * Preserved contracts:
+   *   - B52-R7: shares `resolveMinRequired` / `resolveMaxAllowed` with the
+   *     other arms.
+   *   - Element PRNG forks via `genPrng.fork("[i]")` so element order doesn't
+   *     disturb other fields' seeds (D4 / D10).
+   *   - B52-R4: applies per-index `options.overrides` via `deepMerge`.
+   *   - Returns the result PRE-transform; the dispatcher's shared trailing
+   *     pass applies `options.transform`.
+   */
+  private generateArrayAdHoc(
+    innerSchema: ZodTypeAny,
+    arraySchema: ZodTypeAny,
+    defMin: number,
+    defMax: number,
+    genPrng: ReturnType<typeof createPrng>,
+    options: GenerateOptions<unknown[]> | undefined,
+  ): unknown[] {
     // B52-R7: share the bound-resolution helpers instead of inlining.
     const minN = resolveMinRequired(arraySchema, defMin);
     const maxN = resolveMaxAllowed(arraySchema, defMax);
     const N = genPrng.int(Math.min(minN, maxN), Math.max(minN, maxN));
 
-    let result = Array.from({ length: N }, (_, i) => {
+    let result: unknown[] = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);
       const nextPath = options?.fieldPath ? `${options.fieldPath}.[${i}]` : `[${i}]`;
       return this.generate(innerSchema, {
@@ -1297,18 +1387,62 @@ export class WorldImpl implements World {
     });
 
     if (options?.overrides) {
-      const overrides = options.overrides as any[];
+      const overrides = options.overrides as unknown[];
       result = result.map((item, i) => {
         const ov = overrides[i];
-        return ov !== undefined ? (deepMerge(item, ov) as any) : item;
+        return ov !== undefined
+          ? (deepMerge(item, ov as Record<string, unknown>) as unknown)
+          : item;
       });
     }
 
-    if (options?.transform) {
-      result = result.map(options.transform as any);
-    }
-
     return result;
+  }
+
+  /**
+   * D14 shared trailing pass for `generateArray`. The full D14 sequence is
+   * cap → per-index overrides → transform; the cap and per-index overrides
+   * are applied AT PRODUCTION TIME inside each per-mode method (required to
+   * preserve D8 for derived/primary, where the cap gates `registry.store`
+   * and overrides on the primary arm merge before store via
+   * `generateAndStorePrimary`). This shared method closes the sequence with
+   * `options.transform`, which is uniformly safe to apply post-production
+   * across all three arms.
+   */
+  private applyArrayTrailingPass(
+    result: unknown[],
+    options: GenerateOptions<unknown[]> | undefined,
+  ): unknown[] {
+    if (options?.transform) {
+      return result.map(options.transform as unknown as (value: unknown, index: number) => unknown);
+    }
+    return result;
+  }
+
+  /**
+   * Collect `(source, reg, sourceIndex)` triples across the given derived
+   * registrations by iterating each `reg.from`'s registry sources. When
+   * `captured` is provided and a `reg.from` registry is empty, falls back
+   * to the captured map (B20 local-capture for `store: false` derived
+   * auto-source). Shared between {@link generateArrayDerived} and
+   * {@link generateDerivedAutoSource}.
+   */
+  private collectSourcePairs(
+    derivedRegs: SchemaReg[],
+    captured?: Map<ZodTypeAny, unknown>,
+  ): SourcePair[] {
+    const pairs: SourcePair[] = [];
+    for (const reg of derivedRegs) {
+      const sources = this.registry.all(reg.from!);
+      if (sources.length > 0) {
+        for (let i = 0; i < sources.length; i++) {
+          pairs.push({ source: sources[i], reg, sourceIndex: i });
+        }
+      } else if (captured?.has(reg.from!)) {
+        pairs.push({ source: captured.get(reg.from!), reg, sourceIndex: 0 });
+      }
+    }
+    return pairs;
   }
 
   // -------------------------------------------------------------------------
@@ -1507,18 +1641,7 @@ export class WorldImpl implements World {
     // B20-R4: the non-empty path reads from the registry exactly as today;
     // the local capture is consulted only when the registry is still empty
     // after the auto-provision attempt (i.e. only under `store: false`).
-    type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
-    const pairs: SourcePair[] = [];
-    for (const reg of derivedRegs) {
-      const sources = this.registry.all(reg.from!);
-      if (sources.length > 0) {
-        for (let i = 0; i < sources.length; i++) {
-          pairs.push({ source: sources[i], reg, sourceIndex: i });
-        }
-      } else if (captured.has(reg.from!)) {
-        pairs.push({ source: captured.get(reg.from!), reg, sourceIndex: 0 });
-      }
-    }
+    const pairs = this.collectSourcePairs(derivedRegs, captured);
 
     const idx = (this.derivedPairCounter - 1) % pairs.length;
     const { source, reg, sourceIndex } = pairs[idx]!;
