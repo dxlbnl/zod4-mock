@@ -92,6 +92,33 @@ export function createPrng(seed: number): Prng {
       return items[Math.floor(rand() * items.length)];
     },
 
+    pickZipf(items, s) {
+      // Closed-form inverse-CDF Zipf draw — one `random()`, no rejection
+      // loop. See wiki/research/text-generation/locale-list-size-targets.md §3
+      // and the B55 spec for the formula. `Math.pow` / `Math.floor` /
+      // `Math.max` / `Math.min` only — D13 isomorphic. Routes through
+      // `prng.random()` (the public method) rather than the internal closure
+      // so wrappers that intercept `random()` observe the single draw
+      // (B55-R1 "single PRNG draw, no rejection loop" scenario).
+      const N = items.length;
+      const u = prng.random();
+      let raw: number;
+      if (s === 0) {
+        // Reproduces `pick`: floor(1 + u·N) − 1 ≡ floor(u·N) for u ∈ [0, 1).
+        raw = Math.floor(1 + u * N) - 1;
+      } else if (s === 1) {
+        // Classic Zipf: floor((N + 1)^u) − 1.
+        raw = Math.floor(Math.pow(N + 1, u)) - 1;
+      } else {
+        // General power law: floor([1 + u·((N+1)^(1−s) − 1)]^(1/(1−s))) − 1.
+        const oneMinusS = 1 - s;
+        const term = 1 + u * (Math.pow(N + 1, oneMinusS) - 1);
+        raw = Math.floor(Math.pow(term, 1 / oneMinusS)) - 1;
+      }
+      const i = Math.max(0, Math.min(raw, N - 1));
+      return items[i]!;
+    },
+
     shuffle(items) {
       const result = items.slice();
       // Fisher-Yates: walk from the end, swap each element with a random

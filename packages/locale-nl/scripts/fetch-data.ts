@@ -132,18 +132,28 @@ try {
   }
   if (!names) throw lastErr ?? new Error("all open-nl-data candidates failed");
 
-  const cleanList = (raw: string[]): string[] =>
-    [
-      ...new Set(
-        raw
-          .map((n) => n.trim())
-          .filter((n) => /^[A-Z][a-z]+$/.test(n))
-          .map((n) => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()),
-      ),
-    ].sort();
+  // B55-R5: sort descending by CBS `Mannen` / `Vrouwen` count instead of
+  // alphabetical (pre-B55 the trailing `.sort()` produced wrong Zipf draws
+  // — see B51 §3). Carry the count alongside the cleaned name so the final
+  // sort can pick descending-by-count.
+  const cleanList = (raw: Array<{ name: string; count: number }>): string[] => {
+    const seen = new Map<string, number>();
+    for (const { name, count } of raw) {
+      const trimmed = name.trim();
+      if (!/^[A-Z][a-z]+$/.test(trimmed)) continue;
+      const normalised = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      // First-occurrence count wins on duplicates after normalisation.
+      if (!seen.has(normalised)) seen.set(normalised, count);
+    }
+    return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  };
 
-  firstNamesMale = cleanList(names.filter((n) => n.Mannen > 100).map((n) => n.Voornaam));
-  firstNamesFemale = cleanList(names.filter((n) => n.Vrouwen > 100).map((n) => n.Voornaam));
+  firstNamesMale = cleanList(
+    names.filter((n) => n.Mannen > 100).map((n) => ({ name: n.Voornaam, count: n.Mannen })),
+  );
+  firstNamesFemale = cleanList(
+    names.filter((n) => n.Vrouwen > 100).map((n) => ({ name: n.Voornaam, count: n.Vrouwen })),
+  );
   if (firstNamesMale.length === 0 || firstNamesFemale.length === 0) {
     throw new Error("Dutch first-name source returned an empty list after filter");
   }

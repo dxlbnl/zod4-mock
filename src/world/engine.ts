@@ -498,6 +498,15 @@ export class WorldImpl implements World {
    */
   private effectiveLocale: LocaleData | undefined = undefined;
 
+  /**
+   * B55-R6 — per-call unique-mode flag, set when the caller passes
+   * `{ unique: true }` to `world.generate(...)`. Read by {@link makeFieldCtx}
+   * so the field-bound `ctx.prng.pickZipf` substitutes `s = 0` for the
+   * duration of the call (uniqueness wins over realism — per B51 Q-9).
+   * Push/pop in {@link withEffectiveUniqueMode} mirrors {@link withEffectiveLocale}.
+   */
+  private effectiveUniqueMode = false;
+
   constructor(private readonly options: WorldOptions = {}) {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
@@ -718,49 +727,51 @@ export class WorldImpl implements World {
     // an inherited `store: false` (used by `world.get` to force storage on its
     // create-path delegate call).
     return this.withEffectiveLocale(options?.locale, () =>
-      this.withEffectiveStore(options?.store, () => {
-        let current: ZodTypeAny = schema;
-        let d = def(current);
-        const outerWrappers: Array<"optional" | "nullable"> = [];
+      this.withEffectiveUniqueMode(options?.unique, () =>
+        this.withEffectiveStore(options?.store, () => {
+          let current: ZodTypeAny = schema;
+          let d = def(current);
+          const outerWrappers: Array<"optional" | "nullable"> = [];
 
-        while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
-          outerWrappers.push(d.type);
-          current = d.innerType;
+          while (d.innerType && (d.type === "optional" || d.type === "nullable")) {
+            outerWrappers.push(d.type);
+            current = d.innerType;
+            d = def(current);
+          }
+
+          current = resolveLazyChain(current, this.lazyCache);
           d = def(current);
-        }
 
-        current = resolveLazyChain(current, this.lazyCache);
-        d = def(current);
-
-        if (d.type === "array") {
-          if (outerWrappers.length > 0) {
-            // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
-            // outer `schema` reference (the `.optional()` wrapper) so the Nth
-            // call to the same `.optional()` schema reuses the same fork key
-            // regardless of intervening `generate(Y)` calls.
-            const { id, slot } = this.nextSchemaSlot(schema);
-            const prng = this.prng.fork(`wrap:${id}:${slot}`);
-            const optProb = this.options.optionalProbability ?? 0.2;
-            for (const wrapper of outerWrappers) {
-              if (prng.random() < optProb) {
-                // No counter mutation on skip — the per-schema slot was already
-                // advanced by `nextSchemaSlot` above (the next call gets slot+1).
-                return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+          if (d.type === "array") {
+            if (outerWrappers.length > 0) {
+              // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
+              // outer `schema` reference (the `.optional()` wrapper) so the Nth
+              // call to the same `.optional()` schema reuses the same fork key
+              // regardless of intervening `generate(Y)` calls.
+              const { id, slot } = this.nextSchemaSlot(schema);
+              const prng = this.prng.fork(`wrap:${id}:${slot}`);
+              const optProb = this.options.optionalProbability ?? 0.2;
+              for (const wrapper of outerWrappers) {
+                if (prng.random() < optProb) {
+                  // No counter mutation on skip — the per-schema slot was already
+                  // advanced by `nextSchemaSlot` above (the next call gets slot+1).
+                  return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+                }
               }
             }
+            return this.generateArray(
+              d.element!,
+              current,
+              options as GenerateOptions<unknown[]> | undefined,
+            ) as z.infer<TSchema>;
           }
-          return this.generateArray(
-            d.element!,
-            current,
-            options as GenerateOptions<unknown[]> | undefined,
-          ) as z.infer<TSchema>;
-        }
 
-        return this.generateSingleItem(
-          schema,
-          options as GenerateOptions<unknown>,
-        ) as z.infer<TSchema>;
-      }),
+          return this.generateSingleItem(
+            schema,
+            options as GenerateOptions<unknown>,
+          ) as z.infer<TSchema>;
+        }),
+      ),
     );
   }
 
@@ -910,6 +921,23 @@ export class WorldImpl implements World {
     }
   }
 
+  /**
+   * B55-R6 — push/pop {@link effectiveUniqueMode} for the duration of `fn`.
+   * Only `value === true` activates the mode (the default is false, and an
+   * explicit `false` is a no-op pass-through — matching B65's
+   * "undefined ⇒ inherit" pattern but specialised for the boolean opt-in).
+   */
+  private withEffectiveUniqueMode<R>(value: boolean | undefined, fn: () => R): R {
+    if (value !== true) return fn();
+    const previous = this.effectiveUniqueMode;
+    this.effectiveUniqueMode = true;
+    try {
+      return fn();
+    } finally {
+      this.effectiveUniqueMode = previous;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Private: generators binding
   // -------------------------------------------------------------------------
@@ -975,13 +1003,37 @@ export class WorldImpl implements World {
       this.resolveRelated<T>(reg, recordPrng, recordId, relName)) as GeneratorContext["related"];
     related.many = <T = unknown>(relName: string, count: number): T[] =>
       this.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
+    // B55-R6 — when the outer `generate` call passes `unique: true`,
+    // `effectiveUniqueMode` is true for the duration of the call. Wrap
+    // `fieldPrng` so its `pickZipf` substitutes `s = 0` regardless of the
+    // configured exponent (uniqueness wins over realism). All other methods
+    // delegate verbatim — no PRNG state semantics change. Wrapping at the
+    // field boundary covers both the direct `ctx.prng.pickZipf(...)` path
+    // and the `ctx.gen.*` namespace (whose generators receive this same
+    // wrapped prng through `bindGenerators`).
+    const exposedPrng: Prng = this.effectiveUniqueMode
+      ? {
+          get seed(): number {
+            return fieldPrng.seed;
+          },
+          random: () => fieldPrng.random(),
+          int: (min, max) => fieldPrng.int(min, max),
+          pick: ((items: readonly unknown[]) =>
+            fieldPrng.pick(items as readonly [unknown, ...unknown[]])) as Prng["pick"],
+          pickZipf: <T>(items: readonly T[], _s: number): T => fieldPrng.pickZipf(items, 0),
+          shuffle: (items) => fieldPrng.shuffle(items),
+          sample: (items, count) => fieldPrng.sample(items, count),
+          fork: (key) => fieldPrng.fork(key),
+          bytes: (n) => fieldPrng.bytes(n),
+        }
+      : fieldPrng;
     // B40: build the ctx first (with a placeholder `gen`), then replace `gen`
     // with a properly-bound proxy that captures THIS ctx as its `boundCtx`.
     // The Proxy adapter injects this ctx (carrying `locale`, `current`, etc.)
     // as the default `ctx?` arg for every locale-aware helper, so matcher
     // calls like `ctx.gen.word.noun()` honour the configured locale.
     const ctx: GeneratorContext = {
-      prng: fieldPrng,
+      prng: exposedPrng,
       gen: {} as BoundGenerators,
       source,
       registry: this.registry,
@@ -999,7 +1051,10 @@ export class WorldImpl implements World {
       // fall back to the world's `options.locale`, then `defaultLocale`.
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
     };
-    (ctx as { gen: BoundGenerators }).gen = this.bindGenerators(fieldPrng, ctx);
+    (ctx as { gen: BoundGenerators }).gen = this.bindGenerators(
+      exposedPrng as ReturnType<typeof createPrng>,
+      ctx,
+    );
     return ctx;
   }
 

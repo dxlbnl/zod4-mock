@@ -839,3 +839,15 @@ it records the reason here AND states it in chat.
 - Regression test: `tests/unit/B65-locale-threads-into-ctx-gen.test.ts` (1 test asserting `ctx.locale === en` inside a matcher after `world.generate(S, { locale: en })`).
 - `pnpm validate` green. Changeset `patch` on `zod4-mock`.
 - result: done — commit pending
+
+## 2026-06-02 — B55: Zipf-distributed pick + freq-sort retrofit + per-corpus map
+
+- manager: promoted inbox → doing, track: feature (flagged review). Filed by B51 close-out 2026-06-01; both blocking-Q decisions locked in card (Q-1 literature `s` defaults, Q-2 same-commit freq-sort retrofit).
+- manager: dispatch spec-writer
+- spec-writer: 11 R-IDs formalised (R1 pickZipf / R2 frequencyExponent* fields / R3 open-corpus call sites swap / R4 per-corpus s map / R5 freq-sort retrofit / R6 unique auto-flatten / R7 docs / R8 changeset / R9 snapshot / R10 no new public API / R11 no new D-number). 0 blocking opens. 0 tooling slips.
+- manager: spec-gate PASS; user approved at review checkpoint #2 ("looks ok").
+- test-writer: 6 it() blocks RED at typecheck (12 TS errors — missing pickZipf + missing LocaleData fields). 0 slips.
+- implementer: 5/6 green; flagged R1a's counter-side wrapper as structurally broken (delegating to base.pickZipf strands `this`; same B48 precedent). 0 slips. R6 wiring: effectiveUniqueMode flag + withEffectiveUniqueMode helper + makeFieldCtx ctx.prng wrap (mirrors B65). frequencyExponentOverrides type widened to `Readonly<Partial<Record<string, number>>>` per exactOptionalPropertyTypes constraint — accepted, surface identical for users.
+- test-writer (surgical fix): reimplemented R1a wrapper's pickZipf using closed-form formula (B48 pattern). 1070/1070 green. 0 slips.
+- reviewer: PASS — all 11 R-IDs verified at file:line; full suite 1157/1157 green; lint warnings pre-existing only; scope contained; no D-number; type-widening accepted (recommend non-blocking wiki-sync); changeset 6 terse bullets. 1 slip (one batched `head`).
+- result: done — commit pending

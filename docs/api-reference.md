@@ -790,6 +790,7 @@ interface Prng {
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
   pick<T>(items: readonly T[]): T | undefined;
+  pickZipf<T>(items: readonly T[], s: number): T;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
@@ -825,6 +826,20 @@ Two overloads, chosen by the input type:
   const kinds: string[] = Object.keys(KIND_MAP);
   const k = ctx.prng.pick(kinds); // k: string | undefined
   ```
+
+### `.pickZipf(items, s)`
+
+Zipf-distributed pick from a frequency-sorted array via a closed-form inverse-CDF draw — one `random()` call per pick, no rejection loop. `items` MUST be sorted descending by real frequency; `s` is the Zipf exponent (classic Zipf is `s = 1`, uniform is `s = 0`, anything between is a softer Zipf). The matcher author chooses `s`; for built-in open-corpus generators (`person.firstName`, `person.lastName`, …) the active locale's `frequencyExponent` / `frequencyExponentOverrides` fields resolve `s` automatically.
+
+```ts
+// Uniform — equivalent to prng.pick(items).
+ctx.prng.pickZipf(items, 0);
+
+// Classic Zipf — head dominates the tail.
+ctx.prng.pickZipf(items, 1);
+```
+
+Inside a `world.generate(..., { unique: true })` retry loop the engine auto-flattens `s` to `0` for the duration of the loop (uniqueness wins over realism). Empty `items` is undefined behaviour — callers MUST guard.
 
 ### `.shuffle(items)`
 
@@ -1074,6 +1089,18 @@ interface Currency {
 
 interface LocaleData {
   id: string;
+  /**
+   * Locale-level Zipf exponent applied at open-corpus `pickZipf` call sites
+   * when no per-corpus override is present (default `1.0` at the call site;
+   * undefined means uniform-by-omission for closed/enumerable lists).
+   */
+  frequencyExponent?: number;
+  /**
+   * Per-corpus Zipf exponent overrides (keyed by data-generator corpus name,
+   * e.g. `lastNames`, `firstNamesMale`). Wins over `frequencyExponent` for
+   * the matching corpus. Closed/enumerable corpora ignore this map.
+   */
+  frequencyExponentOverrides?: Readonly<Partial<Record<string, number>>>;
   person: {
     // Real wordlists sampled by `prng.pick`. Optional — locales may ship
     // none, some, or all three. When absent, `firstName` / `lastName` fall

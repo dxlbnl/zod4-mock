@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-01
 predecessor: B51
 report: wiki/research/text-generation/locale-list-size-targets.md
+spec: wiki/specs/B55-zipf-distributed-pick.md
 ---
 
 ## Description

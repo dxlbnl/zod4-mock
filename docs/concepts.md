@@ -217,6 +217,16 @@ const enGB = extend(en, {
 
 See the [API reference](api-reference.md#localization) for the full `LocaleData` interface.
 
+### Zipf-default picks on open corpora
+
+`zod4-mock`'s open-corpus pickers (e.g. `person.firstName`, `person.lastName`) draw from frequency-sorted locale arrays via `prng.pickZipf(items, s)` — a single closed-form inverse-CDF Zipf draw — rather than uniform `prng.pick(items)`. The exponent `s` is resolved per call site as `locale.frequencyExponentOverrides?.[corpus] ?? locale.frequencyExponent ?? 1.0`, so shipped locales bias the head of each list toward the real world's frequency curve: `"john"` shows up far more than `"aaden"`, mirroring SSA / Census distributions.
+
+This is a deliberate divergence from faker, whose default is uniform across each list. If you prefer faker-style uniform output, set `frequencyExponent: 0` (or override an individual corpus) on your locale.
+
+**Unique contexts auto-flatten to uniform.** When you request `world.generate(schema, { unique: true })`, the engine flattens `s` to `0` for every `pickZipf` call inside that loop — uniqueness wins over realism. The flag has no opt-out; matchers that need head-skewed picks inside a unique loop should call `ctx.prng.pickZipf(arr, s)` directly with an explicit `s`.
+
+Closed / enumerable corpora (states, months, weekdays, currencies, etc.) ignore the Zipf surface entirely and stay on `prng.pick`.
+
 ---
 
 ## Populate

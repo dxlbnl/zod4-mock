@@ -117,25 +117,34 @@ try {
     .slice(1)
     .filter((l) => l.trim().length > 0);
 
-  const males = new Set<string>();
-  const females = new Set<string>();
+  // B55-R5: track aggregate `percent` (SSA's frequency column, summed across
+  // years) per name+sex so we can sort descending by real frequency. The
+  // mirror columns are `year,name,percent,sex` (header skipped). Pre-B55 the
+  // tally was a `Set<string>` sorted alphabetically — that produced
+  // `firstNamesMale[0] === "aaden"` and broke Zipf-default realism (B51 §3).
+  const males = new Map<string, number>();
+  const females = new Map<string, number>();
   for (const line of lines) {
     const cols = line.split(",");
     if (cols.length < 4) continue;
     const rawName = cols[1]?.replace(/"/g, "").trim().toLowerCase() ?? "";
+    const rawPercent = Number(cols[2]?.replace(/"/g, "").trim() ?? "");
     const rawSex = cols[3]?.replace(/"/g, "").trim().toLowerCase() ?? "";
     if (!/^[a-z]+$/.test(rawName)) continue;
-    if (rawSex === "boy") males.add(rawName);
-    else if (rawSex === "girl") females.add(rawName);
+    const pct = Number.isFinite(rawPercent) ? rawPercent : 0;
+    if (rawSex === "boy") males.set(rawName, (males.get(rawName) ?? 0) + pct);
+    else if (rawSex === "girl") females.set(rawName, (females.get(rawName) ?? 0) + pct);
   }
 
   if (males.size === 0 || females.size === 0) {
     throw new Error(`SSA mirror returned 0 names (males=${males.size}, females=${females.size})`);
   }
-  firstNamesMale = [...males].sort();
-  firstNamesFemale = [...females].sort();
-  console.log(`  ✓ firstNamesMale (${firstNamesMale.length} names)`);
-  console.log(`  ✓ firstNamesFemale (${firstNamesFemale.length} names)`);
+  const sortByCountDesc = (m: Map<string, number>): string[] =>
+    [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  firstNamesMale = sortByCountDesc(males);
+  firstNamesFemale = sortByCountDesc(females);
+  console.log(`  ✓ firstNamesMale (${firstNamesMale.length} names, freq-descending)`);
+  console.log(`  ✓ firstNamesFemale (${firstNamesFemale.length} names, freq-descending)`);
 } catch (e) {
   console.error("  ✗ SSA names failed:", (e as Error).message);
   console.error("    Falling back to previously committed data.");

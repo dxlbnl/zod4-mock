@@ -6,6 +6,28 @@ const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 export const nl: LocaleData = {
   id: "nl",
 
+  // B55-R4 — Zipf-default `s` values per B51 report §2.3. Open-corpus
+  // data-generator call sites resolve `s` as
+  // `frequencyExponentOverrides[corpusName] ?? frequencyExponent ?? 1.0`;
+  // closed/enumerable lists ignore both (per R3 they stay on `prng.pick`).
+  frequencyExponent: 1.0,
+  frequencyExponentOverrides: {
+    lastNames: 0.7,
+    firstNamesMale: 0.9,
+    firstNamesFemale: 0.9,
+    // OpenTaal word lists ship alphabetical (no freq signal) — flatten to uniform.
+    nouns: 0,
+    adjectives: 0,
+    // Company buzz / catch-phrase lists are intentionally combinatorial; soft
+    // Zipf preserves variety per B51 §2.3.
+    buzzAdjectives: 0.5,
+    buzzNouns: 0.5,
+    buzzVerbLemmas: 0.5,
+    catchPhraseAdjectives: 0.5,
+    catchPhraseDescriptors: 0.5,
+    catchPhraseNouns: 0.5,
+  },
+
   person: {
     firstNamesMale,
     firstNamesFemale,

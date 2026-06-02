@@ -60,6 +60,26 @@ function makeCountingPrng(inner: Prng): { prng: Prng; count: () => number; reset
     pick<T>(items: readonly T[]): T | undefined {
       return items[Math.floor(prng.random() * items.length)];
     },
+    pickZipf<T>(items: readonly T[], s: number): T {
+      // Re-implement against `prng.random()` (the wrapper) so the counter
+      // observes the single draw — the inner implementation routes through
+      // its own closure-captured `prng.random()` (= `inner.random()`), which
+      // bypasses the wrapper. Closed-form formula mirrors `src/prng.ts`'s
+      // `pickZipf` (B55-R1).
+      const N = items.length;
+      const u = prng.random();
+      let raw: number;
+      if (s === 0) {
+        raw = Math.floor(1 + u * N) - 1;
+      } else if (s === 1) {
+        raw = Math.floor(Math.pow(N + 1, u)) - 1;
+      } else {
+        const oneMinusS = 1 - s;
+        const term = 1 + u * (Math.pow(N + 1, oneMinusS) - 1);
+        raw = Math.floor(Math.pow(term, 1 / oneMinusS)) - 1;
+      }
+      return items[Math.max(0, Math.min(raw, N - 1))]!;
+    },
     shuffle<T>(items: readonly T[]): T[] {
       return inner.shuffle(items);
     },

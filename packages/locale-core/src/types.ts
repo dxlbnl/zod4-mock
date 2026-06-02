@@ -11,6 +11,12 @@ export interface Prng {
   int(min: number, max: number): number;
   pick<T>(items: readonly [T, ...T[]]): T;
   pick<T>(items: readonly T[]): T | undefined;
+  /**
+   * Zipf-distributed pick from a freq-sorted array via a closed-form inverse-CDF
+   * draw — one `random()`, no rejection loop. `s = 0` reproduces `pick`; `s = 1`
+   * is classic Zipf. See B51 report §3 for the formula.
+   */
+  pickZipf<T>(items: readonly T[], s: number): T;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
@@ -44,6 +50,20 @@ export interface LocaleSentenceContext {
 
 export interface LocaleData {
   id: string;
+
+  /**
+   * Locale-level Zipf exponent applied at open-corpus `pickZipf` call sites
+   * when no per-corpus override is present. Resolved at the data-generator
+   * call site as `overrides[corpusName] ?? frequencyExponent ?? 1.0`, so
+   * locales authored without this field continue to behave unchanged.
+   */
+  frequencyExponent?: number;
+  /**
+   * Per-corpus Zipf exponent overrides (keyed by data-generator corpus name,
+   * e.g. `lastNames`, `firstNamesMale`). Wins over `frequencyExponent` for
+   * the matching corpus; closed/enumerable lists ignore this map entirely.
+   */
+  frequencyExponentOverrides?: Readonly<Partial<Record<string, number>>>;
 
   person: {
     /** Pool of male first names sampled uniformly by `prng.pick`. */

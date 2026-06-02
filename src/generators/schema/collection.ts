@@ -38,6 +38,7 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
     random: () => inner.random(),
     int: (min, max) => inner.int(min, max),
     pick: (items) => inner.pick(items),
+    pickZipf: (items, s) => inner.pickZipf(items, s),
     shuffle: (items) => inner.shuffle(items),
     sample: (items, count) => inner.sample(items, count),
     bytes: (n) => inner.bytes(n),
