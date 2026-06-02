@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-01
 predecessor: B54
 report: wiki/research/field-resolution/numeric-distributions.md
+spec: wiki/specs/B57-realistic-numeric-distributions-impl.md
 ---
 
 ## Description

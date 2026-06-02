@@ -376,3 +376,26 @@ const world = createWorld({ seed: 42, optionalProbability: 0 });
 // Pin a specific optional field in one generate call
 const user = world.generate(UserSchema, { overrides: { middleName: "Maria" } });
 ```
+
+---
+
+## Opt out of realistic numeric distributions
+
+Money / scale-free measurement keys default to **log-uniform** (Benford-conforming) and shaped keys (`age`, `year`, `quantity`, `count`) default to their real-world distributions. To replace any of these with a uniform draw (or any other custom distribution), register a per-key generator via `withGenerators`:
+
+```ts
+import { createWorld } from "zod4-mock";
+import { resolveNumberBounds } from "zod4-mock/internal"; // optional bounds helper
+
+const world = createWorld({ seed: 42 }).withGenerators({
+  // Force uniform `amount` (faker-style) instead of Benford-conforming log-uniform.
+  amount: (schema, ctx) => {
+    const { min, max } = resolveNumberBounds(schema, 1, 10000);
+    return parseFloat((ctx.prng.random() * (max - min) + min).toFixed(2));
+  },
+  // Force uniform-int `quantity` instead of truncated geometric.
+  quantity: (schema, ctx) => ctx.prng.int(1, 100),
+});
+```
+
+`withGenerators` overrides win over the built-in key heuristics — see the pipeline order in [concepts.md](concepts.md#the-generation-pipeline).

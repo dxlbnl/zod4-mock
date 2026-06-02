@@ -227,6 +227,16 @@ This is a deliberate divergence from faker, whose default is uniform across each
 
 Closed / enumerable corpora (states, months, weekdays, currencies, etc.) ignore the Zipf surface entirely and stay on `prng.pick`.
 
+### Realistic numeric distributions
+
+The same realism axis applies on the numeric side. Money keys (`amount`, `balance`, `total`, `revenue`, `cost`, `fee`, `salary`, `price`, …) draw **log-uniform** — `min * Math.pow(max / min, u)` — so leading-digit-1 values appear ~30% of the time (Benford's law), matching real-world ledgers instead of faker's flat uniform-over-range. Scale-free measurement keys (`fileSize`, `bytes`, `views`, `population`, `distance`) follow the same log-uniform default with `Math.round` for the integer routes. `age` is a clipped log-normal centred on μ = ln(36) (US Census median adult), `year` is an exponential skew toward the present (λ = 0.05), and `quantity` / `count` are truncated geometrics with `p = 0.5` (modal at the lower bound).
+
+Three semantic-meaningful keys stay bounded-uniform on a pinned default range: `rating` (`[0, 5]`), `score` and `percentage` (`[0, 100]`).
+
+**Un-keyed auto-flip on `z.number()`.** A plain (un-routed) numeric field auto-flips to log-uniform when **all four** of these hold: `min > 0`, `log10(max / min) ≥ 3` (≥ 3 orders of magnitude), `!schema.isInt`, and no `.multipleOf`. Anything else stays on today's uniform draw. The threshold (3 orders) is deliberately wide enough to catch obvious file-size / view-count cases without misfiring on probabilities (`.min(0.01).max(1)`) or sub-percent ranges.
+
+Cross-zero or non-positive ranges always fall back to uniform (the log-uniform formula is undefined for `min ≤ 0`) — `zod4-mock` does **not** silently shift your stated bounds with an epsilon. To opt out per-key, use `withGenerators` (see `docs/recipes.md`).
+
 ---
 
 ## Populate

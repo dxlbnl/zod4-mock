@@ -4,6 +4,30 @@ import { getLeafDef } from "../schema/zod-def.js";
 import { resolveNumberBounds, generateNumberWithBounds } from "../schema/number.js";
 import { resolveStringLength } from "../schema/string.js";
 import * as data from "./index.js";
+import { age as ageGen } from "./age.js";
+import { year as yearGen } from "./year.js";
+import { quantity as quantityGen, count as countGen } from "./discrete.js";
+
+/**
+ * Log-uniform integer draw on `[min, max]`. Falls back to uniform-int when
+ * the range crosses zero or `min ≤ 0`. Used by `fileSize` / `bytes` / `views`
+ * / `population` per B57-R1.
+ */
+function logUniformInt(prng: Prng, min: number, max: number): number {
+  if (min > 0) {
+    return Math.round(prng.logUniform(min, max));
+  }
+  return prng.int(Math.ceil(min), Math.floor(max));
+}
+
+/**
+ * Log-uniform continuous draw on `[min, max]`. Falls back to uniform when
+ * the range crosses zero or `min ≤ 0`. Used by `distance` per B57-R1.
+ */
+function logUniformFloat(prng: Prng, min: number, max: number): number {
+  if (min > 0) return prng.logUniform(min, max);
+  return prng.random() * (max - min) + min;
+}
 
 /**
  * Accumulates sentences until the result is at least `minLen` characters,
@@ -261,16 +285,86 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
     longitude: data.location.longitude as PrngGen,
     port: data.internet.port as PrngGen,
     quantity: (p, _ctx, schema) => {
-      return generateNumberWithBounds(p, resolveNumberBounds(schema, 1, 100));
+      const { min, max } = resolveNumberBounds(schema, 1, 100);
+      return quantityGen(p, min, max);
     },
     count: (p, _ctx, schema) => {
-      return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 50));
+      const { min, max } = resolveNumberBounds(schema, 0, 50);
+      return countGen(p, min, max);
     },
     age: (p, _ctx, schema) => {
-      return generateNumberWithBounds(p, resolveNumberBounds(schema, 18, 90));
+      const { min, max } = resolveNumberBounds(schema, 18, 80);
+      return ageGen(p, min, max);
     },
     year: (p, _ctx, schema) => {
-      return generateNumberWithBounds(p, resolveNumberBounds(schema, 1970, 2030));
+      const currentYear = new Date().getFullYear();
+      const { min, max } = resolveNumberBounds(schema, currentYear - 50, currentYear);
+      return yearGen(p, min, max);
+    },
+
+    // B57-R1: log-uniform money keys (Benford-conforming, 2-decimal).
+    balance: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 100000);
+      return data.finance.amount(p, min, max);
+    },
+    total: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 10000);
+      return data.finance.amount(p, min, max);
+    },
+    subtotal: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 10000);
+      return data.finance.amount(p, min, max);
+    },
+    revenue: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1000, 1e9);
+      return data.finance.amount(p, min, max);
+    },
+    cost: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 1000);
+      return data.finance.amount(p, min, max);
+    },
+    fee: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 1000);
+      return data.finance.amount(p, min, max);
+    },
+    salary: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 20000, 500000);
+      return data.finance.amount(p, min, max);
+    },
+
+    // B57-R1: log-uniform integer measurement keys (round after the draw).
+    filesize: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 100, 1e9);
+      return logUniformInt(p, min, max);
+    },
+    bytes: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 100, 1e9);
+      return logUniformInt(p, min, max);
+    },
+    views: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 1e7);
+      return logUniformInt(p, min, max);
+    },
+    population: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 1e7);
+      return logUniformInt(p, min, max);
+    },
+
+    // B57-R1: log-uniform continuous measurement key.
+    distance: (p, _ctx, schema) => {
+      const { min, max } = resolveNumberBounds(schema, 1, 10000);
+      return logUniformFloat(p, min, max);
+    },
+
+    // B57-R1: bounded-uniform shaped keys (semantic-meaningful default range).
+    rating: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 5));
+    },
+    score: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 100));
+    },
+    percentage: (p, _ctx, schema) => {
+      return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 100));
     },
   },
 };

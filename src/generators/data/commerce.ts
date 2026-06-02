@@ -42,7 +42,10 @@ export function productDescription(prng: Prng, ctx?: GeneratorContext): string {
 }
 
 export function price(prng: Prng, min = 1, max = 1000, ctx?: GeneratorContext): string {
-  const amount = prng.random() * (max - min) + min;
+  // B57-R3: log-uniform on `[min, max]` for `min > 0` (Benford-conforming);
+  // cross-zero / non-positive ranges fall back to the historic uniform draw.
+  // `formatPrice` composition is preserved unchanged.
+  const amount = min > 0 ? prng.logUniform(min, max) : prng.random() * (max - min) + min;
   return (ctx?.locale ?? defaultLocale).commerce.formatPrice(amount);
 }
 

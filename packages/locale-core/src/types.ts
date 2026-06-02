@@ -17,6 +17,20 @@ export interface Prng {
    * is classic Zipf. See B51 report §3 for the formula.
    */
   pickZipf<T>(items: readonly T[], s: number): T;
+  /**
+   * Closed-form log-uniform draw on `[min, max]` — one `random()`, no rejection.
+   * Formula: `min * Math.pow(max / min, u)` for `u = random()`. Caller MUST
+   * ensure `min > 0`; cross-zero handling lives in the per-key generators.
+   * See B54 research report §5 / B57 R8.
+   */
+  logUniform(min: number, max: number): number;
+  /**
+   * Truncated-geometric draw with parameter `p ∈ (0, 1)` — one `random()`, no
+   * rejection. Returns a non-negative integer offset from 0:
+   * `Math.floor(Math.log(1 - u) / Math.log(1 - p))`. Callers add `min` if
+   * desired. See B54 research report §3 / B57 R8.
+   */
+  geometric(p: number): number;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;

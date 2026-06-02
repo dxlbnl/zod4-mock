@@ -169,17 +169,27 @@ These fire when the field is a `z.string()` (or unwrapped to one) and the lowerc
 
 These fire when the field is a `z.number()` (or unwrapped to one).
 
-| Key         | Generator identifier | Description                                                      |
-| ----------- | -------------------- | ---------------------------------------------------------------- |
-| `amount`    | `inline:amount`      | Currency amount (respects `.min()`/`.max()`, default 1 – 10 000) |
-| `price`     | `inline:price`       | Price amount (respects `.min()`/`.max()`, default 1 – 500)       |
-| `latitude`  | `location.latitude`  | Latitude in degrees                                              |
-| `longitude` | `location.longitude` | Longitude in degrees                                             |
-| `port`      | `internet.port`      | TCP/UDP port number                                              |
-| `quantity`  | `inline:quantity`    | Integer in [1, 100]                                              |
-| `count`     | `inline:count`       | Integer in [0, 50]                                               |
-| `age`       | `inline:age`         | Integer in [18, 90]                                              |
-| `year`      | `inline:year`        | Integer in [1970, 2030]                                          |
+| Key                   | Distribution    | Generator identifier | Description                                                                                         |
+| --------------------- | --------------- | -------------------- | --------------------------------------------------------------------------------------------------- |
+| `amount`, `bedrag`    | log-uniform     | `inline:amount`      | Currency amount, Benford-conforming (`.min()`/`.max()`, default 1 – 10 000)                         |
+| `price`, `prijs`      | log-uniform     | `inline:price`       | Price amount, Benford-conforming (`.min()`/`.max()`, default 1 – 500)                               |
+| `balance`             | log-uniform     | `inline:balance`     | Money balance (default 1 – 100 000)                                                                 |
+| `total`, `subtotal`   | log-uniform     | `inline:total`       | Order total / subtotal (default 1 – 10 000)                                                         |
+| `revenue`             | log-uniform     | `inline:revenue`     | Revenue figure (default 1 000 – 1 × 10⁹)                                                            |
+| `cost`, `fee`         | log-uniform     | `inline:cost`        | Cost / fee amount (default 1 – 1 000)                                                               |
+| `salary`              | log-uniform     | `inline:salary`      | Annual salary (default 20 000 – 500 000)                                                            |
+| `fileSize`, `bytes`   | log-uniform-int | `inline:fileSize`    | Scale-free byte count (default 100 – 1 × 10⁹)                                                       |
+| `views`, `population` | log-uniform-int | `inline:views`       | Scale-free count (default 1 – 1 × 10⁷)                                                              |
+| `distance`            | log-uniform     | `inline:distance`    | Continuous distance (default 1 – 10 000)                                                            |
+| `rating`              | uniform         | `inline:rating`      | Bounded score on `[0, 5]`                                                                           |
+| `score`, `percentage` | uniform         | `inline:score`       | Bounded score on `[0, 100]`                                                                         |
+| `latitude`            | uniform         | `location.latitude`  | Latitude in degrees                                                                                 |
+| `longitude`           | uniform         | `location.longitude` | Longitude in degrees                                                                                |
+| `port`                | uniform         | `internet.port`      | TCP/UDP port number                                                                                 |
+| `quantity`            | geometric       | `inline:quantity`    | Truncated geometric (`p = 0.5`), modal at lower bound (default `[1, 100]`)                          |
+| `count`               | geometric       | `inline:count`       | Truncated geometric (`p = 0.5`), modal at lower bound; `min = 0` native (default `[0, 50]`)         |
+| `age`                 | log-normal      | `inline:age`         | Clipped log-normal centred on μ = ln(36), σ = 0.35 (default `[18, 80]`); tight bounds → uniform-int |
+| `year`                | exponential     | `inline:year`        | Exponential recent-skew (λ = 0.05); default `[currentYear - 50, currentYear]`; tight → uniform-int  |
 
 ---
 

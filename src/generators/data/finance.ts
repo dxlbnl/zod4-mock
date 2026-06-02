@@ -20,7 +20,18 @@ function pick<T>(prng: Prng, arr: readonly T[]): T {
 }
 
 export function amount(prng: Prng, min = 0, max = 1000): number {
-  return parseFloat((prng.random() * (max - min) + min).toFixed(2));
+  // B57-R2: log-uniform on `[min, max]` for `min > 0` (Benford-conforming);
+  // cross-zero / non-positive ranges fall back to the historic uniform draw.
+  // `Math.max(min, …)` clamp after `.toFixed(2)` defends against
+  // fractional-penny `min` (e.g. `.min(1.005)`).
+  let raw: number;
+  if (min > 0) {
+    raw = prng.logUniform(min, max);
+  } else {
+    raw = prng.random() * (max - min) + min;
+  }
+  const rounded = parseFloat(raw.toFixed(2));
+  return Math.max(min, rounded);
 }
 
 export function currencyCode(prng: Prng, ctx?: GeneratorContext): string {

@@ -92,6 +92,23 @@ export function createPrng(seed: number): Prng {
       return items[Math.floor(rand() * items.length)];
     },
 
+    logUniform(min, max) {
+      // Closed-form log-uniform inverse-CDF — one `random()`, no rejection.
+      // Caller is responsible for ensuring `min > 0`. Routes through the
+      // public `prng.random()` (mirroring `pickZipf`) so wrappers that
+      // intercept `random()` observe the single draw.
+      const u = prng.random();
+      return min * Math.pow(max / min, u);
+    },
+
+    geometric(p) {
+      // Closed-form truncated-geometric inverse-CDF — one `random()`, no
+      // rejection. Returns a non-negative integer offset from 0; callers add
+      // `min` if desired. Routes through the public `prng.random()`.
+      const u = prng.random();
+      return Math.floor(Math.log(1 - u) / Math.log(1 - p));
+    },
+
     pickZipf(items, s) {
       // Closed-form inverse-CDF Zipf draw — one `random()`, no rejection
       // loop. See wiki/research/text-generation/locale-list-size-targets.md §3

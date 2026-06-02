@@ -67,9 +67,17 @@ export function generateNumberWithBounds(
   const { min, max, isInt, multipleOf } = bounds;
 
   if (multipleOf !== undefined) {
-    const base = Math.ceil(min / multipleOf) * multipleOf;
-    const count = Math.floor((max - base) / multipleOf);
-    return base + prng.int(0, Math.max(0, count)) * multipleOf;
+    const lower = Math.ceil(min / multipleOf) * multipleOf;
+    const upper = Math.floor(max / multipleOf) * multipleOf;
+    // B57-R9: empty-window degenerate case — no multiple of `m` lies in
+    // `[min, max]`. Fall back to uniform-bounded (returns `min` for the
+    // single-point range case the spec calls out).
+    if (lower > upper) {
+      return min + prng.random() * (max - min);
+    }
+    const span = upper - lower;
+    const stepCount = Math.floor(span / multipleOf);
+    return lower + prng.int(0, stepCount) * multipleOf;
   }
 
   if (isInt) return prng.int(Math.ceil(min), Math.floor(max));
@@ -77,7 +85,23 @@ export function generateNumberWithBounds(
 }
 
 export function generateZodNumber(schema: ZodTypeAny, ctx: GeneratorContext): number {
-  return generateNumberWithBounds(ctx.prng, resolveNumberBounds(schema));
+  const bounds = resolveNumberBounds(schema);
+  const { min, max, isInt, multipleOf } = bounds;
+
+  // B57-R7: un-keyed auto-flip to log-uniform when `min > 0` AND
+  // `log10(max/min) ≥ 3` AND `!isInt` AND no `.multipleOf`. All four
+  // preconditions must hold; otherwise fall through to the uniform path.
+  if (!isInt && multipleOf === undefined && min > 0 && max > 0) {
+    if (Math.log10(max / min) >= 3) {
+      return ctx.prng.logUniform(min, max);
+    }
+  }
+
+  // B57-R9: round-after-the-draw on `.multipleOf` for the log-uniform path
+  // does not apply here (we just returned uniform when multipleOf was set).
+  // The auto-flip path above is gated on `multipleOf === undefined`, so
+  // there's no log-uniform-with-multipleOf collision in the un-keyed branch.
+  return generateNumberWithBounds(ctx.prng, bounds);
 }
 
 export function generateZodBigInt(schema: ZodTypeAny, ctx: GeneratorContext): bigint {

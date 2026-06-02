@@ -1021,6 +1021,8 @@ export class WorldImpl implements World {
           pick: ((items: readonly unknown[]) =>
             fieldPrng.pick(items as readonly [unknown, ...unknown[]])) as Prng["pick"],
           pickZipf: <T>(items: readonly T[], _s: number): T => fieldPrng.pickZipf(items, 0),
+          logUniform: (min, max) => fieldPrng.logUniform(min, max),
+          geometric: (p) => fieldPrng.geometric(p),
           shuffle: (items) => fieldPrng.shuffle(items),
           sample: (items, count) => fieldPrng.sample(items, count),
           fork: (key) => fieldPrng.fork(key),

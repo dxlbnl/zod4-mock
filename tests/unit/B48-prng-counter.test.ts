@@ -80,6 +80,18 @@ function makeCountingPrng(inner: Prng): { prng: Prng; count: () => number; reset
       }
       return items[Math.max(0, Math.min(raw, N - 1))]!;
     },
+    logUniform(min: number, max: number): number {
+      // Re-implement against the wrapper's `random()` so the counter
+      // observes the single draw (mirrors `pickZipf` re-implementation).
+      const u = prng.random();
+      return min * Math.pow(max / min, u);
+    },
+    geometric(p: number): number {
+      // Re-implement against the wrapper's `random()` so the counter
+      // observes the single draw.
+      const u = prng.random();
+      return Math.floor(Math.log(1 - u) / Math.log(1 - p));
+    },
     shuffle<T>(items: readonly T[]): T[] {
       return inner.shuffle(items);
     },

@@ -791,6 +791,8 @@ interface Prng {
   pick<T>(items: readonly [T, ...T[]]): T;
   pick<T>(items: readonly T[]): T | undefined;
   pickZipf<T>(items: readonly T[], s: number): T;
+  logUniform(min: number, max: number): number;
+  geometric(p: number): number;
   shuffle<T>(items: readonly T[]): T[];
   sample<T>(items: readonly T[], count: number): T[];
   fork(key: string): Prng;
@@ -840,6 +842,22 @@ ctx.prng.pickZipf(items, 1);
 ```
 
 Inside a `world.generate(..., { unique: true })` retry loop the engine auto-flattens `s` to `0` for the duration of the loop (uniqueness wins over realism). Empty `items` is undefined behaviour — callers MUST guard.
+
+### `.logUniform(min, max)`
+
+Closed-form log-uniform draw on `[min, max]` — one `random()` call, no rejection. Returns `min * Math.pow(max / min, u)` for `u = random()`. The caller MUST ensure `min > 0`; cross-zero / non-positive ranges are undefined behaviour (the helper doesn't silently branch into uniform — the per-key data generators that compose it own that fallback). Used internally by `finance.amount`, `commerce.price`, the un-keyed wide-bound auto-flip on `z.number()`, and the log-uniform money / measurement keys (`balance`, `total`, `revenue`, `fileSize`, `views`, …) registered in `DEFAULT_KEY_MAP.number`.
+
+```ts
+const usd = ctx.prng.logUniform(1, 10000); // Benford-conforming amount
+```
+
+### `.geometric(p)`
+
+Closed-form truncated-geometric draw with parameter `p ∈ (0, 1)` — one `random()` call, no rejection. Returns the non-negative integer `Math.floor(Math.log(1 - u) / Math.log(1 - p))` for `u = random()`; callers add `min` if desired. Used internally by the `quantity` and `count` key-map entries (`p = 0.5`, modal at the lower bound).
+
+```ts
+const cartQty = 1 + ctx.prng.geometric(0.5); // P(1) ≈ 50%
+```
 
 ### `.shuffle(items)`
 

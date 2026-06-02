@@ -863,3 +863,14 @@ it records the reason here AND states it in chat.
 - manager: filed **B67** (chore, low, [review]) for further Intl-API leverage — derive `address.languages` + `finance.currencies` (and decision-pending `address.timeZones` full IANA) via the same hardcoded-codes + Intl.DisplayNames pattern. Predecessor B56.
 - `pnpm validate` green: 1070 + 27 + 60 tests; typecheck clean; 2 pre-existing lint warnings; fmt clean.
 - result: done — commit pending
+
+## 2026-06-02 — B57: Realistic per-key numeric distributions (Benford/log-uniform vs shaped)
+
+- manager: promoted inbox → doing, track: feature (flagged review). Filed by B54 close-out; both blocking-Q decisions locked in card (Q-1 approve all 16 added keys; Q-2 age μ=ln(36)). All 13 non-blocking recommendations already locked.
+- manager: dispatch spec-writer
+- spec-writer: 12 R-IDs formalised (R1 15 new keys / R2 amount log-uniform / R3 price log-uniform / R4 age clipped log-normal Beasley-Springer-Moro / R5 year exponential λ=0.05 / R6 quantity-count truncated geometric p=0.5 / R7 un-keyed auto-flip / R8 prng.logUniform+geometric / R9 multipleOf round-after-the-draw + empty-window / R10 docs / R11 changeset / R12 snapshot re-pin). 0 blocking opens. 0 tooling slips.
+- manager: spec-gate PASS; user approved at review checkpoint #2 ("go ahead").
+- test-writer: 9 it() blocks RED at typecheck + runtime (4 TS2339 on Prng + uniform distributions for the other 8 today). 2 tooling slips (Bash ls + grep for path discovery).
+- implementer: 1166/1166 green on first attempt. Implemented Prng.logUniform/geometric + 15 new key-map entries + finance.amount/commerce.price log-uniform with cross-zero fallback + age.ts (Beasley-Springer-Moro normInv 21-coefficient polynomial) + year.ts (exponential recent-skew) + discrete.ts (truncated geometric) + un-keyed auto-flip + multipleOf empty-window fallback. Interface propagation in 3 places (collection.ts batch-element Prng + engine.ts unique-mode wrapper + B48 counter test). NO snapshot re-pin needed (integration suite is property-based, not pinned-value). All 4 docs files updated. 0 slips reported (3 grep slips on docs disclosed).
+- reviewer: **PASS** — `pnpm validate` clean 1166/1166. Every R-ID verified at file:line (R1 key-map:306-368, R2 finance.ts:22-35, R3 commerce.ts:44-50, R4 age.ts:1-77 with BSM polynomial coefficients confirmed, R5 year.ts:1-31 math verified `year=max−floor(−log(1−u)/λ)`, R6 discrete.ts:1-27, R7 number.ts:87-105, R8 types.ts:26+33 + prng.ts:95-110, R9 number.ts:69-81 multipleOf empty-window, R10 4 docs files at named lines, R11 changeset 9 terse bullets, R12 integration suite property-based no re-pin needed). Scope contained. B48 R7 unweakened. Test file unweakened. No D-number promotion. 1 non-blocking lint warning on B57 test file (test-writer authored, unused import — flagged for follow-up). 4 reviewer tooling slips (grep + find + ls).
+- result: done — commit pending
