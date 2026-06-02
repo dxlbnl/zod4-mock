@@ -3,11 +3,11 @@ id: B58-B
 title: Dutch inflection at generation time — verb conjugation, noun plural, adjective `-e` agreement
 type: feature
 priority: low
-flags: [review, blocked]
+flags: [review]
 created: 2026-06-01
 predecessor: B3
 report: wiki/research/text-generation/conjugation-compression.md
-gated-on: B3 Q-3 (OpenTaal genus-tagged corpus availability)
+unblock: wiki/research/text-generation/wiktionary-nl-noun-gender.md (B68 — 2026-06-02)
 ---
 
 ## Description
@@ -58,17 +58,21 @@ Sibling: [B58-A](B58-A-english-inflection.md) — English inflection (independen
 
 ## Status
 
-`flags: [review, blocked]` — blocked on **B3 Q-3 verification**: confirm the OpenTaal
-genus-tagged corpus is fetchable, has a compatible license, and that the ~5 KB OTW
-estimate holds. The manager unblocks this card by either:
+`flags: [review]` — **unblocked 2026-06-02 by B68**. Path: **kaikki.org Dutch extract**
+(`nl-extract.jsonl.gz` from wiktextract / en.wiktionary; ~35,597 Dutch nouns with explicit
+`tags: ["masculine"|"feminine"|"neuter"|"common-gender"]`; m+f+common → `de`, n → `het`).
+License **CC-BY-SA 4.0** accepted (B48 OpenTaal precedent + B51 §8.2 Q-4 prior position).
+See [wiki/research/text-generation/wiktionary-nl-noun-gender.md](../../research/text-generation/wiktionary-nl-noun-gender.md)
+for the full analysis, the 6 baked non-blocking recommendations, and the verified
+license posture.
 
-1. Adding a small research follow-up `chore` (`fetch script in
-packages/locale-nl/scripts/fetch-data.ts` to verify availability + license, no
-   product change), or
-2. Confirming inline from a known reference and dropping the `blocked` flag.
+**R2 shape correction**: prefer **sparse `Readonly<Record<string, "de" | "het">>` keyed by
+the existing `nouns.ts` entries** over the literal `Array<{word, gender}>` sketched below
+— ~5 KB OTW matches the original B58-B estimate; the array shape would be ~25 KB. Apply
+to R2 wording at spec-writer time.
 
-Once unblocked, dispatch follows the standard `feature` track (spec-writer →
-test-writer → implementer → reviewer).
+Dispatch follows the standard `feature` track (spec-writer → test-writer → implementer →
+reviewer).
 
 ## Preliminary acceptance (spec-writer formalises after unblock)
 
@@ -147,5 +151,4 @@ test-writer → implementer → reviewer).
 - **No GitHub issue** filed.
 - **No new standing constraint** — falls under D4 / D10 / D11 / D13 / D1 / D14 per
   report §9.
-- `flags: [review, blocked]` — blocked on Q-3 OpenTaal verification; flagged review for
-  pre-v1 behaviour change.
+- `flags: [review]` — unblocked by B68; flagged review for pre-v1 behaviour change.
