@@ -119,6 +119,14 @@ export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
 }
 
 /**
+ * English object-form pronouns. Used by `sentence()` Template 3's object slot
+ * (Template 2's subject slot stays on `loc.pronouns`). Inlined as a closed
+ * grammar-specific list — a `LocaleData.word.pronounsObject?` field would
+ * force every locale to populate it for zero downstream gain (per B66 spec).
+ */
+const OBJECT_PRONOUNS = ["him", "her", "it", "them", "us", "me"] as const;
+
+/**
  * Generates a grammatically structured sentence using the active locale.
  *
  * Delegates to `loc.formatSentence` when the active locale defines it
@@ -145,7 +153,10 @@ export function sentence(prng: Prng, ctx?: GeneratorContext): string {
   // output for top-level callers). Mid-sentence words stay lowercase; only
   // the leading template token gets `cap(...)` applied below.
   const art = (): string => locPick(prng, loc.articles);
+  // Subject-form pronouns from the locale; object-form pronouns inlined as
+  // a closed English-grammar-specific list (Template 3 uses object position).
   const pron = (): string => locPick(prng, loc.pronouns);
+  const pronObj = (): string => OBJECT_PRONOUNS[prng.int(0, OBJECT_PRONOUNS.length - 1)]!;
   const pre = (): string => locPick(prng, loc.prepositions);
   const vrb = (): string => locPick(prng, loc.verbs);
   const vrbp = (): string => locPick(prng, loc.verbsPlural);
@@ -158,8 +169,8 @@ export function sentence(prng: Prng, ctx?: GeneratorContext): string {
     () => `${cap(art())} ${adj()} ${n()} ${vrb()} ${pre()} ${art()} ${n()}.`,
     // [Pronoun] [Verb] [Article] [Adjective] [Noun]
     () => `${cap(pron())} ${vrb()} ${art()} ${adj()} ${n()}.`,
-    // [Preposition] [Article] [Noun] [Verb] [Pronoun] [Article] [Noun]
-    () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pron()} ${art()} ${n()}.`,
+    // [Preposition] [Article] [Noun] [Verb] [Pronoun-object] [Article] [Noun]
+    () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pronObj()} ${art()} ${n()}.`,
     // [Article] [Noun] [Verb] [Adjective] [Preposition] [Noun]
     () => `${cap(art())} ${n()} ${vrb()} ${adj()} ${pre()} ${n()}.`,
     // [Article] [Noun] [Conj] [Article] [Noun] [VerbPlural] [Preposition] [Article] [Noun]

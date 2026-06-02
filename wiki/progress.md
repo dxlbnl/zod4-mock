@@ -822,3 +822,13 @@ it records the reason here AND states it in chat.
 - `pnpm validate` green: 1061 lib + 27 + 60 playground tests, typecheck clean, lint 2 non-blocking warnings (pre-existing test-file `(o ?? {})` spread style), fmt clean.
 - manager: filed two follow-up bug cards surfaced by the playground demo: **B65** (`locale` doesn't thread into `ctx.gen.*` calls inside matchers — why locale-en's `formatSentence` doesn't fire from matchers despite `world.generate(S, { locale: en })`); **B66** (`sentence()` uses subject-form pronouns in object positions — "sees they" / "sees we"; affects fallback path + locale-en).
 - result: done — commit pending
+
+## 2026-06-02 — B66: BUG — `sentence()` uses subject-form pronouns in object positions
+
+- manager: closed inline per "fix it after [B64 commit]" direction.
+- Library fallback (`src/generators/data/word.ts`): added module-scope `OBJECT_PRONOUNS = ["him", "her", "it", "them", "us", "me"]`; Template 3 (`[Prep] [Art] [Noun] [Verb] [Pron-obj] [Art] [Noun].`) now uses `pronObj()` picking from this list; Template 2 (subject slot) stays on `loc.pronouns`.
+- locale-en `formatSentence`: same fix — inlined `pronounsObject` constant + `pronObj()` helper; Template 3 swapped from `pronAny()` to `pronObj()`; subject-form `pronAny`/`pronounsAny` removed (Template 2 already uses `pron3ps()` from the existing `PRONOUNS_3PS` constraint).
+- Decision: closed list inlined at each consumer per the B66 spec recommendation — no `LocaleData.word.pronounsObject?` field added (would force every locale to populate for zero downstream gain).
+- Regression test: `tests/unit/B66-sentence-object-pronouns.test.ts` (2 tests, 200 seeds each — defaultLocale fallback path + locale-en formatSentence; assert mid-sentence subject-only pronouns ["they", "we", "I"] never appear in object position).
+- `pnpm validate` green. Changeset `patch` on `zod4-mock` + `@zod4-mock/locale-en`.
+- result: done — commit pending

@@ -649,7 +649,10 @@ export const en: LocaleData = {
         "about",
       ] as const;
       const conjunctions = ["and", "or", "but", "because", "so", "yet"] as const;
-      const pronounsAny = ["he", "she", "they", "we", "I"] as const;
+      // English object-form pronouns for Template 3's object slot (after the verb).
+      // Subject pronouns (`pron3ps`) are inlined separately because Template 2
+      // forces 3ps-singular subject-verb agreement.
+      const pronounsObject = ["him", "her", "it", "them", "us", "me"] as const;
 
       const pickFrom = <T extends string>(arr: readonly T[]): T =>
         arr[Math.floor(prng.random() * arr.length)] as T;
@@ -657,7 +660,7 @@ export const en: LocaleData = {
       const art = (): string => pickFrom(articles);
       const pre = (): string => pickFrom(prepositions);
       const conj = (): string => pickFrom(conjunctions);
-      const pronAny = (): string => pickFrom(pronounsAny);
+      const pronObj = (): string => pickFrom(pronounsObject);
       const pron3ps = (): string => pickFrom(PRONOUNS_3PS);
       const vrb = (): string => inflect.conjugate(pickFrom(verbLemmas), "3ps");
       // `vrbp()` (plural-subject verb slot in Template 5) keeps the bare
@@ -676,8 +679,8 @@ export const en: LocaleData = {
         () => `${cap(art())} ${adj()} ${n()} ${vrb()} ${pre()} ${art()} ${npl()}.`,
         // [Pronoun-3ps] [Verb-3ps] [Article] [Adjective] [Noun-plural]
         () => `${cap(pron3ps())} ${vrb()} ${art()} ${adj()} ${npl()}.`,
-        // [Preposition] [Article] [Noun] [Verb-3ps] [Pronoun-any-obj] [Article] [Noun-plural]
-        () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pronAny()} ${art()} ${npl()}.`,
+        // [Preposition] [Article] [Noun] [Verb-3ps] [Pronoun-object] [Article] [Noun-plural]
+        () => `${cap(pre())} ${art()} ${n()} ${vrb()} ${pronObj()} ${art()} ${npl()}.`,
         // [Article] [Noun] [Verb-3ps] [Adjective] [Preposition] [Noun-plural]
         () => `${cap(art())} ${n()} ${vrb()} ${adj()} ${pre()} ${npl()}.`,
         // [Article] [Noun] [Conj] [Article] [Noun] [Verb-bare-plural] [Preposition] [Article] [Noun-plural]
