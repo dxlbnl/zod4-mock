@@ -997,3 +997,25 @@ it records the reason here AND states it in chat.
   - Rewrite `../../raw/...` link refs in `wiki/product/*` to
     `../research/reports/2026-05-13-gen-bench-*.md`.
   - `wiki/INDEX.md` gains `product/` row.
+
+## 2026-06-03 — Phase B kickoff
+
+- manager: maintainer reframed at work-plan checkpoint — instead of running
+  B69–B83 in isolation, scope the entire site rebuild as one research effort.
+  Three surfaces (docs, playground, comparison) on `@dxlbnl/ui` foundation.
+- manager: filed B84 (site architecture rebuild), marked B79 (DS scope) and
+  B80 (playground integration) as superseded/absorbed by B84.
+- manager: dispatching B84 + B83 as parallel researchers; B82 (Vercel deploy)
+  is an out-of-tree maintainer task running on the user's side.
+- researcher: B83 ecosystem survey returned (8 candidates surveyed; recommend
+  adding `zod-schema-faker` + `zocker` + CLI-only `zod-fixture`; drop `faker`
+  from browser tier; document `interface-forge` only). Self-disclosed 2
+  tooling slips.
+- manager: review checkpoint #2 — user answered Q1 (keep @anatine one cycle)
+  and Q2 (interface-forge document only, accept researcher recommendation).
+- reviewer: PASS for B83 — per-candidate facts verified via `pnpm view` + spot
+  WebFetch; runner-shape sketches plausible; one advisory finding
+  (`zod-schema-faker/v4` exports `setFaker`, not `install()`) to fix at runner
+  wiring time (B69/B70 implementer catches). No new D-number. Reviewer
+  tooling slip: 1 (ls — should have been Glob).
+- result: B83 done — commit pending.
