@@ -979,3 +979,21 @@ it records the reason here AND states it in chat.
     deploy, Zod-mock ecosystem survey).
   - `site/wiki/index.md`, `site/wiki/decisions.md`, `site/wiki/architecture.md`,
     and `site/wiki/product/*` deleted (folded into root wiki).
+- manager: C3 follow-up (user surfaced 3 gaps in the merge):
+  - Restore `wiki/product/{vision,audience,differentiators}.md` from import
+    commit `06e9d68` — the planner's fold-into-root-wiki decision was wrong;
+    product/ pages are homepage-targeted positioning with citations, root
+    `vision.md`/`requirements.md` are project-level. Both layers belong.
+  - Revert `wiki/vision.md` and `wiki/requirements.md` to pre-merge state
+    (`b3174c0`).
+  - Create `wiki/site/architecture.md` from gen-bench's `wiki/architecture.md`
+    Stack + Key libraries + Test setup + Project structure + Design system
+    sections (with `site/` path prefix; root architecture.md and decisions.md
+    govern library-wide rules).
+  - Move `site/docs/showcase-redesign.md` → `wiki/site/showcase-redesign.md`
+    (design note, not a routed doc).
+  - Update `wiki/product/vision.md` version note `0.2.3` → `0.10.0` and
+    point at B74 for bench-baseline refresh.
+  - Rewrite `../../raw/...` link refs in `wiki/product/*` to
+    `../research/reports/2026-05-13-gen-bench-*.md`.
+  - `wiki/INDEX.md` gains `product/` row.

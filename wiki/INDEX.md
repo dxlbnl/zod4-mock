@@ -26,6 +26,7 @@ Every agent reads this page first, before doing anything else.
 | [progress.md](progress.md)         | Append-only run journal — what the agents have done.                                                                                                   |
 | [specs/](specs/)                   | One spec page per feature/bug (`B<n>-<slug>.md`). Browse the directory; format in `specs/README.md`.                                                   |
 | [research/](research/overview.md)  | Research reports grouped by topic (`engine/`, `text-generation/`, `reports/`). Start at `research/overview.md`; live status in `research/tracking.md`. |
+| [product/](product/vision.md)      | Homepage-facing positioning: vision, differentiators, audience — sources the `/` route copy.                                                           |
 | [site/](site/)                     | Site (homepage / `/bench` / `/showcase` / `/docs`) design notes, benchmark methodology, roadmap, and historical backlog/log from the gen-bench merge.  |
 
 > **End-user documentation lives in `docs/`** (`docs/api-reference.md`,

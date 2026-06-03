@@ -1,6 +1,6 @@
-# gen-bench — zod4-mock showcase & benchmark
+# `@zod4-mock/site` — zod4-mock showcase & benchmark
 
-Benchmark and showcase site for [zod4-mock](https://github.com/dxlbnl/zod4-mock): schema-driven mock data generation for Zod v4 with relational consistency across entities.
+Homepage + benchmark + showcase site for [zod4-mock](https://github.com/dxlbnl/zod4-mock): schema-driven mock data generation for Zod v4 with relational consistency across entities. Lives as the `site/` workspace member; deploys to `gen-bench.vercel.app`.
 
 ```sh
 npm install zod4-mock
@@ -29,4 +29,4 @@ pnpm bench      # CLI performance benchmark → bench/results/latest.json
 
 ## Contributing
 
-This repo will eventually merge into the [zod4-mock](https://github.com/dxlbnl/zod4-mock) repo as the official site. For library bugs or feature requests, open an issue there.
+For library bugs or feature requests, open an issue on the [zod4-mock](https://github.com/dxlbnl/zod4-mock) repo. Site work is tracked in `wiki/backlog/inbox/B69-B83` and design notes live in `wiki/site/`.
