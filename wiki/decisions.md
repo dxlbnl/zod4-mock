@@ -536,3 +536,128 @@ read-only inspector.
   implemented in each locale package. `@zod4-mock/locale-core` itself MUST
   contain types only. (→ D15)"
 - **Supersedes**: none
+
+## D16: zod3 alias for benchmark parity within `site/`
+
+- **Date**: 2026-06-03
+- **By**: gen-bench merge (manager) — promoted from gen-bench `D-04`
+- **Historical-id**: D-04 (gen-bench)
+- **Context**: The benchmark suite under `site/bench/` and `site/src/lib/runners/`
+  compares zod4-mock against `@anatine/zod-mock`, which is Zod-v3-only. Both Zod
+  majors cannot coexist in one import graph under their canonical names, so the
+  gen-bench project pinned `zod3: npm:zod@^3.25.76` (an alias) as a separate
+  dependency entry. Production library/test code in this repo imports `zod` (v4);
+  only parity-only benchmark code reaches for `zod3`.
+- **Decision**: Within `site/`, code MAY import from `"zod3"` only when it serves
+  benchmark-parity purposes (driving `@anatine/zod-mock` against an equivalent
+  schema for measurement). Production schemas — anywhere in the repo, including
+  within `site/` — MUST import from `"zod"`. Outside `site/`, `"zod3"` MUST NOT
+  be imported at all.
+- **Consequences**: Bench runners can fairly compare same-schema-different-version
+  across libraries. Reviewer gains a standing check: a `"zod3"` import outside
+  `site/`, or in a non-bench code path within `site/`, is a rule violation.
+- **Rule added/changed**: "Within `site/`, code that imports from `\"zod3\"` MUST
+  be parity-only benchmark code; production schemas MUST import from `\"zod\"`.
+  Outside `site/`, `\"zod3\"` MUST NOT be imported. (→ D16)"
+- **Supersedes**: none
+
+## D17: Two-tier benchmark — CLI citable, browser qualitative
+
+- **Date**: 2026-06-03
+- **By**: gen-bench merge (manager) — promoted from gen-bench `D-07`
+- **Historical-id**: D-07 (gen-bench)
+- **Context**: gen-bench ships two benchmark harnesses: a CLI harness under
+  `site/bench/` (vitest, warmup=1000, runs=5000, forks pool) producing the
+  citable `latest.json` snapshot, and a browser harness on `/bench` (warmup=5,
+  runs=20) producing a qualitative "feels-like" reading the user can experience
+  live. The two answer different questions; mixing them breaks the honesty
+  contract.
+- **Decision**: All ops/sec figures in user-facing surfaces (README, `docs/`,
+  `site/` copy, social posts) MUST cite the CLI baseline
+  (`site/bench/results/latest.json`) with its `node` version and library
+  versions header. The browser benchmark MUST NOT be quoted as ops/sec —
+  it's a "click-and-feel" demonstration; surface relative shape (this lib
+  vs that lib in the current browser tab) not absolute numbers.
+- **Consequences**: Future copy must point at the CLI snapshot. Browser
+  benchmark UI can show relative bars and "X is faster" callouts but never
+  a number presented as authoritative throughput.
+- **Rule added/changed**: "Speed claims in any user-facing surface (README,
+  `docs/`, `site/`) MUST cite the CLI baseline
+  (`site/bench/results/latest.json`); browser benchmark numbers MUST NOT be
+  quoted as ops/sec. (→ D17)"
+- **Supersedes**: none
+
+## D18: mdsvex `playground` code-fence hydration pattern
+
+- **Date**: 2026-06-03
+- **By**: gen-bench merge (manager) — promoted from gen-bench `D-09`
+- **Historical-id**: D-09 (gen-bench)
+- **Context**: The docs site (mdsvex under `site/src/routes/docs/`) supports
+  inline interactive playground examples via a custom `playground` code fence.
+  CodeMirror cannot be SSR'd safely (it touches `window`/`document` at
+  construction). The mdsvex preprocessor base64-encodes the fence content
+  into a placeholder element; the client-side `SchemaPlayground` component
+  mounts CodeMirror after hydration, decodes the source, and runs it.
+- **Decision**: mdsvex `playground` code fences MUST be base64-encoded into
+  placeholder elements at preprocess time and hydrated client-side by the
+  `SchemaPlayground` component; SSR MUST NOT mount CodeMirror directly.
+  Any future inline interactive doc widget that touches `window`/`document`
+  follows the same encode-and-hydrate pattern.
+- **Consequences**: Doc pages render server-side without crashes; CodeMirror
+  initialization is deferred to the browser. Reviewer check: a docs route
+  rendering a CodeMirror-bearing component outside the encode/hydrate path
+  is a rule violation.
+- **Rule added/changed**: "mdsvex `playground` code fences MUST be
+  base64-encoded into placeholder elements and hydrated client-side; SSR
+  MUST NOT mount CodeMirror directly. (→ D18)"
+- **Supersedes**: none
+
+## D19: The site is the project homepage
+
+- **Date**: 2026-06-03
+- **By**: gen-bench merge (manager) — promoted from gen-bench `D-10`
+- **Historical-id**: D-10 (gen-bench)
+- **Context**: gen-bench was originally a standalone showcase + benchmark site
+  but was promoted on 2026-05-13 to be the zod4-mock homepage. Folding it
+  into this repo as `site/` makes the promotion structural. The `/` route's
+  primary audience is a first-time evaluator deciding whether to install.
+- **Decision**: The site's `/` route SHOULD present zod4-mock to first-time
+  evaluators: relational proof lead, install CTA above the fold, feature
+  matrix and benchmark summary deeper in the scroll. (SHOULD, not MUST, so
+  A/B experiments and layout iterations stay in scope without rule
+  violations.) The `gen-bench.vercel.app` URL is the production deploy of
+  this route.
+- **Consequences**: The `/` route is owned by zod4-mock's positioning, not
+  by gen-bench-as-product (which no longer exists separately). The
+  benchmark and showcase pages are supporting evidence; the homepage's job
+  is identification and install.
+- **Rule added/changed**: "The site's `/` route SHOULD present zod4-mock to
+  first-time evaluators (relational proof lead, install CTA above the
+  fold). (→ D19)"
+- **Supersedes**: none
+
+## D20: Honest framing for speed claims
+
+- **Date**: 2026-06-03
+- **By**: gen-bench merge (manager) — promoted from gen-bench `D-11`
+- **Historical-id**: D-11 (gen-bench)
+- **Context**: Per-call speed across the three benchmark libraries
+  (zod4-mock, `@anatine/zod-mock`, hand-coded `faker`) is tier-dependent:
+  zod4-mock beats `@anatine/zod-mock` on every measured tier; against
+  hand-coded faker, zod4-mock wins on the `simple` tier but loses on
+  `user` and `nested` (faker does the minimum work, zod4-mock does the
+  schema-derived work). Casually phrased "fastest" / "faster than the
+  alternatives" claims are dishonest.
+- **Decision**: Any copy referencing speed — README, `docs/`, `site/`
+  routes, marketing — MUST use the honest framing: cite the tier and the
+  source. Acceptable phrasings include "Faster than `@anatine/zod-mock`
+  by 2.7×–5.2× across measured tiers" and "Competitive with hand-coded
+  faker, with zero shape maintenance." Unacceptable: "fastest", "faster
+  than the alternatives", or any ops/sec figure without `latest.json` as
+  citation.
+- **Consequences**: Reviewer gains a standing check on any speed-related
+  copy. The reviewer rejects an unqualified superlative without citation.
+- **Rule added/changed**: "Copy referencing speed MUST use the honest
+  framing: cite tier + source; never use 'fastest' or 'faster than the
+  alternatives' without a citation. (→ D20)"
+- **Supersedes**: none

@@ -1,5 +1,46 @@
 # Requirements
 
+## Who this is for
+
+### Primary persona
+
+A TypeScript developer — backend, full-stack, or full-stack-ish frontend with API
+ownership — who:
+
+- Already uses **Zod v4** (or is migrating to it) for runtime validation.
+- Needs **mock data** for one of: test fixtures, seed data for dev/demo environments,
+  Storybook stories, playground content, load testing, or API stubbing.
+- Has hit one of these specific frictions: fixture factories drifted from schemas;
+  faker generators producing data that doesn't pass their own Zod validators; a
+  multi-entity demo whose cross-references don't resolve; tried `@anatine/zod-mock`
+  and discovered it doesn't support Zod v4.
+
+### Jobs to be done
+
+In declining frequency:
+
+1. **"Generate fixtures from my schemas so they stay in sync."** Solves the drift problem.
+2. **"Give me a realistic relational dataset for my demo / Storybook / load test."**
+   The differentiated job — relational consistency the wedge.
+3. **"Replace my hand-rolled faker generators because I already write Zod schemas."**
+   The migration job.
+
+### Anti-personas
+
+- **No schemas, just need random data.** Use `faker` directly.
+- **Locked on Zod v3 with no upgrade path.** Use `@anatine/zod-mock`.
+- **Need server-side mock APIs with full HTTP layer.** Use MSW or similar; zod4-mock
+  is a data layer, not a network layer.
+- **Need data that passes complex cross-field invariants.** zod4-mock can generate the
+  fields but won't satisfy arbitrary business rules. Pair it with a post-generation
+  fixer if needed.
+
+### Secondary persona — the comparison shopper
+
+Visitors comparing libraries for a team decision: they skim the feature matrix on the
+homepage, click `/bench` for ops/sec, read `/docs/comparison` for per-competitor
+framing, and check the npm version (pre-1.0 — handle honestly).
+
 ## Functional requirements
 
 - R1: `generate(schema)` produces a value matching a Zod v4 schema with zero

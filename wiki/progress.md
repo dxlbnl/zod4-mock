@@ -939,3 +939,43 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer
 - reviewer: **PASS** — verified de-woord 404 (correction load-bearing); per-access-path verdicts sound; license precedent (B48 OpenTaal BSD/GPL, B51 §8.2 Q-4 CC-BY-SA-3.0 acceptance) covers Q-2; bundle math (5K × ~11 B / sparse-record ≈ 5 KB OTW under B51 ~5× brotli ratio) reasonable; Q-1/Q-2 blocking classification correct; Q-3–Q-8 non-blocking with reasonable recs; no new D-number warranted; scope contained (report-only). Reviewer tooling slips: 3 (1 git, 2 curl — WebFetch unavailable). Residual unverified: kaikki URL resolution, Wikidata lexeme count, en.wiktionary subcategory counts — all falsifiable at B58-B fetch-script time via Q-4 coverage gate.
 - result: done — commit pending
+
+## 2026-06-03 — gen-bench → site/ merge
+
+- manager: imported `~/Projects/typescript/gen-bench` (`d6ee4be3` on branch
+  `claude/design-zod4-mock-benchmarks-WiA4l`) via `read-tree --prefix=site/`
+  as `@zod4-mock/site` workspace member. Pre-import: committed gen-bench's
+  uncommitted backlog drift (`d6ee4be`).
+- manager: 5-commit Phase A sequence:
+  - 6e16965: chore — green main (fmt sweep + drop brittle nl-cities membership check)
+  - cd44e60: C0 — site/ workspace placeholder
+  - 446faaa: C1 — `.npmrc` engine-strict + site:\* root script aliases
+  - 4da7bde / 06e9d68 / 55a6767 / 02b825e: C2 — placeholder removal,
+    read-tree import (129 files), workspace fixups
+    (rename `gen-bench` → `@zod4-mock/site`, `workspace:*` deps, drop
+    nested `.claude`/`.gitignore`/`.npmrc`/`.vscode`/`pnpm-lock.yaml`,
+    move `pnpm.overrides` to root, fmt sweep), gitignore tweak.
+- manager: C3 — wiki merge.
+  - `wiki/site/` populated from gen-bench `site/wiki/site/*` + the two
+    historical archives (`historical-backlog.md` from gen-bench's flat
+    `backlog.md`, `historical-log.md` from `log.md`).
+  - `wiki/research/reports/2026-05-13-gen-bench-*.md` populated from
+    gen-bench `site/raw/{product,site}/*.md` + `site/design.md`.
+  - `wiki/vision.md` expanded with three-claims framing, differentiators,
+    feature matrix, honest framing — folded from gen-bench
+    `product/vision.md` + `product/differentiators.md`.
+  - `wiki/requirements.md` prefixed with audience section (primary persona,
+    jobs to be done, anti-personas, comparison shopper) — folded from
+    gen-bench `product/audience.md`.
+  - `wiki/decisions.md` D16–D20 appended (promoted from gen-bench D-04 /
+    D-07 / D-09 / D-10 / D-11 with `historical-id:` traceability).
+  - `wiki/architecture.md` Rules section: five new lines for D16–D20.
+  - `wiki/site/decisions-archive.md` records six dropped gen-bench D-entries
+    (D-01 / D-02 / D-03 / D-05 / D-06 / D-08) and why.
+  - `wiki/INDEX.md` Pages table: new `site/` row.
+  - 15 new backlog cards in `wiki/backlog/inbox/`: B69–B79 promoted from
+    gen-bench open items (P2-_ / X-_ / DS / wiki-vision); B80–B83 new
+    restructure cards (playground integration, link-link sweep, Vercel
+    deploy, Zod-mock ecosystem survey).
+  - `site/wiki/index.md`, `site/wiki/decisions.md`, `site/wiki/architecture.md`,
+    and `site/wiki/product/*` deleted (folded into root wiki).
