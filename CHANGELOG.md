@@ -1,5 +1,11 @@
 # zod4-mock
 
+## Unreleased
+
+- Repo: `gen-bench` (SvelteKit showcase + benchmark site) merged in as `site/`
+  workspace member; D16–D20 promoted to standing rules. Site is `"private": true`,
+  no npm publish.
+
 ## 0.10.0
 
 ### Minor Changes

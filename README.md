@@ -165,6 +165,19 @@ Build custom locales by overriding individual sections with `extend()` — see t
 - [Key-Based Field Heuristics](docs/key-heuristics.md) — auto-generated values by field name
 - [Recipes](docs/recipes.md) — copy-pasteable patterns for common scenarios
 
+## Repository layout
+
+- `src/` — library core
+- `packages/locale-core`, `packages/locale-en`, `packages/locale-nl` — optional locale packages
+- `playground/` — vitest scratch surface for trying library APIs
+- `site/` — SvelteKit homepage (`/`, `/bench`, `/showcase`, `/table`, `/docs`),
+  deployed at `gen-bench.vercel.app`. Imported from the standalone `gen-bench`
+  repo on 2026-06-03. To deploy, the Vercel project needs **Root directory** set
+  to `site` and **Install command** `pnpm install --frozen-lockfile`; see
+  `wiki/backlog/inbox/B82-vercel-deploy-from-site-subdir.md`.
+- `docs/` — shipped user-facing reference (the URLs above)
+- `wiki/` — build-time spec / Vibin workflow source of truth
+
 ## License
 
 MIT
