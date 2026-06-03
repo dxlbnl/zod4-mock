@@ -58,7 +58,12 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build:all && changeset publish",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "site:dev": "pnpm --filter @zod4-mock/site dev",
+    "site:build": "pnpm --filter @zod4-mock/site build",
+    "site:bench": "pnpm --filter @zod4-mock/site bench",
+    "site:check": "pnpm --filter @zod4-mock/site check",
+    "site:storybook": "pnpm --filter @zod4-mock/site storybook"
   },
   "dependencies": {
     "@zod4-mock/locale-core": "workspace:*"
