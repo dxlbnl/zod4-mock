@@ -16,13 +16,13 @@ With faker you generate each entity independently, then manually wire foreign ke
 ```typescript
 const users = Array.from({ length: 10 }, () => ({
   id: faker.string.uuid(),
-  name: faker.person.fullName()
+  name: faker.person.fullName(),
 }));
 
 const orders = Array.from({ length: 20 }, () => ({
   id: faker.string.uuid(),
   // Manual pick — easy to forget, easy to drift
-  userId: users[Math.floor(Math.random() * users.length)].id
+  userId: users[Math.floor(Math.random() * users.length)].id,
 }));
 ```
 
@@ -32,8 +32,8 @@ Generate each entity array from its schema, then assign foreign keys in a second
 Every ID is a real UUID that actually exists in the dataset.
 
 ```typescript
-import { generate } from 'zod4-mock';
-import { userSchema, productSchema, reviewSchema } from './schemas/ecommerce';
+import { generate } from "zod4-mock";
+import { userSchema, productSchema, reviewSchema } from "./schemas/ecommerce";
 
 const users = Array.from({ length: 10 }, () => generate(userSchema));
 const products = Array.from({ length: 20 }, () => generate(productSchema));
@@ -42,7 +42,7 @@ const products = Array.from({ length: 20 }, () => generate(productSchema));
 const reviews = Array.from({ length: 30 }, () => ({
   ...generate(reviewSchema),
   userId: users[Math.floor(Math.random() * users.length)].id,
-  productId: products[Math.floor(Math.random() * products.length)].id
+  productId: products[Math.floor(Math.random() * products.length)].id,
 }));
 ```
 
@@ -57,7 +57,7 @@ const userSchema = z.object({
   name: z.string().min(2).max(60),
   email: z.string().email(),
   address: z.object({ street: z.string(), city: z.string(), country: z.string() }),
-  createdAt: z.date()
+  createdAt: z.date(),
 });
 
 // Product (references Category)
@@ -66,17 +66,17 @@ const productSchema = z.object({
   name: z.string(),
   categoryId: z.string().uuid(), // → Category.id
   price: z.number().min(0.01).max(9999.99),
-  rating: z.number().min(1).max(5)
+  rating: z.number().min(1).max(5),
 });
 
 // Review (references both User and Product)
 const reviewSchema = z.object({
   id: z.string().uuid(),
   productId: z.string().uuid(), // → Product.id
-  userId: z.string().uuid(),    // → User.id
+  userId: z.string().uuid(), // → User.id
   rating: z.number().min(1).max(5),
   body: z.string(),
-  createdAt: z.date()
+  createdAt: z.date(),
 });
 ```
 
@@ -87,12 +87,12 @@ z.object({
   user: z.object({
     id: z.string().uuid(),
     name: z.string(),
-    email: z.string().email()
+    email: z.string().email(),
   }),
   order: z.object({
     id: z.string().uuid(),
-    status: z.enum(['pending', 'shipped', 'delivered']),
-    total: z.number().min(0)
-  })
-})
+    status: z.enum(["pending", "shipped", "delivered"]),
+    total: z.number().min(0),
+  }),
+});
 ```

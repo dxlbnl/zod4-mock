@@ -14,6 +14,7 @@ Inventory of the issues surfaced during the 2026-05-13 review, grouped by catego
 **Storybook story type errors.** Calls to `args.onclick.mockClear()` (and `.oninput.mockClear()`, `.onchange.mockClear()`) treat the prop as a Vitest mock, but the prop is typed `() => void` on the underlying component. TypeScript rejects both `.mockClear()` access and the implicit optional-chaining concern.
 
 Affected:
+
 - `src/lib/components/Primitives/Button.stories.svelte:21`, `:36`
 - `src/lib/components/Primitives/Input.stories.svelte:18`
 - `src/lib/components/Primitives/SegmentedControl.stories.svelte:24`
@@ -26,7 +27,7 @@ Fix shape: cast the prop in the `play` body — `const mockFn = args.onclick as 
 
 ### #2 — `SchemaPlayground.buildExecutable` crashes on multi-line bare schema expressions
 
-`src/lib/components/Docs/SchemaPlayground.svelte:27-44`. The function splits user code into lines, regex-tests *the last line trimmed* for `^(?:const|let|var)\s+(\w+)\s*=`, and either returns the variable or wraps the last line as a return expression. For a multi-line `z.object({\n  …\n})`, the last line trimmed is `})` — fails the regex, then gets wrapped as `return (})` which is a syntax error.
+`src/lib/components/Docs/SchemaPlayground.svelte:27-44`. The function splits user code into lines, regex-tests _the last line trimmed_ for `^(?:const|let|var)\s+(\w+)\s*=`, and either returns the variable or wraps the last line as a return expression. For a multi-line `z.object({\n  …\n})`, the last line trimmed is `})` — fails the regex, then gets wrapped as `return (})` which is a syntax error.
 
 The playground works today only because `getting-started.md`'s example ends with `const user = generate(userSchema);`. The moment a user types a bare schema expression, the playground enters a permanent error state with no recovery path.
 
@@ -76,12 +77,12 @@ See [benchmark-methodology](benchmark-methodology.md) §"Honesty guardrails" and
 
 CLI (`bench/perf.test.ts`) and browser (`/bench`) measure different schemas with different configs:
 
-| | CLI | Browser |
-|---|---|---|
-| Schemas | `simple`, `user`, `nested` (inline) | `flat`, `nested`, `array` (from `src/lib/schemas/`) |
-| Warmup | 1000 | 5 |
-| Runs | 5000 | 20 |
-| Unit measured | Single record | Batch of N |
+|               | CLI                                 | Browser                                             |
+| ------------- | ----------------------------------- | --------------------------------------------------- |
+| Schemas       | `simple`, `user`, `nested` (inline) | `flat`, `nested`, `array` (from `src/lib/schemas/`) |
+| Warmup        | 1000                                | 5                                                   |
+| Runs          | 5000                                | 20                                                  |
+| Unit measured | Single record                       | Batch of N                                          |
 
 Two parallel sources of truth for the same library is a maintenance hazard. The browser numbers are also too noisy at the sample size used to be cite-able. See [benchmark-methodology](benchmark-methodology.md).
 
@@ -133,11 +134,11 @@ The project's purpose is measuring `zod4-mock`. A minor bump can move the number
 
 **[RESOLVED 2026-05-16]** Added `// eslint-disable-next-line no-unassigned-vars -- assigned by Svelte bind:this` to both files.
 
-## What's *not* an issue (worth recording)
+## What's _not_ an issue (worth recording)
 
 - `pnpm test:unit` is green (26/26 passing). The TDD discipline is intact.
 - Runes-only mode is enforced via `svelte.config.js` `compilerOptions.runes` — components don't accidentally fall back to Svelte 4 semantics.
-- The custom mdsvex `playground` code-fence pipeline works correctly for variable-declaration patterns (the case the docs actually use today). Issue #2 is about a *different* pattern (bare expression) that the docs don't yet rely on.
+- The custom mdsvex `playground` code-fence pipeline works correctly for variable-declaration patterns (the case the docs actually use today). Issue #2 is about a _different_ pattern (bare expression) that the docs don't yet rely on.
 - Token-driven CSS is consistent; light theme override is wired up via `html.light`.
 
 ## See Also

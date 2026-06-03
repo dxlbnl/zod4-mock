@@ -71,13 +71,8 @@ export function generateWorld(seed?: number): EcommerceWorld {
           });
         },
         total: (ctx) => {
-          const items = (
-            ctx.current as { items?: { qty: number; unitPrice: number }[] }
-          ).items;
-          return (
-            items?.reduce((sum, item) => sum + item.qty * item.unitPrice, 0) ??
-            0
-          );
+          const items = (ctx.current as { items?: { qty: number; unitPrice: number }[] }).items;
+          return items?.reduce((sum, item) => sum + item.qty * item.unitPrice, 0) ?? 0;
         },
       },
     });

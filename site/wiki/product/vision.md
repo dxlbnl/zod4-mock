@@ -41,13 +41,13 @@ Claims 2 and 3 are structural facts demonstrated on `/showcase` and verifiable f
 
 ## Honest framing of "fast"
 
-zod4-mock is *not* universally faster than hand-coded `faker`. On the same `latest.json` snapshot:
+zod4-mock is _not_ universally faster than hand-coded `faker`. On the same `latest.json` snapshot:
 
-| Tier | zod4-mock ops/s | faker ops/s | Winner |
-|---|---|---|---|
-| simple | 166 136 | 123 230 | zod4-mock |
-| user | 99 516 | 140 406 | faker |
-| nested | 28 333 | 56 871 | faker |
+| Tier   | zod4-mock ops/s | faker ops/s | Winner    |
+| ------ | --------------- | ----------- | --------- |
+| simple | 166 136         | 123 230     | zod4-mock |
+| user   | 99 516          | 140 406     | faker     |
+| nested | 28 333          | 56 871      | faker     |
 
 This is the right tradeoff: faker wins per-call because it does the minimum work — no schema parsing, no constraint checking, no relational bookkeeping. zod4-mock buys back the time it spends with three things faker can't give you: a schema-derived shape (you write `z.object({...})` once, not the generator), type-safe output (you don't `as User` anything), and relational consistency (`order.userId` resolves).
 

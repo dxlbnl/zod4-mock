@@ -12,17 +12,15 @@ The site runs two benchmark harnesses — a CLI (`bench/perf.test.ts`) and an in
 Defined in `src/lib/bench.ts`:
 
 ```ts
-export function measure(
-  fn: () => void,
-  { warmup = 5, runs = 20 } = {}
-): BenchResult {
+export function measure(fn: () => void, { warmup = 5, runs = 20 } = {}): BenchResult {
   const t0 = performance.now();
-  fn();                                     // (1) cold call
+  fn(); // (1) cold call
   const coldStart = performance.now() - t0;
 
-  for (let i = 0; i < warmup; i++) fn();    // (2) warmup
+  for (let i = 0; i < warmup; i++) fn(); // (2) warmup
   const times: number[] = [];
-  for (let i = 0; i < runs; i++) {          // (3) timed runs
+  for (let i = 0; i < runs; i++) {
+    // (3) timed runs
     const s = performance.now();
     fn();
     times.push(performance.now() - s);
@@ -33,7 +31,7 @@ export function measure(
     min: Math.min(...times),
     max: Math.max(...times),
     opsPerSec: 1000 / avg,
-    coldStart
+    coldStart,
   };
 }
 ```
@@ -61,16 +59,16 @@ This is the harness whose numbers we trust for claims. The snapshot at [Bench Re
 - Three libraries measured sequentially with `await new Promise((r) => setTimeout(r, 0))` between them (a single-tick yield — not nearly enough to let the browser repaint reliably under load).
 - Runs **on mount** (`onMount(() => run())`) and on every click of the Run button.
 
-The browser numbers are useful for *qualitative* comparison and feel ("zod4-mock's bar is taller than zod-mock's bar"). They are not useful for citation.
+The browser numbers are useful for _qualitative_ comparison and feel ("zod4-mock's bar is taller than zod-mock's bar"). They are not useful for citation.
 
 ## Schema divergence between harnesses
 
-| Harness | Schemas measured |
-|---|---|
+| Harness              | Schemas measured                                             |
+| -------------------- | ------------------------------------------------------------ |
 | CLI (`perf.test.ts`) | `simple`, `user`, `nested` — defined inline in the test file |
-| Browser (`/bench`) | `flat`, `nested`, `array` — imported from `src/lib/schemas/` |
+| Browser (`/bench`)   | `flat`, `nested`, `array` — imported from `src/lib/schemas/` |
 
-The names `nested` overlap but the *shapes* differ. The CLI's `nested` has uuid, email, address, optional billing, tags array, and a record. The browser's `nested` has only id/total/status/customer/address. These are not the same benchmark.
+The names `nested` overlap but the _shapes_ differ. The CLI's `nested` has uuid, email, address, optional billing, tags array, and a record. The browser's `nested` has only id/total/status/customer/address. These are not the same benchmark.
 
 ## Cold-start metric — what it actually measures, and why it misleads
 
@@ -90,17 +88,19 @@ Either rename it ("first-call latency", measured separately) or remove it from `
 
 From the 2026-05-13 CLI baseline ([Bench Results](../../raw/site/2026-05-13-bench-latest-results.md)):
 
-| Tier | zod4-mock ops/s | zod3-mock ops/s | faker ops/s | zod4 vs zod3 | zod4 vs faker |
-|---|---|---|---|---|---|
-| simple | 166 136 | 31 877 | 123 230 | **5.2× faster** | **1.35× faster** |
-| user | 99 516 | 19 945 | 140 406 | **5.0× faster** | 0.71× (slower) |
-| nested | ~28 333 | 10 339 | 56 871 | **2.7× faster** | 0.50× (slower) |
+| Tier   | zod4-mock ops/s | zod3-mock ops/s | faker ops/s | zod4 vs zod3    | zod4 vs faker    |
+| ------ | --------------- | --------------- | ----------- | --------------- | ---------------- |
+| simple | 166 136         | 31 877          | 123 230     | **5.2× faster** | **1.35× faster** |
+| user   | 99 516          | 19 945          | 140 406     | **5.0× faster** | 0.71× (slower)   |
+| nested | ~28 333         | 10 339          | 56 871      | **2.7× faster** | 0.50× (slower)   |
 
 **Safe claims:**
+
 - "Faster than `@anatine/zod-mock` by 2.7×–5.2× across tested schemas."
 - "Faster than hand-coded faker on simple schemas; competitive on realistic ones with zero shape maintenance."
 
 **Unsafe claims (don't use):**
+
 - "Faster than the alternatives." (Contradicted on user + nested by faker.)
 - "The fastest mock library." (Same.)
 - Anything quoting `coldStart` from `/bench` as a meaningful number.

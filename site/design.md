@@ -6,11 +6,11 @@
 [`zod4-mock`](https://github.com/dxlbnl/zod4-mock), comparing mock data
 generation across:
 
-| Library | Description |
-|---------|-------------|
-| `zod4-mock` | Schema-driven generation for Zod v4 *(subject)* |
-| `@faker-js/faker` | Pure, schema-less random data |
-| `zod-mock` | Schema-driven generation for Zod v3 (predecessor) |
+| Library           | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| `zod4-mock`       | Schema-driven generation for Zod v4 _(subject)_   |
+| `@faker-js/faker` | Pure, schema-less random data                     |
+| `zod-mock`        | Schema-driven generation for Zod v3 (predecessor) |
 
 This project is designed to eventually merge with the zod4-mock playground.
 All design and tooling decisions mirror that codebase.
@@ -25,19 +25,19 @@ All design and tooling decisions mirror that codebase.
 
 ## Tech Stack
 
-| Role | Choice |
-|------|--------|
-| Framework | SvelteKit 2 |
-| Language | TypeScript 6 (strict) |
-| UI | Svelte 5 (runes) |
-| Styling | CSS custom properties — no utility framework |
-| Charts | Chart.js + svelte-chartjs |
-| Syntax highlight | Shiki |
-| Component docs | Storybook 10 + `@storybook/addon-svelte-csf` |
-| Testing | Vitest 4 (unit + Storybook CSF component tests) |
-| Linting/fmt | oxlint + oxfmt |
-| Deployment | Vercel adapter |
-| Package manager | pnpm |
+| Role             | Choice                                          |
+| ---------------- | ----------------------------------------------- |
+| Framework        | SvelteKit 2                                     |
+| Language         | TypeScript 6 (strict)                           |
+| UI               | Svelte 5 (runes)                                |
+| Styling          | CSS custom properties — no utility framework    |
+| Charts           | Chart.js + svelte-chartjs                       |
+| Syntax highlight | Shiki                                           |
+| Component docs   | Storybook 10 + `@storybook/addon-svelte-csf`    |
+| Testing          | Vitest 4 (unit + Storybook CSF component tests) |
+| Linting/fmt      | oxlint + oxfmt                                  |
+| Deployment       | Vercel adapter                                  |
+| Package manager  | pnpm                                            |
 
 ---
 
@@ -57,32 +57,41 @@ zod4-mock playground for future merge compatibility.
 --text-muted: #8888a0;
 --border: #252533;
 --accent: #a78bfa;
---accent-soft: rgba(167,139,250,0.2);
+--accent-soft: rgba(167, 139, 250, 0.2);
 --success: #2dd4bf;
 --warning: #fbbf24;
 --danger: #f87171;
 
 /* Library identity colors (charts + legend) */
 --lib-zod4mock: #a78bfa;
---lib-zodmock:  #fbbf24;
---lib-faker:    #34d399;
+--lib-zodmock: #fbbf24;
+--lib-faker: #34d399;
 
 /* Spacing — 8px base */
---space-1: 4px;  --space-2: 8px;   --space-3: 12px;
---space-4: 16px; --space-5: 24px;  --space-6: 32px; --space-8: 48px;
+--space-1: 4px;
+--space-2: 8px;
+--space-3: 12px;
+--space-4: 16px;
+--space-5: 24px;
+--space-6: 32px;
+--space-8: 48px;
 
 /* Component heights */
---h-btn: 26px; --h-topbar: 40px; --h-input: 22px; --h-row: 28px;
+--h-btn: 26px;
+--h-topbar: 40px;
+--h-input: 22px;
+--h-row: 28px;
 
 /* Typography */
---font-sans: 'Inter', system-ui, sans-serif;
---font-mono: 'JetBrains Mono', monospace;
+--font-sans: "Inter", system-ui, sans-serif;
+--font-mono: "JetBrains Mono", monospace;
 
 /* Motion */
---t-quick: 120ms; --t-normal: 150ms;
+--t-quick: 120ms;
+--t-normal: 150ms;
 
 /* Shadows */
---shadow-popover: 0 8px 32px rgba(0,0,0,0.5);
+--shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.5);
 ```
 
 Light theme via `html.light { ... }`.
@@ -97,6 +106,7 @@ Global resets, 7-level type scale (`.t-large` → `.t-micro`), `.btn` variants
 ## Storybook
 
 `.storybook/` mirrors playground setup:
+
 - **`main.ts`** — `@storybook/sveltekit`, addons: svelte-csf, vitest, a11y, docs, themes
 - **`theme.ts`** — dark base, `#0a0a0f` bg, `#a78bfa` accent, Inter + JetBrains Mono
 - **`preview.ts`** — dark/light bg presets, className theme switcher, sort:
@@ -110,10 +120,10 @@ Every component in `src/lib/components/**` gets a `.stories.svelte` sibling.
 
 TDD: write test first, implement second.
 
-| Layer | Tool | Pattern |
-|-------|------|---------|
-| Unit — stores, runners, harness | Vitest | `*.test.ts` next to source |
-| Component | Storybook + `@storybook/addon-vitest` | `*.stories.svelte` |
+| Layer                           | Tool                                  | Pattern                    |
+| ------------------------------- | ------------------------------------- | -------------------------- |
+| Unit — stores, runners, harness | Vitest                                | `*.test.ts` next to source |
+| Component                       | Storybook + `@storybook/addon-vitest` | `*.stories.svelte`         |
 
 ---
 
@@ -124,6 +134,7 @@ TDD: write test first, implement second.
 Feature matrix across libraries, headline stats, nav CTAs.
 
 **Components:**
+
 - `FeatureMatrix` — library × feature grid, cells show ✓ / ✗ / partial
 - `SummaryCard` — single headline stat (e.g. "3.2× faster")
 - `Button` — nav CTAs
@@ -133,11 +144,13 @@ Feature matrix across libraries, headline stats, nav CTAs.
 All timing in the browser (`performance.now`). Warm path separated from cold start.
 
 **Controls (top bar):**
+
 - `SegmentedControl` — schema: Flat | Nested | Array
 - `RangeSlider` — N records, log scale 10 → 10 000, labeled stops
 - `Button` — Run
 
 **Results:**
+
 - `BenchChart` — horizontal grouped bar chart: warm ops/sec, then cold-start row
 - `WinnerCallout` — auto-computed ratio, shown after run
 - `LibraryLegend` — color dot + library name × 3
@@ -145,11 +158,11 @@ All timing in the browser (`performance.now`). Warm path separated from cold sta
 
 **Schema scenarios:**
 
-| Label | Shape |
-|-------|-------|
-| Flat | 10 primitives: string, number, boolean, date, enum, email |
-| Nested | 3-level: order → customer → address |
-| Array | Schema returning `Variant[]` of 50 items |
+| Label  | Shape                                                     |
+| ------ | --------------------------------------------------------- |
+| Flat   | 10 primitives: string, number, boolean, date, enum, email |
+| Nested | 3-level: order → customer → address                       |
+| Array  | Schema returning `Variant[]` of 50 items                  |
 
 zod-mock uses equivalent Zod v3 schemas.
 Relational scenario: zod4-mock only (others show N/A).
@@ -169,6 +182,7 @@ OrderItem   { orderId, productId → Product, variantId → Variant, qty, price 
 ```
 
 **Components:**
+
 - `CodePanel` — tabbed Shiki code viewer, one tab per entity
 - `JsonTree` — collapsible JSON, cross-entity IDs highlighted in accent color
 - `Button` — Regenerate
@@ -185,6 +199,7 @@ will slow down. That's the point.
 **Row counts:** 100 / 500 / 1k / 5k
 
 **Components:**
+
 - `SegmentedControl` — row count selector
 - `TimingBadge` — one for generation time, one for render time
 - `Input` — text filter (client-side, filters visible rows)
@@ -261,10 +276,7 @@ export interface BenchResult {
   coldStart: number;
 }
 
-export function measure(
-  fn: () => void,
-  { warmup = 5, runs = 20 } = {}
-): BenchResult {
+export function measure(fn: () => void, { warmup = 5, runs = 20 } = {}): BenchResult {
   const t0 = performance.now();
   fn();
   const coldStart = performance.now() - t0;
@@ -276,8 +288,13 @@ export function measure(
     times.push(performance.now() - s);
   }
   const avg = times.reduce((a, b) => a + b) / times.length;
-  return { avg, min: Math.min(...times), max: Math.max(...times),
-           opsPerSec: 1000 / avg, coldStart };
+  return {
+    avg,
+    min: Math.min(...times),
+    max: Math.max(...times),
+    opsPerSec: 1000 / avg,
+    coldStart,
+  };
 }
 ```
 

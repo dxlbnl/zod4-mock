@@ -22,18 +22,12 @@ describe("generateWorld shape", () => {
   });
 
   it("every entity passes its schema", () => {
-    for (const u of world.users)
-      expect(userSchema.safeParse(u).success).toBe(true);
-    for (const c of world.categories)
-      expect(categorySchema.safeParse(c).success).toBe(true);
-    for (const p of world.products)
-      expect(productSchema.safeParse(p).success).toBe(true);
-    for (const v of world.variants)
-      expect(variantSchema.safeParse(v).success).toBe(true);
-    for (const r of world.reviews)
-      expect(reviewSchema.safeParse(r).success).toBe(true);
-    for (const o of world.orders)
-      expect(orderSchema.safeParse(o).success).toBe(true);
+    for (const u of world.users) expect(userSchema.safeParse(u).success).toBe(true);
+    for (const c of world.categories) expect(categorySchema.safeParse(c).success).toBe(true);
+    for (const p of world.products) expect(productSchema.safeParse(p).success).toBe(true);
+    for (const v of world.variants) expect(variantSchema.safeParse(v).success).toBe(true);
+    for (const r of world.reviews) expect(reviewSchema.safeParse(r).success).toBe(true);
+    for (const o of world.orders) expect(orderSchema.safeParse(o).success).toBe(true);
   });
 });
 
@@ -72,19 +66,13 @@ describe("generateWorld relations", () => {
 
   it("review.userId → a real user", () => {
     for (const r of world.reviews) {
-      expect(
-        userIds.has(r.userId),
-        `review ${r.id} has unknown userId ${r.userId}`,
-      ).toBe(true);
+      expect(userIds.has(r.userId), `review ${r.id} has unknown userId ${r.userId}`).toBe(true);
     }
   });
 
   it("order.userId → a real user", () => {
     for (const o of world.orders) {
-      expect(
-        userIds.has(o.userId),
-        `order ${o.id} has unknown userId ${o.userId}`,
-      ).toBe(true);
+      expect(userIds.has(o.userId), `order ${o.id} has unknown userId ${o.userId}`).toBe(true);
     }
   });
 
@@ -123,10 +111,7 @@ describe("generateWorld relations", () => {
 
   it("order.total matches sum of items", () => {
     for (const o of world.orders) {
-      const expected = o.items.reduce(
-        (sum, item) => sum + item.qty * item.unitPrice,
-        0,
-      );
+      const expected = o.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
       expect(o.total).toBeCloseTo(expected, 5);
     }
   });

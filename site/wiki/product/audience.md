@@ -41,7 +41,7 @@ In order of priority for a first-time visitor:
 
 The P1 pass (2026-05-16) restructured `/` to deliver this funnel: Install CTA above the fold, inline relational exhibit in the primary scroll path, feature matrix below.
 
-## Anti-personas (who should *not* use zod4-mock, and what to use instead)
+## Anti-personas (who should _not_ use zod4-mock, and what to use instead)
 
 - **No schemas, just need random data.** Use `faker` directly. zod4-mock has nothing to offer without a schema.
 - **Locked on Zod v3 with no upgrade path.** Use `@anatine/zod-mock`. zod4-mock doesn't support v3.

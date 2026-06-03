@@ -16,31 +16,31 @@ Config:     warmup=1000  runs=5000
 
 ## Simple schema
 
-| Library | avg (ms) | min (ms) | ops/sec | cold start (ms) |
-|---|---|---|---|---|
-| faker        | 0.0081 | 0.0036 | 123 230 | 0.64 |
-| zod3-mock    | 0.0314 | 0.0248 |  31 877 | 1.16 |
-| **zod4-mock** | **0.0060** | **0.0035** | **166 136** | 1.05 |
+| Library       | avg (ms)   | min (ms)   | ops/sec     | cold start (ms) |
+| ------------- | ---------- | ---------- | ----------- | --------------- |
+| faker         | 0.0081     | 0.0036     | 123 230     | 0.64            |
+| zod3-mock     | 0.0314     | 0.0248     | 31 877      | 1.16            |
+| **zod4-mock** | **0.0060** | **0.0035** | **166 136** | 1.05            |
 
 `zod4-mock` is the fastest on the simple tier — ~5.2× zod3-mock and ~1.35× faker.
 
 ## User schema (realistic fields: uuid, email, enum, optional)
 
-| Library | avg (ms) | min (ms) | ops/sec | cold start (ms) |
-|---|---|---|---|---|
-| **faker**       | **0.0071** | **0.0042** | **140 406** | 0.47 |
-| zod3-mock    | 0.0501 | 0.0366 |  19 945 | 0.65 |
-| zod4-mock    | 0.0100 | 0.0057 |  99 516 | 0.39 |
+| Library   | avg (ms)   | min (ms)   | ops/sec     | cold start (ms) |
+| --------- | ---------- | ---------- | ----------- | --------------- |
+| **faker** | **0.0071** | **0.0042** | **140 406** | 0.47            |
+| zod3-mock | 0.0501     | 0.0366     | 19 945      | 0.65            |
+| zod4-mock | 0.0100     | 0.0057     | 99 516      | 0.39            |
 
 `zod4-mock` is ~5.0× zod3-mock but ~0.71× of faker. Faker is faster per call.
 
 ## Nested schema (uuid + email + nested object + optional + array + record)
 
-| Library | avg (ms) | min (ms) | ops/sec | cold start (ms) |
-|---|---|---|---|---|
-| **faker**       | **0.0176** | **0.0113** | **56 871** | 0.49 |
-| zod3-mock    | 0.0967 | 0.0671 |  10 339 | 0.57 |
-| zod4-mock    | 0.0353 | 0.0169 | ~28 333 | (truncated) |
+| Library   | avg (ms)   | min (ms)   | ops/sec    | cold start (ms) |
+| --------- | ---------- | ---------- | ---------- | --------------- |
+| **faker** | **0.0176** | **0.0113** | **56 871** | 0.49            |
+| zod3-mock | 0.0967     | 0.0671     | 10 339     | 0.57            |
+| zod4-mock | 0.0353     | 0.0169     | ~28 333    | (truncated)     |
 
 `zod4-mock` is ~2.7× zod3-mock but ~0.50× of faker.
 

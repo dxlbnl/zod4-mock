@@ -1,2 +1,2 @@
-export { measure } from './bench';
-export type { BenchResult } from './bench';
+export { measure } from "./bench";
+export type { BenchResult } from "./bench";

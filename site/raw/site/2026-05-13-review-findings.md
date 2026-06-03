@@ -22,7 +22,7 @@ Original synthesis produced during an analysis session. Captured here as raw evi
 
 2. **`SchemaPlayground.buildExecutable` crashes on multi-line bare schema expressions.** At `src/lib/components/Docs/SchemaPlayground.svelte:27-44`, the function:
    - splits the user code into lines,
-   - regex-tests the *last line trimmed* for `^(?:const|let|var)\s+(\w+)\s*=`,
+   - regex-tests the _last line trimmed_ for `^(?:const|let|var)\s+(\w+)\s*=`,
    - if it matches → returns the variable,
    - otherwise → treats the last line as a return expression and wraps it in `return (...)`.
 
@@ -42,9 +42,10 @@ Original synthesis produced during an analysis session. Captured here as raw evi
 ### Honesty / messaging
 
 5. **Homepage overclaims.** `src/routes/+page.svelte:21-22` hero copy:
+
    > "**zod4-mock** generates type-safe mock data from your Zod schemas — faster than the alternatives, with relational consistency across entities."
 
-   But `bench/results/latest.json` shows zod4-mock is *slower* than hand-coded faker on the `user` tier (99k vs 140k ops/s) and `nested` tier (28k vs 57k ops/s). The honest framing — already used in `content/docs/comparison.md` — is "consistently faster than zod-mock" with "competitive with hand-coded faker, with zero shape maintenance".
+   But `bench/results/latest.json` shows zod4-mock is _slower_ than hand-coded faker on the `user` tier (99k vs 140k ops/s) and `nested` tier (28k vs 57k ops/s). The honest framing — already used in `content/docs/comparison.md` — is "consistently faster than zod-mock" with "competitive with hand-coded faker, with zero shape maintenance".
 
 ### Benchmark architecture
 

@@ -4,33 +4,33 @@
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Framework | SvelteKit + Svelte 5 (runes-only, `compilerOptions.runes` enforced) |
-| Language | TypeScript |
-| Runtime | Node 22 (`nodejs22.x`) |
-| Deploy | `@sveltejs/adapter-vercel` |
-| Bundler | Vite |
-| Package manager | pnpm |
+| Layer           | Choice                                                              |
+| --------------- | ------------------------------------------------------------------- |
+| Framework       | SvelteKit + Svelte 5 (runes-only, `compilerOptions.runes` enforced) |
+| Language        | TypeScript                                                          |
+| Runtime         | Node 22 (`nodejs22.x`)                                              |
+| Deploy          | `@sveltejs/adapter-vercel`                                          |
+| Bundler         | Vite                                                                |
+| Package manager | pnpm                                                                |
 
 ## Key libraries
 
-| Purpose | Library |
-|---------|---------|
-| Schema runtime (v4) | `zod@^4.4.3` (aliased `zod`) |
-| Schema runtime (v3, parity only) | `zod3@npm:zod@^3.24.4` |
-| Mock generator under test | `zod4-mock@0.5.0` (pinned exact) |
-| Zod v3 mock (parity) | `@anatine/zod-mock@^3.14.0` |
-| Fixture baseline | `@faker-js/faker@^9.8.0` |
-| Markdown + playgrounds | mdsvex |
-| Syntax highlighting | Shiki (`github-dark-dimmed`) |
-| Code editor | CodeMirror 6 |
-| Chart rendering | Chart.js |
+| Purpose                          | Library                          |
+| -------------------------------- | -------------------------------- |
+| Schema runtime (v4)              | `zod@^4.4.3` (aliased `zod`)     |
+| Schema runtime (v3, parity only) | `zod3@npm:zod@^3.24.4`           |
+| Mock generator under test        | `zod4-mock@0.5.0` (pinned exact) |
+| Zod v3 mock (parity)             | `@anatine/zod-mock@^3.14.0`      |
+| Fixture baseline                 | `@faker-js/faker@^9.8.0`         |
+| Markdown + playgrounds           | mdsvex                           |
+| Syntax highlighting              | Shiki (`github-dark-dimmed`)     |
+| Code editor                      | CodeMirror 6                     |
+| Chart rendering                  | Chart.js                         |
 
 ## Git conventions
 
 - **No `Co-Authored-By: Claude` lines in commits.** Commits are authored by the developer. Do not add AI attribution trailers.
-- Commit messages describe the *what and why* of the change, not the implementation steps.
+- Commit messages describe the _what and why_ of the change, not the implementation steps.
 
 ## TypeScript conventions
 
@@ -44,6 +44,7 @@
 ## Test setup
 
 ### Unit tests
+
 - **Runner:** Vitest
 - **Config:** `vitest.unit.config.ts`
 - **Pattern:** `src/**/*.test.ts`
@@ -51,23 +52,28 @@
 - **Run command:** `pnpm test:unit`
 
 ### Component tests (Storybook CSF)
+
 - **Runner:** Vitest + Playwright (Chromium)
 - **Config:** `vite.config.ts`
 - **Pattern:** `src/**/*.stories.svelte` — each `play()` function becomes a test
 - **Run command:** `pnpm test:component`
 
 ### Full suite
+
 - **Run command:** `pnpm test` (`test:unit` + `test:component`)
 
 ### Performance / bench harness (not in CI)
+
 - **Config:** `bench/vitest.config.ts`
 - **Run command:** `pnpm bench`
 - **Output:** `bench/results/latest.json` (committed); `history.json` (gitignored)
 
 ### Type checking
+
 - **Command:** `pnpm check` (`svelte-kit sync && svelte-check`)
 
 ### Lint / format
+
 - **Linter:** oxlint (`pnpm lint`)
 - **Formatter:** oxfmt (`pnpm fmt`)
 
@@ -107,6 +113,7 @@ gen-bench/
 ## Design system
 
 Token-driven, CSS custom properties in `src/lib/styles/tokens.css`:
+
 - Dark base by default; light theme via `html.light` class on `<html>`
 - Library identity colors: `--lib-zod4mock: #a78bfa`, `--lib-zodmock: #fbbf24`, `--lib-faker: #34d399`
 - 8px spacing scale; Inter (body) + JetBrains Mono (code)

@@ -10,11 +10,11 @@
 [`zod4-mock`](https://github.com/dxlbnl/zod4-mock), comparing mock data
 generation across:
 
-| Library | Description |
-|---------|-------------|
-| `zod4-mock` | Schema-driven generation for Zod v4 *(subject)* |
-| `@faker-js/faker` | Pure, schema-less random data |
-| `zod-mock` | Schema-driven generation for Zod v3 (predecessor) |
+| Library           | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| `zod4-mock`       | Schema-driven generation for Zod v4 _(subject)_   |
+| `@faker-js/faker` | Pure, schema-less random data                     |
+| `zod-mock`        | Schema-driven generation for Zod v3 (predecessor) |
 
 This project is designed to eventually merge with the zod4-mock playground.
 All design and tooling decisions mirror that codebase.
@@ -29,19 +29,19 @@ All design and tooling decisions mirror that codebase.
 
 ## Tech Stack
 
-| Role | Choice |
-|------|--------|
-| Framework | SvelteKit 2 |
-| Language | TypeScript 6 (strict) |
-| UI | Svelte 5 (runes) |
-| Styling | CSS custom properties — no utility framework |
-| Charts | Chart.js + svelte-chartjs |
-| Syntax highlight | Shiki |
-| Component docs | Storybook 10 + `@storybook/addon-svelte-csf` |
-| Testing | Vitest 4 (unit + Storybook CSF component tests) |
-| Linting/fmt | oxlint + oxfmt |
-| Deployment | Vercel adapter |
-| Package manager | pnpm |
+| Role             | Choice                                          |
+| ---------------- | ----------------------------------------------- |
+| Framework        | SvelteKit 2                                     |
+| Language         | TypeScript 6 (strict)                           |
+| UI               | Svelte 5 (runes)                                |
+| Styling          | CSS custom properties — no utility framework    |
+| Charts           | Chart.js + svelte-chartjs                       |
+| Syntax highlight | Shiki                                           |
+| Component docs   | Storybook 10 + `@storybook/addon-svelte-csf`    |
+| Testing          | Vitest 4 (unit + Storybook CSF component tests) |
+| Linting/fmt      | oxlint + oxfmt                                  |
+| Deployment       | Vercel adapter                                  |
+| Package manager  | pnpm                                            |
 
 ---
 
@@ -62,6 +62,7 @@ scrollbars.
 ## Storybook
 
 `.storybook/` mirrors playground setup:
+
 - **`main.ts`** — `@storybook/sveltekit`, addons: svelte-csf, vitest, a11y, docs, themes
 - **`theme.ts`** — dark base, `#0a0a0f` bg, `#a78bfa` accent, Inter + JetBrains Mono
 - **`preview.ts`** — dark/light bg presets, className theme switcher, sort:
@@ -75,10 +76,10 @@ Every component in `src/lib/components/**` gets a `.stories.svelte` sibling.
 
 TDD: write test first, implement second.
 
-| Layer | Tool | Pattern |
-|-------|------|---------|
-| Unit — stores, runners, harness | Vitest | `*.test.ts` next to source |
-| Component | Storybook + `@storybook/addon-vitest` | `*.stories.svelte` |
+| Layer                           | Tool                                  | Pattern                    |
+| ------------------------------- | ------------------------------------- | -------------------------- |
+| Unit — stores, runners, harness | Vitest                                | `*.test.ts` next to source |
+| Component                       | Storybook + `@storybook/addon-vitest` | `*.stories.svelte`         |
 
 ---
 
@@ -100,11 +101,11 @@ All timing in the browser (`performance.now`). Warm path separated from cold sta
 
 **Schema scenarios:**
 
-| Label | Shape |
-|-------|-------|
-| Flat | 10 primitives: string, number, boolean, date, enum, email |
-| Nested | 3-level: order → customer → address |
-| Array | Schema returning `Variant[]` of 50 items |
+| Label  | Shape                                                     |
+| ------ | --------------------------------------------------------- |
+| Flat   | 10 primitives: string, number, boolean, date, enum, email |
+| Nested | 3-level: order → customer → address                       |
+| Array  | Schema returning `Variant[]` of 50 items                  |
 
 zod-mock uses equivalent Zod v3 schemas. Relational scenario: zod4-mock only.
 
@@ -172,10 +173,7 @@ export interface BenchResult {
   coldStart: number;
 }
 
-export function measure(
-  fn: () => void,
-  { warmup = 5, runs = 20 } = {}
-): BenchResult {
+export function measure(fn: () => void, { warmup = 5, runs = 20 } = {}): BenchResult {
   const t0 = performance.now();
   fn();
   const coldStart = performance.now() - t0;
@@ -187,8 +185,13 @@ export function measure(
     times.push(performance.now() - s);
   }
   const avg = times.reduce((a, b) => a + b) / times.length;
-  return { avg, min: Math.min(...times), max: Math.max(...times),
-           opsPerSec: 1000 / avg, coldStart };
+  return {
+    avg,
+    min: Math.min(...times),
+    max: Math.max(...times),
+    opsPerSec: 1000 / avg,
+    coldStart,
+  };
 }
 ```
 

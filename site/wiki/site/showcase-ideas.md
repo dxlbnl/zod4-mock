@@ -5,7 +5,7 @@
 
 ## The problem with the current design
 
-Two-column layout: code (Shiki tabs) on the left, collapsible JSON tree on the right. The relational proof is text-based (`review.userId = User#42 ✓`) but doesn't *visually connect* entities. You have to mentally parse JSON and scan for matching UUIDs. The RelationCallout is a list, not a diagram.
+Two-column layout: code (Shiki tabs) on the left, collapsible JSON tree on the right. The relational proof is text-based (`review.userId = User#42 ✓`) but doesn't _visually connect_ entities. You have to mentally parse JSON and scan for matching UUIDs. The RelationCallout is a list, not a diagram.
 
 ## Ideas captured
 
@@ -18,7 +18,7 @@ Replace the collapsible JSON tree with flat entity cards (one per entity type: U
 
 ### Option B — Comparison mode ("faker broken vs zod4-mock resolved")
 
-Show two columns: left is "what you get with faker" (entities generated independently, UUIDs that don't cross-reference), right is "zod4-mock" (same UUIDs, verified cross-references). The *pain* is visible before the fix. Most argumentative — directly sells the why.
+Show two columns: left is "what you get with faker" (entities generated independently, UUIDs that don't cross-reference), right is "zod4-mock" (same UUIDs, verified cross-references). The _pain_ is visible before the fix. Most argumentative — directly sells the why.
 
 **Pros:** most persuasive for conversion; answers "why does this matter" immediately.
 **Cons:** requires building a "broken faker world" generator alongside the fixed one; more complex layout.

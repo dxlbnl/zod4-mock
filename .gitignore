@@ -4,6 +4,11 @@ dist/
 coverage
 packages/*/data/
 
+# SvelteKit generated output (site/)
+.svelte-kit/
+.vercel/
+site/build/
+
 # Claude Code per-session state (wiki-gate markers, etc.)
 .claude/state/
 

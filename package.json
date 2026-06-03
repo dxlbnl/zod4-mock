@@ -85,5 +85,10 @@
   },
   "peerDependencies": {
     "zod": "^4.4.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@anatine/zod-mock>zod": "^3.24.4"
+    }
   }
 }

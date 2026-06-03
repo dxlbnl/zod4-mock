@@ -87,7 +87,7 @@
 
 ## D-09 — mdsvex `playground` code fence: base64 → runtime hydration
 
-**Decision:** A code fence tagged `` ```typescript playground `` is not rendered by Shiki. Instead it's base64-encoded into a `<div data-playground="...">` placeholder by `svelte.config.js`. On page mount, `+page.svelte` for `/docs/[slug]` scans for these divs and mounts `SchemaPlayground` components in their place.
+**Decision:** A code fence tagged ` ```typescript playground ` is not rendered by Shiki. Instead it's base64-encoded into a `<div data-playground="...">` placeholder by `svelte.config.js`. On page mount, `+page.svelte` for `/docs/[slug]` scans for these divs and mounts `SchemaPlayground` components in their place.
 
 **Why:** Shiki runs at build time / preprocess time; CodeMirror runs at runtime. Injecting a CodeMirror instance into the SSR'd HTML directly would require a prerenderable Svelte component that references `document`, which fails SSR. The base64 placeholder is safe to prerender; the mount step fires only in the browser.
 
@@ -107,7 +107,7 @@
 
 ## D-11 — Honest speed framing: "faster than schema-driven alternatives"
 
-**Decision:** Speed claims always use: *"Faster than `@anatine/zod-mock` by 2.7×–5.2×. Competitive with hand-coded faker, with zero shape maintenance."* Never "faster than the alternatives" or "fastest".
+**Decision:** Speed claims always use: _"Faster than `@anatine/zod-mock` by 2.7×–5.2×. Competitive with hand-coded faker, with zero shape maintenance."_ Never "faster than the alternatives" or "fastest".
 
 **Why:** The project's own CLI benchmark shows faker beats zod4-mock on `user` (140k vs 100k ops/s) and `nested` (57k vs 28k ops/s) tiers. The overclaim was live on the homepage hero until the P0 pass and eroded credibility. The honest framing is also the stronger one: zod4-mock wins on the axis that matters to the primary audience (schema-driven, type-safe, relational).
 

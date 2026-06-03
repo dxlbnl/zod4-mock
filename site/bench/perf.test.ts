@@ -311,10 +311,7 @@ function pkgVersions() {
     try {
       const p = JSON.parse(
         readFileSync(
-          join(
-            dirname(fileURLToPath(import.meta.url)),
-            `../node_modules/${name}/package.json`,
-          ),
+          join(dirname(fileURLToPath(import.meta.url)), `../node_modules/${name}/package.json`),
           "utf-8",
         ),
       ) as { version: string };
@@ -332,10 +329,7 @@ function pkgVersions() {
   };
 }
 
-function printSummaryTable(
-  res: Record<string, TierResults>,
-  locales: Record<string, BenchResult>,
-) {
+function printSummaryTable(res: Record<string, TierResults>, locales: Record<string, BenchResult>) {
   const labelCol = 14;
   const col = 18;
   const pad = (s: string) => s.padEnd(col);
@@ -359,9 +353,7 @@ function printSummaryTable(
   for (const [locale, r] of Object.entries(locales)) {
     if (!r) continue;
     const z4 = r.avg.toFixed(3) + "ms";
-    console.log(
-      `${`user:${locale}`.padEnd(labelCol)} ${pad("—")} ${pad("—")} ${pad(z4)}`,
-    );
+    console.log(`${`user:${locale}`.padEnd(labelCol)} ${pad("—")} ${pad("—")} ${pad(z4)}`);
   }
 
   console.log(rule);

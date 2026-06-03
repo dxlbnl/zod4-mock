@@ -6,7 +6,7 @@ Benchmark and showcase site for [zod4-mock](https://github.com/dxlbnl/zod4-mock)
 npm install zod4-mock
 ```
 
-**[Live site →](https://gen-bench.vercel.app)**  ·  [npm](https://npmjs.com/package/zod4-mock)  ·  [Docs](/docs/getting-started)
+**[Live site →](https://gen-bench.vercel.app)** · [npm](https://npmjs.com/package/zod4-mock) · [Docs](/docs/getting-started)
 
 ## What's here
 

@@ -20,22 +20,22 @@ Two consequences:
 
 ## Route role assignments (target)
 
-| Route | Today's role | Target role |
-|---|---|---|
-| `/` | Hero + feature matrix + summary cards | **Hero with relational proof above the fold**; install CTA; matrix below |
-| `/showcase` | Relational demo (separate page) | The proof exhibit; some of it pulled forward into `/` |
-| `/docs/getting-started` | Onboarding doc with live playground | The "install + try" landing target — one click from hero |
-| `/bench` | Live in-browser benchmark, the main exhibit | "View the numbers" — supporting evidence, not the lead |
-| `/table` | DOM stress test | Either reframe as honest generation-cost reporting, or de-emphasize |
-| `/docs/*` | Reference docs | Unchanged — used by comparison-shopper persona ([product/audience](../product/audience.md)) |
+| Route                   | Today's role                                | Target role                                                                                 |
+| ----------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `/`                     | Hero + feature matrix + summary cards       | **Hero with relational proof above the fold**; install CTA; matrix below                    |
+| `/showcase`             | Relational demo (separate page)             | The proof exhibit; some of it pulled forward into `/`                                       |
+| `/docs/getting-started` | Onboarding doc with live playground         | The "install + try" landing target — one click from hero                                    |
+| `/bench`                | Live in-browser benchmark, the main exhibit | "View the numbers" — supporting evidence, not the lead                                      |
+| `/table`                | DOM stress test                             | Either reframe as honest generation-cost reporting, or de-emphasize                         |
+| `/docs/*`               | Reference docs                              | Unchanged — used by comparison-shopper persona ([product/audience](../product/audience.md)) |
 
 The implementation plan that gets us there lives in [roadmap](roadmap.md) P1.
 
-## What the site must *not* do
+## What the site must _not_ do
 
-- **Overclaim.** The homepage hero must not say "faster than the alternatives" — that's contradicted by the project's own benchmark data. The honest pitch from [product/differentiators](../product/differentiators.md) is "faster than schema-driven alternatives; competitive with hand-coded faker, with zero shape maintenance." *(Fixed in P0 pass, 2026-05-16.)*
+- **Overclaim.** The homepage hero must not say "faster than the alternatives" — that's contradicted by the project's own benchmark data. The honest pitch from [product/differentiators](../product/differentiators.md) is "faster than schema-driven alternatives; competitive with hand-coded faker, with zero shape maintenance." _(Fixed in P0 pass, 2026-05-16.)_
 - **Foreground the bench.** It's load-bearing for credibility but it's not the hook. The hook is relational + type-safe + zero shape maintenance.
-- **Hide the relational story behind navigation.** `/showcase` must not be the only entry point to the relational proof. *(Addressed in P1 pass — inline relational exhibit added to `/`, 2026-05-16.)*
+- **Hide the relational story behind navigation.** `/showcase` must not be the only entry point to the relational proof. _(Addressed in P1 pass — inline relational exhibit added to `/`, 2026-05-16.)_
 
 ## What stays
 
@@ -46,7 +46,7 @@ The implementation plan that gets us there lives in [roadmap](roadmap.md) P1.
 
 ## The merge horizon
 
-`design.md` already states: *"This project is designed to eventually merge with the zod4-mock playground."* When that happens, `gen-bench` becomes the playground/site directory inside the `zod4-mock` repo. This wiki's `product/` topic should travel with it (it's about the library, not the site); `site/` may either follow or be archived depending on how the merged repo is organized. See [roadmap](roadmap.md) P3.
+`design.md` already states: _"This project is designed to eventually merge with the zod4-mock playground."_ When that happens, `gen-bench` becomes the playground/site directory inside the `zod4-mock` repo. This wiki's `product/` topic should travel with it (it's about the library, not the site); `site/` may either follow or be archived depending on how the merged repo is organized. See [roadmap](roadmap.md) P3.
 
 ## See Also
 
