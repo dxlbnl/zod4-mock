@@ -27,9 +27,6 @@ importers:
       '@zod4-mock/locale-en':
         specifier: workspace:*
         version: link:packages/locale-en
-      '@zod4-mock/locale-names':
-        specifier: workspace:*
-        version: link:packages/locale-names
       '@zod4-mock/locale-nl':
         specifier: workspace:*
         version: link:packages/locale-nl
@@ -66,22 +63,6 @@ importers:
       '@zod4-mock/locale-core':
         specifier: workspace:*
         version: link:../locale-core
-      '@zod4-mock/locale-names':
-        specifier: workspace:*
-        version: link:../locale-names
-    devDependencies:
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/locale-names:
-    dependencies:
-      '@zod4-mock/locale-core':
-        specifier: workspace:*
-        version: link:../locale-core
     devDependencies:
       tsx:
         specifier: ^4.21.0
@@ -95,9 +76,6 @@ importers:
       '@zod4-mock/locale-core':
         specifier: workspace:*
         version: link:../locale-core
-      '@zod4-mock/locale-names':
-        specifier: workspace:*
-        version: link:../locale-names
     devDependencies:
       tsx:
         specifier: ^4.21.0
@@ -181,6 +159,8 @@ importers:
       vitest-browser-svelte:
         specifier: ^2.1.0
         version: 2.1.1(svelte@5.55.5)(vitest@4.1.5)
+
+  site: {}
 
 packages:
 
