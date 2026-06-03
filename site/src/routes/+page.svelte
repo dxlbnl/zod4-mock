@@ -1,8 +1,7 @@
 <script lang="ts">
-	import FeatureMatrix from '$lib/components/Surfaces/FeatureMatrix.svelte';
-	import SummaryCard from '$lib/components/Surfaces/SummaryCard.svelte';
-	import Button from '$lib/components/Primitives/Button.svelte';
-	import JsonTree from '$lib/components/Showcase/JsonTree.svelte';
+	import { Button, PageHero, StatCard } from '@dxlbnl/ui';
+	import FeatureMatrix from '$lib/widgets/FeatureMatrix.svelte';
+	import JsonTree from '$lib/widgets/JsonTree.svelte';
 	import { generateWorld } from '$lib/runners/ecommerce';
 
 	const features = [
@@ -29,22 +28,19 @@
 </script>
 
 <div class="page">
-	<header class="hero">
-		<h1 class="t-large">Schema-driven mocks,<br />done right for Zod 4</h1>
-		<p class="t-base" style="color:var(--text-muted);max-width:520px;margin-top:var(--space-3)">
-			<strong style="color:var(--accent)">zod4-mock</strong> generates type-safe mock data from your
-			Zod v4 schemas — the only library with relational consistency across entities. Faster than
-			@anatine/zod-mock by 3–5×, and competitive with hand-coded faker with zero shape maintenance.
-		</p>
-		<div class="ctas">
-			<Button label="Install" variant="primary" onclick={() => (window.location.href = '/docs/getting-started')} />
-			<Button label="See relational demo →" onclick={() => (window.location.href = '/showcase')} />
-		</div>
-	</header>
+	<PageHero
+		eyebrow="zod4-mock"
+		heading="Schema-driven mocks, done right for Zod 4"
+		variant="hero"
+		lede="Type-safe mock data from your Zod v4 schemas — the only library with relational consistency across entities. Competitive with hand-coded faker; faster than @anatine/zod-mock on the CLI baseline (see /bench)."
+	>
+		<Button as="a" variant="primary" href="/docs/getting-started">Install</Button>
+		<Button as="a" variant="cta" href="/showcase">See the relational demo</Button>
+	</PageHero>
 
 	<section class="relational-exhibit">
 		<h2 class="t-title">Cross-entity consistency, out of the box</h2>
-		<p class="t-small" style="color:var(--text-muted);margin-top:var(--space-2);margin-bottom:var(--space-4)">
+		<p class="t-small" style="color:var(--ink-dim);margin-top:var(--space-2);margin-bottom:var(--space-4)">
 			Every highlighted ID resolves to a real entity in the same generated world. No manual wiring.
 		</p>
 		<div class="exhibit-grid">
@@ -82,14 +78,9 @@
 	</section>
 
 	<section class="summary-cards">
-		<SummaryCard headline="~3×" description="faster than zod-mock on flat schemas" />
-		<SummaryCard
-			headline="7"
-			unit="entity types"
-			description="in the relational e-commerce showcase"
-			color="var(--success)"
-		/>
-		<SummaryCard headline="Zod 4" description="full schema coverage — no feature gaps" color="var(--warning)" />
+		<StatCard label="warm path" value="~3×" sublabel="vs zod-mock on flat schemas (CLI baseline)" />
+		<StatCard label="entity types" value="7" sublabel="in the relational e-commerce showcase" color="ok" />
+		<StatCard label="schema coverage" value="Zod 4" sublabel="full coverage — no feature gaps" color="amber" />
 	</section>
 	<a href="/bench" class="t-small bench-link">See full benchmark results →</a>
 
@@ -108,19 +99,10 @@
 		flex-direction: column;
 		gap: var(--space-8);
 	}
-	.hero {
-		padding-top: var(--space-6);
-	}
-	.ctas {
-		display: flex;
-		gap: var(--space-3);
-		margin-top: var(--space-5);
-		align-items: center;
-	}
 	.relational-exhibit {
-		background: var(--surface-2, var(--surface));
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg, 8px);
+		background: var(--bg-rail);
+		border: 1px solid var(--rule);
+		border-radius: 8px;
 		padding: var(--space-5);
 	}
 	.exhibit-grid {
@@ -133,13 +115,13 @@
 		min-width: 0;
 	}
 	.panel-label {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		margin-bottom: var(--space-2);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
 	.json-body {
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 12px;
 		overflow: auto;
 		max-height: 260px;
@@ -157,24 +139,24 @@
 		flex-wrap: wrap;
 	}
 	.proof-id {
-		font-family: var(--font-mono);
-		background: var(--accent-soft);
-		color: var(--accent);
+		font-family: var(--mono);
+		background: color-mix(in srgb, var(--amber) 20%, transparent);
+		color: var(--amber);
 		border-radius: 3px;
 		padding: 1px 4px;
 		font-weight: 600;
 		word-break: break-all;
 	}
 	.proof-arrow {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 	}
 	.proof-label {
-		color: var(--text-primary);
+		color: var(--ink);
 	}
 	.see-all {
 		display: inline-block;
 		margin-top: var(--space-3);
-		color: var(--accent);
+		color: var(--amber);
 		text-decoration: none;
 	}
 	.see-all:hover {
@@ -186,12 +168,12 @@
 		gap: var(--space-4);
 	}
 	.bench-link {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		text-decoration: none;
 		margin-top: calc(var(--space-8) * -1 + var(--space-2));
 	}
 	.bench-link:hover {
-		color: var(--accent);
+		color: var(--amber);
 	}
 	.matrix-section {
 		max-width: 640px;
@@ -200,18 +182,18 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		padding-bottom: var(--space-6);
 	}
 	.site-footer a {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		text-decoration: none;
 	}
 	.site-footer a:hover {
-		color: var(--accent);
+		color: var(--amber);
 	}
 	.sep {
-		color: var(--border);
+		color: var(--rule);
 	}
 
 	@media (max-width: 640px) {

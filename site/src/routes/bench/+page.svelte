@@ -1,11 +1,11 @@
 <script lang="ts">
-	import SegmentedControl from '$lib/components/Primitives/SegmentedControl.svelte';
-	import RangeSlider from '$lib/components/Primitives/RangeSlider.svelte';
-	import Button from '$lib/components/Primitives/Button.svelte';
-	import BenchChart from '$lib/components/Bench/BenchChart.svelte';
-	import MetricBadge from '$lib/components/Bench/MetricBadge.svelte';
-	import WinnerCallout from '$lib/components/Bench/WinnerCallout.svelte';
-	import LibraryLegend from '$lib/components/Bench/LibraryLegend.svelte';
+	import { Button } from '@dxlbnl/ui';
+	import SegmentedControl from '$lib/widgets/SegmentedControl.svelte';
+	import RangeSlider from '$lib/widgets/RangeSlider.svelte';
+	import BenchChart from '$lib/widgets/BenchChart.svelte';
+	import MetricBadge from '$lib/widgets/MetricBadge.svelte';
+	import WinnerCallout from '$lib/widgets/WinnerCallout.svelte';
+	import LibraryLegend from '$lib/widgets/LibraryLegend.svelte';
 	import { onMount } from 'svelte';
 	import { measure, type BenchResult } from '$lib/bench';
 	import { runZod4Mock } from '$lib/runners/zod4mock';
@@ -65,7 +65,7 @@
 <div class="page">
 	<header class="page-header">
 		<h1 class="t-title">Live Benchmarks</h1>
-		<p class="t-small" style="color:var(--text-muted)">
+		<p class="t-small" style="color:var(--ink-dim)">
 			Runs in the browser via <code>performance.now()</code>. Warm path ({5} warmup + {20} timed runs).
 		</p>
 	</header>
@@ -79,7 +79,9 @@
 			<span class="t-caption">N records: <strong>{n.toLocaleString()}</strong></span>
 			<RangeSlider bind:value={n} min={10} max={10000} />
 		</div>
-		<Button label={running ? 'Running…' : 'Run'} variant="primary" disabled={running} onclick={run} />
+		<Button variant="primary" disabled={running} onclick={run}>
+			{running ? 'Running…' : 'Run'}
+		</Button>
 	</div>
 
 	<div class="results">
@@ -175,9 +177,9 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		padding: var(--space-4);
-		border: 1px solid var(--border);
+		border: 1px solid var(--rule);
 		border-radius: 8px;
-		background: var(--bg-raised);
+		background: var(--bg-rail);
 		min-width: 140px;
 	}
 	.lib-name {
@@ -186,8 +188,8 @@
 	}
 	.note {
 		padding: var(--space-3);
-		border: 1px solid var(--border);
+		border: 1px solid var(--rule);
 		border-radius: 6px;
-		background: var(--bg-raised);
+		background: var(--bg-rail);
 	}
 </style>

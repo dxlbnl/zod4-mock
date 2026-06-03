@@ -12,8 +12,8 @@
 
 - **Promote `site/` to the single public surface** for zod4-mock — homepage, docs, comparison/bench, World Explorer — all on one SvelteKit deployment, served from `zod4-mock.vercel.app` (or successor URL per B82).
 - **`@dxlbnl/ui@1.1.1`** is published, Svelte 5 + SvelteKit 2 peer-typed, ESM-only, with **~50 components** in 8 categories (primitives / layout / cards / navigation / forms / feedback / patterns / data) plus a `toast` store and `Phosphor` (dark) / `Paper` (light) palette tokens. It covers ~80% of what the current site hand-rolls; the gaps are domain-specific (`CodeMirror Editor`, `JsonTree`, `BenchChart`, `FeatureMatrix`, `RelationCallout`, plus the Explorer view widgets — see below).
-- **Docs system: REJECTED; gated on [B94](../../backlog/inbox/B94-docs-system-design.md).** `docs/*` is the wrong shape for a docs *site*. Phase 2 stays a route stub until B94's design lands.
-- **"Play with data" surface = World Explorer, not a schema-builder UI.** The brainstorm in `wiki/research/world-explorer.md` redirects the playground-shaped slot to a **World Explorer** fed by a new library API (`world.trace(): WorldTrace` + provenance capture sink + stable record IDs). The site mounts an `/explorer` route that renders the three view metaphors — **Constellation** (graph of records and relations), **Record Inspector** (field-by-field provenance chips colored by resolution rung), **Provenance Heatmap** (records × fields realism grid). The existing `playground/` workspace is **deprecated**, not absorbed; salvage value is narrow (the field-type catalogue may inform Inspector field rendering; `codegen.ts`'s string-build pattern *may inform* `writeExplorer` *when it lands in Phase 4 v2*) and is called out where it applies.
+- **Docs system: REJECTED; gated on [B94](../../backlog/inbox/B94-docs-system-design.md).** `docs/*` is the wrong shape for a docs _site_. Phase 2 stays a route stub until B94's design lands.
+- **"Play with data" surface = World Explorer, not a schema-builder UI.** The brainstorm in `wiki/research/world-explorer.md` redirects the playground-shaped slot to a **World Explorer** fed by a new library API (`world.trace(): WorldTrace` + provenance capture sink + stable record IDs). The site mounts an `/explorer` route that renders the three view metaphors — **Constellation** (graph of records and relations), **Record Inspector** (field-by-field provenance chips colored by resolution rung), **Provenance Heatmap** (records × fields realism grid). The existing `playground/` workspace is **deprecated**, not absorbed; salvage value is narrow (the field-type catalogue may inform Inspector field rendering; `codegen.ts`'s string-build pattern _may inform_ `writeExplorer` _when it lands in Phase 4 v2_) and is called out where it applies.
 - **Comparison surface: keep `/bench` as the qualitative "live demo" (D17, D20)**, add a new `/comparison` page that renders the feature matrix + per-library narrative from a single `comparison.ts` data module that the ecosystem matrix (B83) writes into. The CLI `pnpm site:bench` remains the citable source; `/bench` reads `bench/results/latest.json` plus runs an interactive in-browser benchmark for vibes.
 - **Phasing in 5 chunks** (re-ordered per redirect: docs first, comparison second, Explorer third): (Phase 1) `@dxlbnl/ui` foundation + IA scaffold + delete `/table`; (Phase 2) docs system (gated on B94); (Phase 3) `/comparison` + worker bench rebuild; (Phase 4) **World Explorer** — library-side `world.trace()` + provenance capture + IDs (v1); `writeExplorer` deferred to Phase 4 v2; (Phase 5) polish (smoke, Storybook audit, copy buttons, version baseline).
 
@@ -70,7 +70,7 @@ The workspace is wired with vitest unit + component tests, Storybook 10, and dev
 - The `/showcase` page with `JsonTree` highlighting and `RelationCallout` is the strongest existing exhibit; nothing else in the ecosystem demonstrates relational fidelity visually.
 - mdsvex + the base64-hydrated `playground` fence (D18) is unique to this site and worth keeping — but it now feeds **doc examples only**, not a full builder.
 - The CLI bench (`bench/perf.test.ts`) is statistically sound and produces `latest.json` that survives D17 cite-ability.
-- The library's existing `FieldResolution` tagged union (`src/pipeline.ts`) and `world.explain(schema)` (`src/explain.ts`) **already name the resolution rungs** that the Explorer's chips colour by — the work is *capturing* per-record what `explain` reports per-schema, not inventing a vocabulary.
+- The library's existing `FieldResolution` tagged union (`src/pipeline.ts`) and `world.explain(schema)` (`src/explain.ts`) **already name the resolution rungs** that the Explorer's chips colour by — the work is _capturing_ per-record what `explain` reports per-schema, not inventing a vocabulary.
 
 ### What is structurally weak
 
@@ -79,7 +79,7 @@ The workspace is wired with vitest unit + component tests, Storybook 10, and dev
 - **Two bench harnesses with different schemas** (B70).
 - **No `/comparison` surface beyond `comparison.md` and the feature matrix on `/`**; B83's ecosystem inventory has no destination.
 - The current `/table` route has no clear story — **delete** (confirmed by the maintainer).
-- **No way to introspect a generated world**: today `.generate()` returns JSON; users can't see *why* a field got its value, *which* record an FK points at, or *how much* of the data is realistic vs raw fallback. The Explorer closes this gap.
+- **No way to introspect a generated world**: today `.generate()` returns JSON; users can't see _why_ a field got its value, _which_ record an FK points at, or _how much_ of the data is realistic vs raw fallback. The Explorer closes this gap.
 
 ---
 
@@ -104,16 +104,16 @@ The workspace is wired with vitest unit + component tests, Storybook 10, and dev
 
 ### Component inventory (47 named exports)
 
-| Category    | Components                                                                       | Count |
-| ----------- | -------------------------------------------------------------------------------- | ----- |
-| Primitives  | `Button`, `Led`, `TagPill`, `Text`, `Heading`                                    | 5     |
-| Layout      | `Stack`, `Inline`, `Spread`, `Grid`, `Container`, `Rule`, `Prose`                | 7     |
-| Cards       | `Card`, `ProductCard`, `ProjectCard`, `NoteCard`                                 | 4     |
-| Navigation  | `Nav`, `Breadcrumb`                                                              | 2     |
-| Forms       | `Input`, `Textarea`, `Select`, `InputWrap`, `Field`, `Checkbox`, `Radio`, `RadioGroup`, `Switch` | 9     |
-| Feedback    | `Alert`, `Modal`, `Toast`, `ToastRegion`, `toast()` function (+ `ToastItem` / `ToastVariant` / `ToastOptions` types) | 4     |
-| Patterns    | `CtaBlock`, `StatCard`, `KvList`, `ProgressBar`, `ActivityRow`, `SectionHead`, `SectionFoot`, `PageHero` | 8     |
-| Data        | `Accordion`, `AccordionItem`, `Tabs`, `Table`                                    | 4     |
+| Category   | Components                                                                                                           | Count |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- | ----- |
+| Primitives | `Button`, `Led`, `TagPill`, `Text`, `Heading`                                                                        | 5     |
+| Layout     | `Stack`, `Inline`, `Spread`, `Grid`, `Container`, `Rule`, `Prose`                                                    | 7     |
+| Cards      | `Card`, `ProductCard`, `ProjectCard`, `NoteCard`                                                                     | 4     |
+| Navigation | `Nav`, `Breadcrumb`                                                                                                  | 2     |
+| Forms      | `Input`, `Textarea`, `Select`, `InputWrap`, `Field`, `Checkbox`, `Radio`, `RadioGroup`, `Switch`                     | 9     |
+| Feedback   | `Alert`, `Modal`, `Toast`, `ToastRegion`, `toast()` function (+ `ToastItem` / `ToastVariant` / `ToastOptions` types) | 4     |
+| Patterns   | `CtaBlock`, `StatCard`, `KvList`, `ProgressBar`, `ActivityRow`, `SectionHead`, `SectionFoot`, `PageHero`             | 8     |
+| Data       | `Accordion`, `AccordionItem`, `Tabs`, `Table`                                                                        | 4     |
 
 ### Tokens
 
@@ -208,7 +208,7 @@ The current site's `Table` link drops; `Explorer`, `Showcase`, and `Comparison` 
 4. `StatCard` row — perf summary citing the CLI baseline (D17/D20 honest framing).
 5. Secondary CTAs to `/explorer` ("See the universe your schemas build") and `/comparison` ("Versus the field").
 
-A first-time visitor's path to install: hero CTA → `/docs/getting-started`. A first-time visitor's path to evaluate: hero → inline exhibit → matrix → `/comparison` → `/bench`. A first-time visitor's path to *see the why*: hero → `/explorer`.
+A first-time visitor's path to install: hero CTA → `/docs/getting-started`. A first-time visitor's path to evaluate: hero → inline exhibit → matrix → `/comparison` → `/bench`. A first-time visitor's path to _see the why_: hero → `/explorer`.
 
 ---
 
@@ -216,7 +216,7 @@ A first-time visitor's path to install: hero CTA → `/docs/getting-started`. A 
 
 > **REJECTED 2026-06-03.** Maintainer rejected the hybrid `import.meta.glob('/docs/*.md')`
 > recommendation: "docs/\* is a terrible shape for superb docs. we need to be better."
-> The published `docs/*.md` is the shipped reference (dense, list-shaped); a docs *site*
+> The published `docs/*.md` is the shipped reference (dense, list-shaped); a docs _site_
 > needs richer authoring, structured navigation, interactive content. Filed as
 > [B94](../../backlog/inbox/B94-docs-system-design.md) — a research item to design the
 > docs system properly (reference benchmarks, authoring path options, content model,
@@ -231,10 +231,12 @@ A first-time visitor's path to install: hero CTA → `/docs/getting-started`. A 
 ### Options weighed
 
 **(a) Keep mdsvex in `site/content/docs/`** (status quo).
+
 - Pros: trivial; already in production.
 - Cons: drift. `docs/api-reference.md` is the canonical reference per architecture rule D5; the site's `api.md` is a thin rewrite. The site lies in two places about what zod4-mock supports.
 
 **(b) Generate site docs from `docs/*.md`** (full single-source-of-truth).
+
 - Pros: kills the drift; every `docs/` edit lands on the deployed site at next build; D5 propagates for free.
 - Cons: `docs/api-reference.md` is 58 kB — too dense for a first-time visitor; it's a reference, not a tutorial. Loses the bite-size site-first surfaces (`getting-started.md` on the site is 1.4 kB, intentionally welcoming).
 
@@ -321,7 +323,7 @@ The Explorer requires significant new library API surface. This work **must prec
 
 #### v1 (Phase 4a)
 
-- **`world.trace(): WorldTrace`** — a new public method on `World` that returns the full provenance structure for everything generated so far. Reuses the existing `FieldResolution` tagged union (`src/pipeline.ts`) and `explain` strings (`src/explain.ts`) — the vocabulary already exists; the work is *capturing* it per-record instead of discarding it after each generation.
+- **`world.trace(): WorldTrace`** — a new public method on `World` that returns the full provenance structure for everything generated so far. Reuses the existing `FieldResolution` tagged union (`src/pipeline.ts`) and `explain` strings (`src/explain.ts`) — the vocabulary already exists; the work is _capturing_ it per-record instead of discarding it after each generation.
 - **`WorldTrace` / `TraceNode` / `TraceField` / `TraceEdge` types** — new public types in `src/types.ts` (or a new `src/trace.ts`). Plain JSON-serializable. Stable surface — once shipped, the shape is part of the public contract because the standalone HTML artifact embeds it.
 - **Provenance capture sink** — wired into `generateObjectFields` (per-field resolution) / `walkPipeline` (sibling reads via `ctx.current`) / `ctx.related` (relation pick records). Per §10 Q4: opt-in at v1 via `createWorld({ trace: true })`. Always-on flip becomes a v2 ADR once a regression-free hot-path benchmark exists.
 - **Stable record IDs exposed via `TraceNode.id`** — the internal `reg0#3` / `dreg1#2` IDs are computed for PRNG seeding (`src/world/engine.ts`) but never exposed. The Explorer needs them stable and friendly. Per §10 Q3: friendly `person#1` IDs. Per-registration display name from `defineSubjectType(name, ...)`.
@@ -341,7 +343,7 @@ The Explorer requires significant new library API surface. This work **must prec
 - **Trace ingestion** — `/explorer` needs a way to get a `WorldTrace`. Two modes:
   1. **Inline mode** — user pastes schemas / imports their `world.ts` source, the page evaluates it via the same mdsvex playground pattern (`new Function`/IIFE), and calls `world.trace()` to produce the trace. Stays in-browser.
   2. **Upload mode** — user pastes a `WorldTrace` JSON they generated locally (`writeExplorer` already produces this in the standalone HTML; we expose `world.trace()` for direct JSON access). For users with private schemas they don't want to evaluate in a hosted page.
-  Both modes are recommended; the entry-point banner offers both.
+     Both modes are recommended; the entry-point banner offers both.
 - **No persistence** — the Explorer is a viewer, not a builder. No save state, no seed history, no exports beyond "download this trace as JSON" and "open in standalone `world.html`".
 
 ### Out of scope for v1
@@ -389,7 +391,7 @@ B83 produces `wiki/research/reports/zod-mock-ecosystem-survey.md` plus a recomme
 2. `site/src/lib/comparison/libraries.ts` — per-library metadata (`name`, `npm`, `repo`, `lastPublished`, `zodVersion`, `deterministic`, `schemaDriven`, `narrative`).
 3. `site/src/lib/runners/<lib>.ts` — one new runner stub per B83-recommended addition. Each implements `{ flat, nested, array, batch(schema, n) }`. CLI `bench/perf.test.ts` and browser worker both consume them.
 
-The B83 report is treated as a **black box input**: this design doesn't presume which libraries it will recommend. It does presume that B83 supplies *(a)* the matrix rows, *(b)* per-library copy, and *(c)* a yes/no on benching for each.
+The B83 report is treated as a **black box input**: this design doesn't presume which libraries it will recommend. It does presume that B83 supplies _(a)_ the matrix rows, _(b)_ per-library copy, and _(c)_ a yes/no on benching for each.
 
 ---
 
@@ -397,33 +399,33 @@ The B83 report is treated as a **black box input**: this design doesn't presume 
 
 ### Inventory map
 
-| Current site component (`site/src/lib/components/`) | `@dxlbnl/ui` equivalent | Verdict |
-| --- | --- | --- |
-| `Foundations/Color.stories.svelte` | `tokens/tokens.css` (Phosphor/Paper) | **Replace** — delete the foundations stories; rely on the library's Storybook for token docs. |
-| `Foundations/Typography.stories.svelte` | `tokens/typography.css` + `Heading`/`Text` | **Replace**. |
-| `Foundations/Spacing.stories.svelte` | `--u`/`--u2`/… scale from library tokens | **Replace**. |
-| `Primitives/Button.svelte` | `Button` | **Replace**. |
-| `Primitives/Input.svelte` | `Input` / `InputWrap` / `Field` | **Replace**. |
-| `Primitives/RangeSlider.svelte` (log-scale) | **gap** — no equivalent | **Keep**, restyle on tokens. |
-| `Primitives/SegmentedControl.svelte` | **gap** — `Tabs` is close but not identical | **Keep** or merge into `Tabs`. Decision: replace with `Tabs` where the use is tab-like (showcase entity picker); keep `SegmentedControl` only where it's a true grouped-radio (bench schema picker). |
-| `Bench/BenchChart.svelte` (Chart.js) | **gap** | **Keep**, restyle. |
-| `Bench/MetricBadge.svelte` | `StatCard` (close) or `TagPill` | **Replace with StatCard** for ops/sec + numeric value; `TagPill` for cold-start label. |
-| `Bench/WinnerCallout.svelte` | `Alert` (success variant) | **Replace**. |
-| `Bench/LibraryLegend.svelte` | `KvList` with colour swatches | **Replace** (custom render of `KvList`). |
-| `Showcase/CodePanel.svelte` (Shiki tabs) | `Tabs` (chrome) + Shiki body | **Replace tab chrome with `Tabs`**; keep Shiki render layer. |
-| `Showcase/JsonTree.svelte` (recursive + ID highlight) | **gap** | **Keep** — domain widget. |
-| `Showcase/RelationCallout.svelte` (proof rows) | `KvList` close, but proof rows want their own affordance | **Keep** as a thin wrapper around `KvList`, or build natively on `KvList`. |
-| `Table/DataTable.svelte` | `Table` | **Replace**. |
-| `Table/TimingBadge.svelte` | `StatCard` (compact) | **Replace**. |
-| `Surfaces/FeatureMatrix.svelte` | `Table` (with custom cell renderer for ✓/✗/partial) | **Replace, customise cell**. |
-| `Surfaces/SummaryCard.svelte` | `StatCard` | **Replace**. |
-| `Docs/CodeBlock.svelte` (copy button) | `Card` + `Button` + `toast()` | **Replace** (wraps Shiki output in `Card`; `Button` calls `toast()`). |
-| `Docs/Editor.svelte` (CodeMirror 6 host) | **gap** | **Keep** — domain widget. Used by doc-fence `SchemaPlayground` and by Explorer's inline-mode entry-point. |
-| `Docs/SchemaPlayground.svelte` | **gap** | **Keep** — small in-doc fence component for `getting-started.md` / `api.md` examples. Stays at its current scope (155 lines, `new Function` evaluator). **No longer** replaced by an absorbed playground workspace — that direction is dropped. |
-| `+layout.svelte` topbar | `Nav` | **Replace**. |
-| `+page.svelte` hero | `PageHero` + `CtaBlock` + `Button` | **Replace**. |
-| `/docs` sidebar layout | `Accordion` + `Stack` | **Replace**. |
-| **Explorer widgets** (new — `site/src/lib/explorer/widgets/{ConstellationGraph,RecordInspector,ProvenanceHeatmap,ProvenanceChip}.svelte`) | **gap** | **Keep as domain widgets** — these stay in `site/`, not absorbed into `@dxlbnl/ui`. The library's `writeExplorer` HTML artifact inlines the same widgets (built once at library-publish time). |
+| Current site component (`site/src/lib/components/`)                                                                                       | `@dxlbnl/ui` equivalent                                  | Verdict                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Foundations/Color.stories.svelte`                                                                                                        | `tokens/tokens.css` (Phosphor/Paper)                     | **Replace** — delete the foundations stories; rely on the library's Storybook for token docs.                                                                                                                                                   |
+| `Foundations/Typography.stories.svelte`                                                                                                   | `tokens/typography.css` + `Heading`/`Text`               | **Replace**.                                                                                                                                                                                                                                    |
+| `Foundations/Spacing.stories.svelte`                                                                                                      | `--u`/`--u2`/… scale from library tokens                 | **Replace**.                                                                                                                                                                                                                                    |
+| `Primitives/Button.svelte`                                                                                                                | `Button`                                                 | **Replace**.                                                                                                                                                                                                                                    |
+| `Primitives/Input.svelte`                                                                                                                 | `Input` / `InputWrap` / `Field`                          | **Replace**.                                                                                                                                                                                                                                    |
+| `Primitives/RangeSlider.svelte` (log-scale)                                                                                               | **gap** — no equivalent                                  | **Keep**, restyle on tokens.                                                                                                                                                                                                                    |
+| `Primitives/SegmentedControl.svelte`                                                                                                      | **gap** — `Tabs` is close but not identical              | **Keep** or merge into `Tabs`. Decision: replace with `Tabs` where the use is tab-like (showcase entity picker); keep `SegmentedControl` only where it's a true grouped-radio (bench schema picker).                                            |
+| `Bench/BenchChart.svelte` (Chart.js)                                                                                                      | **gap**                                                  | **Keep**, restyle.                                                                                                                                                                                                                              |
+| `Bench/MetricBadge.svelte`                                                                                                                | `StatCard` (close) or `TagPill`                          | **Replace with StatCard** for ops/sec + numeric value; `TagPill` for cold-start label.                                                                                                                                                          |
+| `Bench/WinnerCallout.svelte`                                                                                                              | `Alert` (success variant)                                | **Replace**.                                                                                                                                                                                                                                    |
+| `Bench/LibraryLegend.svelte`                                                                                                              | `KvList` with colour swatches                            | **Replace** (custom render of `KvList`).                                                                                                                                                                                                        |
+| `Showcase/CodePanel.svelte` (Shiki tabs)                                                                                                  | `Tabs` (chrome) + Shiki body                             | **Replace tab chrome with `Tabs`**; keep Shiki render layer.                                                                                                                                                                                    |
+| `Showcase/JsonTree.svelte` (recursive + ID highlight)                                                                                     | **gap**                                                  | **Keep** — domain widget.                                                                                                                                                                                                                       |
+| `Showcase/RelationCallout.svelte` (proof rows)                                                                                            | `KvList` close, but proof rows want their own affordance | **Keep** as a thin wrapper around `KvList`, or build natively on `KvList`.                                                                                                                                                                      |
+| `Table/DataTable.svelte`                                                                                                                  | `Table`                                                  | **Replace**.                                                                                                                                                                                                                                    |
+| `Table/TimingBadge.svelte`                                                                                                                | `StatCard` (compact)                                     | **Replace**.                                                                                                                                                                                                                                    |
+| `Surfaces/FeatureMatrix.svelte`                                                                                                           | `Table` (with custom cell renderer for ✓/✗/partial)      | **Replace, customise cell**.                                                                                                                                                                                                                    |
+| `Surfaces/SummaryCard.svelte`                                                                                                             | `StatCard`                                               | **Replace**.                                                                                                                                                                                                                                    |
+| `Docs/CodeBlock.svelte` (copy button)                                                                                                     | `Card` + `Button` + `toast()`                            | **Replace** (wraps Shiki output in `Card`; `Button` calls `toast()`).                                                                                                                                                                           |
+| `Docs/Editor.svelte` (CodeMirror 6 host)                                                                                                  | **gap**                                                  | **Keep** — domain widget. Used by doc-fence `SchemaPlayground` and by Explorer's inline-mode entry-point.                                                                                                                                       |
+| `Docs/SchemaPlayground.svelte`                                                                                                            | **gap**                                                  | **Keep** — small in-doc fence component for `getting-started.md` / `api.md` examples. Stays at its current scope (155 lines, `new Function` evaluator). **No longer** replaced by an absorbed playground workspace — that direction is dropped. |
+| `+layout.svelte` topbar                                                                                                                   | `Nav`                                                    | **Replace**.                                                                                                                                                                                                                                    |
+| `+page.svelte` hero                                                                                                                       | `PageHero` + `CtaBlock` + `Button`                       | **Replace**.                                                                                                                                                                                                                                    |
+| `/docs` sidebar layout                                                                                                                    | `Accordion` + `Stack`                                    | **Replace**.                                                                                                                                                                                                                                    |
+| **Explorer widgets** (new — `site/src/lib/explorer/widgets/{ConstellationGraph,RecordInspector,ProvenanceHeatmap,ProvenanceChip}.svelte`) | **gap**                                                  | **Keep as domain widgets** — these stay in `site/`, not absorbed into `@dxlbnl/ui`. The library's `writeExplorer` HTML artifact inlines the same widgets (built once at library-publish time).                                                  |
 
 ### Migration order
 
@@ -440,28 +442,29 @@ The B83 report is treated as a **black box input**: this design doesn't presume 
 
 ### Classification of inbox cards
 
-| Card | Classification | One-line reasoning |
-| --- | --- | --- |
-| **B58-B** Dutch inflection | **Independent** | Library/locale work, unrelated to site rebuild. |
-| **B69** /bench Web Worker | **Lands as Phase 3** | Bench rebuild lands with the comparison surface; worker is its core. |
-| **B70** Unify CLI+browser schemas | **Lands as Phase 3** | Same — paired with worker. |
-| **B71** Time-budget bench | **Lands as Phase 3** | Same — paired with worker. |
-| **B72** Cold-start metric | **Obsoleted** | Rebuild removes cold-start from `/bench` (option b); closed by the design itself. |
-| **B73** Progress + Abort on /bench | **Lands as Phase 3** | Part of the worker rebuild — `ProgressBar` per cell, `Abort` calls `worker.terminate()`. |
-| **B74** Sync vision version + bench baseline | **Lands as Phase 5** | A copy refresh + bench re-run; pairs naturally with polish. |
-| **B75** Playwright smoke tests | **Lands as Phase 5** | Wires after the routes settle so the assertion set is stable. |
-| **B76** Light theme QA | **Obsoleted by Phase 1** | `@dxlbnl/ui` ships Phosphor + Paper as a tested pair; site adopts both via tokens. Theme-toggle plumbing is a thin follow-up (could be a small chore card if maintainer wants a toggle in `Nav`). Closes via Phase 1. |
-| **B77** Install copy button | **Lands as Phase 5** | `@dxlbnl/ui`'s `Toast` + `Button` makes this trivial after the primitive swap. |
-| **B78** Storybook coverage audit | **Lands as Phase 5** | After primitives migrate to `@dxlbnl/ui`, the site's Storybook is much smaller; the audit lands against the *post-migration* surface (including the new Explorer widgets). |
-| **B79** DS scope | **Obsoleted by Phase 1 (already marked superseded by B84)** | Answered by adopting `@dxlbnl/ui`. Closes via Phase 1. |
-| **B80** Playground integration (A/B/C) | **Obsoleted by Phase 4 (already marked absorbed by B84)** | Answered by redirect: option C (deprecate) — Explorer replaces what schema-builder gave. Closes when Phase 4 ships and the `playground/` workspace is deleted. |
-| **B81** Link sweep | **Lands as Phase 2** | Naturally absorbed when docs are re-routed via `import.meta.glob('/docs/*.md')`; any surviving links get swept then. |
-| **B82** Vercel deploy from `site/` | **Independent (maintainer task)** | Out-of-tree action; not blocked by the rebuild, but should be done **before** Phase 1 ships to make iteration visible. |
-| **B83** Ecosystem survey | **Consumed as Phase 3 input** | Feeds `/comparison`. Status now: B83 has returned (per redirect); content is ready to flow into Phase 3. |
+| Card                                         | Classification                                              | One-line reasoning                                                                                                                                                                                                    |
+| -------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **B58-B** Dutch inflection                   | **Independent**                                             | Library/locale work, unrelated to site rebuild.                                                                                                                                                                       |
+| **B69** /bench Web Worker                    | **Lands as Phase 3**                                        | Bench rebuild lands with the comparison surface; worker is its core.                                                                                                                                                  |
+| **B70** Unify CLI+browser schemas            | **Lands as Phase 3**                                        | Same — paired with worker.                                                                                                                                                                                            |
+| **B71** Time-budget bench                    | **Lands as Phase 3**                                        | Same — paired with worker.                                                                                                                                                                                            |
+| **B72** Cold-start metric                    | **Obsoleted**                                               | Rebuild removes cold-start from `/bench` (option b); closed by the design itself.                                                                                                                                     |
+| **B73** Progress + Abort on /bench           | **Lands as Phase 3**                                        | Part of the worker rebuild — `ProgressBar` per cell, `Abort` calls `worker.terminate()`.                                                                                                                              |
+| **B74** Sync vision version + bench baseline | **Lands as Phase 5**                                        | A copy refresh + bench re-run; pairs naturally with polish.                                                                                                                                                           |
+| **B75** Playwright smoke tests               | **Lands as Phase 5**                                        | Wires after the routes settle so the assertion set is stable.                                                                                                                                                         |
+| **B76** Light theme QA                       | **Obsoleted by Phase 1**                                    | `@dxlbnl/ui` ships Phosphor + Paper as a tested pair; site adopts both via tokens. Theme-toggle plumbing is a thin follow-up (could be a small chore card if maintainer wants a toggle in `Nav`). Closes via Phase 1. |
+| **B77** Install copy button                  | **Lands as Phase 5**                                        | `@dxlbnl/ui`'s `Toast` + `Button` makes this trivial after the primitive swap.                                                                                                                                        |
+| **B78** Storybook coverage audit             | **Lands as Phase 5**                                        | After primitives migrate to `@dxlbnl/ui`, the site's Storybook is much smaller; the audit lands against the _post-migration_ surface (including the new Explorer widgets).                                            |
+| **B79** DS scope                             | **Obsoleted by Phase 1 (already marked superseded by B84)** | Answered by adopting `@dxlbnl/ui`. Closes via Phase 1.                                                                                                                                                                |
+| **B80** Playground integration (A/B/C)       | **Obsoleted by Phase 4 (already marked absorbed by B84)**   | Answered by redirect: option C (deprecate) — Explorer replaces what schema-builder gave. Closes when Phase 4 ships and the `playground/` workspace is deleted.                                                        |
+| **B81** Link sweep                           | **Lands as Phase 2**                                        | Naturally absorbed when docs are re-routed via `import.meta.glob('/docs/*.md')`; any surviving links get swept then.                                                                                                  |
+| **B82** Vercel deploy from `site/`           | **Independent (maintainer task)**                           | Out-of-tree action; not blocked by the rebuild, but should be done **before** Phase 1 ships to make iteration visible.                                                                                                |
+| **B83** Ecosystem survey                     | **Consumed as Phase 3 input**                               | Feeds `/comparison`. Status now: B83 has returned (per redirect); content is ready to flow into Phase 3.                                                                                                              |
 
 ### Implementation order (5 phases, each shippable)
 
 **Phase 1 — Foundation (`@dxlbnl/ui` adoption + IA scaffold + delete `/table`)**
+
 - Add `@dxlbnl/ui@^1.1.1` to `site/package.json` (npm dep — confirmed by maintainer).
 - Import `tokens.css` + `typography.css` in `app.css`; delete `site/src/lib/styles/tokens.css` (keep identity color extensions).
 - Swap layout chrome (`+layout.svelte` → `Nav` + `Container`), `+page.svelte` hero (`PageHero` + `CtaBlock`), primitives (`Button`, `Card`, `StatCard`, `Tabs` where applicable).
@@ -486,6 +489,7 @@ Phase 2** under this gating; the manager runs B94 in parallel with the implement
 sequence and slots Phase 2 in when ready.
 
 **Phase 3 — Comparison surface + Bench rebuild**
+
 - Add `site/src/lib/comparison/{matrix,libraries}.ts` data modules; populate from B83's report. Render at `/comparison` using `Table` + `Card` + `KvList` + `Alert` for the honest framing.
 - Add new runner stubs `site/src/lib/runners/<lib>.ts` for any B83-recommended additions; implements `{ flat, nested, array, batch(schema, n) }`. CLI and browser worker both consume.
 - Rebuild `/bench`: Web Worker (B69), unify schemas with CLI (B70), switch `measure()` to time-budget (B71), add `ProgressBar` + `Abort` (B73). Remove cold-start from browser surface (B72 closed).
@@ -499,6 +503,7 @@ sequence and slots Phase 2 in when ready.
 Filed as separate backlog cards (see "Recommended library-side cards" below). These ship as library work in `src/`, get their own changesets, and update `docs/api-reference.md` per D5. The site does not depend on them until 4b.
 
 **Phase 4b — Site-side `/explorer` route**
+
 - Build `site/src/lib/explorer/widgets/{ConstellationGraph,RecordInspector,ProvenanceHeatmap,ProvenanceChip}.svelte`. Stories alongside.
 - Wire `/explorer` route to mount the three widgets behind a `Tabs` view switcher. Inline-mode entry-point (paste schema or import `world.ts`) + upload-mode entry-point (paste `WorldTrace` JSON).
 - Standalone HTML artifact deferred to Phase 4 v2 per §10 Q5; widgets stay site-only at v1.
@@ -506,6 +511,7 @@ Filed as separate backlog cards (see "Recommended library-side cards" below). Th
 - Ship: `/explorer` is live; users can see the universe their schemas build. (closes B80.)
 
 **Phase 5 — Polish**
+
 - Playwright smoke suite hitting `/`, `/docs/getting-started`, `/explorer`, `/comparison`, `/showcase`, `/bench` (B75).
 - Storybook coverage audit on the post-migration component set, including the Explorer widgets (B78); most foundations/primitives stories were deleted in Phase 1.
 - Copy-to-clipboard buttons on install snippets in `docs/getting-started.md` via `@dxlbnl/ui` `Button` + `toast()` (B77).
@@ -513,6 +519,7 @@ Filed as separate backlog cards (see "Recommended library-side cards" below). Th
 - Ship: site is full, tested, and quality-polished. (closes B74, B75, B77, B78.)
 
 **Independent tracks (do not gate the phases above)**
+
 - B82 — Maintainer reconfigures Vercel to deploy `site/`. Should land before Phase 1 visibility is needed.
 - B58-B — Library work, parallel.
 

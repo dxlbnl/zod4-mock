@@ -12,7 +12,7 @@ phase: 4a
 ## Description
 
 Second library card of B84's Phase 4a. Threads a provenance-capture sink
-through the per-field pipeline so each `TraceField` records *how* its value
+through the per-field pipeline so each `TraceField` records _how_ its value
 was decided.
 
 ### Scope (v1)

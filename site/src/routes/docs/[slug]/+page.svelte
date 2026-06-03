@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { mount, unmount } from 'svelte';
-	import SchemaPlayground from '$lib/components/Docs/SchemaPlayground.svelte';
+	import SchemaPlayground from '$lib/widgets/SchemaPlayground.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

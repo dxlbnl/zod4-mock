@@ -29,6 +29,7 @@
     "@codemirror/language": "^6.12.3",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.42.1",
+    "@dxlbnl/ui": "^1.1.1",
     "@faker-js/faker": "^10.4.0",
     "@lezer/highlight": "^1.2.3",
     "@zod4-mock/locale-en": "workspace:*",

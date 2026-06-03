@@ -1,8 +1,8 @@
 <script lang="ts">
-	import CodePanel from '$lib/components/Showcase/CodePanel.svelte';
-	import JsonTree from '$lib/components/Showcase/JsonTree.svelte';
-	import RelationCallout from '$lib/components/Showcase/RelationCallout.svelte';
-	import Button from '$lib/components/Primitives/Button.svelte';
+	import { Button, Tabs } from '@dxlbnl/ui';
+	import CodePanel from '$lib/widgets/CodePanel.svelte';
+	import JsonTree from '$lib/widgets/JsonTree.svelte';
+	import RelationCallout from '$lib/widgets/RelationCallout.svelte';
 	import { generateWorld } from '$lib/runners/ecommerce';
 	import type { EcommerceWorld } from '$lib/schemas/ecommerce';
 
@@ -110,7 +110,6 @@
 	];
 
 	type EntityKey = 'users' | 'categories' | 'products' | 'variants' | 'reviews' | 'orders';
-	let selectedEntity = $state<EntityKey>('reviews');
 
 	const entityOptions: { key: EntityKey; label: string }[] = [
 		{ key: 'users', label: 'Users' },
@@ -122,27 +121,20 @@
 	];
 </script>
 
+{#snippet entityPanel(key: EntityKey)}
+	<JsonTree value={world[key]} highlightIds={allIds} />
+{/snippet}
+
 <div class="page">
 	<header class="page-header">
 		<h1 class="t-title">Relational Data Demo</h1>
-		<p class="t-small" style="color:var(--text-muted)">
+		<p class="t-small" style="color:var(--ink-dim)">
 			zod4-mock generates referentially consistent data — IDs cross-reference real entities.
 		</p>
 	</header>
 
 	<div class="toolbar">
-		<div class="entity-tabs seg">
-			{#each entityOptions as opt}
-				<button
-					class="seg-item {selectedEntity === opt.key ? 'active' : ''}"
-					onclick={() => (selectedEntity = opt.key)}
-					type="button"
-				>
-					{opt.label} ({world[opt.key].length})
-				</button>
-			{/each}
-		</div>
-		<Button label="Regenerate" onclick={regenerate} />
+		<Button variant="ghost" onclick={regenerate}>Regenerate</Button>
 	</div>
 
 	<RelationCallout proofs={proofs()} />
@@ -155,7 +147,14 @@
 		<div class="right">
 			<p class="t-caption section-label">Generated output</p>
 			<div class="json-wrap">
-				<JsonTree value={world[selectedEntity]} highlightIds={allIds} />
+				<Tabs
+					active="reviews"
+					tabs={entityOptions.map((opt) => ({
+						id: opt.key,
+						label: `${opt.label} (${world[opt.key].length})`,
+						panel: () => entityPanel(opt.key)
+					}))}
+				/>
 			</div>
 		</div>
 	</div>
@@ -178,9 +177,6 @@
 		gap: var(--space-3);
 		flex-wrap: wrap;
 	}
-	.entity-tabs {
-		flex-wrap: wrap;
-	}
 	.split {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -196,11 +192,7 @@
 		margin-bottom: var(--space-2);
 	}
 	.json-wrap {
-		padding: var(--space-4);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--bg-raised);
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 12px;
 		max-height: 520px;
 		overflow: auto;

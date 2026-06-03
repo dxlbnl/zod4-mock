@@ -36,7 +36,7 @@ filed when v1 is on `main`).
 - Two trace ingestion modes (entry-point banner — `@dxlbnl/ui` `Alert`):
   - **Inline mode** — user pastes schema source (or imports their `world.ts`);
     the page evaluates it via the existing D18 playground pattern (`new
-    Function` / IIFE) and calls `world.trace()` to produce the trace. Stays
+Function` / IIFE) and calls `world.trace()` to produce the trace. Stays
     in-browser.
   - **Upload mode** — user pastes a `WorldTrace` JSON they generated locally
     (downloaded from `world.trace()` directly).

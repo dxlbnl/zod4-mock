@@ -42,7 +42,7 @@ Report at `wiki/research/reports/docs-system-design.md` answering:
      `@dxlbnl/ui`, search story, build story).
    - **(c) Bespoke** — author docs in `wiki/docs-source/` as a richer MDX-shape
      with explicit narrative sections + per-page metadata; site renders.
-3. **Content model** — what shape docs the *user* writes vs what shape the *site*
+3. **Content model** — what shape docs the _user_ writes vs what shape the _site_
    renders. Specifically:
    - Where does the canonical `docs/api-reference.md` live (still `docs/` for D5?
      or migrate the canonical to `wiki/`?)
@@ -59,9 +59,9 @@ Report at `wiki/research/reports/docs-system-design.md` answering:
    - Inline benchmark bars (one chart inside the doc page).
    - "Try this in your repo" with the install command swappable per package
      manager (pnpm / npm / yarn / bun).
-   Recommend which ship in v1 and which defer.
+     Recommend which ship in v1 and which defer.
 5. **Search** — pagefind / Algolia DocSearch / flexsearch / something else?
-   How does the search index get the *concepts* in the prose, not just headings?
+   How does the search index get the _concepts_ in the prose, not just headings?
 6. **Sync with `docs/`** — how does the docs site stay honest with
    `docs/api-reference.md` without duplicating it? Options:
    - Author canonical in `docs/`, site reads (the rejected hybrid).

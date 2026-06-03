@@ -2,9 +2,9 @@
 	import { untrack } from 'svelte';
 	import * as z from 'zod';
 	import { generate } from 'zod4-mock';
+	import { Button } from '@dxlbnl/ui';
 	import Editor from './Editor.svelte';
-	import JsonTree from '$lib/components/Showcase/JsonTree.svelte';
-	import Button from '$lib/components/Primitives/Button.svelte';
+	import JsonTree from './JsonTree.svelte';
 
 	interface Props {
 		initialCode?: string;
@@ -101,7 +101,7 @@
 		<Editor bind:value={code} />
 	</div>
 	<div class="toolbar">
-		<Button label="Randomize" variant="default" onclick={randomize} />
+		<Button variant="ghost" onclick={randomize}>Randomize</Button>
 		{#if error}
 			<span class="error t-caption">{error}</span>
 		{/if}

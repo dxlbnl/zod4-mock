@@ -1,0 +1,28 @@
+/* =========================================================
+   zod4-mock site identity layer
+   Layered on top of @dxlbnl/ui tokens (see app.css @layer order).
+   ========================================================= */
+
+:root {
+  /* Library identity — used in charts, legend, and the relational exhibit. */
+  --lib-zod4mock: #a78bfa;
+  --lib-zodmock: #fbbf24;
+  --lib-faker: #34d399;
+}
+
+/* ── Resolution rungs ───────────────────────────────────────
+   Future Explorer colours; reserved for B90; not consumed yet.
+   Values take inspiration from @dxlbnl/ui's named accents
+   (cyan / amber / ok / danger) so they read consistently against
+   Phosphor + Paper. B90 will refine these; the values committed
+   here stand as defaults.
+   ─────────────────────────────────────────────────────────── */
+:root {
+  --rung-matcher: #7cc7d1; /* intentional / wired — cyan */
+  --rung-keymap: #8fd48a; /* intentional / wired — ok-green */
+  --rung-key-based: #b0c4d4; /* softer realism cue — pale blue-grey */
+  --rung-schema-based: #a4b0a9; /* neutral grey (matches --ink-dim) */
+  --rung-override: #ffb347; /* pinned override — amber */
+  --rung-default: #d4a04e; /* wrapper default — amber-dim */
+  --rung-absent: #5a635e; /* faded / absent */
+}

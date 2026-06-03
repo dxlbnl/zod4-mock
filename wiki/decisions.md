@@ -661,3 +661,39 @@ read-only inspector.
   framing: cite tier + source; never use 'fastest' or 'faster than the
   alternatives' without a citation. (→ D20)"
 - **Supersedes**: none
+
+## D21: Site CSS layer convention — `@layer dxlbnl, site;`
+
+- **Date**: 2026-06-03
+- **By**: implementer (B95) flagged; reviewer recommended promotion; manager
+  promoted on close.
+- **Context**: B95 introduced `@dxlbnl/ui` as the site's design-system
+  foundation (Phase 1 of the B84 rebuild). Token customisation lives in
+  `site/src/lib/styles/identity.css` (the three `--lib-*` identity colours +
+  the seven `--rung-*` Resolution Rung tokens reserved for B90). Without an
+  explicit layer order, the win between `@dxlbnl/ui` tokens and `identity.css`
+  depends on import order in `app.css` — a fragile invariant. B95 §10 Q4
+  answer locked the layer order in CSS rather than implicit ordering. Per the
+  Q4 answer, `@dxlbnl/ui` itself does not (yet) ship a layer convention; the
+  site introduces one and may revisit when the library adopts its own.
+- **Decision**: The site **MUST** declare CSS `@layer dxlbnl, site;` at the
+  top of `site/src/lib/styles/app.css`, import `@dxlbnl/ui/tokens/tokens.css`
+  and `@dxlbnl/ui/tokens/typography.css` into the `dxlbnl` layer, and import
+  `./identity.css` (plus any future site-local style sheets) into the `site`
+  layer. The layer order makes site overrides deterministic regardless of
+  import order; future site CSS work (B90 rung consumption, B94 docs system,
+  B69/B70/B71/B73 bench rebuild) inherits the same discipline.
+- **Consequences**:
+  - Reviewer gains a standing check: any new site stylesheet that bypasses
+    the layer order — or any change to `app.css` that re-orders the layer
+    declaration — is a rule violation.
+  - When `@dxlbnl/ui` later adopts its own `@layer` convention, this rule
+    updates to match (a small follow-up chore at that time, recorded as a
+    superseding ADR).
+  - No impact on library code (`src/`), packages (`packages/locale-*`), or
+    end-user docs (`docs/`) — site-local rule only.
+- **Rule added/changed**: "The site **MUST** declare CSS
+  `@layer dxlbnl, site;` in `site/src/lib/styles/app.css` and import
+  `@dxlbnl/ui` tokens into the `dxlbnl` layer + site identity into the
+  `site` layer. (→ D21)"
+- **Supersedes**: none

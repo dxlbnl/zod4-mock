@@ -48,7 +48,7 @@ covering:
 - **`@dxlbnl/ui` adoption** — inventory current `site/src/lib/components/`,
   map to `@dxlbnl/ui` equivalents, list gaps (components that don't yet
   exist in `@dxlbnl/ui`), propose migration order.
-- **Phasing** — which existing inbox cards land *as part of* this rebuild
+- **Phasing** — which existing inbox cards land _as part of_ this rebuild
   vs. become obsolete vs. stay independent. Tentative classification:
   - Land as part of rebuild: B69 (worker), B70 (unify schemas),
     B71 (budget), B73 (progress UI), B75 (Playwright smoke),

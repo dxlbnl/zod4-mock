@@ -38,7 +38,7 @@ B90 has nodes but no edges.
 
 - D4 / D10 / D9: capture is observation, no PRNG / counter side effects.
 - D8: registered-schema storage contract preserved (transforms still apply
-  before storage; the edge records the *stored* `to` ID).
+  before storage; the edge records the _stored_ `to` ID).
 - D14: `generateArray` arms keep their trailing pass; edge capture happens
   per generated element.
 - D13: no `node:*` imports.

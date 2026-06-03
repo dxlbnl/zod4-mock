@@ -63,7 +63,9 @@
     "site:build": "pnpm --filter @zod4-mock/site build",
     "site:bench": "pnpm --filter @zod4-mock/site bench",
     "site:check": "pnpm --filter @zod4-mock/site check",
-    "site:storybook": "pnpm --filter @zod4-mock/site storybook"
+    "site:storybook": "pnpm --filter @zod4-mock/site storybook",
+    "site:test:unit": "pnpm --filter @zod4-mock/site test:unit",
+    "site:test:component": "pnpm --filter @zod4-mock/site test:component"
   },
   "dependencies": {
     "@zod4-mock/locale-core": "workspace:*"

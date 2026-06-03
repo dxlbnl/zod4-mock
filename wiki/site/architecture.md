@@ -102,15 +102,31 @@ site/
 
 ## Design system
 
-Token-driven, CSS custom properties in `src/lib/styles/tokens.css`:
+Token-driven, layered via CSS `@layer` (declared in `src/lib/styles/app.css`):
 
-- Dark base by default; light theme via `html.light` class on `<html>` (QA pending — B76).
-- Library identity colors: `--lib-zod4mock: #a78bfa`, `--lib-zodmock: #fbbf24`, `--lib-faker: #34d399`.
-- 8px spacing scale; Inter (body) + JetBrains Mono (code).
-- 7-level type scale: `.t-large` → `.t-micro`.
+```
+@layer dxlbnl, site;
+@import "@dxlbnl/ui/tokens/tokens.css" layer(dxlbnl);
+@import "@dxlbnl/ui/tokens/typography.css" layer(dxlbnl);
+@import "./identity.css" layer(site);
+```
 
-Whether to invest in a documented design system layer is open — see
-[B79](../backlog/inbox/B79-site-design-system-scope.md).
+- **Phosphor (dark)** palette default; **Paper (light)** via
+  `<html data-palette="paper">` (the library's switch — B76 closed by B95).
+- **Library identity** colours (chart/legend) live in `src/lib/styles/identity.css`
+  on `:root`: `--lib-zod4mock: #a78bfa`, `--lib-zodmock: #fbbf24`,
+  `--lib-faker: #34d399`.
+- **Resolution-rung tokens** (`--rung-matcher`, `--rung-keymap`,
+  `--rung-key-based`, `--rung-schema-based`, `--rung-override`,
+  `--rung-default`, `--rung-absent`) are declared in `identity.css` but
+  reserved for B90 (Explorer); not yet consumed.
+- Layout / chrome composes `@dxlbnl/ui` primitives (`Nav`, `Container`,
+  `Stack`, `PageHero`, `Button`, `StatCard`, `Tabs`, `Table`).
+- Domain widgets (charts, JSON tree, schema playground, etc.) live under
+  `src/lib/widgets/`; the legacy `src/lib/components/` directory is gone.
+
+B79 is superseded by B84/B95; further design-system work tracks in those
+cards' successors.
 
 ## See also
 

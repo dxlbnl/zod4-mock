@@ -1046,3 +1046,30 @@ it records the reason here AND states it in chat.
   (`/explorer` route + widgets — gated on B85–B88). B89 (`writeExplorer`
   HTML artifact) deferred to Phase 4 v2; will file when v1 ships.
 - result: B84 done — commit pending.
+
+## 2026-06-03 — B95: Phase 1 — site foundation on @dxlbnl/ui
+
+- manager: start, track: feature (flagged review — architecturally
+  significant first `@dxlbnl/ui` adoption). Phase 1 of B84's 5-phase
+  rebuild. Closes B76 + B79 + B80 partial.
+- manager: dispatching spec-writer.
+- spec-writer: B95 spec landed at `wiki/specs/B95-site-foundation-on-dxlbnl-ui.md` (10 R-IDs, 0 blocking, 5 non-blocking). 0 tooling slips.
+- manager: spec-validation gate PASS.
+- manager: review checkpoint #2 — user answered all 5 non-blocking Qs. New constraint: `@dxlbnl/ui` API/tokens questions read from `/home/dexter/Projects/Web/dxlb-ui/docs/`, NEVER `node_modules` (saved memory `reference-dxlb-ui-docs.md`). Q2 (test aliases) added to R10 scope. Q3 (rung tokens) take inspiration from dxlb-ui palette. Q4 (layering) introduce `@layer dxlbnl, site;` in site app.css. Q5 (widget relocation) confirmed in scope.
+- manager: dispatching test-writer.
+- implementer: 10 R-IDs landed. 45/48 unit tests passed initially with 3
+  test-writer self-collisions (R2/R6/R8 file-walks scanned their own
+  detection logic); implementer correctly escalated rather than weakening
+  tests. Tooling slips: 0. Flagged D21 candidate (CSS `@layer dxlbnl, site;`).
+- test-writer: surgical fix landed (walkProductionFiles helper excludes
+  `*.test.ts` + `*.stories.svelte` from source scans). All 48 unit + 27
+  component + 1084 library + 27 playground tests green. Tooling slips: 0.
+- reviewer: PASS — all 10 R-IDs verified per-file:line; D17/D18/D19/D20
+  honoured; D21 recommended for promotion. Scope clean; no edits to
+  `src/`/`tests/`/`docs/`/`packages/`. Tooling slips: 0.
+- manager: promoted **D21** (CSS `@layer dxlbnl, site;`) to `decisions.md`
+  + `architecture.md` Rules. Closed B95 (mv done/), closed B76 (light theme
+  fulfilled via Phosphor/Paper palette), closed B79 (DS scope answered by
+  @dxlbnl/ui). B80 partial (the playground/explorer nav slot rebrand
+  landed; full close at Phase 4b).
+- result: B95 done — commit pending. B76 + B79 ride along.

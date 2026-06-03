@@ -183,6 +183,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.42.1
         version: 6.43.0
+      '@dxlbnl/ui':
+        specifier: ^1.1.1
+        version: 1.1.1(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0)))(svelte@5.55.5)
       '@faker-js/faker':
         specifier: ^10.4.0
         version: 10.4.0
@@ -420,6 +423,12 @@ packages:
 
   '@codemirror/view@6.43.0':
     resolution: {integrity: sha512-V7ZCLQO3Jus9hzh2jVCCPW3mO4IBMr43O37PqSUYautJSnnJF41YlgLw21x0fLJTYvJ+Vkm6Gp+qKGH9pltgXA==}
+
+  '@dxlbnl/ui@1.1.1':
+    resolution: {integrity: sha512-BXD2OwstLceUTWpzszSbaMIKaFzYNTb49hFN1QY9N1N8Y980+pd78I2x6LA/7oNPYWnEUr4w1CVam013eJH/0A==}
+    peerDependencies:
+      '@sveltejs/kit': ^2.0.0
+      svelte: ^5.0.0
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -751,6 +760,12 @@ packages:
   '@faker-js/faker@10.4.0':
     resolution: {integrity: sha512-sDBWI3yLy8EcDzgobvJTWq1MJYzAkQdpjXuPukga9wXonhpMRvd1Izuo2Qgwey2OiEoRIBr35RMU9HJRoOHzpw==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
+
+  '@fontsource/inter-tight@5.2.7':
+    resolution: {integrity: sha512-44TmSfHdNQus/3MWOMIonUEnbxwQhiaFo2sfBJEGIE4c7TN+GO6kfLzsTH4Nu52BC9HDZFl9fPQ6Cwzp9vYTtQ==}
+
+  '@fontsource/jetbrains-mono@5.2.8':
+    resolution: {integrity: sha512-6w8/SG4kqvIMu7xd7wt6x3idn1Qux3p9N62s6G3rfldOUYHpWcc2FKrqf+Vo44jRvqWj2oAtTHrZXEP23oSKwQ==}
 
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
@@ -4411,6 +4426,13 @@ snapshots:
       style-mod: 4.1.3
       w3c-keyname: 2.2.8
 
+  '@dxlbnl/ui@1.1.1(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0)))(svelte@5.55.5)':
+    dependencies:
+      '@fontsource/inter-tight': 5.2.7
+      '@fontsource/jetbrains-mono': 5.2.8
+      '@sveltejs/kit': 2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(tsx@4.21.0))
+      svelte: 5.55.5
+
   '@emnapi/core@1.10.0':
     dependencies:
       '@emnapi/wasi-threads': 1.2.1
@@ -4595,6 +4617,10 @@ snapshots:
     optional: true
 
   '@faker-js/faker@10.4.0': {}
+
+  '@fontsource/inter-tight@5.2.7': {}
+
+  '@fontsource/jetbrains-mono@5.2.8': {}
 
   '@inquirer/external-editor@1.0.3(@types/node@25.6.1)':
     dependencies:
