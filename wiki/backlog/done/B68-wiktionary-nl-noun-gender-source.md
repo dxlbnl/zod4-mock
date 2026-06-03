@@ -53,11 +53,12 @@ the runtime backing the wiki. The questions for this research item:
 ## Deliverable
 
 `wiki/research/text-generation/wiktionary-nl-noun-gender.md`. Per-access-path feasibility
-+ license + bundle-size estimate + a recommendation:
 
-- **A**: viable access path X → file B58-B unblocking note + name the path
-- **B**: not viable from Wiktionary → recommend B58-B rescope (drop R8, ship R1–R7 + R9–R12)
-- **C**: other (e.g. fold the gender-tagging into a much smaller curated list)
+- license + bundle-size estimate + a recommendation:
+
+* **A**: viable access path X → file B58-B unblocking note + name the path
+* **B**: not viable from Wiktionary → recommend B58-B rescope (drop R8, ship R1–R7 + R9–R12)
+* **C**: other (e.g. fold the gender-tagging into a much smaller curated list)
 
 ## Out of scope
 

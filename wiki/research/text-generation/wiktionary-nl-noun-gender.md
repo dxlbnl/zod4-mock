@@ -76,7 +76,7 @@
      (`Dutch masculine nouns` = 15,540, `Dutch feminine nouns` = 14,163,
      `Dutch neuter nouns` = 18,962, `Dutch common-gender nouns` = 299,
      `Dutch nouns with multiple genders` = 2,025, `Dutch masculine and
-     feminine nouns by sense` = 168) — verified directly against
+feminine nouns by sense` = 168) — verified directly against
      `Category:Dutch_nouns_by_gender` on 2026-06-02. License inherits
      from upstream Wiktionary (CC-BY-SA 4.0; §3) and the project ships
      simple `(word, "de"|"het")` tuples that almost certainly qualify
@@ -161,7 +161,7 @@
   (vrouwelijk / feminine), `{{o}}` (onzijdig / neuter). Verified on
   the `nl.wiktionary.org/wiki/hond` entry (2026-06-02) — the source
   text contains `de **hond** [m]` for the animal sense and `het
-  **hond** [o]` for the obsolete land-measurement sense, with `[m]`
+**hond** [o]` for the obsolete land-measurement sense, with `[m]`
   and `[o]` rendered from `{{m}}` and `{{o}}` templates.
 - **There is NO `Categorie:De-woord_in_het_Nederlands` or
   `Categorie:Het-woord_in_het_Nederlands` on nl.wiktionary** —
@@ -277,7 +277,7 @@ incremental-update workflows that aren't in scope here.
   by the `wiktextract` tool. Front-page footer explicitly states:
   > "This dictionary is based on structured data extracted on
   > 2026-05-31 from the **enwiktionary dump dated 2026-05-01**"
-  (verified 2026-06-02).
+  > (verified 2026-06-02).
 - Notable: the source is **English Wiktionary's Dutch-language
   entries**, NOT nl.wiktionary. This is actually a **better** source
   for gender annotation than nl.wiktionary because en.wiktionary
@@ -305,7 +305,7 @@ incremental-update workflows that aren't in scope here.
   - `head_templates.args."1"` carries the **gender code**
     (`"m"` / `"f"` / `"n"`) used by the upstream wikitext template,
     which expands to e.g. `"hond m (plural honden, diminutive
-    hondje n)"` in the rendered headword.
+hondje n)"` in the rendered headword.
   - Polysemy: multi-gender words have multiple senses each with its
     own gender tag (the `hond` entry has both a masculine sense for
     the animal and a neuter sense for the obsolete land-measurement
@@ -398,32 +398,32 @@ that is no harsher than the OpenTaal BSD/GPL precedent.
 
 For the **A: kaikki** recommendation:
 
-| Property | Value |
-| --- | --- |
-| Source URL | `https://kaikki.org/dictionary/rawdata.html` → `nl-extract.jsonl.gz` |
-| Downstream upstream | English Wiktionary dump 2026-05-01 (extracted 2026-05-31 by wiktextract) |
-| Compressed size | ~119.6 MB (.gz) |
-| Raw JSONL size | ~1.1 GB |
-| License (upstream) | CC-BY-SA 4.0 (en.wiktionary) |
-| License (kaikki redistribution) | not separately declared; inherits upstream |
-| Refresh cadence | Monthly (tracking enwiktionary dump cycle) |
-| Total Dutch noun senses | 84,070 |
-| Unique Dutch noun lemmas with gender | ~33 K – 35 K |
-| Coverage of existing `nouns.ts` (5K entries) | very high — OpenTaal lemmas are a subset of Wiktionary's Dutch noun coverage; intersection ≥ 95 % is the working assumption (verify at fetch-script time per Q-1) |
-| Field accessor | `entry.senses[*].tags` array contains `"masculine"` / `"feminine"` / `"neuter"` / `"common-gender"`; `entry.head_templates[0].args."1"` carries the upstream gender code `m`/`f`/`n` |
+| Property                                     | Value                                                                                                                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Source URL                                   | `https://kaikki.org/dictionary/rawdata.html` → `nl-extract.jsonl.gz`                                                                                                                 |
+| Downstream upstream                          | English Wiktionary dump 2026-05-01 (extracted 2026-05-31 by wiktextract)                                                                                                             |
+| Compressed size                              | ~119.6 MB (.gz)                                                                                                                                                                      |
+| Raw JSONL size                               | ~1.1 GB                                                                                                                                                                              |
+| License (upstream)                           | CC-BY-SA 4.0 (en.wiktionary)                                                                                                                                                         |
+| License (kaikki redistribution)              | not separately declared; inherits upstream                                                                                                                                           |
+| Refresh cadence                              | Monthly (tracking enwiktionary dump cycle)                                                                                                                                           |
+| Total Dutch noun senses                      | 84,070                                                                                                                                                                               |
+| Unique Dutch noun lemmas with gender         | ~33 K – 35 K                                                                                                                                                                         |
+| Coverage of existing `nouns.ts` (5K entries) | very high — OpenTaal lemmas are a subset of Wiktionary's Dutch noun coverage; intersection ≥ 95 % is the working assumption (verify at fetch-script time per Q-1)                    |
+| Field accessor                               | `entry.senses[*].tags` array contains `"masculine"` / `"feminine"` / `"neuter"` / `"common-gender"`; `entry.head_templates[0].args."1"` carries the upstream gender code `m`/`f`/`n` |
 
 For the **MediaWiki XML dump fallback**:
 
-| Property | Value |
-| --- | --- |
-| Source URL | `https://dumps.wikimedia.org/nlwiktionary/latest/nlwiktionary-latest-pages-articles.xml.bz2` |
-| Compressed size | ~140 MB (.bz2) |
-| Raw XML size | multi-GB (streaming-only) |
-| License | CC-BY-SA 4.0 (Wikimedia default since the 2023 license update; nl.wiktionary's `Wiktionary:Auteursrechten` page also references GFDL legacy and CC-BY-SA — both apply; CC-BY-SA is the live binding instrument since the 2009 license vote, GFDL is the historical co-license) |
-| Refresh cadence | ~Twice monthly (Wikimedia dump schedule) |
-| Gender encoding | Inline `{{m}}` / `{{v}}` / `{{o}}` templates adjacent to headword in entry wikitext |
-| Total Dutch noun pages | 150,333 (incl. inflected forms) |
-| Gender-tagged lemmas (estimate) | ~35 K – 50 K after filtering inflected-form subcategories |
+| Property                        | Value                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Source URL                      | `https://dumps.wikimedia.org/nlwiktionary/latest/nlwiktionary-latest-pages-articles.xml.bz2`                                                                                                                                                                                   |
+| Compressed size                 | ~140 MB (.bz2)                                                                                                                                                                                                                                                                 |
+| Raw XML size                    | multi-GB (streaming-only)                                                                                                                                                                                                                                                      |
+| License                         | CC-BY-SA 4.0 (Wikimedia default since the 2023 license update; nl.wiktionary's `Wiktionary:Auteursrechten` page also references GFDL legacy and CC-BY-SA — both apply; CC-BY-SA is the live binding instrument since the 2009 license vote, GFDL is the historical co-license) |
+| Refresh cadence                 | ~Twice monthly (Wikimedia dump schedule)                                                                                                                                                                                                                                       |
+| Gender encoding                 | Inline `{{m}}` / `{{v}}` / `{{o}}` templates adjacent to headword in entry wikitext                                                                                                                                                                                            |
+| Total Dutch noun pages          | 150,333 (incl. inflected forms)                                                                                                                                                                                                                                                |
+| Gender-tagged lemmas (estimate) | ~35 K – 50 K after filtering inflected-form subcategories                                                                                                                                                                                                                      |
 
 ---
 
@@ -463,8 +463,8 @@ For the **MediaWiki XML dump fallback**:
      EU Database Directive Article 1(2) defines protected databases
      as collections of "independent works, data or other materials"
      with "qualitatively or quantitatively substantial investment";
-     case law (e.g. ECJ C-203/02 *British Horseracing Board* /
-     C-46/02 *Fixtures Marketing*) holds that single facts are NOT
+     case law (e.g. ECJ C-203/02 _British Horseracing Board_ /
+     C-46/02 _Fixtures Marketing_) holds that single facts are NOT
      protected by sui generis rights when extracted from a larger
      database, only the substantial selection or structure. A flat
      list of (word, gender) pairs is closer to "the facts
@@ -473,7 +473,7 @@ For the **MediaWiki XML dump fallback**:
      ShareAlike attaches, the project's permissive-only stance has
      historically accepted CC-BY-SA data (B51 §8.2 Q-4 cited
      "Wiktionary frequency lists are CC-BY-SA-3.0, more
-     permissive" as the rationale for *not* rejecting Wiktionary
+     permissive" as the rationale for _not_ rejecting Wiktionary
      while rejecting SUBTLEX's NC clause). The B46 license bar
      (URL + license + retrieval date + entry count) satisfies the
      attribution requirement; the data file carries CC-BY-SA in its
@@ -519,12 +519,12 @@ B58-B preliminary R2: tag `nl.nouns` as parallel
 Per the B58-B card baseline + per B51 §1.10 raw-vs-OTW ratios
 (~5× brotli post-bundler):
 
-| Entries shipped | Raw `Array<{word, gender}>` source bytes | OTW brotli (post-consumer-bundler) | Notes |
-| --- | --- | --- | --- |
-| 1,000 (top-1K filter) | ~25 KB raw | ~5 KB OTW | matches B58-B card "~3000 entries → ~5 KB OTW" interpolation; tail dropped |
-| 5,000 (match existing `nouns.ts`) | ~125 KB raw | ~25 KB OTW | parallel-array baseline — **recommended** |
-| 33,000 (kaikki full Dutch noun lemmas) | ~825 KB raw | ~165 KB OTW | over B51 §1.10 locale-nl budget (~280 KB raw / ~70 KB OTW) |
-| 50,000 (B58-B card upper-bound estimate) | ~1.25 MB raw | ~250 KB OTW | blows through every budget |
+| Entries shipped                          | Raw `Array<{word, gender}>` source bytes | OTW brotli (post-consumer-bundler) | Notes                                                                      |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
+| 1,000 (top-1K filter)                    | ~25 KB raw                               | ~5 KB OTW                          | matches B58-B card "~3000 entries → ~5 KB OTW" interpolation; tail dropped |
+| 5,000 (match existing `nouns.ts`)        | ~125 KB raw                              | ~25 KB OTW                         | parallel-array baseline — **recommended**                                  |
+| 33,000 (kaikki full Dutch noun lemmas)   | ~825 KB raw                              | ~165 KB OTW                        | over B51 §1.10 locale-nl budget (~280 KB raw / ~70 KB OTW)                 |
+| 50,000 (B58-B card upper-bound estimate) | ~1.25 MB raw                             | ~250 KB OTW                        | blows through every budget                                                 |
 
 **Key clarification.** The B58-B card's "~5 KB OTW for ~3000 entries"
 estimate assumed the gender tag would be added **as a parallel
@@ -681,21 +681,21 @@ recommendation + license posture + bundle-size sign-off.
 
 #### §6.1 Blocking
 
-| # | Question | Recommendation |
-| --- | --- | --- |
-| Q-1 | **Kaikki vs nl.wiktionary dump as the source.** §1.4 recommends kaikki for cost-of-implementation reasons; §1.1 (nl.wiktionary XML dump) is the documented fallback if kaikki disappears, its license posture turns out to fail Q-2, or quality concerns surface (kaikki is derived from en.wiktionary's Dutch entries; nl.wiktionary's coverage of Dutch slang / dialect / regional words may be richer for the long tail, though the top-5K intersection is unaffected). | **Use kaikki.** The ~80 LOC build-time script vs. ~150 LOC SAX + template parser is a ~2× implementation-cost difference; coverage on the top-5K is functionally identical; license posture is identical (both inherit CC-BY-SA 4.0 from upstream Wiktimedia content). Document the nl.wiktionary dump path in the fetch script header as the cached fallback if kaikki goes offline. |
-| Q-2 | **CC-BY-SA 4.0 acceptability for the 5K shipped gender map.** §3 argues the project should accept CC-BY-SA 4.0 for the gender-map data file under the B46 license bar + sui-generis-database "insubstantial extraction" carve-out, mirroring the OpenTaal BSD/GPL precedent already in tree. Confirm the maintainer accepts CC-BY-SA 4.0 as a shipped data-file license. | **Accept.** OpenTaal BSD / GPL precedent already in tree is stronger copyleft than CC-BY-SA's data-extraction scope; B51 §8.2 Q-4 explicitly cited Wiktionary CC-BY-SA-3.0 as "more permissive" while rejecting SUBTLEX NC. The header-bar attribution discharges the obligation; library code stays MIT. **No standing constraint** required — the B46 license bar already covers it. |
+| #   | Question                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Recommendation                                                                                                                                                                                                                                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-1 | **Kaikki vs nl.wiktionary dump as the source.** §1.4 recommends kaikki for cost-of-implementation reasons; §1.1 (nl.wiktionary XML dump) is the documented fallback if kaikki disappears, its license posture turns out to fail Q-2, or quality concerns surface (kaikki is derived from en.wiktionary's Dutch entries; nl.wiktionary's coverage of Dutch slang / dialect / regional words may be richer for the long tail, though the top-5K intersection is unaffected). | **Use kaikki.** The ~80 LOC build-time script vs. ~150 LOC SAX + template parser is a ~2× implementation-cost difference; coverage on the top-5K is functionally identical; license posture is identical (both inherit CC-BY-SA 4.0 from upstream Wiktimedia content). Document the nl.wiktionary dump path in the fetch script header as the cached fallback if kaikki goes offline.  |
+| Q-2 | **CC-BY-SA 4.0 acceptability for the 5K shipped gender map.** §3 argues the project should accept CC-BY-SA 4.0 for the gender-map data file under the B46 license bar + sui-generis-database "insubstantial extraction" carve-out, mirroring the OpenTaal BSD/GPL precedent already in tree. Confirm the maintainer accepts CC-BY-SA 4.0 as a shipped data-file license.                                                                                                   | **Accept.** OpenTaal BSD / GPL precedent already in tree is stronger copyleft than CC-BY-SA's data-extraction scope; B51 §8.2 Q-4 explicitly cited Wiktionary CC-BY-SA-3.0 as "more permissive" while rejecting SUBTLEX NC. The header-bar attribution discharges the obligation; library code stays MIT. **No standing constraint** required — the B46 license bar already covers it. |
 
 #### §6.2 Non-blocking (recommendations baked in)
 
-| # | Question | Recommendation |
-| --- | --- | --- |
-| Q-3 | **Gender-map shape: full array (R2-as-written) vs sparse record.** §4 recommends shape (b) — `Readonly<Record<string, "de" \| "het">>` — for the ~5 KB OTW match to the B58-B card's estimate. The R2-as-literally-written shape (full `Array<{word, gender}>`) is ~25 KB OTW and equally functional. | **Use shape (b)** — sparse record keyed on word string. Adjust B58-B R2 wording at spec-writer phase from `nounsWithGender?: ReadonlyArray<{ word: string; gender: "de" \| "het" }>` to `nounsGenderMap?: Readonly<Record<string, "de" \| "het">>`. Inflection consumers look up via `nl.nounsGenderMap?.[word] ?? "de"`. Preserves the existing `nouns.ts` corpus unchanged and keeps the bundle delta at ~5 KB OTW. |
-| Q-4 | **Match rate between kaikki and existing `nouns.ts`.** §4 assumes ~95 % of the 5,000 OpenTaal-derived nouns have gender entries in kaikki's Dutch extract. Real match rate is unknown until the fetch script runs; could be lower if OpenTaal's word list includes Dutch dialect / archaic / surname-pollution forms that en.wiktionary doesn't cover. | **Run the fetch script at implementation time and surface the actual match rate in the data-file header `Entries:` count.** If match drops below ~80 % the implementation card should also consider supplementing with nl.wiktionary dump coverage for the residual tail; the 80 % threshold is the level at which the default-`"de"` fallback starts producing visibly-wrong adjective agreement at rates ≥ 6 % (`30 % wrong * 20 % missing = 6 %` cumulative error). |
-| Q-5 | **Multi-gender entry handling.** kaikki surfaces 2,025 "Dutch nouns with multiple genders" + 168 "Dutch masculine and feminine nouns by sense". Emitting two rows per multi-gender word doubles those entries in the shipped record but is consistent with how Dutch grammatically treats multi-gender lemmas. The lookup picks whichever sense landed; B58-B's R8 adjective rule then handles whichever gender came back. | **Emit two rows for multi-gender entries** — the record-shape (b) (Q-3) is well-defined for this case (`gender: "de" \| "het"` per row; whichever the consumer reads is grammatically valid). Document the choice in the fetch script header. Alternative: collapse multi-gender to "de" (the dominant Dutch path). The doubled-row approach is more honest and costs only ~30 extra rows on a 5K corpus. |
-| Q-6 | **kaikki publication stability.** kaikki.org has a stable history (running since ~2019) and tracks Wikimedia dumps monthly. The site is operated by Tatu Ylönen (also the wiktextract author). Risk of disappearance is low but non-zero; the fetch script needs the nl.wiktionary dump fallback documented (per Q-1). | **Document the fallback inline in the fetch script header.** No additional action needed; the dump path is mechanical to switch on. Re-evaluate only if kaikki's monthly cadence breaks. |
-| Q-7 | **Refresh policy.** kaikki publishes monthly; the project's fetch scripts are manually re-run, not cron-driven. A gender-map regeneration is fine on the existing schedule (when someone edits the fetch script + bumps the corpus). | **Manual re-run via `pnpm --filter @zod4-mock/locale-nl fetch-data`** — the existing pattern. No automation needed. |
-| Q-8 | **`nounsGenderMap` consumer surface — `inflect.nl.inflectAdjective` only, or also expose for user matchers?** B58-B R1 / R8 spec internal use; external consumers might want it for custom matchers. | **Expose via the `LocaleData` `word.*` block** — the same surface that already publishes `nouns`, `adjectives`, etc. User matchers can read it via the existing locale-extension contract. No new API. |
+| #   | Question                                                                                                                                                                                                                                                                                                                                                                                                                   | Recommendation                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-3 | **Gender-map shape: full array (R2-as-written) vs sparse record.** §4 recommends shape (b) — `Readonly<Record<string, "de" \| "het">>` — for the ~5 KB OTW match to the B58-B card's estimate. The R2-as-literally-written shape (full `Array<{word, gender}>`) is ~25 KB OTW and equally functional.                                                                                                                      | **Use shape (b)** — sparse record keyed on word string. Adjust B58-B R2 wording at spec-writer phase from `nounsWithGender?: ReadonlyArray<{ word: string; gender: "de" \| "het" }>` to `nounsGenderMap?: Readonly<Record<string, "de" \| "het">>`. Inflection consumers look up via `nl.nounsGenderMap?.[word] ?? "de"`. Preserves the existing `nouns.ts` corpus unchanged and keeps the bundle delta at ~5 KB OTW.                                                  |
+| Q-4 | **Match rate between kaikki and existing `nouns.ts`.** §4 assumes ~95 % of the 5,000 OpenTaal-derived nouns have gender entries in kaikki's Dutch extract. Real match rate is unknown until the fetch script runs; could be lower if OpenTaal's word list includes Dutch dialect / archaic / surname-pollution forms that en.wiktionary doesn't cover.                                                                     | **Run the fetch script at implementation time and surface the actual match rate in the data-file header `Entries:` count.** If match drops below ~80 % the implementation card should also consider supplementing with nl.wiktionary dump coverage for the residual tail; the 80 % threshold is the level at which the default-`"de"` fallback starts producing visibly-wrong adjective agreement at rates ≥ 6 % (`30 % wrong * 20 % missing = 6 %` cumulative error). |
+| Q-5 | **Multi-gender entry handling.** kaikki surfaces 2,025 "Dutch nouns with multiple genders" + 168 "Dutch masculine and feminine nouns by sense". Emitting two rows per multi-gender word doubles those entries in the shipped record but is consistent with how Dutch grammatically treats multi-gender lemmas. The lookup picks whichever sense landed; B58-B's R8 adjective rule then handles whichever gender came back. | **Emit two rows for multi-gender entries** — the record-shape (b) (Q-3) is well-defined for this case (`gender: "de" \| "het"` per row; whichever the consumer reads is grammatically valid). Document the choice in the fetch script header. Alternative: collapse multi-gender to "de" (the dominant Dutch path). The doubled-row approach is more honest and costs only ~30 extra rows on a 5K corpus.                                                              |
+| Q-6 | **kaikki publication stability.** kaikki.org has a stable history (running since ~2019) and tracks Wikimedia dumps monthly. The site is operated by Tatu Ylönen (also the wiktextract author). Risk of disappearance is low but non-zero; the fetch script needs the nl.wiktionary dump fallback documented (per Q-1).                                                                                                     | **Document the fallback inline in the fetch script header.** No additional action needed; the dump path is mechanical to switch on. Re-evaluate only if kaikki's monthly cadence breaks.                                                                                                                                                                                                                                                                               |
+| Q-7 | **Refresh policy.** kaikki publishes monthly; the project's fetch scripts are manually re-run, not cron-driven. A gender-map regeneration is fine on the existing schedule (when someone edits the fetch script + bumps the corpus).                                                                                                                                                                                       | **Manual re-run via `pnpm --filter @zod4-mock/locale-nl fetch-data`** — the existing pattern. No automation needed.                                                                                                                                                                                                                                                                                                                                                    |
+| Q-8 | **`nounsGenderMap` consumer surface — `inflect.nl.inflectAdjective` only, or also expose for user matchers?** B58-B R1 / R8 spec internal use; external consumers might want it for custom matchers.                                                                                                                                                                                                                       | **Expose via the `LocaleData` `word.*` block** — the same surface that already publishes `nouns`, `adjectives`, etc. User matchers can read it via the existing locale-extension contract. No new API.                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -735,7 +735,7 @@ For honesty (the dispatch baseline this session was 2 – 4; target was 0):
   in-tree files:
   - `wc -l packages/locale-nl/src/data/nouns.ts` — to count noun
     entries; the right tool was `Read packages/locale-nl/src/data/nouns.ts
-    --limit 5` (which I also ran; `wc` was redundant). **Counted: 1.**
+--limit 5` (which I also ran; `wc` was redundant). **Counted: 1.**
   - `grep -n "OTW\|brotli\|5 KB\|3000\|gender" wiki/research/text-generation/conjugation-compression.md` —
     to find the B58-B baseline estimate quickly; the right tool was
     `Grep`. **Counted: 1.**
