@@ -9,6 +9,9 @@ packages/*/data/
 .vercel/
 site/build/
 
+# Site bench history (latest.json is committed; history.json grows unbounded)
+site/bench/results/history.json
+
 # Claude Code per-session state (wiki-gate markers, etc.)
 .claude/state/
 
