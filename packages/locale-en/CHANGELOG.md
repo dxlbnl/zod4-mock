@@ -1,5 +1,52 @@
 # @zod4-mock/locale-en
 
+## 0.6.0
+
+### Minor Changes
+
+- 9a586d5: - Add `Prng.pickZipf(items, s)` — single-draw closed-form inverse-CDF Zipf pick.
+  - Add `LocaleData.frequencyExponent` + `frequencyExponentOverrides` for per-locale / per-corpus Zipf tuning.
+  - Open-corpus generators (`person.firstName`, `person.lastName`) now draw via `pickZipf`; closed/enumerable lists stay uniform.
+  - `world.generate(..., { unique: true })` auto-flattens `s` to `0` for the loop's duration.
+  - Locale-en + locale-nl first-name corpora re-emitted in descending-frequency order (freq-sort retrofit on the fetch scripts; `lastNames` order unchanged).
+  - Seed → value mapping shifts on every open-corpus field; integration fixtures re-pinned in the same release.
+- 25f8412: - `@zod4-mock/locale-core`: new `LocaleData.word.formatSentence?(prng, ctx?)` callback + `LocaleSentenceContext` type; `LocaleData.word.verbsPlural` `@deprecated`.
+  - `@zod4-mock/locale-en`: new public `inflect` namespace — `pluralize(noun)`, `conjugate(verb, "3ps" | "past" | "gerund" | "participle")`, `adverbFromAdjective(adj)`.
+  - `@zod4-mock/locale-en`: `word.formatSentence` ships 5 English templates with subject–verb 3ps agreement (pronoun slot pinned to `{he, she, it}`).
+  - `@zod4-mock/locale-en`: `word.adverbs` expanded from 8 to ~3000 entries via `inflect.adverbFromAdjective`.
+  - `@zod4-mock/locale-en`: `company.formatBuzzPhrase` conjugates verbs to 3ps (`"Streamlines synergistic solutions"`).
+  - `zod4-mock`: `word.sentence()` delegates to `loc.formatSentence` when present.
+- f33b567: - Email generator now picks a random local-part format (first.last / flast / f.last / lastonly / firstname42 / etc) based on which siblings are present.
+  - Multi-word company names use ALL tokens with a random `.` / `_` / `''` joiner, not just the first token.
+  - `fullName` / `full_name` / `fullname` / `volledigeNaam` siblings split into first + last for the local-part.
+  - Whimsical fallback handles compose at runtime from `loc.word.adjectives` + `loc.word.nouns` (no hardcoded handle list).
+  - New optional `LocaleData.internet.emailCompanyPrefixes?: readonly string[]` field for locale-specific `info@…` / `contact@…` / `hallo@…` prefixes.
+  - `firstName` / `lastName` always emit per-word title-cased proper nouns regardless of locale data file casing.
+  - `sentence()` no longer capitalises mid-sentence adjectives/nouns — only the leading template token.
+  - `sentence()` `a` / `an` article agreement repaired by a post-template regex pass.
+
+### Patch Changes
+
+- be7ab6d: - `address.cities` expanded to 60 (top-population, head-frequency-ordered for B55 Zipf).
+  - `address.streetNames` (en) expanded to 50; nl unchanged at 85.
+  - `address.timeZones` expanded to 24 curated IANA regional representatives.
+  - `address.countries` / `countryCodes` now ship full ISO 3166-1 — codes hardcoded, localised names derived at module init via `Intl.DisplayNames` (D13-isomorphic).
+  - `commerce.departments` / `productAdjectives` expanded to ~30 each.
+  - `company.buzzAdjectives` / `buzzNouns` / `buzzVerbLemmas` / `catchPhraseAdjectives` / `catchPhraseDescriptors` / `catchPhraseNouns` expanded to ~30 each.
+  - `color.names` expanded to 50 (xkcd-derived, head-frequency-ordered).
+  - `finance.transactionDescriptions` expanded to ~30.
+  - `person.jobTitles` expanded to 40.
+- 8dafc59: - `sentence()` Template 3 now emits object-form pronouns (`him` / `her` / `it` / `them` / `us` / `me`) in the object slot, fixing "sees they" / "sees we" in both the library fallback and locale-en's `formatSentence`.
+- 07035c6: - `address.languages` now derived from a hardcoded ISO 639-1 code list via `Intl.DisplayNames` at module init in both `locale-en` and `locale-nl` (ECMA-402, D13-isomorphic).
+  - `finance.currencies` now derived from `Intl.supportedValuesOf('currency')` + `Intl.DisplayNames` + `Intl.NumberFormat` at module init; numeric codes via a new `ISO_4217_NUMERIC` map in `@zod4-mock/locale-core`.
+  - `@zod4-mock/locale-core` exports the new `ISO_4217_NUMERIC` map for consumers that need ISO 4217 numeric codes (Intl does not expose them).
+- Updated dependencies [9a586d5]
+- Updated dependencies [6d1f3ff]
+- Updated dependencies [25f8412]
+- Updated dependencies [f33b567]
+- Updated dependencies [07035c6]
+  - @zod4-mock/locale-core@0.5.0
+
 ## 0.5.1
 
 ### Patch Changes

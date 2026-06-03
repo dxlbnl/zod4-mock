@@ -1,6 +1,6 @@
 {
   "name": "@zod4-mock/locale-en",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "English locale for zod4-mock",
   "files": [
     "dist",
