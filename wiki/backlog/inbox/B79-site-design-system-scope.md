@@ -3,10 +3,15 @@ id: B79
 title: Scope a site design system (research)
 type: research
 priority: medium
-flags: [review]
+flags: [review, blocked]
 created: 2026-06-03
 provenance: gen-bench DS
+superseded-by: B84
 ---
+
+> **Superseded by [B84](B84-site-architecture-rebuild.md) (2026-06-03)**: maintainer
+> answered the A-vs-B question by adopting `@dxlbnl/ui`. The component-library
+> inventory work moves into B84's `@dxlbnl/ui` adoption section.
 
 ## Description
 

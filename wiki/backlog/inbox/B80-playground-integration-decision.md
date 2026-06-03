@@ -3,9 +3,15 @@ id: B80
 title: Decide — integrate playground/ into site/ or deprecate it
 type: research
 priority: high
-flags: [review]
+flags: [review, blocked]
 created: 2026-06-03
+absorbed-by: B84
 ---
+
+> **Absorbed by [B84](B84-site-architecture-rebuild.md) (2026-06-03)**: playground
+> integration is now a sub-question of B84's "way to check / play with data" surface.
+> Outcomes (A) integrate / (B) split / (C) deprecate are still the right framing —
+> they get answered as part of B84's IA recommendation.
 
 ## Description
 

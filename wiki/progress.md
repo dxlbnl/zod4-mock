@@ -1019,3 +1019,30 @@ it records the reason here AND states it in chat.
   wiring time (B69/B70 implementer catches). No new D-number. Reviewer
   tooling slip: 1 (ls — should have been Glob).
 - result: B83 done — commit pending.
+- researcher: B84 revision #2 returned (5-phase plan, World Explorer fed by
+  `world.trace()` API, 6 library cards B85–B90 recommended). Researcher
+  self-reported 0 slips; actual 1 (one `ls`).
+- manager: review checkpoint #2 second pass — user redirected again:
+  (a) docs system rejected as designed ("docs/\* is a terrible shape for
+  superb docs"); (b) @dxlbnl/ui ownership clarified (maintainer is the
+  vendor; license + repo Qs moot).
+- manager: filed [B94](wiki/backlog/inbox/B94-docs-system-design.md)
+  (docs system design research). Patched B84 report §5 (rejected baseline
+  preserved), §9 Phase 2 (gated on B94), §10 Qs 1–2 (answered).
+- manager: maintainer answered §10 Q3 (friendly `person#1` IDs), Q4 (opt-in
+  trace via `createWorld({ trace: true })`), Q5 (site `/explorer` v1 only;
+  `writeExplorer` deferred to Phase 4 v2 — B89 demoted), Q7 (Vercel deploy
+  after Phase 1; URL = `zod4-mock.vercel.app`). Patched report §10 + B89
+  recommendation; updated B82 card.
+- manager: dispatching B84 reviewer.
+- reviewer: B84 revision #3 **PASS** — all 18 surgical fixes verified;
+  internal consistency restored; 0 tooling slips. Non-blocking observation:
+  §3 component-count uses "47 named exports" which reconciles via the
+  Feedback row's typed exports (4 component classes + `toast()` + 3 type
+  aliases = 8 exports counted in the header) — readable but worth a
+  future-polish pass.
+- manager: filed B85 (`world.trace()` API + types), B86 (field capture
+  sink), B87 (relation edge sink), B88 (friendly `person#1` IDs), B90
+  (`/explorer` route + widgets — gated on B85–B88). B89 (`writeExplorer`
+  HTML artifact) deferred to Phase 4 v2; will file when v1 ships.
+- result: B84 done — commit pending.
