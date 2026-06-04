@@ -5,7 +5,7 @@
  * Results are written to bench/results/latest.json and appended to bench/results/history.json
  */
 
-import { afterAll, describe, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,11 @@ import { en } from "@zod4-mock/locale-en";
 import { z as z3 } from "zod3";
 import { z as z4 } from "zod";
 import { measure, type BenchResult } from "../src/lib/bench.ts";
+import { sampleMemory, type MemorySample } from "./memory.ts";
+import {
+  compareToBaseline,
+  type RunLike,
+} from "./regression-compare.ts";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -159,6 +164,14 @@ type TierResults = {
 
 const results: Record<string, TierResults> = {};
 
+// ─── Memory collection (B98-R6) ───────────────────────────────────────────────
+
+const memory: Record<"simple" | "user" | "nested", MemorySample> = {
+  simple: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
+  user: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
+  nested: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
+};
+
 // ─── Benchmarks ───────────────────────────────────────────────────────────────
 
 describe("simple schema", () => {
@@ -177,9 +190,11 @@ describe("simple schema", () => {
   });
 
   it("zod4-mock (zod4)", () => {
-    results.simple.zod4_mock = measure(() => generate(simple4), {
-      warmup: WARMUP,
-      runs: RUNS,
+    memory.simple = sampleMemory(() => {
+      results.simple.zod4_mock = measure(() => generate(simple4), {
+        warmup: WARMUP,
+        runs: RUNS,
+      });
     });
     console.log(` zod4-mock simple   ${fmt(results.simple.zod4_mock)}`);
   });
@@ -201,9 +216,11 @@ describe("user schema", () => {
   });
 
   it("zod4-mock (zod4)", () => {
-    results.user.zod4_mock = measure(() => generate(user4), {
-      warmup: WARMUP,
-      runs: RUNS,
+    memory.user = sampleMemory(() => {
+      results.user.zod4_mock = measure(() => generate(user4), {
+        warmup: WARMUP,
+        runs: RUNS,
+      });
     });
     console.log(` zod4-mock user     ${fmt(results.user.zod4_mock)}`);
   });
@@ -225,9 +242,11 @@ describe("nested schema", () => {
   });
 
   it("zod4-mock (zod4)", () => {
-    results.nested.zod4_mock = measure(() => generate(nested4), {
-      warmup: WARMUP,
-      runs: RUNS,
+    memory.nested = sampleMemory(() => {
+      results.nested.zod4_mock = measure(() => generate(nested4), {
+        warmup: WARMUP,
+        runs: RUNS,
+      });
     });
     console.log(` zod4-mock nested   ${fmt(results.nested.zod4_mock)}`);
   });
@@ -276,6 +295,7 @@ afterAll(() => {
     config: { warmup: WARMUP, runs: RUNS },
     results,
     localeResults,
+    memory,
   };
 
   writeFileSync(join(dir, "latest.json"), JSON.stringify(entry, null, 2));
@@ -298,6 +318,37 @@ afterAll(() => {
   console.log(` bench/results/latest.json`);
   console.log(` bench/results/history.json  (${history.length} total runs)`);
   printSummaryTable(results, localeResults);
+});
+
+// ─── Regression vs baseline (B98-R5 / B98-R7) ────────────────────────────────
+//
+// Runs AFTER the measurement blocks above so `results` + `memory` are populated.
+// Reads bench/results/baseline.json and compares the in-memory run against it.
+// FAIL verdict ⇒ test fails ⇒ `pnpm bench` exits non-zero.
+
+describe("regression vs baseline", () => {
+  it("zod4_mock does not regress past per-tier thresholds", () => {
+    const dir = join(dirname(fileURLToPath(import.meta.url)), "results");
+    const baselinePath = join(dir, "baseline.json");
+    if (!existsSync(baselinePath)) {
+      console.log(
+        " (no baseline.json — skipping regression check; see site/bench/baseline.md for the jq-based refresh step)",
+      );
+      return;
+    }
+    const baseline = JSON.parse(readFileSync(baselinePath, "utf-8")) as RunLike;
+    const latest: RunLike = { results: results as RunLike["results"], memory };
+    const report = compareToBaseline(baseline, latest, {
+      timeWarnPct: 10,
+      timeFailPct: 25,
+      memWarnPct: 25,
+      memFailPct: 50,
+    });
+    console.log("\n─── Regression vs baseline ──────────────────────────");
+    console.log(report.table);
+    console.log(` verdict: ${report.verdict}`);
+    expect(report.verdict).not.toBe("FAIL");
+  });
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

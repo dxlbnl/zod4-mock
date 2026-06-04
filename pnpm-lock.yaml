@@ -219,6 +219,27 @@ importers:
       zod4-mock:
         specifier: workspace:*
         version: link:..
+      zod4-mock-v050:
+        specifier: npm:zod4-mock@0.5.0
+        version: zod4-mock@0.5.0(zod@4.4.3)
+      zod4-mock-v060:
+        specifier: npm:zod4-mock@0.6.0
+        version: zod4-mock@0.6.0(zod@4.4.3)
+      zod4-mock-v070:
+        specifier: npm:zod4-mock@0.7.0
+        version: zod4-mock@0.7.0(zod@4.4.3)
+      zod4-mock-v072:
+        specifier: npm:zod4-mock@0.7.2
+        version: zod4-mock@0.7.2(zod@4.4.3)
+      zod4-mock-v080:
+        specifier: npm:zod4-mock@0.8.0
+        version: zod4-mock@0.8.0(zod@4.4.3)
+      zod4-mock-v090:
+        specifier: npm:zod4-mock@0.9.0
+        version: zod4-mock@0.9.0(zod@4.4.3)
+      zod4-mock-v092:
+        specifier: npm:zod4-mock@0.9.2
+        version: zod4-mock@0.9.2(zod@4.4.3)
     devDependencies:
       '@chromatic-com/storybook':
         specifier: ^5.2.1
@@ -2461,6 +2482,18 @@ packages:
   '@webcontainer/env@1.1.1':
     resolution: {integrity: sha512-6aN99yL695Hi9SuIk1oC88l9o0gmxL1nGWWQ/kNy81HigJ0FoaoTXpytCj6ItzgyCEwA9kF1wixsTuv5cjsgng==}
 
+  '@zod4-mock/locale-core@0.2.0':
+    resolution: {integrity: sha512-DvSDc3hnMn1Y1c2SAH0hRIvXICGe9jvpRyM5PmqQfm8tDXGWsqCT45ITlgJxkbdket21i+Owjj8guQk88dsGDA==}
+
+  '@zod4-mock/locale-core@0.3.0':
+    resolution: {integrity: sha512-mpnmd+LFSMv0sw/xqKlgo3epwdN+kYfC/VV27lfF7GqkoGXzLwhRlyNfm2tTB2gBNjHdHBQXMaPDWEihc6fMtw==}
+
+  '@zod4-mock/locale-core@0.4.0':
+    resolution: {integrity: sha512-ZkC2TwlKyRA/WqZp160WFLIF59sxxzzHFvj7BpIufMFgYJ0kNMA7FVYmm6m3rL3zF/mWUlrmvXJ3oNbt93oWbQ==}
+
+  '@zod4-mock/locale-core@0.4.1':
+    resolution: {integrity: sha512-FYwFYoSybGTb0gAwcpUwriDbmJeVFCsKJCTjKkKVVqiAL4WAa/rK98vGjFN5XYk3w3A3ztbCNYTo0hpam8H3fQ==}
+
   abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
     engines: {node: ^18.17.0 || >=20.5.0}
@@ -4164,6 +4197,41 @@ packages:
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
+
+  zod4-mock@0.5.0:
+    resolution: {integrity: sha512-VZpcQ+IJoBN7/h4envpbDjE6d3hpeTNd5++uQBCWyNluH294DpaGYhnwQbDN2Eo8tzsTyIk6lbmA1kU7BH2DlQ==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.6.0:
+    resolution: {integrity: sha512-cQEuxjSjiiXqCMrO2azRvTPtzwPFS/75NDD/zqzUhaGaqUg/objmhNwgXcBvFa3VJEba8hy+kKGlDulhSr5a8A==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.7.0:
+    resolution: {integrity: sha512-ZAp5TbYWqK2pQpbrr6LS7ABlPzywqxOHSAZYrGx4PsxrwHa9CO0Cd4DhPNMsA6a3eGmChL6sUt/CZT1ZQbiruA==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.7.2:
+    resolution: {integrity: sha512-BtIoxbHL/TvEvBsutS/h8Y2gpPvaLLGjKM/7I8hi+DKtLeFPPSzU70kQLBYM+h6J0BOmaxZwzxwzSuuIaE/p9w==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.8.0:
+    resolution: {integrity: sha512-rj0ed2EI+NnU9UBZz7zwzuPO85mUfvoPozd2wYM5vVlX6qyqXF4EnRfhjCPULon6vfcjbV6NR6AmHEUZq/BMXQ==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.9.0:
+    resolution: {integrity: sha512-+mt+sPRU2JR5aBGOmG5JA1fh8NSFYX2C5SXYya4KJF6NR5C82q9iIOSfMuGjm/gC80LoAHOADDSkRg8xrkUMdw==}
+    peerDependencies:
+      zod: ^4.4.3
+
+  zod4-mock@0.9.2:
+    resolution: {integrity: sha512-ez/tniH+qfk7j46NNN9JCbchGSOoRajlpAGZlO16WkOWmIgbMib9wQx87+D6LerBzC2nT85HivRchqIVcEGNBQ==}
+    peerDependencies:
+      zod: ^4.4.3
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -6104,6 +6172,14 @@ snapshots:
 
   '@webcontainer/env@1.1.1': {}
 
+  '@zod4-mock/locale-core@0.2.0': {}
+
+  '@zod4-mock/locale-core@0.3.0': {}
+
+  '@zod4-mock/locale-core@0.4.0': {}
+
+  '@zod4-mock/locale-core@0.4.1': {}
+
   abbrev@3.0.1: {}
 
   acorn-import-attributes@1.9.5(acorn@8.16.0):
@@ -7820,6 +7896,41 @@ snapshots:
   zimmerframe@1.1.2: {}
 
   zimmerframe@1.1.4: {}
+
+  zod4-mock@0.5.0(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.2.0
+      zod: 4.4.3
+
+  zod4-mock@0.6.0(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.2.0
+      zod: 4.4.3
+
+  zod4-mock@0.7.0(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.3.0
+      zod: 4.4.3
+
+  zod4-mock@0.7.2(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.3.0
+      zod: 4.4.3
+
+  zod4-mock@0.8.0(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.3.0
+      zod: 4.4.3
+
+  zod4-mock@0.9.0(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.4.0
+      zod: 4.4.3
+
+  zod4-mock@0.9.2(zod@4.4.3):
+    dependencies:
+      '@zod4-mock/locale-core': 0.4.1
+      zod: 4.4.3
 
   zod@3.25.76: {}
 

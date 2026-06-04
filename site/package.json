@@ -40,7 +40,14 @@
     "svelte-chartjs": "^4.0.1",
     "zod": "^4.4.3",
     "zod3": "npm:zod@^3.25.76",
-    "zod4-mock": "workspace:*"
+    "zod4-mock": "workspace:*",
+    "zod4-mock-v050": "npm:zod4-mock@0.5.0",
+    "zod4-mock-v060": "npm:zod4-mock@0.6.0",
+    "zod4-mock-v070": "npm:zod4-mock@0.7.0",
+    "zod4-mock-v072": "npm:zod4-mock@0.7.2",
+    "zod4-mock-v080": "npm:zod4-mock@0.8.0",
+    "zod4-mock-v090": "npm:zod4-mock@0.9.0",
+    "zod4-mock-v092": "npm:zod4-mock@0.9.2"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",

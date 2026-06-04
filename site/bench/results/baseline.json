@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-06-04T07:34:29.131Z",
+  "node": "v22.22.2",
+  "versions": {
+    "faker": "10.4.0",
+    "@anatine/zod-mock": "3.14.0",
+    "zod4-mock": "0.10.0",
+    "zod3": "3.25.76",
+    "zod4": "4.4.3"
+  },
+  "config": {
+    "warmup": 1000,
+    "runs": 5000
+  },
+  "results": {
+    "simple": {
+      "zod4_mock": {
+        "avg": 0.10243901839999849,
+        "min": 0.03742999999985841,
+        "max": 1.648975000000064,
+        "opsPerSec": 9761.905332743941,
+        "coldStart": 3.5753709999999046
+      }
+    },
+    "user": {
+      "zod4_mock": {
+        "avg": 0.10759349560000146,
+        "min": 0.07474000000001979,
+        "max": 6.115342000000055,
+        "opsPerSec": 9294.242132607005,
+        "coldStart": 1.132184000000052
+      }
+    },
+    "nested": {
+      "zod4_mock": {
+        "avg": 0.3015169751999929,
+        "min": 0.16564999999991414,
+        "max": 9.047400999999809,
+        "opsPerSec": 3316.562854667506,
+        "coldStart": 1.8341510000000198
+      }
+    }
+  },
+  "localeResults": {
+    "default": {
+      "avg": 0.09703088520000273,
+      "min": 0.07395799999994779,
+      "max": 2.294995000000199,
+      "opsPerSec": 10305.996878610067,
+      "coldStart": 0.19131900000047608
+    },
+    "en": {
+      "avg": 0.10419426660000336,
+      "min": 0.07394900000053894,
+      "max": 6.845590999999331,
+      "opsPerSec": 9597.457063918408,
+      "coldStart": 0.5274099999996906
+    },
+    "nl": {
+      "avg": 0.10043737460000812,
+      "min": 0.07566200000019307,
+      "max": 1.0803759999998874,
+      "opsPerSec": 9956.453003500941,
+      "coldStart": 0.2676019999998971
+    }
+  },
+  "memory": {
+    "simple": {
+      "heapUsedDeltaBytes": 36648216,
+      "v8HeapUsedBytes": 103551608,
+      "gcForced": false
+    },
+    "user": {
+      "heapUsedDeltaBytes": -39601296,
+      "v8HeapUsedBytes": 73636264,
+      "gcForced": false
+    },
+    "nested": {
+      "heapUsedDeltaBytes": 40112808,
+      "v8HeapUsedBytes": 121599096,
+      "gcForced": false
+    }
+  }
+}

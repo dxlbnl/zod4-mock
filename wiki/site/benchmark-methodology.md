@@ -109,6 +109,16 @@ From the 2026-05-13 CLI baseline ([Bench Results](../../raw/site/2026-05-13-benc
 
 A worker-based browser bench, unified on one schema set, with time-budget runs (e.g. "run for 500 ms, count iterations") instead of fixed-sample counts. See [roadmap](roadmap.md) P2.
 
+## Regression guardrail (B98)
+
+The CLI bench now also gates against a release-pinned baseline. Each run writes
+`bench/results/latest.json` (with a new top-level `memory` block — `heapUsedDeltaBytes`,
+`v8HeapUsedBytes`, `gcForced` per tier) and compares it against
+`bench/results/baseline.json`. The comparator (`bench/regression-compare.ts`) fails
+the test when a tier's `zod4_mock.avg` regresses **> +25 %** (B98-R5) or memory
+delta regresses **> +50 %** (B98-R7). Refresh workflow + manual merge gate are
+documented in [`site/bench/baseline.md`](../../site/bench/baseline.md).
+
 ## See Also
 
 - [current-state](current-state.md) §"Two benchmark harnesses".
