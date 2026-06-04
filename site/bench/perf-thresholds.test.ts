@@ -31,49 +31,21 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { z } from "zod";
 import { createWorld, generate } from "zod4-mock";
 import { measure } from "../src/lib/bench.ts";
 import type { MatcherCtx } from "zod4-mock";
-
-// ─── Local matcher-tier schemas (mirror B97-R6 / `perf.test.ts` plan) ────────
-
-const CompanySchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  industry: z.string(),
-});
-
-const AddressSchema = z.object({
-  street: z.string(),
-  city: z.string(),
-  country: z.string(),
-});
-
-const UserSchema = z.object({
-  id: z.string().uuid(),
-  fullName: z.string(),
-  email: z.string().email(),
-  city: z.string(),
-  address: AddressSchema,
-  employerId: z.string().uuid(),
-});
+// B70: canonical schema set — imported from `site/src/lib/schemas/`.
+import { simple } from "../src/lib/schemas/simple.ts";
+import { CompanySchema, UserSchema } from "../src/lib/schemas/matcher.ts";
 
 // ─── B97-R1 — simple tier avg ≤ 25 µs ────────────────────────────────────────
 
 describe("B97-R1 / simple tier avg ≤ 25 µs", () => {
-  it("B97-R1 / simple tier — measure(() => generate(simple4)) avg ≤ 0.025 ms (25 µs)", () => {
-    const simple4 = z.object({
-      id: z.string(),
-      name: z.string(),
-      age: z.number(),
-      active: z.boolean(),
-    });
-
+  it("B97-R1 / simple tier — measure(() => generate(simple)) avg ≤ 0.025 ms (25 µs)", () => {
     // Match `site/bench/perf.test.ts`'s WARMUP/RUNS (1000/5000) so the
     // test's JIT amortisation lines up with the full-bench measurement —
     // the spec's round-5 17 µs cite is the full-bench number.
-    const result = measure(() => generate(simple4), { warmup: 1000, runs: 5000 });
+    const result = measure(() => generate(simple), { warmup: 1000, runs: 5000 });
 
     // Print observed data for diagnostics.
     console.log(`B97-R1 observed: simple avg=${(result.avg * 1000).toFixed(2)}µs (ceiling 25µs)`);

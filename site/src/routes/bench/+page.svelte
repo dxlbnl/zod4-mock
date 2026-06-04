@@ -12,15 +12,15 @@
 	import { runZodMock } from '$lib/runners/zodmock';
 	import { runFaker } from '$lib/runners/faker';
 
-	type Schema = 'flat' | 'nested' | 'array';
+	type Schema = 'simple' | 'nestedOrder' | 'array';
 
 	const schemaOptions = [
-		{ value: 'flat', label: 'Flat' },
-		{ value: 'nested', label: 'Nested' },
+		{ value: 'simple', label: 'Simple' },
+		{ value: 'nestedOrder', label: 'Nested order' },
 		{ value: 'array', label: 'Array' }
 	];
 
-	let schema = $state<Schema>('flat');
+	let schema = $state<Schema>('simple');
 	let n = $state(100);
 	let running = $state(false);
 
@@ -120,8 +120,8 @@
 
 	<div class="note">
 		<p class="t-caption">
-			Schema scenarios: <strong>Flat</strong> — 10 primitive fields;
-			<strong>Nested</strong> — 3-level object (order → customer → address);
+			Schema scenarios: <strong>Simple</strong> — 4 primitive fields;
+			<strong>Nested order</strong> — 3-level object (order → customer → address);
 			<strong>Array</strong> — 50-item variant array.
 			zod-mock uses equivalent Zod v3 schemas.
 		</p>

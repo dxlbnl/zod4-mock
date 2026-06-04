@@ -14,11 +14,16 @@ import { generateMock } from "@anatine/zod-mock";
 import { createWorld, generate, type MatcherCtx } from "zod4-mock";
 import { nl } from "@zod4-mock/locale-nl";
 import { en } from "@zod4-mock/locale-en";
-import { z as z3 } from "zod3";
-import { z as z4 } from "zod";
 import { measure, type BenchResult } from "../src/lib/bench.ts";
 import { sampleMemory, type MemorySample } from "./memory.ts";
 import { compareToBaseline, type RunLike } from "./regression-compare.ts";
+// B70: canonical schema set — imported from `site/src/lib/schemas/`.
+// Aliased to the historical inline names (`simple4` / `user4` / `nested4`)
+// so the rest of this file keeps reading the same way.
+import { simple as simple4, simple3 } from "../src/lib/schemas/simple";
+import { user as user4, user3 } from "../src/lib/schemas/user";
+import { nested as nested4, nested3 } from "../src/lib/schemas/nested";
+import { CompanySchema, UserSchema } from "../src/lib/schemas/matcher";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -26,20 +31,6 @@ const WARMUP = 1000;
 const RUNS = 5000;
 
 // ─── Schema tier 1: Simple ────────────────────────────────────────────────────
-
-const simple3 = z3.object({
-  id: z3.string(),
-  name: z3.string(),
-  age: z3.number(),
-  active: z3.boolean(),
-});
-
-const simple4 = z4.object({
-  id: z4.string(),
-  name: z4.string(),
-  age: z4.number(),
-  active: z4.boolean(),
-});
 
 function fakerSimple() {
   return {
@@ -51,28 +42,6 @@ function fakerSimple() {
 }
 
 // ─── Schema tier 2: User (realistic fields) ───────────────────────────────────
-
-const user3 = z3.object({
-  id: z3.string().uuid(),
-  firstName: z3.string(),
-  lastName: z3.string(),
-  email: z3.string().email(),
-  age: z3.number().int().min(18).max(100),
-  role: z3.enum(["admin", "user", "guest"]),
-  bio: z3.string().optional(),
-  score: z3.number().min(0).max(1),
-});
-
-const user4 = z4.object({
-  id: z4.string().uuid(),
-  firstName: z4.string(),
-  lastName: z4.string(),
-  email: z4.string().email(),
-  age: z4.int().gte(18).lte(100),
-  role: z4.enum(["admin", "user", "guest"]),
-  bio: z4.string().optional(),
-  score: z4.number().min(0).max(1),
-});
 
 function fakerUser() {
   return {
@@ -88,40 +57,6 @@ function fakerUser() {
 }
 
 // ─── Schema tier 3: Nested ────────────────────────────────────────────────────
-
-const address3 = z3.object({
-  street: z3.string(),
-  city: z3.string(),
-  country: z3.string(),
-  zip: z3.string(),
-});
-
-const address4 = z4.object({
-  street: z4.string(),
-  city: z4.string(),
-  country: z4.string(),
-  zip: z4.string(),
-});
-
-const nested3 = z3.object({
-  id: z3.string().uuid(),
-  name: z3.string(),
-  email: z3.string().email(),
-  address: address3,
-  billingAddress: address3.optional(),
-  tags: z3.array(z3.string()),
-  metadata: z3.record(z3.string()),
-});
-
-const nested4 = z4.object({
-  id: z4.string().uuid(),
-  name: z4.string(),
-  email: z4.string().email(),
-  address: address4,
-  billingAddress: address4.optional(),
-  tags: z4.array(z4.string()),
-  metadata: z4.record(z4.string(), z4.string()),
-});
 
 function fakerNested() {
   return {
@@ -155,29 +90,9 @@ function fakerNested() {
 //
 // The matcher tier is zod4-mock-specific (the matcher / relations registration
 // shape is a zod4-mock API surface — faker / @anatine/zod-mock don't have a
-// comparable concept). Schemas are constructed at module scope per D10 so
-// reference identity is stable across worlds.
-
-const CompanySchema = z4.object({
-  id: z4.string().uuid(),
-  name: z4.string(),
-  industry: z4.string(),
-});
-
-const AddressSchema = z4.object({
-  street: z4.string(),
-  city: z4.string(),
-  country: z4.string(),
-});
-
-const UserSchema = z4.object({
-  id: z4.string().uuid(),
-  fullName: z4.string(),
-  email: z4.string().email(),
-  city: z4.string(),
-  address: AddressSchema,
-  employerId: z4.string().uuid(),
-});
+// comparable concept). Schemas (CompanySchema / UserSchema / AddressSchema)
+// are constructed at module scope per D10 in `site/src/lib/schemas/matcher.ts`
+// so reference identity is stable across worlds.
 
 // ─── Results collection ───────────────────────────────────────────────────────
 

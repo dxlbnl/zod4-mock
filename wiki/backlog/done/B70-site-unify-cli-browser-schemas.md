@@ -6,6 +6,7 @@ priority: high
 flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-schemas
+spec: wiki/specs/B70-site-unify-cli-browser-schemas.md
 ---
 
 ## Description

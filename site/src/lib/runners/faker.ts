@@ -1,21 +1,19 @@
 import { faker } from "@faker-js/faker";
 
-function flat() {
+// B70: faker runners mirror the canonical schema names — `simple`, `nestedOrder`,
+// `array`. `simple` is the canonical 4-field primitive shape (`flat` was
+// dropped per the B70 canonical-naming decision).
+
+function simple() {
   return {
     id: faker.string.uuid(),
     name: faker.person.fullName(),
-    email: faker.internet.email(),
-    age: faker.number.int({ min: 18, max: 99 }),
-    score: faker.number.float({ min: 0, max: 1, fractionDigits: 4 }),
+    age: faker.number.int({ min: 0, max: 120 }),
     active: faker.datatype.boolean(),
-    createdAt: faker.date.past(),
-    role: faker.helpers.arrayElement(["admin", "user", "moderator", "guest"] as const),
-    bio: faker.lorem.sentence(),
-    phone: faker.phone.number(),
   };
 }
 
-function nested() {
+function nestedOrder() {
   return {
     id: faker.string.uuid(),
     total: faker.number.float({ min: 0, max: 9999, fractionDigits: 2 }),
@@ -52,13 +50,13 @@ function array() {
   }));
 }
 
-type SchemaKey = "flat" | "nested" | "array";
+type SchemaKey = "simple" | "nestedOrder" | "array";
 
-const generators: Record<SchemaKey, () => unknown> = { flat, nested, array };
+const generators: Record<SchemaKey, () => unknown> = { simple, nestedOrder, array };
 
 export const runFaker = {
-  flat,
-  nested,
+  simple,
+  nestedOrder,
   array,
   batch: (schema: SchemaKey, n: number) => Array.from({ length: n }, generators[schema]),
 };

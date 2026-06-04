@@ -1169,8 +1169,23 @@ it records the reason here AND states it in chat.
 - manager: dispatch test-writer
 - test-writer: wrote 13 test files under site/src/lib/docs/ (sidebar.test.ts, B100-files.test.ts, SpeedClaim.types.test.ts, 9 primitive .stories.svelte + 1 chrome .stories.svelte). RED confirmed: 6 unit failures + 2 suite-load failures + 31 svelte-check errors + 10 component story-load failures. Flagged spec-writer ts-expect-error placement bug (corrected by implementer at green).
 - manager: dispatch implementer
-- implementer: wrote 9 primitives + sidebar manifest + layout rewrite + landing + 9 stub routes + vitest exclude for *.types.test.ts + D22 ADR in wiki/decisions.md. Deleted site/content/docs/, [slug]/, +page.ts. site:check 0/0, site:test:unit 55/55, site:test:component 47/47, site:build OK (SSR-safety R2 confirmed), test:all 1100+60+27+55+47 green, fmt:check 8 slips (all pre-existing or owned by manager).
+- implementer: wrote 9 primitives + sidebar manifest + layout rewrite + landing + 9 stub routes + vitest exclude for \*.types.test.ts + D22 ADR in wiki/decisions.md. Deleted site/content/docs/, [slug]/, +page.ts. site:check 0/0, site:test:unit 55/55, site:test:component 47/47, site:build OK (SSR-safety R2 confirmed), test:all 1100+60+27+55+47 green, fmt:check 8 slips (all pre-existing or owned by manager).
 - manager: dispatch reviewer
 - reviewer: **PASS** — all R1–R15 met with evidence; D1/D13/D18/D21 clean; D22 ADR well-formed; @ts-expect-error placement fix verified. Non-blocking findings: (1) DocPage.svelte:17 `'index'` union scope-creep; (2) 4 new B100 files fail fmt:check; (3) manager TODO — promote D22 one-line Rule to architecture.md.
 - manager: applied reviewer findings — dropped `'index'` union member from DocPage.svelte; ran `pnpm exec oxfmt` on new B100 files + B94 research report; appended one-line D22 Rule to architecture.md Rules section. Remaining 2 fmt slips (CHANGELOG.md from B97, site/bench/results/latest.json) are pre-existing, not in B100 scope.
-- result: B100 done — moved card to wiki/backlog/done/; commit pending.
+- result: B100 done — commit 32f0507.
+
+## 2026-06-04 — B70: Unify CLI + browser bench schema set
+
+- manager: start, track: feature (review pre-approved); git mv inbox/ → doing/
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B70-site-unify-cli-browser-schemas.md (R1–R9). Canonical naming: CLI tier names (`simple`/`user`/`nested`/`matcher`) win because baseline.json + versions.json + threshold tests are pinned on them. Strategy: byte-equivalent assertion (no re-baseline). 6 non-blocking open questions.
+- manager: spec-validation gate passed. Skip review-checkpoint per user pre-approval.
+- manager: dispatch test-writer
+- test-writer: wrote site/src/lib/schemas/B70.test.ts (32 tests against R1–R9). RED confirmed: 27/32 fail; 5 invariant-guards intentionally pass-now.
+- manager: dispatch implementer
+- implementer: created 5 canonical schema files (`simple.ts`, `user.ts`, `matcher.ts`, `nestedOrder.ts`, plus rewritten `nested.ts` to CLI mixed-features shape); created `index.ts` barrel; renamed `arraySchema` → `array`; deleted `flat.ts`; refactored 3 CLI bench files + 4 browser runners + bench page; extended `schemas.test.ts`. site:test:unit 93/93, site:check 0/0, site:bench verdict OK, validate green minus pre-existing latest.json fmt drift.
+- manager: dispatch reviewer
+- reviewer: **PASS** — all R1–R9 met; D1/D4/D10/D16 clean; perf gate green; byte-equivalence confirmed via empty `git diff` on baseline.json/versions.json/history.json. Flagged standing constraint for promotion.
+- manager: promoted to D23 ADR in wiki/decisions.md + one-line Rule in wiki/architecture.md.
+- result: B70 done — moved card to wiki/backlog/done/; commit pending.

@@ -748,3 +748,53 @@ read-only inspector.
 - **Supersedes**: none (D18 remains in effect for `+page.md` /
   mdsvex-rendered routes; D22 covers the `+page.svelte`-imported editor
   path D18 did not anticipate).
+
+## D23 — Bench schemas are canonical under `site/src/lib/schemas/`
+
+- **Date**: 2026-06-04.
+- **By**: B70 (unify CLI + browser bench schema set) — reviewer-flagged
+  for promotion as a standing constraint future bench/runner work must
+  obey.
+- **Context**: Before B70, the CLI bench (`site/bench/perf.test.ts`,
+  `site/bench/regression.bench.ts`, `site/bench/perf-thresholds.test.ts`)
+  defined `simple3/4`, `user3/4`, `nested3/4`, `CompanySchema`,
+  `UserSchema`, `AddressSchema` inline, while the browser bench
+  (`site/src/lib/runners/{zod4mock,zodmock,ecommerce,faker}.ts`,
+  `site/src/routes/bench/+page.svelte`) consumed a separate set from
+  `site/src/lib/schemas/{flat,nested,array,ecommerce}.ts` — overlapping
+  but not identical, making the two benchmark tiers incomparable. B70
+  promoted a single canonical schema set under `site/src/lib/schemas/`,
+  with a barrel `index.ts` re-exporting every entry. Both harnesses
+  import from the canonical location; deleting a schema file removes it
+  from both `pnpm site:bench` and `/bench` without further edits.
+- **Decision**:
+  - Site bench schemas (the `simple` / `user` / `nested` / `matcher` /
+    `nestedOrder` / `array` / `ecommerce` set and any future addition)
+    **live under `site/src/lib/schemas/<name>.ts`** as module-scope
+    `const` exports (D4/D10).
+  - Every consumer in the site workspace — the CLI bench
+    (`site/bench/*.ts`), the browser runners (`site/src/lib/runners/*.ts`),
+    the bench page (`site/src/routes/bench/+page.svelte`), the showcase
+    route, and the `/explorer` route — imports from
+    `site/src/lib/schemas/` (or its `index.ts` barrel). Inline `z.object`
+    schema definitions in these consumer files are forbidden for any
+    tier the bench measures.
+  - Each canonical zod4 schema MUST be paired with a `*3` zod3 parity
+    export when the corresponding tier is benchmarked against
+    `@anatine/zod-mock` or any other zod3-only library (D16). Matcher
+    and ecommerce tiers are zod4-only carve-outs (the matcher/relations
+    API is zod4-mock-specific).
+  - The `site/src/lib/schemas/index.ts` barrel is the canonical
+    enumeration point: removing an entry from the barrel removes it from
+    both harnesses without further edits. This satisfies B70's
+    acceptance contract.
+- **Rule added/changed**: Promoted by the manager to a one-line rule
+  in `architecture.md`'s Rules section: "Site bench schemas (the
+  `simple` / `user` / `nested` / `matcher` / `nestedOrder` / `array` /
+  `ecommerce` set) **MUST** live under `site/src/lib/schemas/` as
+  module-scope `const` exports; consumers in `site/bench/`,
+  `site/src/lib/runners/`, and `site/src/routes/` **MUST** import from
+  there (no inline `z.object` schema definitions for benchmarked tiers).
+  Each canonical zod4 schema benchmarked against a zod3-only library
+  **MUST** ship a paired `*3` zod3 parity export. (→ D23)"
+- **Supersedes**: none.

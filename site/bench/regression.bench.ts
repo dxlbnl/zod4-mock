@@ -32,6 +32,11 @@ import {
   type MemoryBlockFile,
   type VersionsFileShape,
 } from "./regression-writeback.ts";
+// B70: canonical schema set — imported from `site/src/lib/schemas/`. The
+// canonical names line up with the CLI perf-baseline (`simple` / `user` /
+// `nested` plus the matcher-tier `CompanySchema` / `UserSchema`).
+import { simple, user, nested } from "../src/lib/schemas/index.ts";
+import { CompanySchema, UserSchema } from "../src/lib/schemas/matcher.ts";
 
 import { generate as gen050, createWorld as createWorld050 } from "zod4-mock-v050";
 import { generate as gen060, createWorld as createWorld060 } from "zod4-mock-v060";
@@ -75,60 +80,10 @@ const versions: Array<[string, GenFn, CreateWorldFn]> = [
   ["0.10.0", gen100 as GenFn, createWorld100 as unknown as CreateWorldFn],
 ];
 
-const simple = z.object({
-  id: z.string(),
-  name: z.string(),
-  age: z.number(),
-  active: z.boolean(),
-});
-
-const user = z.object({
-  id: z.string().uuid(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.string().email(),
-  age: z.int().gte(18).lte(100),
-  role: z.enum(["admin", "user", "guest"]),
-  bio: z.string().optional(),
-  score: z.number().min(0).max(1),
-});
-
-const address = z.object({
-  street: z.string(),
-  city: z.string(),
-  country: z.string(),
-  zip: z.string(),
-});
-
-const nested = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  email: z.string().email(),
-  address,
-  billingAddress: address.optional(),
-  tags: z.array(z.string()),
-  metadata: z.record(z.string(), z.string()),
-});
-
-// B97-R6 matcher-tier schemas (constructed once per D10 reference identity).
-const CompanySchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  industry: z.string(),
-});
-const AddressSchema = z.object({
-  street: z.string(),
-  city: z.string(),
-  country: z.string(),
-});
-const UserSchema = z.object({
-  id: z.string().uuid(),
-  fullName: z.string(),
-  email: z.string().email(),
-  city: z.string(),
-  address: AddressSchema,
-  employerId: z.string().uuid(),
-});
+// B70: schemas (`simple`, `user`, `nested`, `CompanySchema`, `UserSchema`)
+// imported above from `site/src/lib/schemas/`. The canonical references are
+// what `perf.test.ts` registers too, so per-version `createWorld(...)` calls
+// derive identical fork keys across the perf gate and the bisect bench.
 
 // Cutoff comment (B97-R6 / open question §3 hand-check):
 //   0.5.0 / 0.6.0: `relations?: TRelations` is Record<string, ZodTypeAny> —

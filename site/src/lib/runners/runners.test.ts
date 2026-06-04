@@ -2,47 +2,47 @@ import { describe, it, expect } from "vitest";
 import { runZod4Mock } from "./zod4mock";
 import { runZodMock } from "./zodmock";
 import { runFaker } from "./faker";
-import { flatSchema, flatSchema3 } from "../schemas/flat";
-import { nestedSchema, nestedSchema3 } from "../schemas/nested";
-import { arraySchema } from "../schemas/array";
+import { simple, simple3 } from "../schemas/simple";
+import { nestedOrder, nestedOrder3 } from "../schemas/nestedOrder";
+import { array } from "../schemas/array";
 
 describe("zod4mock runner", () => {
-  it("generates a flat record matching the schema", () => {
-    const record = runZod4Mock.flat();
-    const result = flatSchema.safeParse(record);
+  it("generates a simple record matching the schema", () => {
+    const record = runZod4Mock.simple();
+    const result = simple.safeParse(record);
     expect(result.success).toBe(true);
   });
 
-  it("generates a nested record", () => {
-    const record = runZod4Mock.nested();
-    const result = nestedSchema.safeParse(record);
+  it("generates a nested order record", () => {
+    const record = runZod4Mock.nestedOrder();
+    const result = nestedOrder.safeParse(record);
     expect(result.success).toBe(true);
   });
 
   it("generates an array of 50 variants", () => {
     const record = runZod4Mock.array();
-    const result = arraySchema.safeParse(record);
+    const result = array.safeParse(record);
     expect(result.success).toBe(true);
     expect(Array.isArray(record)).toBe(true);
     expect((record as unknown[]).length).toBe(50);
   });
 
   it("generates a batch of N records", () => {
-    const batch = runZod4Mock.batch("flat", 10);
+    const batch = runZod4Mock.batch("simple", 10);
     expect(batch).toHaveLength(10);
   });
 });
 
 describe("zodmock runner", () => {
-  it("generates a flat record with the right shape", () => {
-    const record = runZodMock.flat();
-    const result = flatSchema3.safeParse(record);
+  it("generates a simple record with the right shape", () => {
+    const record = runZodMock.simple();
+    const result = simple3.safeParse(record);
     expect(result.success).toBe(true);
   });
 
-  it("generates a nested record", () => {
-    const record = runZodMock.nested();
-    const result = nestedSchema3.safeParse(record);
+  it("generates a nested order record", () => {
+    const record = runZodMock.nestedOrder();
+    const result = nestedOrder3.safeParse(record);
     expect(result.success).toBe(true);
   });
 
@@ -54,16 +54,16 @@ describe("zodmock runner", () => {
 });
 
 describe("faker runner", () => {
-  it("generates a flat record with expected keys", () => {
-    const record = runFaker.flat();
-    const keys = Object.keys(flatSchema.shape);
+  it("generates a simple record with expected keys", () => {
+    const record = runFaker.simple();
+    const keys = Object.keys(simple.shape);
     for (const key of keys) {
       expect(record).toHaveProperty(key);
     }
   });
 
-  it("generates a nested record", () => {
-    const record = runFaker.nested();
+  it("generates a nested order record", () => {
+    const record = runFaker.nestedOrder();
     expect(record).toHaveProperty("customer");
     expect((record as { customer: unknown }).customer).toHaveProperty("address");
   });
