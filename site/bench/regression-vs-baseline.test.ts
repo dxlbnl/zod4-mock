@@ -35,10 +35,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  compareToBaseline,
-  type ComparisonReport,
-} from "./regression-compare.ts";
+import { compareToBaseline, type ComparisonReport } from "./regression-compare.ts";
 
 // ─── Shared baseline / latest fixtures ────────────────────────────────────────
 
@@ -130,9 +127,9 @@ describe("B98-R5 / time regression guardrail", () => {
   });
 
   it("B98-R5 / an improvement is OK (negative deltaPct)", () => {
-    const baseline = makeRun({ simple: 0.0100, user: 0.0200, nested: 0.0500 });
+    const baseline = makeRun({ simple: 0.01, user: 0.02, nested: 0.05 });
     // simple gets 20% faster
-    const latest = makeRun({ simple: 0.0080, user: 0.0200, nested: 0.0500 });
+    const latest = makeRun({ simple: 0.008, user: 0.02, nested: 0.05 });
 
     const report = compareToBaseline(baseline, latest, THRESHOLDS);
 
@@ -253,7 +250,11 @@ describe("B98-R5 / comparator tolerates a stripped baseline", () => {
 
     // The cast reflects that on disk the baseline is the stripped subset.
     expect(() =>
-      compareToBaseline(strippedBaseline as unknown as Parameters<typeof compareToBaseline>[0], latest, THRESHOLDS),
+      compareToBaseline(
+        strippedBaseline as unknown as Parameters<typeof compareToBaseline>[0],
+        latest,
+        THRESHOLDS,
+      ),
     ).not.toThrow();
 
     const report = compareToBaseline(

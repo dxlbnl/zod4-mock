@@ -14,10 +14,15 @@ const memTierSchema = z.object({
   gcForced: z.boolean(),
 });
 
+// B97-R9: `matcher` tier added alongside simple / user / nested. Each per-row
+// `matcher` value is `MemTier | null` — null is the legacy carveout for
+// historical aliases whose API can't run the matcher-tier registration shape
+// (mirrors B98-R1's per-row `memory: null` carveout).
 const memoryBlockSchema = z.object({
   simple: memTierSchema,
   user: memTierSchema,
   nested: memTierSchema,
+  matcher: z.union([memTierSchema, z.null()]).optional(),
 });
 
 const versionEntrySchema = z.object({
@@ -27,6 +32,10 @@ const versionEntrySchema = z.object({
     simple: z.number(),
     user: z.number(),
     nested: z.number(),
+    // B97-R9: matcher number for the post-B97 entries; null is the legacy
+    // carveout for rows where the historical alias doesn't support the
+    // matcher tier (a `note` explains the incompatibility per R10).
+    matcher: z.union([z.number(), z.null()]).optional(),
   }),
   memory: z.union([memoryBlockSchema, z.null()]),
   note: z.string().optional(),

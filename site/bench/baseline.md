@@ -5,13 +5,19 @@
 [`bench/regression-compare.ts`](regression-compare.ts); the thresholds live in
 [`wiki/specs/B98-perf-memory-regression-suite.md`](../../wiki/specs/B98-perf-memory-regression-suite.md):
 
-| Metric | WARN range  | FAIL threshold | Rule    |
-| ------ | ----------- | -------------- | ------- |
-| time   | [+10%, +25%]| > +25%         | B98-R5  |
-| memory | [+25%, +50%]| > +50%         | B98-R7  |
+| Metric | WARN range   | FAIL threshold | Rule   |
+| ------ | ------------ | -------------- | ------ |
+| time   | [+10%, +25%] | > +25%         | B98-R5 |
+| memory | [+25%, +50%] | > +50%         | B98-R7 |
 
 A negative delta (improvement) prints `OK`. A baseline memory value of `0` prints
-`SKIP` and never fails the build.
+`SKIP` and never fails the build. Per B97-R8, a missing matcher row in the
+baseline (legacy carveout — baseline captured before the matcher tier existed)
+also prints `SKIP` for both metrics of that tier and does not fail the build.
+
+Thresholds apply identically to all four tiers (`simple`, `user`, `nested`,
+`matcher`). The matcher tier is zod4-mock-only — `faker` / `zod3_mock` are not
+gated on any tier (B98-R5).
 
 ## Provenance of the current baseline
 
@@ -66,6 +72,12 @@ regression table.
 jq`, `apt-get install jq`, …) if missing. The `results` mapping uses
 `map_values({ zod4_mock })` which keeps each tier object's `zod4_mock` field
 verbatim and drops every other sibling (i.e. `faker` and `zod3_mock`).
+
+Per B97-R11 the `results` map iterates **all four tiers** (`simple`, `user`,
+`nested`, `matcher`); the `matcher` tier is zod4-mock-only so the
+`map_values({ zod4_mock })` filter naturally produces the right shape for it
+(no `faker` or `zod3_mock` keys to drop). The `memory` block is carried over
+verbatim and also includes the `matcher` tier.
 
 ## Manual merge gate (B98-R10)
 

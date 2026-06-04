@@ -13,12 +13,21 @@ export interface MemoryBlockFile {
   simple: MemorySample;
   user: MemorySample;
   nested: MemorySample;
+  // B97-R9: matcher tier added — `null` is the legacy carveout for
+  // historical aliases that can't run the matcher tier API shape.
+  matcher?: MemorySample | null;
 }
 
 export interface VersionEntryFile {
   timestamp: string;
   version: string;
-  avg_us: { simple: number; user: number; nested: number };
+  avg_us: {
+    simple: number;
+    user: number;
+    nested: number;
+    // B97-R9: matcher number (or `null` legacy carveout) added in R10.
+    matcher?: number | null;
+  };
   memory: MemoryBlockFile | null;
   note?: string;
 }
@@ -29,6 +38,18 @@ export interface VersionsFileShape {
   node: string;
   schemas: { simple: string; user: string; nested: string };
   entries: VersionEntryFile[];
+}
+
+/**
+ * B97-R10 — captured matcher-tier measurements per version. `avg_us: null`
+ * + `memory: null` represent versions whose API can't run the matcher tier
+ * (the registration `try` threw). The accompanying `note` is appended to
+ * the entry's existing `note` string when the row is filled.
+ */
+export interface MatcherSample {
+  avg_us: number | null;
+  memory: MemorySample | null;
+  note?: string;
 }
 
 export interface ApplyResult {
@@ -70,6 +91,50 @@ export function applyMemoryWriteBack(
       } else {
         entry.note = cleaned;
       }
+    }
+    filled += 1;
+  }
+
+  return { filled, skipped, skippedVersions };
+}
+
+/**
+ * B97-R10 — fill `avg_us.matcher` and `memory.matcher` on rows where the
+ * matcher tier is currently absent (undefined or null). Already-populated
+ * matcher rows are left untouched (append-only invariant extended from
+ * B98-R2). `avg_us.{simple,user,nested}` and `memory.{simple,user,nested}`
+ * are never modified.
+ *
+ * When a row's matcher slot is filled with `null` (legacy carveout — the
+ * historical alias couldn't run the matcher tier), the row's `note` is
+ * appended with the supplied `MatcherSample.note` so the reason is
+ * recorded.
+ */
+export function applyMatcherWriteBack(
+  file: VersionsFileShape,
+  measured: Map<string, MatcherSample>,
+): ApplyResult {
+  let filled = 0;
+  let skipped = 0;
+  const skippedVersions: string[] = [];
+
+  for (const entry of file.entries) {
+    const sample = measured.get(entry.version);
+    if (!sample) continue;
+    const matcherAvgPopulated = typeof entry.avg_us.matcher === "number";
+    const matcherMemPopulated = entry.memory !== null && entry.memory.matcher != null;
+    if (matcherAvgPopulated || matcherMemPopulated) {
+      skipped += 1;
+      skippedVersions.push(entry.version);
+      continue;
+    }
+    entry.avg_us.matcher = sample.avg_us;
+    if (entry.memory !== null) {
+      entry.memory.matcher = sample.memory;
+    }
+    // Append the carveout note for null rows.
+    if (sample.avg_us === null && sample.note) {
+      entry.note = entry.note ? `${entry.note} ${sample.note}` : sample.note;
     }
     filled += 1;
   }

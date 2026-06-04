@@ -26,7 +26,7 @@
  * 3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent
  *    per layer; sets `ctx.inner` for downstream steps. Internal — does not
  *    produce a final value on its own.
- * 4. **World-level custom generators** — entries from `withKeyGen({ ... })`
+ * 4. **World-level custom generators** — entries from `withGenerators({ ... })`
  *    matched on the field name.
  * 5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key +
  *    `DEFAULT_KEY_PATTERNS` regex matches (`email` → realistic email,
@@ -82,7 +82,6 @@ import {
   stripOuterOptionalNullable,
 } from "../generators/schema/zod-def.js";
 import { deepMerge, deepEqual } from "../utils/merge.js";
-import * as generatorsData from "../generators/data/index.js";
 import { defaultLocale } from "../default-locale.js";
 import type { LocaleData } from "@zod4-mock/locale-core";
 import { explainSchema } from "../explain.js";
@@ -104,7 +103,7 @@ import {
   type DerivedUpsertMap,
 } from "./derived.js";
 import { RelationResolver } from "./relations.js";
-import { bindNamespace } from "./bind-generators.js";
+import { buildLazyGen, type FieldState } from "./bind-generators.js";
 
 // ---------------------------------------------------------------------------
 // B39 — module-global stable schema identity
@@ -135,6 +134,27 @@ import { bindNamespace } from "./bind-generators.js";
 
 const globalSchemaIds: WeakMap<ZodTypeAny, number> = new WeakMap();
 let nextGlobalSchemaId = 0;
+
+// ---------------------------------------------------------------------------
+// B97-R15 — empty-map singletons shared by every world.
+//
+// Read sites that need a `ReadonlyMap` view (e.g. the per-record pipeline
+// ctx) and don't need to mutate it use these sentinels instead of forcing
+// a per-world allocation of an empty `Map`. The sentinels are frozen at
+// module load; the pipeline never writes to them.
+// ---------------------------------------------------------------------------
+
+// B97-R15: empty-map singletons shared across worlds. Read sites
+// (the per-record pipeline ctx, the `explain()` helper) consult these
+// when the world's per-instance map is still `null`, avoiding a
+// per-world allocation of an empty Map. Typed as mutable `Map<...>` to
+// match the caller interface contracts; by convention these are
+// read-only — never `.set(...)` into them.
+const EMPTY_CUSTOM_KEY_GENERATORS: Map<string, KeyGenerator> = new Map();
+const EMPTY_SCHEMA_KEY_MAPS: Map<
+  ZodTypeAny,
+  Record<string, (ctx: GeneratorContext) => unknown>
+> = new Map();
 
 function getSchemaId(schema: ZodTypeAny): number {
   let id = globalSchemaIds.get(schema);
@@ -245,21 +265,31 @@ export class WorldImpl implements World {
   private readonly schemaCallCounts: WeakMap<ZodTypeAny, number> = new WeakMap();
   private readonly rootSeed: number;
 
-  private readonly customKeyGenerators: Map<string, KeyGenerator> = new Map();
-  private readonly schemaKeyMaps: Map<
+  /**
+   * B97-R15 — five mutable maps lazily allocated on first write. A
+   * freshly-constructed world that never calls `withSchema` / `withKeyMap`
+   * / `withGenerators` and never resolves a relation leaves all five at
+   * `null`. Reads check via `?.get(...)`; writes route through the
+   * `ensureXxx()` helpers below.
+   */
+  private customKeyGenerators: Map<string, KeyGenerator> | null = null;
+  private schemaKeyMaps: Map<
     ZodTypeAny,
     Record<string, (ctx: GeneratorContext) => unknown>
-  > = new Map();
-  private readonly relationPools: Map<string, unknown[]> = new Map();
-  private readonly pendingCounts: Map<ZodTypeAny, number> = new Map();
+  > | null = null;
+  private relationPools: Map<string, unknown[]> | null = null;
+  private pendingCounts: Map<ZodTypeAny, number> | null = null;
   /**
    * B8 — per-pair upsert map for derived schemas registered with `from:`.
    * Outer key: derived schema reference. Inner key: source identity (the
    * source reference itself, or `source[sourceKey]` when declared). The
    * stored value is the post-transform derived record — the same reference
    * that lives in the registry (D8 — see `wiki/decisions.md`).
+   *
+   * B97-R15 — lazy: starts `null`; first write goes through
+   * `ensureDerivedUpsert()`.
    */
-  private readonly derivedUpsert: DerivedUpsertMap = new Map();
+  private derivedUpsert: DerivedUpsertMap | null = null;
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
   /**
    * Effective storage mode for the current outer `generate` call. When `false`,
@@ -296,20 +326,93 @@ export class WorldImpl implements World {
    */
   private readonly relations: RelationResolver;
 
+  /**
+   * B97 — mutable per-`generate()` holder threaded through the lazy generator
+   * binder (see `./bind-generators.ts`). Allocated lazily at the top of the
+   * outer `generate()` entry path; the field loop mutates `state.prng` /
+   * `state.ctx` in place so bound closures observe per-field state at call
+   * time without rebinding.
+   *
+   * Lifetime: scoped to the outer `generate()` call. Reused across nested
+   * `generate()` recursion (the holder is overwritten each `makeFieldCtx`
+   * call). When the call returns, the holder remains live until the next
+   * outer call replaces it — that's fine because every `makeFieldCtx` call
+   * rewrites both fields before passing the holder back through `ctx.gen`.
+   */
+  private fieldState: FieldState | null = null;
+  private boundGen: BoundGenerators | null = null;
+
   constructor(private readonly options: WorldOptions = {}) {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
     this.registry = new SchemaRegistry(this.prng.fork("registry"));
-    for (const [k, fn] of Object.entries(options.generators ?? {})) {
-      this.customKeyGenerators.set(k.toLowerCase(), fn);
+    // B97-R15: only allocate `customKeyGenerators` if construction options
+    // supply any. The empty-no-options shape leaves it at `null`.
+    if (options.generators) {
+      const entries = Object.entries(options.generators);
+      if (entries.length > 0) {
+        const map = this.ensureCustomKeyGenerators();
+        for (const [k, fn] of entries) {
+          map.set(k.toLowerCase(), fn);
+        }
+      }
     }
     this.relations = new RelationResolver({
       registry: this.registry,
-      relationPools: this.relationPools,
+      // B97-R15: pass a callback so the relation pool map is allocated only
+      // when the resolver actually reads/writes it (i.e. the first relation
+      // resolution); a world with no relations never allocates it.
+      getRelationPools: () => this.ensureRelationPools(),
       findPrimaryReg: (schema) => this.findPrimaryRegs(schema)[0] ?? null,
       generateAndStorePrimary: (schema, reg) => this.generateAndStorePrimary(schema, reg),
       isStoreActive: () => this.effectiveStore,
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // B97-R15 — lazy map ensure helpers
+  //
+  // Each `ensureXxx()` returns the corresponding map, allocating it on first
+  // call. Used at every write site; read sites prefer `?.get(...)` so they
+  // do not trigger allocation when the map is still `null`.
+  // -------------------------------------------------------------------------
+
+  private ensureCustomKeyGenerators(): Map<string, KeyGenerator> {
+    if (this.customKeyGenerators === null) {
+      this.customKeyGenerators = new Map();
+    }
+    return this.customKeyGenerators;
+  }
+
+  private ensureSchemaKeyMaps(): Map<
+    ZodTypeAny,
+    Record<string, (ctx: GeneratorContext) => unknown>
+  > {
+    if (this.schemaKeyMaps === null) {
+      this.schemaKeyMaps = new Map();
+    }
+    return this.schemaKeyMaps;
+  }
+
+  private ensureRelationPools(): Map<string, unknown[]> {
+    if (this.relationPools === null) {
+      this.relationPools = new Map();
+    }
+    return this.relationPools;
+  }
+
+  private ensurePendingCounts(): Map<ZodTypeAny, number> {
+    if (this.pendingCounts === null) {
+      this.pendingCounts = new Map();
+    }
+    return this.pendingCounts;
+  }
+
+  private ensureDerivedUpsert(): DerivedUpsertMap {
+    if (this.derivedUpsert === null) {
+      this.derivedUpsert = new Map();
+    }
+    return this.derivedUpsert;
   }
 
   /**
@@ -386,15 +489,17 @@ export class WorldImpl implements World {
   }
 
   withGenerators(map: Record<string, KeyGenerator>): this {
+    const target = this.ensureCustomKeyGenerators();
     for (const [k, fn] of Object.entries(map)) {
-      this.customKeyGenerators.set(k.toLowerCase(), fn);
+      target.set(k.toLowerCase(), fn);
     }
     return this;
   }
 
   withKeyMap<T extends ZodTypeAny>(schema: T, map: SchemaKeyMap<T>): this {
-    const existing = this.schemaKeyMaps.get(schema) ?? {};
-    this.schemaKeyMaps.set(schema, {
+    const target = this.ensureSchemaKeyMaps();
+    const existing = target.get(schema) ?? {};
+    target.set(schema, {
       ...existing,
       ...(map as Record<string, (ctx: GeneratorContext) => unknown>),
     });
@@ -515,52 +620,58 @@ export class WorldImpl implements World {
     schema: TSchema,
     options?: GenerateOptions<z.infer<TSchema>>,
   ): z.infer<TSchema> {
-    // B10-R2/R4: scope the effective store mode to this outer call. When the
-    // caller passes `store: false`, this mode propagates through nested
-    // recursion (generateObjectFields / generateArray / ctx.generate which
-    // re-enters this method); restore the previous value on exit so a separate
-    // top-level call is unaffected. B10-R5: explicit `store: true` overrides
-    // an inherited `store: false` (used by `world.get` to force storage on its
-    // create-path delegate call).
-    return this.withEffectiveLocale(options?.locale, () =>
-      this.withEffectiveUniqueMode(options?.unique, () =>
-        this.withEffectiveStore(options?.store, () => {
-          const stripped = stripOuterOptionalNullable(schema);
-          let current: ZodTypeAny = stripped.inner;
-          const outerWrappers = stripped.wrappers;
+    // B97: scope the lazy generator-binder holder to this outer call so a
+    // matcher's `ctx.gen.<ns>.<fn>()` always observes the holder set up for
+    // its own field, even when the matcher invokes nested `ctx.generate(...)`
+    // that allocates its own per-call holder. Save/restore via try/finally.
+    return this.withFieldStateScope(() =>
+      // B10-R2/R4: scope the effective store mode to this outer call. When the
+      // caller passes `store: false`, this mode propagates through nested
+      // recursion (generateObjectFields / generateArray / ctx.generate which
+      // re-enters this method); restore the previous value on exit so a separate
+      // top-level call is unaffected. B10-R5: explicit `store: true` overrides
+      // an inherited `store: false` (used by `world.get` to force storage on its
+      // create-path delegate call).
+      this.withEffectiveLocale(options?.locale, () =>
+        this.withEffectiveUniqueMode(options?.unique, () =>
+          this.withEffectiveStore(options?.store, () => {
+            const stripped = stripOuterOptionalNullable(schema);
+            let current: ZodTypeAny = stripped.inner;
+            const outerWrappers = stripped.wrappers;
 
-          current = resolveLazyChain(current, this.lazyCache);
-          const d = def(current);
+            current = resolveLazyChain(current, this.lazyCache);
+            const d = def(current);
 
-          if (d.type === "array") {
-            if (outerWrappers.length > 0) {
-              // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
-              // outer `schema` reference (the `.optional()` wrapper) so the Nth
-              // call to the same `.optional()` schema reuses the same fork key
-              // regardless of intervening `generate(Y)` calls.
-              const { id, slot } = this.nextSchemaSlot(schema);
-              const prng = this.prng.fork(`wrap:${id}:${slot}`);
-              const optProb = this.options.optionalProbability ?? 0.2;
-              for (const wrapper of outerWrappers) {
-                if (prng.random() < optProb) {
-                  // No counter mutation on skip — the per-schema slot was already
-                  // advanced by `nextSchemaSlot` above (the next call gets slot+1).
-                  return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+            if (d.type === "array") {
+              if (outerWrappers.length > 0) {
+                // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
+                // outer `schema` reference (the `.optional()` wrapper) so the Nth
+                // call to the same `.optional()` schema reuses the same fork key
+                // regardless of intervening `generate(Y)` calls.
+                const { id, slot } = this.nextSchemaSlot(schema);
+                const prng = this.prng.fork(`wrap:${id}:${slot}`);
+                const optProb = this.options.optionalProbability ?? 0.2;
+                for (const wrapper of outerWrappers) {
+                  if (prng.random() < optProb) {
+                    // No counter mutation on skip — the per-schema slot was already
+                    // advanced by `nextSchemaSlot` above (the next call gets slot+1).
+                    return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+                  }
                 }
               }
+              return this.generateArray(
+                d.element!,
+                current,
+                options as GenerateOptions<unknown[]> | undefined,
+              ) as z.infer<TSchema>;
             }
-            return this.generateArray(
-              d.element!,
-              current,
-              options as GenerateOptions<unknown[]> | undefined,
-            ) as z.infer<TSchema>;
-          }
 
-          return this.generateSingleItem(
-            schema,
-            options as GenerateOptions<unknown>,
-          ) as z.infer<TSchema>;
-        }),
+            return this.generateSingleItem(
+              schema,
+              options as GenerateOptions<unknown>,
+            ) as z.infer<TSchema>;
+          }),
+        ),
       ),
     );
   }
@@ -575,8 +686,8 @@ export class WorldImpl implements World {
     const primaryRegs = this.findPrimaryRegs(schema);
     const reg = primaryRegs.length > 0 ? primaryRegs[primaryRegs.length - 1]! : null;
     const schemaKeyMap =
-      this.schemaKeyMaps.get(schema) ??
-      (this.schemaKeyMaps.get(unwrap(schema)) as
+      this.schemaKeyMaps?.get(schema) ??
+      (this.schemaKeyMaps?.get(unwrap(schema)) as
         | Record<string, (ctx: GeneratorContext) => unknown>
         | undefined) ??
       {};
@@ -584,7 +695,9 @@ export class WorldImpl implements World {
     return explainSchema(schema, {
       matchers: reg?.matchers ?? {},
       schemaKeyMap,
-      customKeyGenerators: this.customKeyGenerators,
+      // B97-R15: explain reads the map for lookups; an empty Map is the
+      // null-equivalent. Avoid allocation on the read path.
+      customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
       relations: reg?.relations ?? {},
     });
   }
@@ -729,46 +842,65 @@ export class WorldImpl implements World {
     }
   }
 
+  /**
+   * B97 — push/pop the lazy generator-binder holder for the duration of `fn`.
+   *
+   * The holder is allocated lazily by {@link ensureFieldState} on first
+   * `makeFieldCtx` call within the outer `generate()`. Nested `ctx.generate`
+   * calls would otherwise mutate the same holder and break a captured outer
+   * `ctx.gen` reference; saving/restoring the holder + `boundGen` pair here
+   * ensures each outer call gets its own pair while still amortising binding
+   * across all fields of the same call.
+   *
+   * Also wires the test-only `__setCurrentWorld` seam so the
+   * `bind-generators-lazy.test.ts` per-world bind counter can attribute
+   * materialisations to this `WorldImpl` instance.
+   */
+  private withFieldStateScope<R>(fn: () => R): R {
+    const previousState = this.fieldState;
+    const previousGen = this.boundGen;
+    this.fieldState = null;
+    this.boundGen = null;
+    try {
+      return fn();
+    } finally {
+      this.fieldState = previousState;
+      this.boundGen = previousGen;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Private: generators binding
   // -------------------------------------------------------------------------
 
   /**
-   * B36 — eager generator binding.
+   * B97 — lazy generator binding via mutable holder.
    *
-   * Walks every namespace in `generatorsData` once and builds an object whose
-   * function members are wrapped per `CTX_SLOTS` (bucket 1/2/3) and whose
-   * non-function members (e.g. `internet.DOMAINS`, `word.TECH_WORDS`) are
-   * forwarded verbatim. Replaces B40's double-Proxy machinery — the slot
-   * lookup is done once at bind time rather than on every property access.
+   * Returns the shared `BoundGenerators` for the current outer `generate()`
+   * call, allocating the `FieldState` + `buildLazyGen` pair on first
+   * invocation and reusing them on every subsequent `makeFieldCtx` within
+   * the same call. Each namespace is a property-getter on the returned
+   * object that materialises its closure set on first touch and caches the
+   * result — see `./bind-generators.ts` for the binder.
    *
-   * B40's ctx-forwarding contract is preserved byte-identically. In
-   * particular, the bucket-2 `person.{firstName,middleName,fullName,prefix}`
-   * helpers continue to forward `boundCtx` **only** when the caller passes
-   * zero args — the Gender-string-without-locale residual carried over from
-   * B40 is intentionally preserved (fixing it requires a helper-signature
-   * change, which is out of scope for this refactor).
+   * The bound closures read `state.prng` / `state.ctx` at call time, so the
+   * field loop only needs to mutate the holder's two fields per iteration
+   * instead of re-binding 14 namespaces × ~10 helpers per field.
+   *
+   * B40's ctx-forwarding contract is preserved byte-identically (see
+   * `CTX_SLOTS` in `./bind-generators.ts`).
    */
-  private bindGenerators(
-    prng: ReturnType<typeof createPrng>,
-    boundCtx: GeneratorContext,
-  ): BoundGenerators {
-    return {
-      color: bindNamespace(generatorsData.color, "color", prng, boundCtx),
-      commerce: bindNamespace(generatorsData.commerce, "commerce", prng, boundCtx),
-      company: bindNamespace(generatorsData.company, "company", prng, boundCtx),
-      date: bindNamespace(generatorsData.date, "date", prng, boundCtx),
-      finance: bindNamespace(generatorsData.finance, "finance", prng, boundCtx),
-      internet: bindNamespace(generatorsData.internet, "internet", prng, boundCtx),
-      location: bindNamespace(generatorsData.location, "location", prng, boundCtx),
-      lorem: bindNamespace(generatorsData.lorem, "lorem", prng, boundCtx),
-      person: bindNamespace(generatorsData.person, "person", prng, boundCtx),
-      phone: bindNamespace(generatorsData.phone, "phone", prng, boundCtx),
-      string: bindNamespace(generatorsData.string, "string", prng, boundCtx),
-      system: bindNamespace(generatorsData.system, "system", prng, boundCtx),
-      vehicle: bindNamespace(generatorsData.vehicle, "vehicle", prng, boundCtx),
-      word: bindNamespace(generatorsData.word, "word", prng, boundCtx),
-    };
+  private ensureFieldState(prng: Prng, ctx: GeneratorContext): FieldState {
+    let state = this.fieldState;
+    if (state === null) {
+      state = { prng, ctx, world: this };
+      this.fieldState = state;
+      this.boundGen = buildLazyGen(state);
+    } else {
+      state.prng = prng;
+      state.ctx = ctx;
+    }
+    return state;
   }
 
   // -------------------------------------------------------------------------
@@ -781,6 +913,20 @@ export class WorldImpl implements World {
   // fieldPrng  — field-seeded PRNG used for all data generation.
   // -------------------------------------------------------------------------
 
+  /**
+   * Build a fresh per-field `GeneratorContext` literal. R13's
+   * `makeRecordCtx` + `updateFieldCtx` split was reverted (see spec
+   * Context → "R13 was also tried and reverted"): the per-field literal
+   * preserves monomorphic shape for V8 inline caching, which dominates the
+   * allocation cost on small (no-matcher) workloads.
+   *
+   * Per-field PRNG (`fieldPrng`) seeds all data generation; `recordPrng`
+   * is the stable per-record PRNG used for relation resolution so
+   * `ctx.related("owner")` returns the same owner across every field of
+   * the record. The lazy-bind holder (`fieldState`) is updated to point
+   * at this field's PRNG + ctx so any bound closures `ctx.gen.<ns>.<fn>()`
+   * triggers see the current field's state at call time.
+   */
   private makeFieldCtx(
     reg: SchemaReg,
     source: unknown,
@@ -825,14 +971,15 @@ export class WorldImpl implements World {
           bytes: (n) => fieldPrng.bytes(n),
         }
       : fieldPrng;
-    // B40: build the ctx first (with a placeholder `gen`), then replace `gen`
-    // with a properly-bound proxy that captures THIS ctx as its `boundCtx`.
-    // The Proxy adapter injects this ctx (carrying `locale`, `current`, etc.)
-    // as the default `ctx?` arg for every locale-aware helper, so matcher
-    // calls like `ctx.gen.word.noun()` honour the configured locale.
+
+    // Allocate / refresh the lazy-bind holder so `ctx.gen.<ns>.<fn>()`
+    // observes this field's prng + ctx at call time. The holder shape is
+    // stable across fields; the per-namespace getters in `buildLazyGen`
+    // materialise closures only when a matcher actually reads them.
+    const state = this.ensureFieldState(exposedPrng, undefined as unknown as GeneratorContext);
     const ctx: GeneratorContext = {
       prng: exposedPrng,
-      gen: {} as BoundGenerators,
+      gen: this.boundGen!,
       source,
       registry: this.registry,
       fieldPath,
@@ -843,16 +990,13 @@ export class WorldImpl implements World {
         return this.generate(s, { ...o, fieldPath: nextPath });
       },
       recursionLimit: this.options.recursionLimit ?? 5,
-      current: (current ?? {}) as Partial<any>,
+      current: (current ?? {}) as Partial<unknown>,
       // B65: per-call `generate(S, { locale })` wins over the world-level
       // construction option. `withEffectiveLocale` set it in scope; without it,
       // fall back to the world's `options.locale`, then `defaultLocale`.
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
     };
-    (ctx as { gen: BoundGenerators }).gen = this.bindGenerators(
-      exposedPrng as ReturnType<typeof createPrng>,
-      ctx,
-    );
+    state.ctx = ctx;
     return ctx;
   }
 
@@ -874,9 +1018,14 @@ export class WorldImpl implements World {
     reg: SchemaReg | null,
     options?: GenerateOptions<unknown>,
   ): unknown {
-    const pending = this.pendingCounts.get(schema) ?? 0;
+    // B97-R15: pendingCounts is lazily allocated. The first invocation of
+    // `generateAndStorePrimary` for any schema triggers allocation. A
+    // zero-config `world.generate(schema)` that does not hit the
+    // store-on path (ad-hoc / store: false) keeps `pendingCounts === null`.
+    const pendingMap = this.ensurePendingCounts();
+    const pending = pendingMap.get(schema) ?? 0;
     const recordIndex = this.registry.count(schema) + pending;
-    this.pendingCounts.set(schema, pending + 1);
+    pendingMap.set(schema, pending + 1);
 
     try {
       const effectiveRegId = reg?.regId ?? -1;
@@ -902,8 +1051,10 @@ export class WorldImpl implements World {
       }
       return result;
     } finally {
-      const currentPending = this.pendingCounts.get(schema) ?? 1;
-      this.pendingCounts.set(schema, currentPending - 1);
+      // pendingCounts was allocated at the top of this method via
+      // ensurePendingCounts(); it cannot be null here.
+      const currentPending = pendingMap.get(schema) ?? 1;
+      pendingMap.set(schema, currentPending - 1);
     }
   }
 
@@ -989,12 +1140,14 @@ export class WorldImpl implements World {
         reg,
         outerSchema: schema,
         resolvedSchema: current,
-        customKeyGenerators: this.customKeyGenerators,
-        schemaKeyMaps: this.schemaKeyMaps,
+        // B97-R15: empty sentinels avoid a per-world Map allocation when
+        // neither was wired through `withGenerators` / `withKeyMap`.
+        customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
+        schemaKeyMaps: this.schemaKeyMaps ?? EMPTY_SCHEMA_KEY_MAPS,
         optionalProbability: this.options.optionalProbability ?? 0.2,
         dryRun: false,
         state: { inner: fs },
-        explainMeta: {},
+        explainMeta: null,
       }).value;
     }
     return result;
@@ -1377,7 +1530,9 @@ export class WorldImpl implements World {
       const isUnique = options?.unique !== false;
       const canUseUpsert = isUnique && this.effectiveStore;
 
-      if (canUseUpsert) {
+      if (canUseUpsert && this.derivedUpsert !== null) {
+        // B97-R15: read-only path — skip the allocation entirely when the
+        // map has never been written.
         const existing = getDerivedUpsert(this.derivedUpsert, schema, identity);
         if (existing !== undefined) {
           this.derivedPairCounter--;
@@ -1451,7 +1606,8 @@ export class WorldImpl implements World {
     if (this.effectiveStore) {
       this.registry.store(schema, result as input<ZodTypeAny>);
       if (isUnique) {
-        setDerivedUpsert(this.derivedUpsert, schema, identity, result);
+        // B97-R15: allocate on first write.
+        setDerivedUpsert(this.ensureDerivedUpsert(), schema, identity, result);
       }
     }
 
@@ -1590,4 +1746,45 @@ export class WorldImpl implements World {
 
 export function createWorld(options?: WorldOptions): World {
   return new WorldImpl(options ?? {});
+}
+
+// ---------------------------------------------------------------------------
+// B97-R15 — test-only escape hatch
+//
+// Test-only accessor for the lazy `WorldImpl` map invariants (R15). Same
+// marker as `__bindCount` in `bind-generators.ts`: NOT part of the public
+// API, not re-exported from `src/index.ts`, no entry in
+// `docs/api-reference.md`. (R12 and R13 were both reverted — see spec
+// Context.)
+// ---------------------------------------------------------------------------
+
+interface LazyMapsSnapshot {
+  customKeyGenerators: Map<string, KeyGenerator> | null;
+  schemaKeyMaps: Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>> | null;
+  relationPools: Map<string, unknown[]> | null;
+  pendingCounts: Map<ZodTypeAny, number> | null;
+  derivedUpsert: DerivedUpsertMap | null;
+}
+
+interface WorldImplPrivate {
+  customKeyGenerators: Map<string, KeyGenerator> | null;
+  schemaKeyMaps: Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>> | null;
+  relationPools: Map<string, unknown[]> | null;
+  pendingCounts: Map<ZodTypeAny, number> | null;
+  derivedUpsert: DerivedUpsertMap | null;
+}
+
+function asPrivate(world: object): WorldImplPrivate {
+  return world as unknown as WorldImplPrivate;
+}
+
+export function __inspectLazyMaps(world: object): LazyMapsSnapshot {
+  const w = asPrivate(world);
+  return {
+    customKeyGenerators: w.customKeyGenerators,
+    schemaKeyMaps: w.schemaKeyMaps,
+    relationPools: w.relationPools,
+    pendingCounts: w.pendingCounts,
+    derivedUpsert: w.derivedUpsert,
+  };
 }

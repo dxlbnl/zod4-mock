@@ -276,22 +276,31 @@ describe("WorldOptions.generators", () => {
   });
 
   it("custom generator receives a full GeneratorContext", () => {
-    let capturedCtx: GeneratorContext | undefined;
+    // B97-R12/R13 — the per-record ctx is mutated across fields, so any
+    // ctx-field observation MUST be made synchronously inside the matcher
+    // (snapshot-not-reference discipline; see the spec's "Trace-API
+    // compatibility" subsection). Capture each ctx slot value at the time
+    // of the matcher call rather than the ctx reference itself.
+    let capturedPrng: GeneratorContext["prng"] | undefined;
+    let capturedFieldPath: string | undefined;
+    let capturedRegistry: GeneratorContext["registry"] | undefined;
 
     const world = createWorld({
       seed: 42,
       generators: {
         vendorCode: (_schema, ctx) => {
-          capturedCtx = ctx;
+          capturedPrng = ctx.prng;
+          capturedFieldPath = ctx.fieldPath;
+          capturedRegistry = ctx.registry;
           return "X";
         },
       },
     }).withSchema(ProductSchema);
 
     world.generate(ProductSchema);
-    expect(capturedCtx?.prng).toBeDefined();
-    expect(capturedCtx?.fieldPath).toMatch(/vendorCode$/);
-    expect(capturedCtx?.registry).toBeDefined();
+    expect(capturedPrng).toBeDefined();
+    expect(capturedFieldPath).toMatch(/vendorCode$/);
+    expect(capturedRegistry).toBeDefined();
   });
 });
 

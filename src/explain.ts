@@ -92,9 +92,14 @@ export function explainSchema<TSchema extends ZodTypeAny>(
         explainMeta: {},
       };
       walkPipeline(PIPELINE, stepCtx);
+      // `explainMeta` is `{}` here because the dry-run path needs the
+      // identifier/reason capture. The hot-path ctx in `engine.ts` uses
+      // `null` instead and pipeline steps skip the writes — but on this
+      // path the slot is always non-null.
+      const meta = stepCtx.explainMeta;
       fields[key] = {
-        generator: stepCtx.explainMeta.identifier ?? "schema-based",
-        reason: stepCtx.explainMeta.reason ?? "no key match, no matcher",
+        generator: meta?.identifier ?? "schema-based",
+        reason: meta?.reason ?? "no key match, no matcher",
       };
     }
   }

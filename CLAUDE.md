@@ -36,7 +36,7 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 
 ### Core concepts
 
-**World** — the central context for one generation session ([src/world/](src/world/)). Built fluently with `createWorld(opts)` then chained with `.withSchema(schema, opts?)`, `.withKeyMap(schema, map)`, and `.withKeyGen({ ... })`; data is produced via `.generate(schema, opts?)` or `.populate(schema, count, factory?)`. One world = one seed = one deterministic dataset. Determinism is keyed on **schema reference identity** (see D4/D10 in [wiki/architecture.md](wiki/architecture.md)) — construct schemas at module scope and reuse them.
+**World** — the central context for one generation session ([src/world/](src/world/)). Built fluently with `createWorld(opts)` then chained with `.withSchema(schema, opts?)`, `.withKeyMap(schema, map)`, and `.withGenerators({ ... })`; data is produced via `.generate(schema, opts?)` or `.populate(schema, count, factory?)`. One world = one seed = one deterministic dataset. Determinism is keyed on **schema reference identity** (see D4/D10 in [wiki/architecture.md](wiki/architecture.md)) — construct schemas at module scope and reuse them.
 
 **Schemas as identity anchors** — there is no separate `Subject`/`defineSubjectType` API. The `ZodTypeAny` reference itself is the identity. Registered schemas (primary or derived via `from:`) get their records stored in the registry; matchers in other schemas reach them via `ctx.related(relName)` (when wired via `withSchema({ relations })`) or directly via `ctx.registry.pick(OtherSchema)`.
 
@@ -46,7 +46,7 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit per-field functions; first to win.
 2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the field name.
 3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent per layer; sets `ctx.inner` for downstream steps. Internal — does not produce a final value on its own.
-4. **World-level custom generators** — entries from `withKeyGen({ ... })` matched on the field name.
+4. **World-level custom generators** — entries from `withGenerators({ ... })` matched on the field name.
 5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key + `DEFAULT_KEY_PATTERNS` regex matches (`email` → realistic email, `firstName` → first name, `createdAt` → date).
 6. **Schema-based fallback** — Zod type introspection (`z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc.). Always resolves.
 

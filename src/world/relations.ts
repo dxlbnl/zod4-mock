@@ -100,7 +100,12 @@ export function relationShortPoolMessage(
  */
 export interface RelationResolverDeps {
   readonly registry: Registry;
-  readonly relationPools: Map<string, unknown[]>;
+  /**
+   * B97-R15 — lazy accessor for the relation pool cache. The
+   * `WorldImpl`-side helper allocates the map on first call and returns it;
+   * a world that never resolves a relation never triggers allocation.
+   */
+  getRelationPools(): Map<string, unknown[]>;
   findPrimaryReg(schema: ZodTypeAny): SchemaReg | null;
   generateAndStorePrimary(schema: ZodTypeAny, reg: SchemaReg | null): unknown;
   isStoreActive(): boolean;
@@ -182,8 +187,11 @@ export class RelationResolver {
     const where = rel.where;
     const isSelfRef = relSchema === reg.schema;
 
+    // B97-R15: the relation-pool map is lazily allocated. Resolving any
+    // relation triggers allocation; worlds without relations never pay.
+    const relationPools = this.deps.getRelationPools();
     const cacheKey = relationCacheKey(recordId, relName, kind);
-    let items = this.deps.relationPools.get(cacheKey);
+    let items = relationPools.get(cacheKey);
 
     if (!items) {
       if (kind === "single") {
@@ -196,7 +204,7 @@ export class RelationResolver {
           // earlier ones already stored. The matcher handles the empty case
           // (e.g. `ctx.related("parent")?.id ?? null`).
           if (isSelfRef) {
-            this.deps.relationPools.set(cacheKey, []);
+            relationPools.set(cacheKey, []);
             items = [];
           } else {
             const provisioned = this.ensurePrimaryRecord(relSchema);
@@ -256,7 +264,7 @@ export class RelationResolver {
           throw new Error(relationShortPoolMessage(relName, count ?? 0, items.length));
         }
       }
-      this.deps.relationPools.set(cacheKey, items);
+      relationPools.set(cacheKey, items);
     }
 
     // Derive a stable per-relation PRNG so all fields in one record pick the

@@ -80,7 +80,7 @@ For every field in a schema, values are resolved in this priority order — the 
 1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit per-field functions; first to win.
 2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the field name.
 3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent per layer; sets `ctx.inner` for downstream steps. Internal — does not produce a final value on its own.
-4. **World-level custom generators** — entries from `withKeyGen({ ... })` matched on the field name.
+4. **World-level custom generators** — entries from `withGenerators({ ... })` matched on the field name.
 5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key + `DEFAULT_KEY_PATTERNS` regex matches. `email` → realistic email, `firstName` → first name, `createdAt` → date. [Full list →](key-heuristics.md)
 6. **Schema-based fallback** — Zod type introspection. `z.enum([...])` → random member, `z.number().int().min(1).max(100)` → integer in range, etc. Always resolves.
 

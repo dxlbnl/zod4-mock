@@ -57,15 +57,28 @@ string }` (string-form schema descriptions for reproducibility), and
 {
   "timestamp": string,             // ISO 8601, e.g. "2026-06-04T07:02:54Z"
   "version": string,               // semver of zod4-mock under test
-  "avg_us": { "simple": number, "user": number, "nested": number },
+  "avg_us": {
+    "simple": number,
+    "user": number,
+    "nested": number,
+    "matcher"?: number | null      // B97-R9: number or `null` legacy carveout
+  },
   "memory": {                      // added by B98-R6 — `null` permitted for legacy entries
     "simple": { "heapUsedDeltaBytes": number, "v8HeapUsedBytes": number, "gcForced": boolean },
     "user":   { "heapUsedDeltaBytes": number, "v8HeapUsedBytes": number, "gcForced": boolean },
-    "nested": { "heapUsedDeltaBytes": number, "v8HeapUsedBytes": number, "gcForced": boolean }
+    "nested": { "heapUsedDeltaBytes": number, "v8HeapUsedBytes": number, "gcForced": boolean },
+    "matcher"?: { "heapUsedDeltaBytes": number, "v8HeapUsedBytes": number, "gcForced": boolean } | null
+                                    // B97-R9: per-row `null` legacy carveout
   } | null,
   "note"?: string                  // optional human annotation
 }
 ```
+
+**B97 amendment** — the `matcher` key on both `avg_us` and `memory` is added
+per B97-R10. `matcher: null` is permitted on a per-row basis when the
+historical version's API can't run the matcher tier (legacy carveout —
+mirrors the existing `memory: null` carveout). `site/bench/versions-schema.ts`
+adds the new key on both shapes.
 
 `avg_us` is in microseconds (per-call avg × 1000) — keeps the existing B97
 shape. `memory.heapUsedDeltaBytes` is the post-loop − pre-loop delta in bytes
@@ -105,10 +118,18 @@ entries are added by humans (or via `site/bench/regression.bench.ts` as the
 on-demand generator), never auto-pruned, and an existing version's row is
 never edited in place **except**:
 
-1. to add a post-hoc `note`, and
+1. to add a post-hoc `note`,
 2. to fill in a `memory: null` placeholder with a real captured sample (the
    one-time memory backfill performed by `regression.bench.ts` in its
-   opt-in write-back mode — see B98-R3).
+   opt-in write-back mode — see B98-R3), and
+3. to **add a new tier column** to an existing row (e.g. B97 adds
+   `avg_us.matcher` and `memory.matcher` alongside the existing
+   `simple` / `user` / `nested` keys). Adding a tier column is **additive
+   only** — the new column's value is written **once** per row (a
+   measured number, or `null` for legacy carveout), and **existing
+   tiers' `avg_us` / `memory` values are never edited**. This carveout
+   mirrors the memory-backfill carveout: a strictly-widening shape
+   change for the file, never destructive.
 
 `avg_us` values **MUST NOT** be edited in place under any circumstance —
 they are the timing baseline and must remain reproducible from the
@@ -117,7 +138,9 @@ has been populated, whether at row creation or via the one-time
 backfill), it is frozen: further edits to that row's `memory` are
 disallowed. The append-only spirit applies to the now-populated field —
 a re-measurement that disagrees with the existing memory block belongs
-in a new entry, not an overwrite.
+in a new entry, not an overwrite. The same freeze applies to any new
+tier column once written: each tier's per-row value is set once and
+then read-only.
 
 The npm aliases in `site/package.json` (`zod4-mock-v050..v092`)
 **MUST** stay declared so the on-demand regression generator can run
@@ -230,26 +253,33 @@ print-only operation; write-back is a deliberate maintainer step.
 The repository **MUST** carry a `site/bench/results/baseline.json` file that
 shares `latest.json`'s top-level keys (`timestamp`, `node`, `versions`,
 `config`, `results`, `localeResults`, plus the new `memory` field per
-B98-R6) but **strips the non-gated comparator columns**: for each tier in
-`results`, only the `zod4_mock` sub-key (the avg/min/max/opsPerSec/coldStart
-object) is retained — `faker` and `zod3_mock` are external libraries the
-comparator (B98-R5) does not gate on, and storing their numbers in the
-baseline is misleading. `localeResults` is kept as-is for now (it is also
-not gated by B98-R5 / B98-R7, but it is small and homogeneous, and dropping
-it would cascade churn into B98-R8 / B98-R9 fixtures — see Open questions).
-`versions["zod4-mock"]` **MUST** correspond to the most recently published
-release at the moment the file was updated. A `site/bench/baseline.md`
-sidecar (or equivalent `_meta` field inside the JSON) **MUST** record which
-release the baseline was captured from and the date of capture.
+B98-R6) but **strips the non-gated comparator columns**: for each of the
+four tiers — `simple`, `user`, `nested`, `matcher` — in `results`, only
+the `zod4_mock` sub-key (the avg/min/max/opsPerSec/coldStart object) is
+retained. `faker` and `zod3_mock` are external libraries the comparator
+(B98-R5) does not gate on, and storing their numbers in the baseline is
+misleading. The `matcher` tier was added by B97-R6 and is gated by
+B98-R5 / B98-R7 identically to the other three tiers; it carries
+`zod4_mock` only (per B97 Out of scope, `faker` / `zod3_mock` are not
+defined on the matcher tier). `localeResults` is kept as-is for now (it
+is also not gated by B98-R5 / B98-R7, but it is small and homogeneous,
+and dropping it would cascade churn into B98-R8 / B98-R9 fixtures — see
+Open questions). `versions["zod4-mock"]` **MUST** correspond to the most
+recently published release at the moment the file was updated. A
+`site/bench/baseline.md` sidecar (or equivalent `_meta` field inside the
+JSON) **MUST** record which release the baseline was captured from and
+the date of capture.
 
 - Scenario: baseline file exists and has correct top-level shape
   GIVEN the repository at this card's merge
   WHEN `site/bench/results/baseline.json` is read and parsed
   THEN it contains the same top-level keys as `latest.json` (`timestamp`,
   `node`, `versions`, `config`, `results`, `localeResults`, `memory`),
-  `versions["zod4-mock"]` is a valid semver string, AND for each tier in
-  `results` (`simple` / `user` / `nested`) the tier object's only sub-key
-  is `zod4_mock` (no `faker` key, no `zod3_mock` key).
+  `versions["zod4-mock"]` is a valid semver string, AND `results`
+  carries all four tiers `simple` / `user` / `nested` / `matcher` (the
+  `matcher` key MUST be present), AND for each of those four tiers the
+  tier object's only sub-key is `zod4_mock` (no `faker` key, no
+  `zod3_mock` key).
 
 - Scenario: baseline provenance is recorded
   GIVEN the committed `baseline.json` (or its sidecar)
@@ -261,13 +291,16 @@ release the baseline was captured from and the date of capture.
 ### B98-R5: Time-regression guardrail with per-tier 25 % threshold
 
 `pnpm --filter=@zod4-mock/site bench` **MUST** fail (non-zero exit) when the
-current run's `results.<tier>.zod4_mock.avg` for **any** of the three tiers
-(`simple` / `user` / `nested`) exceeds the matching value in `baseline.json`
-by more than **25 %**. The faker and `@anatine/zod-mock` columns **MUST NOT**
-gate the build (they're external libraries; informational only) — and per
-B98-R4 they are **not present** in `baseline.json` at all, so the comparator
-**MUST** treat their absence from the baseline as expected (no crash, no
-`undefined` access) and skip them silently when iterating tiers; only
+current run's `results.<tier>.zod4_mock.avg` for **any** of the four tiers
+(`simple` / `user` / `nested` / `matcher`) exceeds the matching value in
+`baseline.json` by more than **25 %**. The threshold and the WARN /
+OK / FAIL bands apply to the `matcher` tier identically — it is a
+first-class gated tier (added by B97-R6), not a special case. The faker
+and `@anatine/zod-mock` columns **MUST NOT** gate the build (they're
+external libraries; informational only) — and per B98-R4 they are **not
+present** in `baseline.json` at all, so the comparator **MUST** treat
+their absence from the baseline as expected (no crash, no `undefined`
+access) and skip them silently when iterating tiers; only
 `results.<tier>.zod4_mock.avg` is read from the baseline. The
 comparison **MUST** run inside the `perf.test.ts` suite (a dedicated
 `describe("regression vs baseline")` block executed after the measurement
@@ -289,7 +322,7 @@ release-pinned baseline.
   8.3 µs; the 0.7.2 baseline)
   AND a synthetic `latest.json` (constructed in a unit fixture that
   exercises the comparator directly) with `results.simple.zod4_mock.avg =
-  0.0108` (i.e. 13.0 µs — a +30 % regression)
+0.0108` (i.e. 13.0 µs — a +30 % regression)
   WHEN the comparison block runs
   THEN it logs a row `simple | 0.0083ms | 0.0108ms | +30.1% | FAIL` and
   the test fails with a non-zero exit code from `pnpm bench`.
@@ -366,13 +399,20 @@ peers.
 ### B98-R7: Memory-regression guardrail with per-tier 50 % threshold
 
 The same comparison block that gates time (B98-R5) **MUST** also gate
-memory: for each tier, the current `memory.<tier>.heapUsedDeltaBytes`
-**MUST** be compared against the matching `baseline.json` value, and a
-delta **> 50 %** **MUST** fail the build. The threshold is intentionally
+memory: for each of the four tiers (`simple` / `user` / `nested` /
+`matcher`), the current `memory.<tier>.heapUsedDeltaBytes` **MUST** be
+compared against the matching `baseline.json` value, and a delta
+**> 50 %** **MUST** fail the build. The threshold is intentionally
 looser than the time threshold because `heapUsed` deltas are noisier (no
 `--expose-gc` ⇒ samples can include allocations the GC has not yet
 collected). A delta in **[25 %, 50 %]** **MUST** print `WARN`. A baseline
 value of `0` (legacy entries pre-B98) **MUST** print `SKIP` and not fail.
+The `matcher` tier additionally carries a `matcher: null` SKIP carveout
+(per B97-R8): when `baseline.results.matcher` or `baseline.memory.matcher`
+is `null` (a baseline captured before the matcher tier existed, or a
+legacy row whose alias couldn't run the matcher tier), the comparator
+**MUST** print `SKIP` for that tier and **MUST NOT** fail the build —
+mirroring the `0`-baseline carveout above.
 
 - Scenario: a 70 % memory regression on `user` fails
   GIVEN `baseline.json` with `memory.user.heapUsedDeltaBytes = 1_000_000`
@@ -401,20 +441,64 @@ The implementer **MUST** add a unit-style test (e.g.
 `site/bench/regression-vs-baseline.test.ts`) that feeds the comparator a
 synthetic `baseline.json` derived from `versions.json`'s `0.7.2` entry and
 a synthetic `latest.json` derived from `0.8.0`, and asserts the comparator
-returns a `FAIL` verdict on all three tiers' time and (if memory data is
-present for those rows; otherwise a `note` records the omission) on
-memory. Re-using the synthetic-fixture path of B98-R5 / B98-R7 is
-acceptable.
+returns a `FAIL` verdict on the three pinned tiers (`simple` / `user` /
+`nested`) for time and (if memory data is present for those rows;
+otherwise a `note` records the omission) on memory.
+
+**Matcher-tier smoke acceptance — conditional on portability.** The
+`matcher` tier was added by B97-R6 and is populated in `versions.json`
+only for versions whose API supports the matcher-tier registration shape
+(the cutoff is around v0.7.0 per the B97-R6 portability check / B97-R10
+historical backfill; legacy rows below the cutoff carry
+`matcher: null`). The smoke acceptance therefore behaves
+**conditionally**:
+
+- When `matcher` is populated (non-`null`) in both the `0.7.2` and
+  `0.8.0` rows of `versions.json`, the comparator **MUST FAIL** on the
+  matcher tier given the 0.7.2 → 0.8.0 substitution (the matcher-tier
+  delta is at least as severe as the three pinned tiers — the eager
+  `bindGenerators` cost scales with every `ctx.gen.*` access, of which
+  matcher schemas have many).
+- When either row's `matcher` is `null` (legacy carveout), the
+  comparator emits `SKIP` for the matcher tier (per B98-R7's `null`
+  carveout) and the smoke acceptance records the absence as a `note`
+  rather than asserting `FAIL` for that tier. The three pinned tiers'
+  `FAIL` assertions are unaffected.
+
+Re-using the synthetic-fixture path of B98-R5 / B98-R7 is acceptable.
 
 - Scenario: 0.7.2 baseline rejects 0.8.0 numbers
   GIVEN a comparator fed `0.7.2` `avg_us` values from `versions.json`
   (simple=8.3 µs, user=16.8 µs, nested=43.7 µs)
   AND `0.8.0` `avg_us` values from `versions.json`
   (simple=76.8 µs, user=154.1 µs, nested=467.8 µs)
-  WHEN the comparator evaluates the three tiers at the B98-R5 threshold
+  WHEN the comparator evaluates the three pinned tiers at the B98-R5
+  threshold (> 25 %)
+  THEN all three pinned tiers report `FAIL` (deltas ≈ +825 %, +817 %,
+  +970 %), and the comparator's aggregate verdict is `FAIL`.
+
+- Scenario (matcher portable): 0.7.2 → 0.8.0 substitution fails the
+  matcher tier when populated
+  GIVEN a `versions.json` whose `0.7.2` and `0.8.0` rows both carry a
+  populated `matcher` number (non-`null`)
+  AND a comparator fed those two rows' `matcher` `avg_us` values
+  (baseline = 0.7.2's `matcher`, latest = 0.8.0's `matcher`)
+  WHEN the comparator evaluates the matcher tier at the B98-R5 threshold
   (> 25 %)
-  THEN all three tiers report `FAIL` (deltas ≈ +825 %, +817 %, +970 %), and
-  the comparator's aggregate verdict is `FAIL`.
+  THEN the matcher row reports `FAIL` (the matcher-tier delta exceeds
+  25 % — historically by a wide margin since `bindGenerators` cost
+  scales with `ctx.gen.*` access count).
+
+- Scenario (matcher legacy): 0.7.2 → 0.8.0 substitution skips the
+  matcher tier when either row is `null`
+  GIVEN a `versions.json` where either the `0.7.2` row or the `0.8.0`
+  row carries `matcher: null` (legacy carveout — the matcher tier
+  couldn't run on that alias)
+  WHEN the comparator evaluates the matcher tier
+  THEN the matcher row reports `SKIP` (per B98-R7's `null` carveout)
+  AND the smoke acceptance records the absence in a `note` rather than
+  asserting `FAIL` for the matcher tier; the three pinned tiers'
+  `FAIL` assertions are unaffected.
 
 ### B98-R9: Baseline-update workflow at release time
 

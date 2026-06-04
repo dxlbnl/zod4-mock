@@ -59,7 +59,11 @@ function makeFixture(opts?: {
 
   const resolver = new RelationResolver({
     registry,
-    relationPools,
+    // B97-R15: the production `WorldImpl` lazily allocates relation pools.
+    // The fixture pre-allocates `relationPools` so the test's identity
+    // assertions on the cache map still work; the resolver fetches it
+    // lazily via the deps callback.
+    getRelationPools: () => relationPools,
     findPrimaryReg: (schema) =>
       registerPrimaryFor !== undefined && schema === registerPrimaryFor ? primaryReg : null,
     generateAndStorePrimary: (schema, reg) => {

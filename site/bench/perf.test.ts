@@ -11,17 +11,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { faker } from "@faker-js/faker";
 import { generateMock } from "@anatine/zod-mock";
-import { generate } from "zod4-mock";
+import { createWorld, generate, type MatcherCtx } from "zod4-mock";
 import { nl } from "@zod4-mock/locale-nl";
 import { en } from "@zod4-mock/locale-en";
 import { z as z3 } from "zod3";
 import { z as z4 } from "zod";
 import { measure, type BenchResult } from "../src/lib/bench.ts";
 import { sampleMemory, type MemorySample } from "./memory.ts";
-import {
-  compareToBaseline,
-  type RunLike,
-} from "./regression-compare.ts";
+import { compareToBaseline, type RunLike } from "./regression-compare.ts";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -154,6 +151,34 @@ function fakerNested() {
   };
 }
 
+// ─── Schema tier 4: Matcher (B97-R6, zod4-mock-only) ─────────────────────────
+//
+// The matcher tier is zod4-mock-specific (the matcher / relations registration
+// shape is a zod4-mock API surface — faker / @anatine/zod-mock don't have a
+// comparable concept). Schemas are constructed at module scope per D10 so
+// reference identity is stable across worlds.
+
+const CompanySchema = z4.object({
+  id: z4.string().uuid(),
+  name: z4.string(),
+  industry: z4.string(),
+});
+
+const AddressSchema = z4.object({
+  street: z4.string(),
+  city: z4.string(),
+  country: z4.string(),
+});
+
+const UserSchema = z4.object({
+  id: z4.string().uuid(),
+  fullName: z4.string(),
+  email: z4.string().email(),
+  city: z4.string(),
+  address: AddressSchema,
+  employerId: z4.string().uuid(),
+});
+
 // ─── Results collection ───────────────────────────────────────────────────────
 
 type TierResults = {
@@ -164,12 +189,19 @@ type TierResults = {
 
 const results: Record<string, TierResults> = {};
 
+// Matcher tier is zod4-mock-only — split into its own narrower shape (no
+// faker / zod3_mock column). B97-R6 / B98-R5 gate zod4_mock alone on this
+// tier per spec ("faker / zod3_mock columns on the matcher tier ... are
+// NOT gated").
+const matcherResults: { zod4_mock: BenchResult | null } = { zod4_mock: null };
+
 // ─── Memory collection (B98-R6) ───────────────────────────────────────────────
 
-const memory: Record<"simple" | "user" | "nested", MemorySample> = {
+const memory: Record<"simple" | "user" | "nested" | "matcher", MemorySample> = {
   simple: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
   user: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
   nested: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
+  matcher: { heapUsedDeltaBytes: 0, v8HeapUsedBytes: 0, gcForced: false },
 };
 
 // ─── Benchmarks ───────────────────────────────────────────────────────────────
@@ -252,6 +284,45 @@ describe("nested schema", () => {
   });
 });
 
+// ─── Schema tier 4: Matcher (zod4-mock only) ─────────────────────────────────
+//
+// B97-R6: the matcher tier reports `populate(UserSchema, 100)` (recommended
+// over `generate(UserSchema)` because populate amplifies per-call closure
+// rebuild cost on the larger sample — see spec §B97-R6 measurement note).
+
+describe("matcher schema", () => {
+  it("zod4-mock (zod4)", () => {
+    const world = createWorld({ seed: 1 })
+      .withSchema(CompanySchema)
+      .withSchema(UserSchema, {
+        relations: { employer: { schema: CompanySchema } },
+        matchers: {
+          fullName: (ctx: MatcherCtx) => ctx.gen.person.fullName(),
+          email: (ctx: MatcherCtx) => ctx.gen.internet.email(),
+          city: (ctx: MatcherCtx) => ctx.gen.location.city(),
+          address: (ctx: MatcherCtx) => ({
+            street: ctx.gen.location.street(),
+            city: ctx.gen.location.city(),
+            country: ctx.gen.location.country(),
+          }),
+          employerId: (ctx: MatcherCtx<{ employer: typeof CompanySchema }>) =>
+            ctx.related("employer").id as string,
+        },
+      });
+
+    // Matcher tier uses lighter warmup/runs because each call generates
+    // 100 records (vs 1 for the other three tiers) — keeps the bench's
+    // wall-clock budget bounded.
+    memory.matcher = sampleMemory(() => {
+      matcherResults.zod4_mock = measure(() => world.populate(UserSchema, 100), {
+        warmup: 10,
+        runs: 100,
+      });
+    });
+    console.log(` zod4-mock matcher  ${fmt(matcherResults.zod4_mock!)}`);
+  });
+});
+
 // ─── Locale variants (zod4-mock, user schema) ─────────────────────────────────
 
 const localeResults: Record<string, BenchResult> = {};
@@ -293,7 +364,7 @@ afterAll(() => {
     node: process.version,
     versions: pkgVersions(),
     config: { warmup: WARMUP, runs: RUNS },
-    results,
+    results: buildResultsWithMatcher(),
     localeResults,
     memory,
   };
@@ -337,7 +408,10 @@ describe("regression vs baseline", () => {
       return;
     }
     const baseline = JSON.parse(readFileSync(baselinePath, "utf-8")) as RunLike;
-    const latest: RunLike = { results: results as RunLike["results"], memory };
+    const latest: RunLike = {
+      results: buildResultsWithMatcher() as RunLike["results"],
+      memory: memory as RunLike["memory"],
+    };
     const report = compareToBaseline(baseline, latest, {
       timeWarnPct: 10,
       timeFailPct: 25,
@@ -355,6 +429,17 @@ describe("regression vs baseline", () => {
 
 function fmt(r: BenchResult): string {
   return `avg=${r.avg.toFixed(3)}ms  min=${r.min.toFixed(3)}ms  ops/s=${Math.round(r.opsPerSec).toLocaleString()}`;
+}
+
+// B97-R6: append the matcher tier (zod4-mock-only — no faker / zod3_mock
+// columns) onto the three-tier `results` map for `latest.json` and the
+// in-memory regression-vs-baseline comparison.
+function buildResultsWithMatcher(): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...results };
+  if (matcherResults.zod4_mock !== null) {
+    out.matcher = { zod4_mock: matcherResults.zod4_mock };
+  }
+  return out;
 }
 
 function pkgVersions() {

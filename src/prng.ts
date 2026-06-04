@@ -12,6 +12,13 @@
  * ## Algorithms
  * - **PRNG**: SFC32 — passes all standard statistical tests, 128-bit state, period ~3.4×10³⁸.
  * - **Hash**: FNV-1a 32-bit — fast, low collision rate for short strings.
+ *
+ * ## B97-R14 — class shape with prototype methods
+ *
+ * `createPrng(seed)` returns an `SFC32Prng` instance whose methods live on
+ * `SFC32Prng.prototype` (not as per-instance closure-object properties). The
+ * byte-identical SFC32 state machine is preserved — the refactor only flips
+ * the allocation shape from closure-object to class.
  */
 
 import type { Prng } from "./types.js";
@@ -49,24 +56,135 @@ function seedToSfc32(seed: number): [number, number, number, number] {
 }
 
 /**
- * Returns an SFC32 generator function seeded with four 32-bit values.
- * Each call advances the internal state and returns a float in [0, 1).
- * SFC32 passes all standard statistical tests and has a period of ~3.4×10³⁸.
+ * B97-R14 — class-shaped SFC32 PRNG with all methods on the prototype.
+ *
+ * Holds the SFC32 state (4 unsigned 32-bit integers) as own properties. The
+ * methods are class-syntax (so they live on `SFC32Prng.prototype`), which
+ * makes `new SFC32Prng(seed)` allocate just the four state slots + the
+ * `seed` slot — no per-instance closure properties.
+ *
+ * Byte-identity with the legacy closure-object factory is preserved: the
+ * SFC32 step (`random()`), the `seedToSfc32` initialisation, the `fork(key)`
+ * hash derivation, and the closed-form `pickZipf` / `logUniform` /
+ * `geometric` formulas are unchanged.
  */
-function sfc32(a: number, b: number, c: number, d: number): () => number {
-  let _a = a >>> 0,
-    _b = b >>> 0,
-    _c = c >>> 0,
-    _d = d >>> 0;
-  return () => {
-    const t = (_a + _b + _d) | 0;
-    _d = (_d + 1) | 0;
-    _a = _b ^ (_b >>> 9);
-    _b = (_c + (_c << 3)) | 0;
-    _c = (_c << 21) | (_c >>> 11);
-    _c = (_c + t) | 0;
+export class SFC32Prng implements Prng {
+  readonly seed: number;
+  // SFC32 state — four unsigned 32-bit integers. Mutated in place by
+  // `random()`; readers MUST NOT depend on stability across `random()` calls.
+  private _a: number;
+  private _b: number;
+  private _c: number;
+  private _d: number;
+
+  constructor(seed: number) {
+    this.seed = seed;
+    const [a, b, c, d] = seedToSfc32(seed);
+    this._a = a >>> 0;
+    this._b = b >>> 0;
+    this._c = c >>> 0;
+    this._d = d >>> 0;
+  }
+
+  random(): number {
+    const t = (this._a + this._b + this._d) | 0;
+    this._d = (this._d + 1) | 0;
+    this._a = this._b ^ (this._b >>> 9);
+    this._b = (this._c + (this._c << 3)) | 0;
+    this._c = (this._c << 21) | (this._c >>> 11);
+    this._c = (this._c + t) | 0;
     return (t >>> 0) / 4294967296;
-  };
+  }
+
+  int(min: number, max: number): number {
+    return min + Math.floor(this.random() * (max - min + 1));
+  }
+
+  pick<T>(items: readonly [T, ...T[]]): T {
+    return items[Math.floor(this.random() * items.length)] as T;
+  }
+
+  logUniform(min: number, max: number): number {
+    // Closed-form log-uniform inverse-CDF — one `random()`, no rejection.
+    // Caller is responsible for ensuring `min > 0`. Routes through the
+    // public `this.random()` (mirroring `pickZipf`) so wrappers that
+    // intercept `random()` observe the single draw.
+    const u = this.random();
+    return min * Math.pow(max / min, u);
+  }
+
+  geometric(p: number): number {
+    // Closed-form truncated-geometric inverse-CDF — one `random()`, no
+    // rejection. Returns a non-negative integer offset from 0; callers add
+    // `min` if desired. Routes through the public `this.random()`.
+    const u = this.random();
+    return Math.floor(Math.log(1 - u) / Math.log(1 - p));
+  }
+
+  pickZipf<T>(items: readonly T[], s: number): T {
+    // Closed-form inverse-CDF Zipf draw — one `random()`, no rejection
+    // loop. See wiki/research/text-generation/locale-list-size-targets.md §3
+    // and the B55 spec for the formula. `Math.pow` / `Math.floor` /
+    // `Math.max` / `Math.min` only — D13 isomorphic. Routes through
+    // `this.random()` (the public method) rather than the internal closure
+    // so wrappers that intercept `random()` observe the single draw
+    // (B55-R1 "single PRNG draw, no rejection loop" scenario).
+    const N = items.length;
+    const u = this.random();
+    let raw: number;
+    if (s === 0) {
+      // Reproduces `pick`: floor(1 + u·N) − 1 ≡ floor(u·N) for u ∈ [0, 1).
+      raw = Math.floor(1 + u * N) - 1;
+    } else if (s === 1) {
+      // Classic Zipf: floor((N + 1)^u) − 1.
+      raw = Math.floor(Math.pow(N + 1, u)) - 1;
+    } else {
+      // General power law: floor([1 + u·((N+1)^(1−s) − 1)]^(1/(1−s))) − 1.
+      const oneMinusS = 1 - s;
+      const term = 1 + u * (Math.pow(N + 1, oneMinusS) - 1);
+      raw = Math.floor(Math.pow(term, 1 / oneMinusS)) - 1;
+    }
+    const i = Math.max(0, Math.min(raw, N - 1));
+    return items[i]!;
+  }
+
+  shuffle<T>(items: readonly T[]): T[] {
+    const result = items.slice();
+    // Fisher-Yates: walk from the end, swap each element with a random
+    // earlier-or-equal index. Deterministic for a given PRNG state.
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [result[i], result[j]] = [result[j]!, result[i]!];
+    }
+    return result;
+  }
+
+  sample<T>(items: readonly T[], count: number): T[] {
+    // Clamp count into [0, items.length] — forgiving for matcher authors.
+    const n = Math.max(0, Math.min(count, items.length));
+    return this.shuffle(items).slice(0, n);
+  }
+
+  fork(key: string): Prng {
+    // Derive a child seed from the parent seed + key; does NOT consume
+    // the parent's state, so the child is fully independent. R14: returns
+    // an `SFC32Prng` instance directly (not via `createPrng` wrapping) so
+    // `child instanceof SFC32Prng === true`.
+    return new SFC32Prng(fnv1a(`${this.seed}:${key}`));
+  }
+
+  bytes(n: number): Uint8Array {
+    // Each rand() call produces 32 random bits; extract 4 bytes per call.
+    const arr = new Uint8Array(n);
+    for (let i = 0; i < n; i += 4) {
+      const u = (this.random() * 4294967296) >>> 0;
+      arr[i] = u & 0xff;
+      if (i + 1 < n) arr[i + 1] = (u >>> 8) & 0xff;
+      if (i + 2 < n) arr[i + 2] = (u >>> 16) & 0xff;
+      if (i + 3 < n) arr[i + 3] = (u >>> 24) & 0xff;
+    }
+    return arr;
+  }
 }
 
 /**
@@ -75,105 +193,7 @@ function sfc32(a: number, b: number, c: number, d: number): () => number {
  * @param seed - Any 32-bit integer.  The same seed always produces the same sequence.
  */
 export function createPrng(seed: number): Prng {
-  const rand = sfc32(...seedToSfc32(seed));
-
-  const prng: Prng = {
-    seed,
-
-    random() {
-      return rand();
-    },
-
-    int(min, max) {
-      return min + Math.floor(rand() * (max - min + 1));
-    },
-
-    pick(items) {
-      return items[Math.floor(rand() * items.length)];
-    },
-
-    logUniform(min, max) {
-      // Closed-form log-uniform inverse-CDF — one `random()`, no rejection.
-      // Caller is responsible for ensuring `min > 0`. Routes through the
-      // public `prng.random()` (mirroring `pickZipf`) so wrappers that
-      // intercept `random()` observe the single draw.
-      const u = prng.random();
-      return min * Math.pow(max / min, u);
-    },
-
-    geometric(p) {
-      // Closed-form truncated-geometric inverse-CDF — one `random()`, no
-      // rejection. Returns a non-negative integer offset from 0; callers add
-      // `min` if desired. Routes through the public `prng.random()`.
-      const u = prng.random();
-      return Math.floor(Math.log(1 - u) / Math.log(1 - p));
-    },
-
-    pickZipf(items, s) {
-      // Closed-form inverse-CDF Zipf draw — one `random()`, no rejection
-      // loop. See wiki/research/text-generation/locale-list-size-targets.md §3
-      // and the B55 spec for the formula. `Math.pow` / `Math.floor` /
-      // `Math.max` / `Math.min` only — D13 isomorphic. Routes through
-      // `prng.random()` (the public method) rather than the internal closure
-      // so wrappers that intercept `random()` observe the single draw
-      // (B55-R1 "single PRNG draw, no rejection loop" scenario).
-      const N = items.length;
-      const u = prng.random();
-      let raw: number;
-      if (s === 0) {
-        // Reproduces `pick`: floor(1 + u·N) − 1 ≡ floor(u·N) for u ∈ [0, 1).
-        raw = Math.floor(1 + u * N) - 1;
-      } else if (s === 1) {
-        // Classic Zipf: floor((N + 1)^u) − 1.
-        raw = Math.floor(Math.pow(N + 1, u)) - 1;
-      } else {
-        // General power law: floor([1 + u·((N+1)^(1−s) − 1)]^(1/(1−s))) − 1.
-        const oneMinusS = 1 - s;
-        const term = 1 + u * (Math.pow(N + 1, oneMinusS) - 1);
-        raw = Math.floor(Math.pow(term, 1 / oneMinusS)) - 1;
-      }
-      const i = Math.max(0, Math.min(raw, N - 1));
-      return items[i]!;
-    },
-
-    shuffle(items) {
-      const result = items.slice();
-      // Fisher-Yates: walk from the end, swap each element with a random
-      // earlier-or-equal index. Deterministic for a given PRNG state.
-      for (let i = result.length - 1; i > 0; i--) {
-        const j = Math.floor(rand() * (i + 1));
-        [result[i], result[j]] = [result[j]!, result[i]!];
-      }
-      return result;
-    },
-
-    sample(items, count) {
-      // Clamp count into [0, items.length] — forgiving for matcher authors.
-      const n = Math.max(0, Math.min(count, items.length));
-      return prng.shuffle(items).slice(0, n);
-    },
-
-    fork(key) {
-      // Derive a child seed from the parent seed + key; does NOT consume
-      // the parent's state, so the child is fully independent.
-      return createPrng(fnv1a(`${seed}:${key}`));
-    },
-
-    bytes(n) {
-      // Each rand() call produces 32 random bits; extract 4 bytes per call.
-      const arr = new Uint8Array(n);
-      for (let i = 0; i < n; i += 4) {
-        const u = (rand() * 4294967296) >>> 0;
-        arr[i] = u & 0xff;
-        if (i + 1 < n) arr[i + 1] = (u >>> 8) & 0xff;
-        if (i + 2 < n) arr[i + 2] = (u >>> 16) & 0xff;
-        if (i + 3 < n) arr[i + 3] = (u >>> 24) & 0xff;
-      }
-      return arr;
-    },
-  };
-
-  return prng;
+  return new SFC32Prng(seed);
 }
 
 /**

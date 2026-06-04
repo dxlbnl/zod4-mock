@@ -17,7 +17,8 @@
       "avg_us": {
         "simple": 9.6,
         "user": 21,
-        "nested": 48.2
+        "nested": 48.2,
+        "matcher": null
       },
       "memory": {
         "simple": {
@@ -34,8 +35,10 @@
           "heapUsedDeltaBytes": 109008,
           "v8HeapUsedBytes": 45642912,
           "gcForced": false
-        }
-      }
+        },
+        "matcher": null
+      },
+      "note": "matcher tier unsupported on this alias (the relations `{ schema, where? }` object form arrived in 0.7.0)"
     },
     {
       "timestamp": "2026-06-04T07:02:54Z",
@@ -43,7 +46,8 @@
       "avg_us": {
         "simple": 7.7,
         "user": 19.2,
-        "nested": 48
+        "nested": 48,
+        "matcher": null
       },
       "memory": {
         "simple": {
@@ -60,8 +64,10 @@
           "heapUsedDeltaBytes": 88912,
           "v8HeapUsedBytes": 49052352,
           "gcForced": false
-        }
-      }
+        },
+        "matcher": null
+      },
+      "note": "matcher tier unsupported on this alias (the relations `{ schema, where? }` object form arrived in 0.7.0)"
     },
     {
       "timestamp": "2026-06-04T07:02:54Z",
@@ -69,7 +75,8 @@
       "avg_us": {
         "simple": 7.8,
         "user": 16.9,
-        "nested": 42.2
+        "nested": 42.2,
+        "matcher": 933.25188999999
       },
       "memory": {
         "simple": {
@@ -86,6 +93,11 @@
           "heapUsedDeltaBytes": 100640,
           "v8HeapUsedBytes": 64228640,
           "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": -9930320,
+          "v8HeapUsedBytes": 48693424,
+          "gcForced": false
         }
       }
     },
@@ -95,7 +107,8 @@
       "avg_us": {
         "simple": 8.3,
         "user": 16.8,
-        "nested": 43.7
+        "nested": 43.7,
+        "matcher": 858.1354899999906
       },
       "memory": {
         "simple": {
@@ -112,6 +125,11 @@
           "heapUsedDeltaBytes": 94640,
           "v8HeapUsedBytes": 41641280,
           "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": 6013552,
+          "v8HeapUsedBytes": 70138232,
+          "gcForced": false
         }
       }
     },
@@ -121,7 +139,8 @@
       "avg_us": {
         "simple": 76.8,
         "user": 154.1,
-        "nested": 467.8
+        "nested": 467.8,
+        "matcher": 11642.520309999973
       },
       "memory": {
         "simple": {
@@ -138,6 +157,11 @@
           "heapUsedDeltaBytes": 827048,
           "v8HeapUsedBytes": 41262000,
           "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": 13578808,
+          "v8HeapUsedBytes": 60512624,
+          "gcForced": false
         }
       },
       "note": "First version with B36 (9717326) — replaced lazy bindGenerators Proxy with eager per-field binding; per-call closure allocations explode."
@@ -148,7 +172,8 @@
       "avg_us": {
         "simple": 79.3,
         "user": 161.4,
-        "nested": 516.7
+        "nested": 516.7,
+        "matcher": 11871.629619999949
       },
       "memory": {
         "simple": {
@@ -165,6 +190,11 @@
           "heapUsedDeltaBytes": 919816,
           "v8HeapUsedBytes": 58734304,
           "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": -21847552,
+          "v8HeapUsedBytes": 81912368,
+          "gcForced": false
         }
       }
     },
@@ -174,7 +204,8 @@
       "avg_us": {
         "simple": 76.4,
         "user": 160.5,
-        "nested": 581.2
+        "nested": 581.2,
+        "matcher": 11715.938949999945
       },
       "memory": {
         "simple": {
@@ -191,6 +222,11 @@
           "heapUsedDeltaBytes": 857536,
           "v8HeapUsedBytes": 70707728,
           "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": 14609712,
+          "v8HeapUsedBytes": 109221872,
+          "gcForced": false
         }
       }
     },
@@ -200,7 +236,8 @@
       "avg_us": {
         "simple": 47.6,
         "user": 94.7,
-        "nested": 281.8
+        "nested": 281.8,
+        "matcher": 1498.2060099999217
       },
       "memory": {
         "simple": {
@@ -216,6 +253,11 @@
         "nested": {
           "heapUsedDeltaBytes": 710696,
           "v8HeapUsedBytes": 50089840,
+          "gcForced": false
+        },
+        "matcher": {
+          "heapUsedDeltaBytes": -16725656,
+          "v8HeapUsedBytes": 103362784,
           "gcForced": false
         }
       },

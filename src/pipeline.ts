@@ -126,8 +126,16 @@ export interface PipelineStepContext {
   readonly dryRun: boolean;
   /** Mutable slot for the unwrapped inner schema (written by step 3, read by 4-6). */
   readonly state: PipelineState;
-  /** Mutable slot for explain-mode metadata (rendered identifier + reason). */
-  readonly explainMeta: { identifier?: string; reason?: string };
+  /**
+   * Mutable slot for explain-mode metadata (rendered identifier + reason).
+   *
+   * B97: on the hot generate() path this is `null` so the per-field ctx
+   * literal stores one slot instead of allocating a nested `{}`. Pipeline
+   * steps that write to `explainMeta` MUST null-check first; only the
+   * `explain()` path in `src/explain.ts` constructs a `{}` and reads the
+   * captured identifier/reason.
+   */
+  readonly explainMeta: { identifier?: string; reason?: string } | null;
 }
 
 export type PipelineStep = (ctx: PipelineStepContext) => FieldResolution | null;
@@ -273,8 +281,10 @@ export function matcherStep(ctx: PipelineStepContext): FieldResolution | null {
   const m = ctx.reg.matchers[ctx.fieldName];
   if (!m) return null;
   if (ctx.dryRun) {
-    ctx.explainMeta.identifier = `matcher:${ctx.fieldName}`;
-    ctx.explainMeta.reason = "matcher registered via withSchema";
+    if (ctx.explainMeta !== null) {
+      ctx.explainMeta.identifier = `matcher:${ctx.fieldName}`;
+      ctx.explainMeta.reason = "matcher registered via withSchema";
+    }
     return { kind: "matcher", value: undefined };
   }
   const matched = m(ctx.fieldCtx);
@@ -295,8 +305,10 @@ export function schemaKeyMapStep(ctx: PipelineStepContext): FieldResolution | nu
     // `explainSchema`'s caller. Read whichever key matches.
     for (const map of ctx.schemaKeyMaps.values()) {
       if (Object.prototype.hasOwnProperty.call(map, ctx.fieldName)) {
-        ctx.explainMeta.identifier = `key-map:${ctx.fieldName}`;
-        ctx.explainMeta.reason = "per-schema key map registered via withKeyMap";
+        if (ctx.explainMeta !== null) {
+          ctx.explainMeta.identifier = `key-map:${ctx.fieldName}`;
+          ctx.explainMeta.reason = "per-schema key map registered via withKeyMap";
+        }
         return { kind: "keymap", value: undefined };
       }
     }
@@ -355,8 +367,10 @@ export function customKeyGenStep(ctx: PipelineStepContext): FieldResolution | nu
   const customGen = ctx.customKeyGenerators.get(lk);
   if (customGen === undefined) return null;
   if (ctx.dryRun) {
-    ctx.explainMeta.identifier = `custom:${lk}`;
-    ctx.explainMeta.reason = "custom generator registered via withGenerators";
+    if (ctx.explainMeta !== null) {
+      ctx.explainMeta.identifier = `custom:${lk}`;
+      ctx.explainMeta.reason = "custom generator registered via withGenerators";
+    }
     return { kind: "custom-gen", value: undefined };
   }
   const innerSchema = ctx.state.inner;
@@ -379,14 +393,18 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
     const lk = ctx.fieldName.toLowerCase();
     const exact = identifierForExactKey(leafType, lk);
     if (exact !== undefined) {
-      ctx.explainMeta.identifier = exact;
-      ctx.explainMeta.reason = `exact key: "${lk}"`;
+      if (ctx.explainMeta !== null) {
+        ctx.explainMeta.identifier = exact;
+        ctx.explainMeta.reason = `exact key: "${lk}"`;
+      }
       return { kind: "key-based", value: undefined };
     }
     const hit = patternHit(leafType, lk);
     if (hit !== undefined) {
-      ctx.explainMeta.identifier = hit.identifier;
-      ctx.explainMeta.reason = `key-pattern: ${hit.label}`;
+      if (ctx.explainMeta !== null) {
+        ctx.explainMeta.identifier = hit.identifier;
+        ctx.explainMeta.reason = `key-pattern: ${hit.label}`;
+      }
       return { kind: "key-based", value: undefined };
     }
     return null;
@@ -411,17 +429,23 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
     const innerDef = def(innerUnwrapped);
     const leafType = innerDef.type;
     if (leafType === "object" || leafType === "lazy") {
-      ctx.explainMeta.identifier = "schema-based:object";
-      ctx.explainMeta.reason = "nested object — call explain(<FieldSchema>) for details";
+      if (ctx.explainMeta !== null) {
+        ctx.explainMeta.identifier = "schema-based:object";
+        ctx.explainMeta.reason = "nested object — call explain(<FieldSchema>) for details";
+      }
       return { kind: "schema-based", value: undefined };
     }
     if (leafType === "array") {
-      ctx.explainMeta.identifier = "schema-based:array";
-      ctx.explainMeta.reason = "array — element type explained on demand";
+      if (ctx.explainMeta !== null) {
+        ctx.explainMeta.identifier = "schema-based:array";
+        ctx.explainMeta.reason = "array — element type explained on demand";
+      }
       return { kind: "schema-based", value: undefined };
     }
-    ctx.explainMeta.identifier = "schema-based";
-    ctx.explainMeta.reason = "no key match, no matcher";
+    if (ctx.explainMeta !== null) {
+      ctx.explainMeta.identifier = "schema-based";
+      ctx.explainMeta.reason = "no key match, no matcher";
+    }
     return { kind: "schema-based", value: undefined };
   }
   const innerSchema = ctx.state.inner;

@@ -38,7 +38,7 @@ export type CoreGenerators = {
   [K in keyof typeof gen]: BoundModule<(typeof gen)[K]>;
 };
 
-export type BoundGenerators = CoreGenerators & Record<string, any>;
+export type BoundGenerators = CoreGenerators;
 
 // ---------------------------------------------------------------------------
 // Generator context

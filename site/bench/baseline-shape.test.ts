@@ -71,7 +71,10 @@ describe("B98-R4 / baseline.json shape", () => {
 
   it("B98-R4 / memory block has the per-tier shape", () => {
     const baseline = JSON.parse(readFileSync(baselineJsonPath, "utf-8")) as {
-      memory: Record<string, { heapUsedDeltaBytes: number; v8HeapUsedBytes: number; gcForced: boolean }>;
+      memory: Record<
+        string,
+        { heapUsedDeltaBytes: number; v8HeapUsedBytes: number; gcForced: boolean }
+      >;
     };
     for (const tier of TIME_TIERS) {
       const mem = baseline.memory[tier];
@@ -82,7 +85,6 @@ describe("B98-R4 / baseline.json shape", () => {
       expect(mem!.v8HeapUsedBytes).toBeGreaterThan(0);
     }
   });
-
 });
 
 // ─── B98-R9 — baseline.md documents the refresh workflow ─────────────────────

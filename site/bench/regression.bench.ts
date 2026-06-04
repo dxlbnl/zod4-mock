@@ -24,34 +24,55 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { measure, type BenchResult } from "../src/lib/bench.ts";
-import { sampleMemory } from "./memory.ts";
+import { sampleMemory, type MemorySample } from "./memory.ts";
 import {
+  applyMatcherWriteBack,
   applyMemoryWriteBack,
+  type MatcherSample,
   type MemoryBlockFile,
   type VersionsFileShape,
 } from "./regression-writeback.ts";
 
-import { generate as gen050 } from "zod4-mock-v050";
-import { generate as gen060 } from "zod4-mock-v060";
-import { generate as gen070 } from "zod4-mock-v070";
-import { generate as gen072 } from "zod4-mock-v072";
-import { generate as gen080 } from "zod4-mock-v080";
-import { generate as gen090 } from "zod4-mock-v090";
-import { generate as gen092 } from "zod4-mock-v092";
-import { generate as gen100 } from "zod4-mock";
+import { generate as gen050, createWorld as createWorld050 } from "zod4-mock-v050";
+import { generate as gen060, createWorld as createWorld060 } from "zod4-mock-v060";
+import { generate as gen070, createWorld as createWorld070 } from "zod4-mock-v070";
+import { generate as gen072, createWorld as createWorld072 } from "zod4-mock-v072";
+import { generate as gen080, createWorld as createWorld080 } from "zod4-mock-v080";
+import { generate as gen090, createWorld as createWorld090 } from "zod4-mock-v090";
+import { generate as gen092, createWorld as createWorld092 } from "zod4-mock-v092";
+import { generate as gen100, createWorld as createWorld100 } from "zod4-mock";
 
 const WARMUP = 1000;
 const RUNS = 5000;
 
-const versions: Array<[string, (s: z.ZodTypeAny) => unknown]> = [
-  ["0.5.0", gen050 as (s: z.ZodTypeAny) => unknown],
-  ["0.6.0", gen060 as (s: z.ZodTypeAny) => unknown],
-  ["0.7.0", gen070 as (s: z.ZodTypeAny) => unknown],
-  ["0.7.2", gen072 as (s: z.ZodTypeAny) => unknown],
-  ["0.8.0", gen080 as (s: z.ZodTypeAny) => unknown],
-  ["0.9.0", gen090 as (s: z.ZodTypeAny) => unknown],
-  ["0.9.2", gen092 as (s: z.ZodTypeAny) => unknown],
-  ["0.10.0", gen100 as (s: z.ZodTypeAny) => unknown],
+// B97-R6 matcher tier — uses a lighter warmup/runs since populate(100)
+// already runs 100 records per call.
+const MATCHER_WARMUP = 10;
+const MATCHER_RUNS = 100;
+
+// `createWorld` factory shape that's tolerant of pre-/post-version differences.
+// We treat the World as `unknown` and trust try/catch at registration / run
+// time to surface incompatibilities (B97-R6 portability check).
+type GenFn = (s: z.ZodTypeAny) => unknown;
+type CreateWorldFn = (opts: { seed: number }) => {
+  withSchema: (
+    schema: z.ZodTypeAny,
+    opts?: unknown,
+  ) => {
+    withSchema: (schema: z.ZodTypeAny, opts?: unknown) => unknown;
+    populate: (schema: z.ZodTypeAny, count: number) => unknown;
+  };
+};
+
+const versions: Array<[string, GenFn, CreateWorldFn]> = [
+  ["0.5.0", gen050 as GenFn, createWorld050 as unknown as CreateWorldFn],
+  ["0.6.0", gen060 as GenFn, createWorld060 as unknown as CreateWorldFn],
+  ["0.7.0", gen070 as GenFn, createWorld070 as unknown as CreateWorldFn],
+  ["0.7.2", gen072 as GenFn, createWorld072 as unknown as CreateWorldFn],
+  ["0.8.0", gen080 as GenFn, createWorld080 as unknown as CreateWorldFn],
+  ["0.9.0", gen090 as GenFn, createWorld090 as unknown as CreateWorldFn],
+  ["0.9.2", gen092 as GenFn, createWorld092 as unknown as CreateWorldFn],
+  ["0.10.0", gen100 as GenFn, createWorld100 as unknown as CreateWorldFn],
 ];
 
 const simple = z.object({
@@ -89,18 +110,103 @@ const nested = z.object({
   metadata: z.record(z.string(), z.string()),
 });
 
+// B97-R6 matcher-tier schemas (constructed once per D10 reference identity).
+const CompanySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  industry: z.string(),
+});
+const AddressSchema = z.object({
+  street: z.string(),
+  city: z.string(),
+  country: z.string(),
+});
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string(),
+  email: z.string().email(),
+  city: z.string(),
+  address: AddressSchema,
+  employerId: z.string().uuid(),
+});
+
+// Cutoff comment (B97-R6 / open question §3 hand-check):
+//   0.5.0 / 0.6.0: `relations?: TRelations` is Record<string, ZodTypeAny> —
+//     the `{ schema, where? }` object form is unsupported. Registration
+//     throws; the per-version matcher row is recorded as `null` + note.
+//   0.7.0+      : RelationEntry supports both bare-schema and the
+//     `{ schema, where? }` object form. Matcher tier registers successfully.
+const MATCHER_CUTOFF_NOTE =
+  "matcher tier unsupported on this alias (the relations `{ schema, where? }` object form arrived in 0.7.0)";
+
 interface Row {
   version: string;
   simple: BenchResult;
   user: BenchResult;
   nested: BenchResult;
   memory: MemoryBlockFile;
+  matcher: BenchResult | null;
+  matcherMemory: MemorySample | null;
+  matcherNote?: string;
 }
 
 const rows: Row[] = [];
 
+/**
+ * Try to register the matcher-tier schemas + matchers + relations on a fresh
+ * world for `createWorldFn`, and time `populate(UserSchema, 100)`. Returns
+ * `null` on any error — see B97-R6 portability check.
+ */
+function tryMatcherTier(createWorldFn: CreateWorldFn): {
+  result: BenchResult;
+  memory: MemorySample;
+} | null {
+  try {
+    const world = createWorldFn({ seed: 1 })
+      .withSchema(CompanySchema)
+      .withSchema(UserSchema, {
+        relations: { employer: { schema: CompanySchema } },
+        matchers: {
+          // Typed via the generated MatcherCtx of the per-version module.
+          // We accept `unknown` ctx and read namespaces dynamically; the
+          // surface (ctx.gen.person.fullName, etc.) is stable across all
+          // versions that support matchers.
+          fullName: (ctx: { gen: { person: { fullName: () => string } } }) =>
+            ctx.gen.person.fullName(),
+          email: (ctx: { gen: { internet: { email: () => string } } }) => ctx.gen.internet.email(),
+          city: (ctx: { gen: { location: { city: () => string } } }) => ctx.gen.location.city(),
+          address: (ctx: {
+            gen: {
+              location: {
+                street: () => string;
+                city: () => string;
+                country: () => string;
+              };
+            };
+          }) => ({
+            street: ctx.gen.location.street(),
+            city: ctx.gen.location.city(),
+            country: ctx.gen.location.country(),
+          }),
+          employerId: (ctx: { related: (name: string) => { id: string } }) =>
+            ctx.related("employer").id,
+        },
+      });
+    let result!: BenchResult;
+    const memSample = sampleMemory(() => {
+      result = measure(() => world.populate(UserSchema, 100), {
+        warmup: MATCHER_WARMUP,
+        runs: MATCHER_RUNS,
+      });
+    });
+    return { result, memory: memSample };
+  } catch {
+    return null;
+  }
+}
+
 describe("regression bisect", () => {
-  for (const [label, fn] of versions) {
+  for (const [label, fn, createWorldFn] of versions) {
     it(label, () => {
       const s = measure(() => fn(simple), { warmup: WARMUP, runs: RUNS });
       const u = measure(() => fn(user), { warmup: WARMUP, runs: RUNS });
@@ -108,27 +214,38 @@ describe("regression bisect", () => {
       const sMem = sampleMemory(() => fn(simple));
       const uMem = sampleMemory(() => fn(user));
       const nMem = sampleMemory(() => fn(nested));
+
+      // B97-R6 matcher tier — try/catch portability check.
+      const matcherRun = tryMatcherTier(createWorldFn);
+      const matcherStr = matcherRun
+        ? `matcher=${matcherRun.result.avg.toFixed(2)}ms`
+        : `matcher=null`;
+
       rows.push({
         version: label,
         simple: s,
         user: u,
         nested: n,
         memory: { simple: sMem, user: uMem, nested: nMem },
+        matcher: matcherRun?.result ?? null,
+        matcherMemory: matcherRun?.memory ?? null,
+        ...(matcherRun === null ? { matcherNote: MATCHER_CUTOFF_NOTE } : {}),
       });
       console.log(
-        ` ${label.padEnd(8)} simple=${(s.avg * 1000).toFixed(1)}us  user=${(u.avg * 1000).toFixed(1)}us  nested=${(n.avg * 1000).toFixed(1)}us  mem(s/u/n)=${sMem.heapUsedDeltaBytes}/${uMem.heapUsedDeltaBytes}/${nMem.heapUsedDeltaBytes}B`,
+        ` ${label.padEnd(8)} simple=${(s.avg * 1000).toFixed(1)}us  user=${(u.avg * 1000).toFixed(1)}us  nested=${(n.avg * 1000).toFixed(1)}us  ${matcherStr}  mem(s/u/n)=${sMem.heapUsedDeltaBytes}/${uMem.heapUsedDeltaBytes}/${nMem.heapUsedDeltaBytes}B`,
       );
     });
   }
 
   it("summary", () => {
     console.log("\n─── Regression bisect (avg per call) ───");
-    console.log("version  simple        user          nested");
+    console.log("version  simple        user          nested        matcher");
     for (const r of rows) {
       const s = `${(r.simple.avg * 1000).toFixed(1)}us`.padEnd(12);
       const u = `${(r.user.avg * 1000).toFixed(1)}us`.padEnd(12);
       const n = `${(r.nested.avg * 1000).toFixed(1)}us`.padEnd(12);
-      console.log(`${r.version.padEnd(8)} ${s}  ${u}  ${n}`);
+      const m = r.matcher ? `${r.matcher.avg.toFixed(2)}ms`.padEnd(10) : "null".padEnd(10);
+      console.log(`${r.version.padEnd(8)} ${s}  ${u}  ${n}  ${m}`);
     }
   });
 });
@@ -154,6 +271,24 @@ afterAll(() => {
     console.log(`skipping populated row: ${v}`);
   }
 
+  // B97-R10: matcher backfill — only fill rows whose `avg_us.matcher` is
+  // currently undefined or null. Existing populated matcher data is frozen
+  // (extends B98-R2 append-only invariant to the new column).
+  const matcherMeasured = new Map<string, MatcherSample>();
+  for (const r of rows) {
+    matcherMeasured.set(r.version, {
+      avg_us: r.matcher === null ? null : r.matcher.avg * 1000,
+      memory: r.matcherMemory,
+      ...(r.matcherNote !== undefined ? { note: r.matcherNote } : {}),
+    });
+  }
+  const matcherResult = applyMatcherWriteBack(file, matcherMeasured);
+  for (const v of matcherResult.skippedVersions) {
+    console.log(`skipping populated matcher row: ${v}`);
+  }
+
   writeFileSync(versionsPath, JSON.stringify(file, null, 2) + "\n");
-  console.log(`\nUPDATE_VERSIONS=1: filled ${filled} row(s), skipped ${skipped} populated row(s).`);
+  console.log(
+    `\nUPDATE_VERSIONS=1: filled ${filled} memory row(s), skipped ${skipped} populated row(s); filled ${matcherResult.filled} matcher row(s), skipped ${matcherResult.skipped} populated matcher row(s).`,
+  );
 });
