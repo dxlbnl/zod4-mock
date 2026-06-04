@@ -1158,4 +1158,19 @@ it records the reason here AND states it in chat.
 - manager: dispatch general-purpose researcher → wiki/research/reports/docs-system-design.md
 - researcher: wrote 600-line report; recommends (c) bespoke SvelteKit `/docs/*` route tree with typed `+page.svelte` modules importing 9 doc primitives (`<DocPage>`, `<Playground>`, `<SignatureBlock>`, `<ParameterTable>`, `<InstallBlock>`, `<SpeedClaim>`, `<DefRef>`, `<RelatedShowcase>`, `<Prerequisites>`) on `@dxlbnl/ui`; Pagefind for search; `docs/api-reference.md` becomes a regenerated artifact from `site/src/lib/docs/api/manifest.ts` via `pnpm docs:generate` + `pnpm docs:check` parity guard; D5 rewrite; D18 successor rule. Rejects Astro Starlight + `docs/*.md` flat render redux. 6 follow-up cards proposed (researcher numbered B96–B101; renumbered to B100–B105 to avoid collision with existing repo IDs). No blocking open questions.
 - manager: review pre-approved by user; no spec-validation gate (research has no spec). Card moved to done/.
-- result: B94 done — research recommendation accepted; commit pending (bundled with follow-up-card filings).
+- result: B94 done — commit 1e5283a (bundles research close + B100–B105 filings + B69/B70/B71 review-flag triage).
+
+## 2026-06-04 — B100: Docs primitive library + chrome + landing (B94 follow-up #1)
+
+- manager: start, track: feature (review pre-approved by user); git mv inbox/ → doing/
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B100-docs-primitive-library-chrome-landing.md (15 R-IDs, R1–R15); 5 non-blocking open questions (`<SpeedClaim>` branding, Storybook pattern, Pagefind timing, /relational + /comparison shape, old-routes stub-vs-leave). Updated wiki/specs/README.md index.
+- manager: spec-validation gate passed (15 R-IDs, MUSTs, GIVEN/WHEN/THEN observable). Skip review-checkpoint per user pre-approval.
+- manager: dispatch test-writer
+- test-writer: wrote 13 test files under site/src/lib/docs/ (sidebar.test.ts, B100-files.test.ts, SpeedClaim.types.test.ts, 9 primitive .stories.svelte + 1 chrome .stories.svelte). RED confirmed: 6 unit failures + 2 suite-load failures + 31 svelte-check errors + 10 component story-load failures. Flagged spec-writer ts-expect-error placement bug (corrected by implementer at green).
+- manager: dispatch implementer
+- implementer: wrote 9 primitives + sidebar manifest + layout rewrite + landing + 9 stub routes + vitest exclude for *.types.test.ts + D22 ADR in wiki/decisions.md. Deleted site/content/docs/, [slug]/, +page.ts. site:check 0/0, site:test:unit 55/55, site:test:component 47/47, site:build OK (SSR-safety R2 confirmed), test:all 1100+60+27+55+47 green, fmt:check 8 slips (all pre-existing or owned by manager).
+- manager: dispatch reviewer
+- reviewer: **PASS** — all R1–R15 met with evidence; D1/D13/D18/D21 clean; D22 ADR well-formed; @ts-expect-error placement fix verified. Non-blocking findings: (1) DocPage.svelte:17 `'index'` union scope-creep; (2) 4 new B100 files fail fmt:check; (3) manager TODO — promote D22 one-line Rule to architecture.md.
+- manager: applied reviewer findings — dropped `'index'` union member from DocPage.svelte; ran `pnpm exec oxfmt` on new B100 files + B94 research report; appended one-line D22 Rule to architecture.md Rules section. Remaining 2 fmt slips (CHANGELOG.md from B97, site/bench/results/latest.json) are pre-existing, not in B100 scope.
+- result: B100 done — moved card to wiki/backlog/done/; commit pending.

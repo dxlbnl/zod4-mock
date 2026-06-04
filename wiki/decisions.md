@@ -697,3 +697,54 @@ read-only inspector.
   `@dxlbnl/ui` tokens into the `dxlbnl` layer + site identity into the
   `site` layer. (→ D21)"
 - **Supersedes**: none
+
+## D22: SSR-safe editor mounting in docs primitives (D18 successor for `+page.svelte` routes)
+
+- **Date**: 2026-06-04
+- **By**: implementer (B100) flagged for promotion; manager promotes the
+  one-line rule to `wiki/architecture.md` at item close per the Vibin
+  workflow.
+- **Context**: B100 introduces a vocabulary of first-class doc primitives
+  under `site/src/lib/docs/widgets/`, authored from typed `+page.svelte`
+  modules under `site/src/routes/docs/`. The `<Playground>` primitive
+  wraps the existing `SchemaPlayground` (CodeMirror + live evaluation),
+  which touches `window`/`document` at construction. D18 already covers
+  the mdsvex playground-fence path (base64-encoded placeholder hydrated
+  client-side), but B100's primitives are imported directly as Svelte
+  components into `+page.svelte` routes — a path D18 doesn't address.
+  Without a successor rule, a future agent could land a docs primitive
+  that constructs CodeMirror (or another `window`-touching widget) at
+  module load, crashing SSR on every prerendered docs route.
+- **Decision**: Any docs primitive that mounts an editor or other
+  `window`-touching widget **MUST** defer construction to `onMount` (or
+  behind an `if (browser)` guard) and **MUST NOT** touch `window` /
+  `document` at module load. The `<Playground>` primitive
+  (`site/src/lib/docs/widgets/Playground.svelte`) is the reference
+  implementation: it imports `SchemaPlayground` lazily and only renders
+  it after `onMount` sets a `mounted` flag.
+- **Consequences**:
+  - SvelteKit prerender of every docs route (`/docs`, `/docs/<stub>`,
+    and any future structured page that imports `<Playground>`) completes
+    without `ReferenceError: window is not defined`.
+  - D18 (original) **remains in effect** for any `+page.md` routes the
+    project keeps — mdsvex `playground` code fences continue to be
+    base64-encoded into placeholder elements and hydrated client-side via
+    the mechanism in `site/svelte.config.js`. D22 generalises the SSR-safety
+    contract from "mdsvex fence" to "any docs primitive imported as a
+    Svelte component"; it does not supersede D18 for the mdsvex path.
+  - Reviewer gains a standing check on any new docs primitive that pulls
+    in CodeMirror / Monaco / another browser-only widget: it must use the
+    `<Playground>` pattern.
+  - The rule scopes to docs primitives (`site/src/lib/docs/widgets/`) and
+    docs route modules (`site/src/routes/docs/`). It does not constrain
+    non-docs widgets — they already follow Svelte's normal SSR-safety
+    discipline.
+- **Rule added/changed**: Recommended for promotion to a one-line rule in
+  `architecture.md`'s Rules section by the manager: "Any docs primitive
+  that mounts an editor or other `window`-touching widget MUST defer
+  construction to `onMount` (or behind an `if (browser)` guard) and MUST
+  NOT touch `window`/`document` at module load. The `<Playground>`
+  primitive is the reference implementation. (→ D22)"
+- **Supersedes**: none (D18 remains in effect for `+page.md` /
+  mdsvex-rendered routes; D22 covers the `+page.svelte`-imported editor
+  path D18 did not anticipate).

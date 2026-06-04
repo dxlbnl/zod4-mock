@@ -6,6 +6,7 @@ priority: high
 created: 2026-06-04
 predecessor: B94
 phase: 2a
+spec: wiki/specs/B100-docs-primitive-library-chrome-landing.md
 ---
 
 ## Description
@@ -67,6 +68,7 @@ Each primitive in `site/src/lib/docs/widgets/` with a `.stories.svelte`:
 
 - **D18 successor rule** — log in `wiki/decisions.md` + add a one-line
   RFC-2119 rule to `wiki/architecture.md` Rules section:
+
   > Any docs primitive that mounts an editor or other `window`-touching
   > widget **MUST** defer construction to `onMount` (or behind an
   > `if (browser)` guard) and **MUST NOT** touch `window`/`document` at
@@ -97,4 +99,4 @@ Each primitive in `site/src/lib/docs/widgets/` with a `.stories.svelte`:
 - Gates B101 (rebuild Getting Started + Concepts) and B102 (structured
   API + parity guard).
 - Coordinate with B96 (finish @dxlbnl/ui migration) — that card already
-  swaps primitives; this card builds the *docs* primitives layered on top.
+  swaps primitives; this card builds the _docs_ primitives layered on top.

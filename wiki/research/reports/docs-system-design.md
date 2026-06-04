@@ -299,26 +299,26 @@ The primitives the docs need, prioritised.
 
 ### Ship in v1 (Phase 2)
 
-| Primitive | Purpose | Notes |
-| --- | --- | --- |
-| **`<DocPage>`** | Page shell. Title, sidebar group, order, prerequisites, related links, edit-on-GitHub, "On this page" right rail (auto-generated from headings). | Wraps `@dxlbnl/ui` `Container` + `Stack` + `Prose`. Frontmatter-equivalent passed as props. |
-| **`<Playground>`** | The existing `SchemaPlayground` (CodeMirror + `new Function` eval + live JSON output), now a first-class import. | Reuses the existing widget. D18 succession: see "D18 successor" below. |
-| **`<SignatureBlock>`** | TS signature display + 1–2-line description + an optional inline `<Playground>`. Renders as a `@dxlbnl/ui` `Card`. | The structured replacement for the giant "method block" in `docs/api-reference.md`. |
-| **`<ParameterTable>`** | Typed parameter rows. Each row: name, type (rendered with Shiki highlight), default, description. | Generates from a TS-shaped data prop, not from markdown table syntax — type-safety inside the doc. |
-| **`<InstallBlock>`** | Install command with `pnpm` / `npm` / `yarn` / `bun` switcher. PM preference stored in `localStorage`, applied across the site. | Closes B77 (install copy button) at primitive level: a click on any block copies + toasts. |
-| **`<SpeedClaim>`** | The honest framing primitive. Required props: `tier`, `value` (e.g. `"2.7×"`), `vs` (e.g. `"@anatine/zod-mock"`), and `source` (string path to `site/bench/results/latest.json`, OR a snapshot date + version triple). Renders as a `StatCard` with the citation line below it. **No `<SpeedClaim>` may be used without a `source` prop — TypeScript enforces this.** | The D17/D20 primitive. Reviewer no longer reads prose for "fastest" — the type system rejects an undecorated speed claim. |
-| **`<DefRef term=… />`** | Concept tooltip (MDN-style). Adds the term to the Pagefind concept index. | Cheap and high-leverage — every "world" / "registry" / "matcher" mention links to its concept page. |
-| **`<RelatedShowcase entity=…>`** | Embeds a `/showcase` entity slice inline (just the `JsonTree` + `RelationCallout` for one entity), with a "see the full demo →" link to `/showcase`. | Reuses the existing showcase widgets. |
-| **`<Prerequisites pages={["/docs/concepts"]}>`** | The Prisma "what you need to have read" callout. Renders as a `@dxlbnl/ui` `Alert` (info variant). | Trivial; high signal for newcomers. |
+| Primitive                                        | Purpose                                                                                                                                                                                                                                                                                                                                                               | Notes                                                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **`<DocPage>`**                                  | Page shell. Title, sidebar group, order, prerequisites, related links, edit-on-GitHub, "On this page" right rail (auto-generated from headings).                                                                                                                                                                                                                      | Wraps `@dxlbnl/ui` `Container` + `Stack` + `Prose`. Frontmatter-equivalent passed as props.                               |
+| **`<Playground>`**                               | The existing `SchemaPlayground` (CodeMirror + `new Function` eval + live JSON output), now a first-class import.                                                                                                                                                                                                                                                      | Reuses the existing widget. D18 succession: see "D18 successor" below.                                                    |
+| **`<SignatureBlock>`**                           | TS signature display + 1–2-line description + an optional inline `<Playground>`. Renders as a `@dxlbnl/ui` `Card`.                                                                                                                                                                                                                                                    | The structured replacement for the giant "method block" in `docs/api-reference.md`.                                       |
+| **`<ParameterTable>`**                           | Typed parameter rows. Each row: name, type (rendered with Shiki highlight), default, description.                                                                                                                                                                                                                                                                     | Generates from a TS-shaped data prop, not from markdown table syntax — type-safety inside the doc.                        |
+| **`<InstallBlock>`**                             | Install command with `pnpm` / `npm` / `yarn` / `bun` switcher. PM preference stored in `localStorage`, applied across the site.                                                                                                                                                                                                                                       | Closes B77 (install copy button) at primitive level: a click on any block copies + toasts.                                |
+| **`<SpeedClaim>`**                               | The honest framing primitive. Required props: `tier`, `value` (e.g. `"2.7×"`), `vs` (e.g. `"@anatine/zod-mock"`), and `source` (string path to `site/bench/results/latest.json`, OR a snapshot date + version triple). Renders as a `StatCard` with the citation line below it. **No `<SpeedClaim>` may be used without a `source` prop — TypeScript enforces this.** | The D17/D20 primitive. Reviewer no longer reads prose for "fastest" — the type system rejects an undecorated speed claim. |
+| **`<DefRef term=… />`**                          | Concept tooltip (MDN-style). Adds the term to the Pagefind concept index.                                                                                                                                                                                                                                                                                             | Cheap and high-leverage — every "world" / "registry" / "matcher" mention links to its concept page.                       |
+| **`<RelatedShowcase entity=…>`**                 | Embeds a `/showcase` entity slice inline (just the `JsonTree` + `RelationCallout` for one entity), with a "see the full demo →" link to `/showcase`.                                                                                                                                                                                                                  | Reuses the existing showcase widgets.                                                                                     |
+| **`<Prerequisites pages={["/docs/concepts"]}>`** | The Prisma "what you need to have read" callout. Renders as a `@dxlbnl/ui` `Alert` (info variant).                                                                                                                                                                                                                                                                    | Trivial; high signal for newcomers.                                                                                       |
 
 ### Defer to v2 (a follow-up card)
 
-| Primitive | Reason to defer |
-| --- | --- |
+| Primitive                                                                       | Reason to defer                                                                                                             |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | **Type-aware code blocks** (paste TS, get hover-tooltips for `z.string()` etc.) | Big build — needs a TS-in-the-browser language server (Monaco / Volar). Defer until at least three doc pages would benefit. |
-| **Inline benchmark bars** (one chart inside a doc page) | The `/bench` page exists; from a doc page, a `<RelatedShowcase entity="bench">` link is enough at v1. |
-| **Inline `/explorer` slice** (mount Constellation in a doc) | Blocks on Phase 4a (`world.trace()` API) shipping. Filed under the Explorer card stack. |
-| **Command palette** (Linear-style ⌘K) | Land Pagefind first; the palette is a thin shell over the Pagefind index + API-symbol manifest. Defer until search is in. |
+| **Inline benchmark bars** (one chart inside a doc page)                         | The `/bench` page exists; from a doc page, a `<RelatedShowcase entity="bench">` link is enough at v1.                       |
+| **Inline `/explorer` slice** (mount Constellation in a doc)                     | Blocks on Phase 4a (`world.trace()` API) shipping. Filed under the Explorer card stack.                                     |
+| **Command palette** (Linear-style ⌘K)                                           | Land Pagefind first; the palette is a thin shell over the Pagefind index + API-symbol manifest. Defer until search is in.   |
 
 ### D18 successor rule
 
@@ -385,12 +385,12 @@ surfaces to exist and stay in sync.
 
 ### Four options re-stated, honestly
 
-| Option | What it does | Trade-off |
-| --- | --- | --- |
-| **(α) Author canonical in `docs/`, site reads** | The rejected hybrid. | Maintainer rejected because flat md is too thin for a docs site. |
-| **(β) Author canonical in site source, generate `docs/` at build time** | Site is the source of truth; `docs/` is a derived artefact emitted by a `pnpm docs:generate` script that walks the site's API page modules and writes `docs/api-reference.md`. | Loses easy-to-edit md for downstream contributors. Generator must produce md that's good to read (renderable on GitHub / npm). |
-| **(γ) Author both, parity script + reviewer check** | Author writes both; `pnpm docs:check` runs in CI and asserts surface parity (per-symbol coverage, signature equality). Reviewer rejects PRs that change one side without the other. | Two writes per change. Mitigated if the parity script gives a concrete diff and a `--fix` mode that regenerates one side. |
-| **(δ) Move D5 to `docs/api.json`** | Generate a structured `docs/api.json` from TypeScript source (typedoc-style); both the site's API page and `docs/api-reference.md` read from it. | Biggest infra build; tightest correctness; biggest change to the rule set. |
+| Option                                                                  | What it does                                                                                                                                                                        | Trade-off                                                                                                                      |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **(α) Author canonical in `docs/`, site reads**                         | The rejected hybrid.                                                                                                                                                                | Maintainer rejected because flat md is too thin for a docs site.                                                               |
+| **(β) Author canonical in site source, generate `docs/` at build time** | Site is the source of truth; `docs/` is a derived artefact emitted by a `pnpm docs:generate` script that walks the site's API page modules and writes `docs/api-reference.md`.      | Loses easy-to-edit md for downstream contributors. Generator must produce md that's good to read (renderable on GitHub / npm). |
+| **(γ) Author both, parity script + reviewer check**                     | Author writes both; `pnpm docs:check` runs in CI and asserts surface parity (per-symbol coverage, signature equality). Reviewer rejects PRs that change one side without the other. | Two writes per change. Mitigated if the parity script gives a concrete diff and a `--fix` mode that regenerates one side.      |
+| **(δ) Move D5 to `docs/api.json`**                                      | Generate a structured `docs/api.json` from TypeScript source (typedoc-style); both the site's API page and `docs/api-reference.md` read from it.                                    | Biggest infra build; tightest correctness; biggest change to the rule set.                                                     |
 
 ### Recommendation: **(β) — site is the source of truth, `docs/` is regenerated**
 
@@ -496,7 +496,7 @@ Phase 2 is the docs route. Three implementation cards, in order.
   convention). Each page emits ≥1 `<Playground>` and ≥1
   `<RelatedShowcase>` to `/showcase` or `/explorer`. The Getting
   Started page leads with `<InstallBlock>` and a `<SpeedClaim
-  source="…/latest.json" />` callout (D17/D20).
+source="…/latest.json" />` callout (D17/D20).
 - **Acceptance**: Both routes render. Pagefind indexes them (build
   emits a Pagefind index). Manual visual check on Phosphor + Paper
   palettes. `pnpm validate` green.
@@ -524,14 +524,14 @@ Phase 2 is the docs route. Three implementation cards, in order.
 
 ### What defers to follow-up cards (post-Phase 2)
 
-| Item | Defer reason | Suggested card |
-| --- | --- | --- |
-| `<DocPage>`-ify `key-heuristics`, `recipes`, `zod4-schema-coverage`, `bugs` | Three more pages to build; B97/B98 unlock the pattern. | B99 — port remaining docs pages to the new primitives. |
-| Pagefind index + UI integration | Land in B97 (the first page that benefits from search) — but the search box UI lives in `Nav`, which Phase 1 owns; coordinate. | B100 — Pagefind search UI in Nav. |
-| Command palette (⌘K) | Defer until Pagefind is in. | B101 — command palette over Pagefind + API manifest. |
-| Type-aware code blocks (Monaco / Volar) | Heavy build; defer until justified. | B102 (when justified). |
-| Inline `/explorer` slice in a doc page | Blocks on Phase 4a (`world.trace()`). | Fold into B90 (Explorer widgets) — that card already builds the reusable embed. |
-| Version selector | Pre-1.0; punt. | B103 (1.x milestone). |
+| Item                                                                        | Defer reason                                                                                                                   | Suggested card                                                                  |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `<DocPage>`-ify `key-heuristics`, `recipes`, `zod4-schema-coverage`, `bugs` | Three more pages to build; B97/B98 unlock the pattern.                                                                         | B99 — port remaining docs pages to the new primitives.                          |
+| Pagefind index + UI integration                                             | Land in B97 (the first page that benefits from search) — but the search box UI lives in `Nav`, which Phase 1 owns; coordinate. | B100 — Pagefind search UI in Nav.                                               |
+| Command palette (⌘K)                                                        | Defer until Pagefind is in.                                                                                                    | B101 — command palette over Pagefind + API manifest.                            |
+| Type-aware code blocks (Monaco / Volar)                                     | Heavy build; defer until justified.                                                                                            | B102 (when justified).                                                          |
+| Inline `/explorer` slice in a doc page                                      | Blocks on Phase 4a (`world.trace()`).                                                                                          | Fold into B90 (Explorer widgets) — that card already builds the reusable embed. |
+| Version selector                                                            | Pre-1.0; punt.                                                                                                                 | B103 (1.x milestone).                                                           |
 
 ### How the phases plug back into B84's plan
 
@@ -544,13 +544,13 @@ gating B84 §9 already records.
 
 ### Constraint conformance
 
-| Rule | How this design satisfies it |
-| --- | --- |
-| **D5** | The structured API page (`site/src/lib/docs/api/manifest.ts`) is the new D5 entry point; `docs/api-reference.md` is regenerated by `pnpm docs:generate` and verified by `pnpm docs:check` (CI). The other `docs/*.md` files remain canonical and hand-edited; the corresponding site pages reuse their prose. Reviewer's standing check: "manifest changed if and only if the published API changed" + "`pnpm docs:check` passes". |
-| **D17** | `<SpeedClaim>` primitive **requires** a `source` prop (TS type `{ source: string }` — no default). Any speed claim without citation fails to compile. The CLI baseline path (`site/bench/results/latest.json`) is the canonical `source` value, asserted by a build-time test that resolves the path string. |
-| **D18** | mdsvex remains the renderer for `+page.md` doc pages — D18 unchanged for those. For bespoke `+page.svelte` doc pages, the **successor rule** (logged in B96) applies: "Any docs primitive that mounts an editor MUST defer to `onMount` and MUST NOT touch `window`/`document` at module load. `<Playground>` is the reference implementation." |
-| **D19** | Every `/docs/<slug>/+page.svelte` is a fully prerendered SvelteKit route — search-landed visitors arrive on a complete page, no client-side route fetch required. The homepage's job (`/`) is untouched; D19 is preserved. |
-| **D20** | Same primitive as D17 — `<SpeedClaim source=…>` forces honest framing at the type level. The reviewer no longer needs to grep for "fastest"; the type system rejects it. |
+| Rule    | How this design satisfies it                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D5**  | The structured API page (`site/src/lib/docs/api/manifest.ts`) is the new D5 entry point; `docs/api-reference.md` is regenerated by `pnpm docs:generate` and verified by `pnpm docs:check` (CI). The other `docs/*.md` files remain canonical and hand-edited; the corresponding site pages reuse their prose. Reviewer's standing check: "manifest changed if and only if the published API changed" + "`pnpm docs:check` passes". |
+| **D17** | `<SpeedClaim>` primitive **requires** a `source` prop (TS type `{ source: string }` — no default). Any speed claim without citation fails to compile. The CLI baseline path (`site/bench/results/latest.json`) is the canonical `source` value, asserted by a build-time test that resolves the path string.                                                                                                                       |
+| **D18** | mdsvex remains the renderer for `+page.md` doc pages — D18 unchanged for those. For bespoke `+page.svelte` doc pages, the **successor rule** (logged in B96) applies: "Any docs primitive that mounts an editor MUST defer to `onMount` and MUST NOT touch `window`/`document` at module load. `<Playground>` is the reference implementation."                                                                                    |
+| **D19** | Every `/docs/<slug>/+page.svelte` is a fully prerendered SvelteKit route — search-landed visitors arrive on a complete page, no client-side route fetch required. The homepage's job (`/`) is untouched; D19 is preserved.                                                                                                                                                                                                         |
+| **D20** | Same primitive as D17 — `<SpeedClaim source=…>` forces honest framing at the type level. The reviewer no longer needs to grep for "fastest"; the type system rejects it.                                                                                                                                                                                                                                                           |
 
 ---
 
