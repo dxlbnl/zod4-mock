@@ -36,7 +36,7 @@
 ```
 src/                 # library source (index.ts is the public API)
   generators/        # key-based.ts (field-name heuristics) + schema-based.ts (Zod introspection)
-  world.ts subject.ts registry.ts prng.ts   # World, SubjectType, registry, PRNG
+  world/ world.ts registry.ts prng.ts       # World (engine.ts + relations.ts + …), registry, PRNG
 tests/
   unit/              # isolated per-module tests
   integration/       # full-scenario tests, each with schemas.ts + world.ts

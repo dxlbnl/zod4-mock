@@ -36,9 +36,9 @@ This is a library (`zod4-mock`) that generates deterministic, schema-driven mock
 
 ### Core concepts
 
-**World** — the central context for one generation session ([src/world.ts](src/world.ts)). Built fluently with `.withSubject()` and `.withSchema()`, then data is produced via `.generate()`. One world = one seed = one deterministic dataset.
+**World** — the central context for one generation session ([src/world/](src/world/)). Built fluently with `createWorld(opts)` then chained with `.withSchema(schema, opts?)`, `.withKeyMap(schema, map)`, and `.withKeyGen({ ... })`; data is produced via `.generate(schema, opts?)` or `.populate(schema, count, factory?)`. One world = one seed = one deterministic dataset. Determinism is keyed on **schema reference identity** (see D4/D10 in [wiki/architecture.md](wiki/architecture.md)) — construct schemas at module scope and reuse them.
 
-**SubjectType** — an identity anchor representing a domain entity (Person, Company, TextFile, etc.). Defined with `defineSubjectType(name, zodObjectSchema)` ([src/subject.ts](src/subject.ts)). Subject instances get stable IDs (`person#1`, `person#2`, …) and their data is stored in the registry so matchers in other schemas can reference it.
+**Schemas as identity anchors** — there is no separate `Subject`/`defineSubjectType` API. The `ZodTypeAny` reference itself is the identity. Registered schemas (primary or derived via `from:`) get their records stored in the registry; matchers in other schemas reach them via `ctx.related(relName)` (when wired via `withSchema({ relations })`) or directly via `ctx.registry.pick(OtherSchema)`.
 
 **Generation pipeline** — for each field of a registered schema, values are resolved in this priority order — the seven named steps of the canonical `PIPELINE` list in [src/pipeline.ts](src/pipeline.ts) (the executable contract). The first step to produce a value wins:
 
@@ -57,7 +57,7 @@ After the pipeline returns, two wrapping passes finish the record:
 
 **PRNG** — SFC32 seeded PRNG with FNV-1a hashing for per-field `fork(key)` derivation ([src/prng.ts](src/prng.ts)). Per-field seeding means adding/removing schema fields does not disturb values for other fields. The `Prng.fork(key)` method creates an independent child PRNG without consuming the parent's state.
 
-**Registry** — in-memory store for all generated data within a world ([src/registry.ts](src/registry.ts)). Matchers can call `ctx.registry.pick<T>('typename')` to reference data generated for other subject types, enabling cross-API consistency.
+**Registry** — in-memory store for all generated data within a world ([src/registry.ts](src/registry.ts)). Matchers can call `ctx.registry.pick<T>(schema)` / `ctx.registry.all(schema)` / `ctx.registry.find(schema, predicate)` (the registry is keyed by `ZodTypeAny` reference) to reference data generated for other registered schemas, enabling cross-schema consistency.
 
 ### Zod v4 internals
 
