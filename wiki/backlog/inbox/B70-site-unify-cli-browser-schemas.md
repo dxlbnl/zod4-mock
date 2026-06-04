@@ -3,6 +3,7 @@ id: B70
 title: Unify CLI + browser bench schema set
 type: feature
 priority: high
+flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-schemas
 ---

@@ -3,9 +3,9 @@ id: B94
 title: Design a docs system that does justice to zod4-mock (not docs/*.md piped through mdsvex)
 type: research
 priority: high
-flags: [review]
 created: 2026-06-03
 predecessor: B84
+report: wiki/research/reports/docs-system-design.md
 ---
 
 ## Description

@@ -1145,3 +1145,17 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer round 2.
 - reviewer (round 2): **PASS** — all 5 round-1 findings resolved; all 13 R-IDs verified with file:line evidence; B98 cross-amendments R2/R4/R5/R7/R8 verified extended; D1/D4/D10/D5/D6/D13/D17 compliance confirmed; scope clean. **Recommended NOT promoting R14 to a Rule** — class-vs-closure-object PRNG shape is implementation detail; the determinism contract is already bound by D4/D10. Advisory non-blocking: `tests/unit/generators/keys.test.ts:280-282` comment cites reverted R12/R13 (cosmetic; future polish). Tooling slips: 0.
 - result: B97 done — moved card to wiki/backlog/done/, commit 91d40f3.
+
+## 2026-06-04 — Manager run — site-cluster batch (B94 + result, B70, B71, B69, B82)
+
+- manager: read wiki/INDEX.md + backlog; tree clean (no bootstrap-baseline commit needed)
+- manager: presented ordered work plan (21 items); auto-flagged review on B69/B70/B71
+- user: "Go work on the site (B94 + result, B70, 71, 69, 82). Without interrupt. no need to review, i'll verify post work." → pre-approved all review checkpoints in this batch; running until blocked.
+
+## 2026-06-04 — B94: Design a docs system that does justice to zod4-mock
+
+- manager: start, track: research (review pre-approved by user); git mv inbox/ → doing/
+- manager: dispatch general-purpose researcher → wiki/research/reports/docs-system-design.md
+- researcher: wrote 600-line report; recommends (c) bespoke SvelteKit `/docs/*` route tree with typed `+page.svelte` modules importing 9 doc primitives (`<DocPage>`, `<Playground>`, `<SignatureBlock>`, `<ParameterTable>`, `<InstallBlock>`, `<SpeedClaim>`, `<DefRef>`, `<RelatedShowcase>`, `<Prerequisites>`) on `@dxlbnl/ui`; Pagefind for search; `docs/api-reference.md` becomes a regenerated artifact from `site/src/lib/docs/api/manifest.ts` via `pnpm docs:generate` + `pnpm docs:check` parity guard; D5 rewrite; D18 successor rule. Rejects Astro Starlight + `docs/*.md` flat render redux. 6 follow-up cards proposed (researcher numbered B96–B101; renumbered to B100–B105 to avoid collision with existing repo IDs). No blocking open questions.
+- manager: review pre-approved by user; no spec-validation gate (research has no spec). Card moved to done/.
+- result: B94 done — research recommendation accepted; commit pending (bundled with follow-up-card filings).

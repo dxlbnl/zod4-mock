@@ -3,6 +3,7 @@ id: B71
 title: Replace fixed runs with time-budget bench measurement
 type: feature
 priority: high
+flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-budget
 ---

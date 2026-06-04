@@ -3,6 +3,7 @@ id: B69
 title: Move /bench to a Web Worker
 type: feature
 priority: high
+flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-worker
 ---
