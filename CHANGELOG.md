@@ -1,5 +1,11 @@
 # zod4-mock
 
+## 0.10.1
+
+### Patch Changes
+
+- 91d40f3: Fix B36 eager `bindGenerators` perf regression (lazy per-namespace binding + class PRNG + lazy `WorldImpl` Maps). Adds a matcher-tier bench and backfills the historical bisect.
+
 ## Unreleased
 
 - Repo: `gen-bench` (SvelteKit showcase + benchmark site) merged in as `site/`
@@ -58,6 +64,7 @@
 - 387c884: Fix: unify `generateArray` mode arms + `populate` to apply bounds, overrides, and transform consistently.
 
   Eight inconsistencies surfaced after B25 unified the classifier but each branch still hand-rolled its own bound logic. The user-visible bugs:
+
   - `generateArray` derived mode silently ignored `.max()`, `.length()`, and the library-side `defaultArrayLength[1]` ceiling — returned one element per source pair regardless of bounds.
   - `generateArray` primary mode under `{ store: false }` silently ignored `.max()` — the B44 store:false fix bypassed the B43 caller-max slice.
   - `generateArray` primary mode silently dropped `options.transform` on both store-on and store-off paths.
@@ -103,6 +110,7 @@
 ### Patch Changes
 
 - 7fad4aa: Internal refactor — split the 1202-LOC monolithic `src/world.ts` into a `src/world/` subdirectory grouped by concern:
+
   - `src/world/engine.ts` — `WorldImpl` class (the per-field pipeline, array / derived / primary generation, relation methods, B36 generator binding, B39 stable schema slot machinery).
   - `src/world/registration.ts` — pure registration types + helpers (`SchemaReg`, `SchemaMode`, `normalizeRelationEntry`, `findPrimaryRegs` / `findDerivedRegs` / `resolveMode`).
   - `src/world/derived.ts` — B8 derived-upsert map type + access helpers.
