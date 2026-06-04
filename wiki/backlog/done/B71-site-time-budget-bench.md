@@ -6,6 +6,7 @@ priority: high
 flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-budget
+spec: wiki/specs/B71-site-time-budget-bench.md
 ---
 
 ## Description

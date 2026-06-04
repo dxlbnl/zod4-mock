@@ -1188,4 +1188,19 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer
 - reviewer: **PASS** — all R1–R9 met; D1/D4/D10/D16 clean; perf gate green; byte-equivalence confirmed via empty `git diff` on baseline.json/versions.json/history.json. Flagged standing constraint for promotion.
 - manager: promoted to D23 ADR in wiki/decisions.md + one-line Rule in wiki/architecture.md.
-- result: B70 done — moved card to wiki/backlog/done/; commit pending.
+- result: B70 done — commit 023eba1.
+
+## 2026-06-04 — B71: Replace fixed runs with time-budget bench measurement
+
+- manager: start, track: feature (review pre-approved); git mv inbox/ → doing/
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B71-site-time-budget-bench.md (R1–R8). Strategy: `measure(fn, { warmup, budgetMs, maxRuns })`; CLI BUDGET_MS=500 / MATCHER_BUDGET_MS=1000; browser BUDGET_MS=200; byte-equivalent migration within ±5% (re-baseline fallback). 4 non-blocking open questions.
+- manager: spec-validation gate passed. Skip review-checkpoint per user pre-approval.
+- manager: dispatch test-writer
+- test-writer: wrote bench.B71.test.ts + bench.B71.types.test.ts (11 runtime + 6 type-level fails) covering R1–R8.
+- manager: dispatch implementer
+- implementer: rewrote `measure()` with `{ warmup, budgetMs, maxRuns? }` + `runs` return field (R1/R2); migrated CLI bench files + `/bench` page; rewrote `latest.json` config block; cold-start preserved. R7 fallback invoked — re-baselined baseline.json against new run (jq extract; pre-rebaseline deltas were faster than B97 baseline → intervening optimizations, not B71 regressions). Updated wiki/site/benchmark-methodology.md. site:test:unit 105/105, site:check 0/0, site:bench OK/WARN (not FAIL).
+- manager: dispatch reviewer
+- reviewer: **FAIL** — 2 non-blocking findings: (1) R7 fallback incomplete — versions.json not updated with rebaseline marker; (2) 4 B71-owned files fail fmt:check.
+- manager: applied fixes inline — extended versionsFileSchema with optional `methodologyChanges` array; added B71 methodology-change marker to versions.json (date/by/from/to/rationale); ran oxfmt on B71-owned files. site:test:unit 105/105 re-confirmed. Only pre-existing latest.json fmt slip remains (not B71 scope).
+- result: B71 done — moved card to wiki/backlog/done/; commit pending.

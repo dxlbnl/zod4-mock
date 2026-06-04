@@ -47,13 +47,14 @@ import { generate as gen090, createWorld as createWorld090 } from "zod4-mock-v09
 import { generate as gen092, createWorld as createWorld092 } from "zod4-mock-v092";
 import { generate as gen100, createWorld as createWorld100 } from "zod4-mock";
 
+// B71-R3: time-budget bench measurement — see wiki/specs/B71-site-time-budget-bench.md
 const WARMUP = 1000;
-const RUNS = 5000;
+const BUDGET_MS = 500;
 
-// B97-R6 matcher tier — uses a lighter warmup/runs since populate(100)
+// B97-R6 matcher tier — uses a lighter warmup/budget since populate(100)
 // already runs 100 records per call.
 const MATCHER_WARMUP = 10;
-const MATCHER_RUNS = 100;
+const MATCHER_BUDGET_MS = 1000;
 
 // `createWorld` factory shape that's tolerant of pre-/post-version differences.
 // We treat the World as `unknown` and trust try/catch at registration / run
@@ -151,7 +152,7 @@ function tryMatcherTier(createWorldFn: CreateWorldFn): {
     const memSample = sampleMemory(() => {
       result = measure(() => world.populate(UserSchema, 100), {
         warmup: MATCHER_WARMUP,
-        runs: MATCHER_RUNS,
+        budgetMs: MATCHER_BUDGET_MS,
       });
     });
     return { result, memory: memSample };
@@ -163,9 +164,12 @@ function tryMatcherTier(createWorldFn: CreateWorldFn): {
 describe("regression bisect", () => {
   for (const [label, fn, createWorldFn] of versions) {
     it(label, () => {
-      const s = measure(() => fn(simple), { warmup: WARMUP, runs: RUNS });
-      const u = measure(() => fn(user), { warmup: WARMUP, runs: RUNS });
-      const n = measure(() => fn(nested), { warmup: WARMUP, runs: RUNS });
+      const simpleCall = () => fn(simple);
+      const userCall = () => fn(user);
+      const nestedCall = () => fn(nested);
+      const s = measure(simpleCall, { warmup: WARMUP, budgetMs: BUDGET_MS });
+      const u = measure(userCall, { warmup: WARMUP, budgetMs: BUDGET_MS });
+      const n = measure(nestedCall, { warmup: WARMUP, budgetMs: BUDGET_MS });
       const sMem = sampleMemory(() => fn(simple));
       const uMem = sampleMemory(() => fn(user));
       const nMem = sampleMemory(() => fn(nested));

@@ -14,9 +14,9 @@
 	name="With results"
 	args={{
 		results: [
-			{ label: 'zod4-mock', color: '#a78bfa', warm: { avg: 0.024, min: 0.02, max: 0.03, opsPerSec: 41667, coldStart: 0.1 } },
-			{ label: 'zod-mock', color: '#fbbf24', warm: { avg: 0.075, min: 0.06, max: 0.09, opsPerSec: 13333, coldStart: 0.3 } },
-			{ label: 'faker', color: '#34d399', warm: { avg: 0.035, min: 0.03, max: 0.045, opsPerSec: 28571, coldStart: 0.15 } }
+			{ label: 'zod4-mock', color: '#a78bfa', warm: { avg: 0.024, min: 0.02, max: 0.03, opsPerSec: 41667, coldStart: 0.1, runs: 5000 } },
+			{ label: 'zod-mock', color: '#fbbf24', warm: { avg: 0.075, min: 0.06, max: 0.09, opsPerSec: 13333, coldStart: 0.3, runs: 5000 } },
+			{ label: 'faker', color: '#34d399', warm: { avg: 0.035, min: 0.03, max: 0.045, opsPerSec: 28571, coldStart: 0.15, runs: 5000 } }
 		]
 	}}
 	play={async ({ canvasElement }) => {

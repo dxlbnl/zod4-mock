@@ -263,5 +263,20 @@
       },
       "note": "Partial recovery vs 0.8.0 but still ~6x slower than 0.7.2 baseline."
     }
+  ],
+  "methodologyChanges": [
+    {
+      "date": "2026-06-04",
+      "by": "B71",
+      "from": { "warmup": 1000, "runs": 5000 },
+      "to": {
+        "warmup": 1000,
+        "budgetMs": 500,
+        "maxRuns": 1000000,
+        "matcherWarmup": 10,
+        "matcherBudgetMs": 1000
+      },
+      "rationale": "Switch from fixed-runs to time-budget bench measurement. Historical `entries` above were captured with the `from` config (5000 fixed runs); future bench runs and `baseline.json` rebaselined 2026-06-04 use the `to` config. The avg-per-call metric is preserved; the only change is sample-count selection (more samples for fast schemas, fewer for slow). Per B71-R7 fallback: pre-rebaseline deltas vs B97 baseline were -55%/-43%/-56%/-35% (faster, not regressions — reflects B97/B100/B70 optimizations); re-baselined to the post-B71 measurement style."
+    }
   ]
 }

@@ -42,10 +42,10 @@ import { CompanySchema, UserSchema } from "../src/lib/schemas/matcher.ts";
 
 describe("B97-R1 / simple tier avg ≤ 25 µs", () => {
   it("B97-R1 / simple tier — measure(() => generate(simple)) avg ≤ 0.025 ms (25 µs)", () => {
-    // Match `site/bench/perf.test.ts`'s WARMUP/RUNS (1000/5000) so the
+    // Match `site/bench/perf.test.ts`'s WARMUP/BUDGET_MS (1000/500ms) so the
     // test's JIT amortisation lines up with the full-bench measurement —
     // the spec's round-5 17 µs cite is the full-bench number.
-    const result = measure(() => generate(simple), { warmup: 1000, runs: 5000 });
+    const result = measure(() => generate(simple), { warmup: 1000, budgetMs: 500 });
 
     // Print observed data for diagnostics.
     console.log(`B97-R1 observed: simple avg=${(result.avg * 1000).toFixed(2)}µs (ceiling 25µs)`);
@@ -79,7 +79,7 @@ describe("B97-R7 / matcher tier ≥ 3× faster than pre-fix", () => {
 
     const result = measure(() => world.populate(UserSchema, 100), {
       warmup: 5,
-      runs: 50,
+      budgetMs: 1000,
     });
 
     console.log(`B97-R7 observed: matcher populate(100) avg=${result.avg.toFixed(3)}ms`);
@@ -119,7 +119,7 @@ describe("B97-R7 / matcher tier ≥ 3× faster than pre-fix", () => {
 
     const result = measure(() => world.populate(UserSchema, 100), {
       warmup: 5,
-      runs: 50,
+      budgetMs: 1000,
     });
 
     console.log(

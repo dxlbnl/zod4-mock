@@ -9,39 +9,54 @@ The site runs two benchmark harnesses — a CLI (`bench/perf.test.ts`) and an in
 
 ## The `measure` primitive
 
-Defined in `src/lib/bench.ts`:
+Defined in `src/lib/bench.ts` (B71 — time-budget loop):
 
 ```ts
-export function measure(fn: () => void, { warmup = 5, runs = 20 } = {}): BenchResult {
+export interface MeasureOpts {
+  warmup?: number;
+  budgetMs: number;
+  maxRuns?: number;
+}
+export interface BenchResult {
+  avg: number;
+  min: number;
+  max: number;
+  opsPerSec: number;
+  coldStart: number;
+  runs: number;
+}
+
+export function measure(fn: () => void, opts: MeasureOpts): BenchResult {
+  const warmup = opts.warmup ?? 5;
+  const maxRuns = opts.maxRuns ?? 1_000_000;
+
   const t0 = performance.now();
   fn(); // (1) cold call
   const coldStart = performance.now() - t0;
 
   for (let i = 0; i < warmup; i++) fn(); // (2) warmup
+
   const times: number[] = [];
-  for (let i = 0; i < runs; i++) {
-    // (3) timed runs
+  const start = performance.now();
+  let iters = 0;
+  while (iters < maxRuns) {
+    // (3) budget-bounded timed runs
     const s = performance.now();
     fn();
     times.push(performance.now() - s);
+    iters++;
+    if (performance.now() - start >= opts.budgetMs) break;
   }
-
-  return {
-    avg: times.reduce((a, b) => a + b) / times.length,
-    min: Math.min(...times),
-    max: Math.max(...times),
-    opsPerSec: 1000 / avg,
-    coldStart,
-  };
+  // … avg / min / max / opsPerSec / runs computed from `times`.
 }
 ```
 
-Three phases per measurement: a single cold call, `warmup` unrecorded calls to let the engine settle, then `runs` recorded calls.
+Three phases per measurement: a single cold call, `warmup` unrecorded calls to let the engine settle, then **a time-budget loop** that keeps calling `fn` until cumulative elapsed wall time crosses `budgetMs` (bounded by `maxRuns`, default 1 000 000). The returned `runs` field is the actual iteration count consumed.
 
 ## CLI harness — `bench/perf.test.ts`
 
 - Run with `pnpm bench` (Vitest, `bench/vitest.config.ts`, `pool: 'forks'`, `testTimeout: 120_000`).
-- Config: `WARMUP = 1000`, `RUNS = 5000`. Statistically solid — 5k samples per cell is enough that GC noise averages out.
+- Config: `WARMUP = 1000`, `BUDGET_MS = 500` for simple/user/nested/locale tiers; `MATCHER_WARMUP = 10`, `MATCHER_BUDGET_MS = 1000` for the matcher tier (B71-R3). Produces ~50 000 samples for `simple`, ~25 000 for `user`, ~10 000 for `nested`, ~830 for `matcher` on the current baseline — at least 2× the previous fixed-runs sample on every tier.
 - Three schema tiers, hand-coded in the test file with paired Zod v3, Zod v4, and faker variants:
   - `simple` — 4 primitive fields.
   - `user` — 8 fields with uuid/email/enum/optional.
@@ -54,7 +69,7 @@ This is the harness whose numbers we trust for claims. The snapshot at [Bench Re
 ## Browser harness — `/bench`
 
 - `src/routes/bench/+page.svelte`.
-- Default config: `warmup=5, runs=20` (the `measure()` defaults). **Too few samples** to be reliable for batches of thousands of records — GC pauses dominate.
+- Default config: `budgetMs = 200` per cell (B71-R4). 200 ms is a UI-responsiveness ceiling — between cells the page yields to `setTimeout(0)`, so a Run press completes in ~700–900 ms total which the user perceives as snappy. The active budget is surfaced on the page as a "budget: 200ms per cell" badge next to the run controls (B71-R8).
 - Each "run" is `runner.batch(schema, n)` — generates `n` records of the selected schema (`flat | nested | array`). For `n=10000 × array`, one iteration is 500 000 underlying generations.
 - Three libraries measured sequentially with `await new Promise((r) => setTimeout(r, 0))` between them (a single-tick yield — not nearly enough to let the browser repaint reliably under load).
 - Runs **on mount** (`onMount(() => run())`) and on every click of the Run button.
@@ -107,7 +122,7 @@ From the 2026-05-13 CLI baseline ([Bench Results](../../raw/site/2026-05-13-benc
 
 ## Future direction
 
-A worker-based browser bench, unified on one schema set, with time-budget runs (e.g. "run for 500 ms, count iterations") instead of fixed-sample counts. See [roadmap](roadmap.md) P2.
+A worker-based browser bench (B69), unified on one schema set (B70 — landed). Time-budget runs landed in B71 — the budget loop is what will run inside the worker. See [roadmap](roadmap.md) P2.
 
 ## Regression guardrail (B98)
 

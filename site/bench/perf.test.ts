@@ -27,8 +27,11 @@ import { CompanySchema, UserSchema } from "../src/lib/schemas/matcher";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+// B71-R7: post-migration perf-baseline ±5% tolerance — see wiki/specs/B71-site-time-budget-bench.md
 const WARMUP = 1000;
-const RUNS = 5000;
+const BUDGET_MS = 500;
+const MATCHER_WARMUP = 10;
+const MATCHER_BUDGET_MS = 1000;
 
 // ─── Schema tier 1: Simple ────────────────────────────────────────────────────
 
@@ -124,14 +127,14 @@ const memory: Record<"simple" | "user" | "nested" | "matcher", MemorySample> = {
 describe("simple schema", () => {
   it("faker direct", () => {
     results.simple = { ...results.simple } as TierResults;
-    results.simple.faker = measure(fakerSimple, { warmup: WARMUP, runs: RUNS });
+    results.simple.faker = measure(fakerSimple, { warmup: WARMUP, budgetMs: BUDGET_MS });
     console.log(` faker simple       ${fmt(results.simple.faker)}`);
   });
 
   it("@anatine/zod-mock (zod3)", () => {
     results.simple.zod3_mock = measure(() => generateMock(simple3), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod3-mock simple   ${fmt(results.simple.zod3_mock)}`);
   });
@@ -140,7 +143,7 @@ describe("simple schema", () => {
     memory.simple = sampleMemory(() => {
       results.simple.zod4_mock = measure(() => generate(simple4), {
         warmup: WARMUP,
-        runs: RUNS,
+        budgetMs: BUDGET_MS,
       });
     });
     console.log(` zod4-mock simple   ${fmt(results.simple.zod4_mock)}`);
@@ -150,14 +153,14 @@ describe("simple schema", () => {
 describe("user schema", () => {
   it("faker direct", () => {
     results.user = {} as TierResults;
-    results.user.faker = measure(fakerUser, { warmup: WARMUP, runs: RUNS });
+    results.user.faker = measure(fakerUser, { warmup: WARMUP, budgetMs: BUDGET_MS });
     console.log(` faker user         ${fmt(results.user.faker)}`);
   });
 
   it("@anatine/zod-mock (zod3)", () => {
     results.user.zod3_mock = measure(() => generateMock(user3), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod3-mock user     ${fmt(results.user.zod3_mock)}`);
   });
@@ -166,7 +169,7 @@ describe("user schema", () => {
     memory.user = sampleMemory(() => {
       results.user.zod4_mock = measure(() => generate(user4), {
         warmup: WARMUP,
-        runs: RUNS,
+        budgetMs: BUDGET_MS,
       });
     });
     console.log(` zod4-mock user     ${fmt(results.user.zod4_mock)}`);
@@ -176,14 +179,14 @@ describe("user schema", () => {
 describe("nested schema", () => {
   it("faker direct", () => {
     results.nested = {} as TierResults;
-    results.nested.faker = measure(fakerNested, { warmup: WARMUP, runs: RUNS });
+    results.nested.faker = measure(fakerNested, { warmup: WARMUP, budgetMs: BUDGET_MS });
     console.log(` faker nested       ${fmt(results.nested.faker)}`);
   });
 
   it("@anatine/zod-mock (zod3)", () => {
     results.nested.zod3_mock = measure(() => generateMock(nested3), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod3-mock nested   ${fmt(results.nested.zod3_mock)}`);
   });
@@ -192,7 +195,7 @@ describe("nested schema", () => {
     memory.nested = sampleMemory(() => {
       results.nested.zod4_mock = measure(() => generate(nested4), {
         warmup: WARMUP,
-        runs: RUNS,
+        budgetMs: BUDGET_MS,
       });
     });
     console.log(` zod4-mock nested   ${fmt(results.nested.zod4_mock)}`);
@@ -225,13 +228,13 @@ describe("matcher schema", () => {
         },
       });
 
-    // Matcher tier uses lighter warmup/runs because each call generates
-    // 100 records (vs 1 for the other three tiers) — keeps the bench's
-    // wall-clock budget bounded.
+    // Matcher tier uses a lighter warmup/budget because each call
+    // generates 100 records (vs 1 for the other three tiers) — keeps the
+    // bench's wall-clock budget bounded.
     memory.matcher = sampleMemory(() => {
       matcherResults.zod4_mock = measure(() => world.populate(UserSchema, 100), {
-        warmup: 10,
-        runs: 100,
+        warmup: MATCHER_WARMUP,
+        budgetMs: MATCHER_BUDGET_MS,
       });
     });
     console.log(` zod4-mock matcher  ${fmt(matcherResults.zod4_mock!)}`);
@@ -246,7 +249,7 @@ describe("locale (zod4-mock, user schema)", () => {
   it("default locale", () => {
     localeResults.default = measure(() => generate(user4), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod4-mock default  ${fmt(localeResults.default)}`);
   });
@@ -254,7 +257,7 @@ describe("locale (zod4-mock, user schema)", () => {
   it("en locale", () => {
     localeResults.en = measure(() => generate(user4, { locale: en }), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod4-mock en       ${fmt(localeResults.en)}`);
   });
@@ -262,7 +265,7 @@ describe("locale (zod4-mock, user schema)", () => {
   it("nl locale", () => {
     localeResults.nl = measure(() => generate(user4, { locale: nl }), {
       warmup: WARMUP,
-      runs: RUNS,
+      budgetMs: BUDGET_MS,
     });
     console.log(` zod4-mock nl       ${fmt(localeResults.nl)}`);
   });
@@ -278,7 +281,13 @@ afterAll(() => {
     timestamp: new Date().toISOString(),
     node: process.version,
     versions: pkgVersions(),
-    config: { warmup: WARMUP, runs: RUNS },
+    config: {
+      warmup: WARMUP,
+      budgetMs: BUDGET_MS,
+      maxRuns: 1_000_000,
+      matcherWarmup: MATCHER_WARMUP,
+      matcherBudgetMs: MATCHER_BUDGET_MS,
+    },
     results: buildResultsWithMatcher(),
     localeResults,
     memory,
@@ -299,7 +308,9 @@ afterAll(() => {
   console.log(` @faker-js/faker      ${v.faker}`);
   console.log(` @anatine/zod-mock    ${v["@anatine/zod-mock"]}  (zod3 ${v.zod3})`);
   console.log(` zod4-mock            ${v["zod4-mock"]}  (zod4 ${v.zod4})`);
-  console.log(` config               warmup=${WARMUP}  runs=${RUNS}`);
+  console.log(
+    ` config               warmup=${WARMUP}  budgetMs=${BUDGET_MS}  matcherWarmup=${MATCHER_WARMUP}  matcherBudgetMs=${MATCHER_BUDGET_MS}`,
+  );
   console.log("\n─── Results written ────────────────────────────────");
   console.log(` bench/results/latest.json`);
   console.log(` bench/results/history.json  (${history.length} total runs)`);

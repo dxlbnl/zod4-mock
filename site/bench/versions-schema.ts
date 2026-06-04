@@ -41,6 +41,26 @@ const versionEntrySchema = z.object({
   note: z.string().optional(),
 });
 
+// B71-R7 fallback: top-level marker recording bench-methodology changes
+// (e.g. fixed-runs → time-budget switch). Historical `entries` keep their
+// original `config` semantics; this marker documents prospective changes
+// for traceability.
+const methodologyChangeSchema = z.object({
+  date: z.string(),
+  by: z.string(),
+  from: z.object({ warmup: z.number(), runs: z.number() }).optional(),
+  to: z
+    .object({
+      warmup: z.number(),
+      budgetMs: z.number(),
+      maxRuns: z.number(),
+      matcherWarmup: z.number().optional(),
+      matcherBudgetMs: z.number().optional(),
+    })
+    .optional(),
+  rationale: z.string(),
+});
+
 export const versionsFileSchema = z
   .object({
     _doc: z.string(),
@@ -55,6 +75,7 @@ export const versionsFileSchema = z
       nested: z.string(),
     }),
     entries: z.array(versionEntrySchema),
+    methodologyChanges: z.array(methodologyChangeSchema).optional(),
   })
   .strict();
 

@@ -14,6 +14,9 @@
 
 	type Schema = 'simple' | 'nestedOrder' | 'array';
 
+	// B71-R4: time-budget bench measurement — see wiki/specs/B71-site-time-budget-bench.md
+	const BUDGET_MS = 200;
+
 	const schemaOptions = [
 		{ value: 'simple', label: 'Simple' },
 		{ value: 'nestedOrder', label: 'Nested order' },
@@ -38,11 +41,14 @@
 		// yield to browser to update UI
 		await new Promise((r) => setTimeout(r, 0));
 
-		results.zod4mock = measure(() => runZod4Mock.batch(schema, n));
+		const zod4mockCall = () => runZod4Mock.batch(schema, n);
+		const zodmockCall = () => runZodMock.batch(schema, n);
+		const fakerCall = () => runFaker.batch(schema, n);
+		results.zod4mock = measure(zod4mockCall, { budgetMs: BUDGET_MS });
 		await new Promise((r) => setTimeout(r, 0));
-		results.zodmock = measure(() => runZodMock.batch(schema, n));
+		results.zodmock = measure(zodmockCall, { budgetMs: BUDGET_MS });
 		await new Promise((r) => setTimeout(r, 0));
-		results.faker = measure(() => runFaker.batch(schema, n));
+		results.faker = measure(fakerCall, { budgetMs: BUDGET_MS });
 
 		running = false;
 	}
@@ -66,7 +72,7 @@
 	<header class="page-header">
 		<h1 class="t-title">Live Benchmarks</h1>
 		<p class="t-small" style="color:var(--ink-dim)">
-			Runs in the browser via <code>performance.now()</code>. Warm path ({5} warmup + {20} timed runs).
+			Runs in the browser via <code>performance.now()</code>.
 		</p>
 	</header>
 
@@ -82,6 +88,7 @@
 		<Button variant="primary" disabled={running} onclick={run}>
 			{running ? 'Running…' : 'Run'}
 		</Button>
+		<span class="budget-badge t-caption">budget: 200ms per cell</span>
 	</div>
 
 	<div class="results">
@@ -185,6 +192,16 @@
 	.lib-name {
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
+	}
+	.budget-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: var(--space-1) var(--space-2);
+		border: 1px solid var(--rule);
+		border-radius: 4px;
+		background: var(--bg-rail);
+		color: var(--ink-dim);
+		white-space: nowrap;
 	}
 	.note {
 		padding: var(--space-3);
