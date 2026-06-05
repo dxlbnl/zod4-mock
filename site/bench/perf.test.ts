@@ -17,6 +17,7 @@ import { en } from "@zod4-mock/locale-en";
 import { measure, type BenchResult } from "../src/lib/bench.ts";
 import { sampleMemory, type MemorySample } from "./memory.ts";
 import { compareToBaseline, type RunLike } from "./regression-compare.ts";
+import { serializeJson } from "./write-json.ts";
 // B70: canonical schema set — imported from `site/src/lib/schemas/`.
 // Aliased to the historical inline names (`simple4` / `user4` / `nested4`)
 // so the rest of this file keeps reading the same way.
@@ -293,14 +294,14 @@ afterAll(() => {
     memory,
   };
 
-  writeFileSync(join(dir, "latest.json"), JSON.stringify(entry, null, 2));
+  writeFileSync(join(dir, "latest.json"), serializeJson(entry));
 
   const historyPath = join(dir, "history.json");
   const history: unknown[] = existsSync(historyPath)
     ? (JSON.parse(readFileSync(historyPath, "utf-8")) as unknown[])
     : [];
   history.push(entry);
-  writeFileSync(historyPath, JSON.stringify(history, null, 2));
+  writeFileSync(historyPath, serializeJson(history));
 
   const v = entry.versions;
   console.log("\n─── Versions ───────────────────────────────────────");
