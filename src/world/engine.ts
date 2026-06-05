@@ -72,7 +72,7 @@ import type {
   ExplainResult,
 } from "../types.js";
 import { SchemaRegistry } from "../registry.js";
-import { createPrng, fieldSeed } from "../prng.js";
+import { createPrng, fieldSeed, fnv1a } from "../prng.js";
 import { generateFromSchema } from "../generators/schema/index.js";
 import {
   def,
@@ -229,6 +229,44 @@ function readCallerMaxBound(schema: ZodTypeAny): number | undefined {
  * pick by `derivedPairCounter`).
  */
 type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
+
+/**
+ * Derive a stable per-source field-PRNG index from a source identity, used by
+ * the explicit-source derived path (`generateWithSourceOverride`). The index
+ * seeds the record's field PRNG (`dreg<regId>#<index>`), so two distinct
+ * sources MUST map to distinct indices or every derived record collapses to
+ * the same field seed (only source-pulled fields like `ctx.source.id` would
+ * vary).
+ *
+ * Keyed on the identity VALUE (not a call counter) so it stays order-
+ * independent per D4/D10: the same identity always yields the same index
+ * regardless of when it is generated, and the upsert short-circuit already
+ * guarantees a repeat call returns the cached record.
+ *
+ * Identity is the output of `computeSourceIdentity`: a primitive (when the
+ * registration set a `sourceKey`) or the source object itself (reference
+ * identity). Primitives stringify directly; objects use a structural
+ * `JSON.stringify` (two distinct references with identical content therefore
+ * share an index — acceptable: they are a deterministic function of content,
+ * and B8-R5 only requires they remain SEPARATE registry records, which the
+ * caller's distinct-reference upsert keys already ensure).
+ */
+function sourceFieldIndex(identity: unknown): number {
+  let key: string;
+  if (identity !== null && typeof identity === "object") {
+    try {
+      key = JSON.stringify(identity);
+    } catch {
+      // Circular/unstringifiable — fall back to the type tag. Collapses to a
+      // single index, i.e. the pre-fix behaviour, only for this pathological
+      // case rather than for every source.
+      key = Object.prototype.toString.call(identity);
+    }
+  } else {
+    key = String(identity);
+  }
+  return fnv1a(key);
+}
 
 // ---------------------------------------------------------------------------
 // WorldImpl
@@ -1628,7 +1666,18 @@ export class WorldImpl implements World {
     // — see B14 (D8). Trust its return value here; do NOT re-apply overrides
     // or transform in this branch (would double-apply for any non-idempotent
     // transform).
-    const result = this.generateDerivedRecord(schema, reg, source, 0, options);
+    //
+    // Seed the field PRNG from the SOURCE IDENTITY, not a hardcoded 0.
+    // A literal 0 made every explicit-source `generate(Derived, { source })`
+    // collapse to the same `dreg<regId>#0` field seed, so all derived records
+    // shared identical field values (only `ctx.source.*`-pulled fields varied).
+    const result = this.generateDerivedRecord(
+      schema,
+      reg,
+      source,
+      sourceFieldIndex(identity),
+      options,
+    );
 
     // B8-R7 / B10: when the outer call opted out of storage, do NOT touch
     // the registry and do NOT write to the upsert map — both side effects
