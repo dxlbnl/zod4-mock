@@ -53,6 +53,7 @@ function makeCtx(seed = 42): GeneratorContext {
     optionalProbability: 0.2,
     current: {},
     locale: en,
+    defaultArrayLength: [1, 5] as const,
   };
   return ctx;
 }
@@ -881,5 +882,91 @@ describe("DEFAULT_KEY_MAP — number domain keys", () => {
     expect(Number.isInteger(v)).toBe(true);
     expect(v).toBeGreaterThanOrEqual(1970);
     expect(v).toBeLessThanOrEqual(2030);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Number key heuristics — finance / measurement (previously uncovered)
+// ---------------------------------------------------------------------------
+
+describe("number key heuristics — finance money keys", () => {
+  const moneyKeys: Array<[string, number, number]> = [
+    ["balance",  1,      100_000],
+    ["total",    1,      10_000],
+    ["subtotal", 1,      10_000],
+    ["revenue",  1_000,  1_000_000_000],
+    ["cost",     1,      1_000],
+    ["fee",      1,      1_000],
+    ["salary",   20_000, 500_000],
+  ];
+
+  for (const [key, min, max] of moneyKeys) {
+    it(`${key} produces a positive number within its default range`, () => {
+      const v = generateFromKey(key, z.number(), makeCtx()) as number;
+      expect(typeof v).toBe("number");
+      expect(v).toBeGreaterThanOrEqual(min);
+      expect(v).toBeLessThanOrEqual(max);
+    });
+  }
+
+  it("balance respects z.number().min() override", () => {
+    const v = generateFromKey("balance", z.number().min(50_000), makeCtx()) as number;
+    expect(v).toBeGreaterThanOrEqual(50_000);
+  });
+
+  it("salary respects z.number().max() override", () => {
+    const v = generateFromKey("salary", z.number().max(30_000), makeCtx()) as number;
+    expect(v).toBeLessThanOrEqual(30_000);
+  });
+});
+
+describe("number key heuristics — log-uniform measurement keys", () => {
+  const intMeasurementKeys: Array<[string, number, number]> = [
+    ["filesize",   100,  1_000_000_000],
+    ["bytes",      100,  1_000_000_000],
+    ["views",      1,    10_000_000],
+    ["population", 1,    10_000_000],
+  ];
+
+  for (const [key, min, max] of intMeasurementKeys) {
+    it(`${key} produces a positive integer within its default range`, () => {
+      const v = generateFromKey(key, z.number(), makeCtx()) as number;
+      expect(typeof v).toBe("number");
+      expect(Number.isInteger(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(min);
+      expect(v).toBeLessThanOrEqual(max);
+    });
+  }
+
+  it("distance produces a positive number (continuous) within [1, 10000]", () => {
+    const v = generateFromKey("distance", z.number(), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(10_000);
+  });
+});
+
+describe("number key heuristics — bounded-uniform shaped keys", () => {
+  it("rating produces a number in [0, 5]", () => {
+    const v = generateFromKey("rating", z.number(), makeCtx()) as number;
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(5);
+  });
+
+  it("score produces a number in [0, 100]", () => {
+    const v = generateFromKey("score", z.number(), makeCtx()) as number;
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(100);
+  });
+
+  it("percentage produces a number in [0, 100]", () => {
+    const v = generateFromKey("percentage", z.number(), makeCtx()) as number;
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(100);
+  });
+
+  it("rating respects z.number().max() override", () => {
+    const v = generateFromKey("rating", z.number().max(3), makeCtx()) as number;
+    expect(v).toBeLessThanOrEqual(3);
   });
 });

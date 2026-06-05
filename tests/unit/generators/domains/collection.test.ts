@@ -29,6 +29,7 @@ function ctx(seed = 42): GeneratorContext {
     },
     recursionLimit: 5,
     locale: en,
+    defaultArrayLength: [1, 5] as const,
   };
   return c;
 }
@@ -242,5 +243,97 @@ describe("schema/collection", () => {
     const v2 = w2.generate(schema) as Record<string, number>;
 
     expect(v1).toEqual(v2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateZodMap — previously uncovered
+// ---------------------------------------------------------------------------
+
+describe("schema/collection — z.map()", () => {
+  it("generates a Map with 2–4 entries", () => {
+    const schema = z.map(z.string(), z.number());
+    const result = generateFromSchema(schema, ctx()) as Map<string, number>;
+    expect(result).toBeInstanceOf(Map);
+    expect(result.size).toBeGreaterThanOrEqual(2);
+    expect(result.size).toBeLessThanOrEqual(4);
+  });
+
+  it("keys are strings, values are numbers", () => {
+    const schema = z.map(z.string(), z.number());
+    const result = generateFromSchema(schema, ctx()) as Map<string, number>;
+    for (const [k, v] of result) {
+      expect(typeof k).toBe("string");
+      expect(typeof v).toBe("number");
+    }
+  });
+
+  it("is deterministic for the same seed", () => {
+    const schema = z.map(z.string(), z.number());
+    const r1 = generateFromSchema(schema, ctx(7)) as Map<string, number>;
+    const r2 = generateFromSchema(schema, ctx(7)) as Map<string, number>;
+    expect([...r1.entries()]).toEqual([...r2.entries()]);
+  });
+
+  it("works with non-string keys (z.number() key)", () => {
+    const schema = z.map(z.number(), z.string());
+    const result = generateFromSchema(schema, ctx()) as Map<number, string>;
+    expect(result).toBeInstanceOf(Map);
+    expect(result.size).toBeGreaterThanOrEqual(2);
+    for (const [k, v] of result) {
+      expect(typeof k).toBe("number");
+      expect(typeof v).toBe("string");
+    }
+  });
+
+  it("via world.generate produces a Map", () => {
+    const schema = z.map(z.string(), z.boolean());
+    const result = createWorld({ seed: 1 }).generate(schema) as Map<string, boolean>;
+    expect(result).toBeInstanceOf(Map);
+    expect(result.size).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateZodSet — previously uncovered
+// ---------------------------------------------------------------------------
+
+describe("schema/collection — z.set()", () => {
+  it("generates a Set with 1–4 entries (default bounds)", () => {
+    const schema = z.set(z.string());
+    const result = generateFromSchema(schema, ctx()) as Set<string>;
+    expect(result).toBeInstanceOf(Set);
+    expect(result.size).toBeGreaterThanOrEqual(1);
+    expect(result.size).toBeLessThanOrEqual(4);
+  });
+
+  it("all entries satisfy the element type", () => {
+    const schema = z.set(z.number().int().min(0).max(1000));
+    const result = generateFromSchema(schema, ctx()) as Set<number>;
+    for (const v of result) {
+      expect(Number.isInteger(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1000);
+    }
+  });
+
+  it("respects .min() / .max() size constraints", () => {
+    const schema = z.set(z.string()).min(3).max(3);
+    const result = generateFromSchema(schema, ctx()) as Set<string>;
+    expect(result.size).toBe(3);
+  });
+
+  it("is deterministic for the same seed", () => {
+    const schema = z.set(z.string());
+    const r1 = generateFromSchema(schema, ctx(99)) as Set<string>;
+    const r2 = generateFromSchema(schema, ctx(99)) as Set<string>;
+    expect([...r1]).toEqual([...r2]);
+  });
+
+  it("via world.generate produces a Set", () => {
+    const schema = z.set(z.number().int());
+    const result = createWorld({ seed: 1 }).generate(schema) as Set<number>;
+    expect(result).toBeInstanceOf(Set);
+    expect(result.size).toBeGreaterThanOrEqual(1);
   });
 });
