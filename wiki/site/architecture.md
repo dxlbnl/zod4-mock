@@ -15,7 +15,7 @@ root [`architecture.md`](../architecture.md). Anything here applies only to `sit
 | Editor     | CodeMirror 6 (deferred / client-only — see D18) |
 | Storybook  | Storybook 10 (CSF + addon-vitest)               |
 | Browser QA | Playwright via `@vitest/browser-playwright`     |
-| Deploy     | Vercel via `@sveltejs/adapter-vercel`           |
+| Deploy     | Vercel via `@sveltejs/adapter-vercel`; workspace-aware install pinned in `site/vercel.json` (B82) |
 
 ## Key libraries
 

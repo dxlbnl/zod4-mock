@@ -1217,4 +1217,11 @@ it records the reason here AND states it in chat.
 - implementer (round 2): created bench-worker-protocol.ts + bench.worker.ts + rewrote +page.svelte (no measure import, no setTimeout yields, Worker in onMount, terminate in onDestroy, typed onmessage handler). Edited B71-R4 test to align with B69-R3 (page no longer calls measure directly — budgetMs flows into BenchWorkerRequest); intent preserved. Moved a @ts-expect-error directive one line down in protocol types test (assertion unchanged). pnpm site:test:unit 113/113, site:check 0/0, site:test:component 47/47, site:build SSR green, validate green.
 - manager: dispatch reviewer
 - reviewer: **PASS** — all R1–R8 met with file:line evidence; D1/D13/D22/D23 clean; B71-R4 edit + @ts-expect-error placement both verified minimum changes with unchanged intent. Non-blocking note: D22 could be generalized to cover Worker construction in any site/ route (not just docs primitives); manager declined to promote (deferred to future Worker consumer; B69 spec R8 captures the rule locally).
-- result: B69 done — moved card to wiki/backlog/done/; commit pending.
+- result: B69 done — commit 81a5192.
+
+## 2026-06-05 — B82: Vercel deploy from site/ subdir
+
+- manager: start, track: chore (review pre-approved; out-of-tree maintainer task — pipeline does the repo-side prep, the maintainer does the Vercel dashboard + DNS); git mv inbox/ → doing/
+- manager: created `site/vercel.json` with workspace-aware install (`cd .. && pnpm install --frozen-lockfile`), `pnpm build`, framework=sveltekit. This makes the card's step 3 work (`pnpm install --frozen-lockfile` at `site/` would otherwise miss the workspace root). Updated wiki/site/architecture.md Deploy row + appended Repo-side prep notes to the card explaining what's now turn-key vs what the maintainer still owns. Verified `pnpm build` in site/ succeeds (SvelteKit + adapter-vercel emit to .vercel/output cleanly).
+- manager: skip pipeline stages (chore + repo-side prep only; no spec/tests needed; dashboard work is non-automatable).
+- result: B82 done from repo side — moved card to wiki/backlog/done/; commit pending. Maintainer's remaining actions (Vercel project create, Root Directory = site, preview deploy, DNS to zod4-mock.vercel.app) are documented in card Notes.
