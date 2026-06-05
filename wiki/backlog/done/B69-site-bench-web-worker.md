@@ -6,6 +6,7 @@ priority: high
 flags: [review]
 created: 2026-06-03
 provenance: gen-bench P2-worker
+spec: wiki/specs/B69-site-bench-web-worker.md
 ---
 
 ## Description

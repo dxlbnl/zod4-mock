@@ -1203,4 +1203,18 @@ it records the reason here AND states it in chat.
 - manager: dispatch reviewer
 - reviewer: **FAIL** — 2 non-blocking findings: (1) R7 fallback incomplete — versions.json not updated with rebaseline marker; (2) 4 B71-owned files fail fmt:check.
 - manager: applied fixes inline — extended versionsFileSchema with optional `methodologyChanges` array; added B71 methodology-change marker to versions.json (date/by/from/to/rationale); ran oxfmt on B71-owned files. site:test:unit 105/105 re-confirmed. Only pre-existing latest.json fmt slip remains (not B71 scope).
-- result: B71 done — moved card to wiki/backlog/done/; commit pending.
+- result: B71 done — commit 9e28c87.
+
+## 2026-06-04 — B69: Move /bench to a Web Worker
+
+- manager: start, track: feature (review pre-approved); git mv inbox/ → doing/
+- manager: dispatch spec-writer
+- spec-writer: wrote wiki/specs/B69-site-bench-web-worker.md (R1–R8). Worker shape: `site/src/lib/bench.worker.ts` + typed protocol `site/src/lib/bench-worker-protocol.ts` + hand-rolled msg protocol (no Comlink). Page constructs worker in onMount, terminates onDestroy, posts run/listens for incremental result/done. Abort policy: ignore-while-running via existing `disabled={running}` (B73 owns Abort). 3 non-blocking open questions.
+- manager: spec-validation gate passed. Skip review-checkpoint per user pre-approval.
+- manager: dispatch test-writer
+- test-writer: wrote bench-worker.B69.test.ts (7 runtime fails) + bench-worker-protocol.types.test.ts (9 type errors). RED confirmed across R1–R8.
+- manager: dispatch implementer (1st dispatch hit subagent session limit before writing — no files touched; restarted fresh).
+- implementer (round 2): created bench-worker-protocol.ts + bench.worker.ts + rewrote +page.svelte (no measure import, no setTimeout yields, Worker in onMount, terminate in onDestroy, typed onmessage handler). Edited B71-R4 test to align with B69-R3 (page no longer calls measure directly — budgetMs flows into BenchWorkerRequest); intent preserved. Moved a @ts-expect-error directive one line down in protocol types test (assertion unchanged). pnpm site:test:unit 113/113, site:check 0/0, site:test:component 47/47, site:build SSR green, validate green.
+- manager: dispatch reviewer
+- reviewer: **PASS** — all R1–R8 met with file:line evidence; D1/D13/D22/D23 clean; B71-R4 edit + @ts-expect-error placement both verified minimum changes with unchanged intent. Non-blocking note: D22 could be generalized to cover Worker construction in any site/ route (not just docs primitives); manager declined to promote (deferred to future Worker consumer; B69 spec R8 captures the rule locally).
+- result: B69 done — moved card to wiki/backlog/done/; commit pending.

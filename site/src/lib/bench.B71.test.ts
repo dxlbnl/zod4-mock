@@ -194,7 +194,16 @@ describe("B71-R3 / CLI bench uses budget API", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("B71-R4 / browser bench uses 200ms budget", () => {
-  it("B71-R4 / +page.svelte declares BUDGET_MS=200, every measure() uses budgetMs: 200, no runs: literal", () => {
+  it("B71-R4 / +page.svelte declares BUDGET_MS=200 and the budget flows to the worker via budgetMs:", () => {
+    // B71-R4 originally asserted `measure(... { budgetMs: ... })` appeared
+    // in +page.svelte directly. B69 then moved the `measure()` call into
+    // the Worker (`$lib/bench.worker.ts`); the page now constructs the
+    // request `{ kind: 'run', schema, n, budgetMs: BUDGET_MS }` and posts
+    // it to the worker, which calls `measure(..., { budgetMs: req.budgetMs })`.
+    // The B71-R4 intent — "the page issues bench work parameterised by
+    // BUDGET_MS=200" — is preserved; the legacy `measure(` token check
+    // has been replaced by a `budgetMs:` token check that still proves
+    // the constant flows downstream.
     const src = readText(join(ROUTES_BENCH, "+page.svelte"));
     const stripped = stripComments(src);
 
@@ -202,16 +211,18 @@ describe("B71-R4 / browser bench uses 200ms budget", () => {
       /\bconst\s+BUDGET_MS\s*=\s*200\b/,
     );
 
-    // Every `measure(...)` call in the file passes budgetMs.
-    // First, no `runs:` literal anywhere in a measure() argument area.
+    // No `runs:` literal anywhere in the page (the fixed-runs API is gone).
     expect(
-      /\bmeasure\s*\([^)]*\bruns\s*:/.test(stripped),
-      "no measure(...) call in +page.svelte may pass `runs:`",
+      /\bruns\s*:/.test(stripped),
+      "+page.svelte must not pass `runs:` (the fixed-runs API is gone)",
     ).toBe(false);
 
-    // At least one measure(...) call uses `budgetMs:` (the migration
-    // has happened, not just removed the old key).
-    expect(/\bmeasure\s*\([^)]*\bbudgetMs\s*:/.test(stripped)).toBe(true);
+    // The BUDGET_MS constant must flow into a `budgetMs:` field somewhere
+    // in the page (today, into the `BenchWorkerRequest` posted to the
+    // worker).
+    expect(stripped, "+page.svelte must use `budgetMs:` to forward BUDGET_MS").toMatch(
+      /\bbudgetMs\s*:/,
+    );
   });
 });
 

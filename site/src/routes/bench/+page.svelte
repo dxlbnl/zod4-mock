@@ -6,11 +6,12 @@
 	import MetricBadge from '$lib/widgets/MetricBadge.svelte';
 	import WinnerCallout from '$lib/widgets/WinnerCallout.svelte';
 	import LibraryLegend from '$lib/widgets/LibraryLegend.svelte';
-	import { onMount } from 'svelte';
-	import { measure, type BenchResult } from '$lib/bench';
-	import { runZod4Mock } from '$lib/runners/zod4mock';
-	import { runZodMock } from '$lib/runners/zodmock';
-	import { runFaker } from '$lib/runners/faker';
+	import { onMount, onDestroy } from 'svelte';
+	import type { BenchResult } from '$lib/bench';
+	import type {
+		BenchWorkerRequest,
+		BenchWorkerResponse
+	} from '$lib/bench-worker-protocol';
 
 	type Schema = 'simple' | 'nestedOrder' | 'array';
 
@@ -35,22 +36,21 @@
 
 	let results = $state<Results>({ zod4mock: null, zodmock: null, faker: null });
 
-	async function run() {
+	// B69-R6 / R8: the Worker is constructed inside `onMount` (SSR-safe)
+	// and terminated on unmount.
+	let worker: Worker | null = null;
+
+	function run() {
+		if (!worker || running) return;
 		running = true;
 		results = { zod4mock: null, zodmock: null, faker: null };
-		// yield to browser to update UI
-		await new Promise((r) => setTimeout(r, 0));
-
-		const zod4mockCall = () => runZod4Mock.batch(schema, n);
-		const zodmockCall = () => runZodMock.batch(schema, n);
-		const fakerCall = () => runFaker.batch(schema, n);
-		results.zod4mock = measure(zod4mockCall, { budgetMs: BUDGET_MS });
-		await new Promise((r) => setTimeout(r, 0));
-		results.zodmock = measure(zodmockCall, { budgetMs: BUDGET_MS });
-		await new Promise((r) => setTimeout(r, 0));
-		results.faker = measure(fakerCall, { budgetMs: BUDGET_MS });
-
-		running = false;
+		const req: BenchWorkerRequest = {
+			kind: 'run',
+			schema,
+			n,
+			budgetMs: BUDGET_MS
+		};
+		worker.postMessage(req);
 	}
 
 	const chartResults = $derived([
@@ -59,7 +59,26 @@
 		{ label: 'faker', color: 'var(--lib-faker)', warm: results.faker }
 	]);
 
-	onMount(() => run());
+	onMount(() => {
+		worker = new Worker(new URL('$lib/bench.worker.ts', import.meta.url), {
+			type: 'module'
+		});
+		worker.onmessage = (e: MessageEvent<BenchWorkerResponse>) => {
+			const msg = e.data;
+			if (msg.kind === 'result') {
+				results[msg.lib] = msg.result;
+			} else if (msg.kind === 'done') {
+				running = false;
+			}
+		};
+		// Auto-run once on mount (preserves prior behaviour).
+		run();
+	});
+
+	onDestroy(() => {
+		worker?.terminate();
+		worker = null;
+	});
 
 	const winnerRatio = $derived(
 		results.zod4mock && results.zodmock
