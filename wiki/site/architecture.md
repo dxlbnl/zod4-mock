@@ -5,16 +5,16 @@ root [`architecture.md`](../architecture.md). Anything here applies only to `sit
 
 ## Stack
 
-| Layer      | Choice                                          |
-| ---------- | ----------------------------------------------- |
-| Framework  | SvelteKit 2.59.1                                |
-| UI         | Svelte 5.55.5 (runes mode)                      |
-| Build      | Vite 8                                          |
-| Markdown   | mdsvex 0.12 with Shiki syntax highlighting      |
-| Charting   | Chart.js 4 + svelte-chartjs                     |
-| Editor     | CodeMirror 6 (deferred / client-only — see D18) |
-| Storybook  | Storybook 10 (CSF + addon-vitest)               |
-| Browser QA | Playwright via `@vitest/browser-playwright`     |
+| Layer      | Choice                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| Framework  | SvelteKit 2.59.1                                                                                  |
+| UI         | Svelte 5.55.5 (runes mode)                                                                        |
+| Build      | Vite 8                                                                                            |
+| Markdown   | mdsvex 0.12 with Shiki syntax highlighting                                                        |
+| Charting   | Chart.js 4 + svelte-chartjs                                                                       |
+| Editor     | CodeMirror 6 (deferred / client-only — see D18)                                                   |
+| Storybook  | Storybook 10 (CSF + addon-vitest)                                                                 |
+| Browser QA | Playwright via `@vitest/browser-playwright`                                                       |
 | Deploy     | Vercel via `@sveltejs/adapter-vercel`; workspace-aware install pinned in `site/vercel.json` (B82) |
 
 ## Key libraries

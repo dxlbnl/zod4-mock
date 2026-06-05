@@ -5005,5 +5005,5 @@ export const nouns: readonly string[] = [
   "walrustand",
   "christiannes",
   "functietheorie",
-  "bagagerekjes"
+  "bagagerekjes",
 ];

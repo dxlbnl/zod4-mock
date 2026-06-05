@@ -68,7 +68,7 @@ interface LegacyBlobShape {
 function hashShuffle(arr: string[]): string[] {
   function djb2(s: string): number {
     let h = 5381;
-    for (let i = 0; i < s.length; i++) h = (((h * 33) ^ s.charCodeAt(i)) >>> 0);
+    for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
     return h;
   }
   return [...arr].sort((a, b) => djb2(a) - djb2(b));
@@ -217,9 +217,19 @@ try {
     .filter((w) => /^[a-z]{4,14}$/.test(w));
 
   const adjSuffixes = ["lijk", "isch", "ig", "baar", "loos", "rijk", "vol", "zaam"];
-  const adj = hashShuffle(sampleEvenly(words.filter((w) => adjSuffixes.some((s) => w.endsWith(s))), 2000));
+  const adj = hashShuffle(
+    sampleEvenly(
+      words.filter((w) => adjSuffixes.some((s) => w.endsWith(s))),
+      2000,
+    ),
+  );
   const adjSet = new Set(adj);
-  const nn = hashShuffle(sampleEvenly(words.filter((w) => !adjSet.has(w)), 5000));
+  const nn = hashShuffle(
+    sampleEvenly(
+      words.filter((w) => !adjSet.has(w)),
+      5000,
+    ),
+  );
 
   if (nn.length === 0 || adj.length === 0) {
     throw new Error(`OpenTaal returned empty buckets (nouns=${nn.length}, adj=${adj.length})`);

@@ -683,43 +683,44 @@ export class WorldImpl implements World {
       this.withEffectiveLocale(options?.locale, () =>
         this.withEffectiveUniqueMode(options?.unique, () =>
           this.withEffectiveDefaultArrayLength(options?.defaultArrayLength, () =>
-          this.withEffectiveStore(options?.store, () => {
-            const stripped = stripOuterOptionalNullable(schema);
-            let current: ZodTypeAny = stripped.inner;
-            const outerWrappers = stripped.wrappers;
+            this.withEffectiveStore(options?.store, () => {
+              const stripped = stripOuterOptionalNullable(schema);
+              let current: ZodTypeAny = stripped.inner;
+              const outerWrappers = stripped.wrappers;
 
-            current = resolveLazyChain(current, this.lazyCache);
-            const d = def(current);
+              current = resolveLazyChain(current, this.lazyCache);
+              const d = def(current);
 
-            if (d.type === "array") {
-              if (outerWrappers.length > 0) {
-                // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
-                // outer `schema` reference (the `.optional()` wrapper) so the Nth
-                // call to the same `.optional()` schema reuses the same fork key
-                // regardless of intervening `generate(Y)` calls.
-                const { id, slot } = this.nextSchemaSlot(schema);
-                const prng = this.prng.fork(`wrap:${id}:${slot}`);
-                const optProb = options?.optionalProbability ?? this.options.optionalProbability ?? 0.2;
-                for (const wrapper of outerWrappers) {
-                  if (prng.random() < optProb) {
-                    // No counter mutation on skip — the per-schema slot was already
-                    // advanced by `nextSchemaSlot` above (the next call gets slot+1).
-                    return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+              if (d.type === "array") {
+                if (outerWrappers.length > 0) {
+                  // B39 — site 3: outer-wrapper optional/nullable roll. Key on the
+                  // outer `schema` reference (the `.optional()` wrapper) so the Nth
+                  // call to the same `.optional()` schema reuses the same fork key
+                  // regardless of intervening `generate(Y)` calls.
+                  const { id, slot } = this.nextSchemaSlot(schema);
+                  const prng = this.prng.fork(`wrap:${id}:${slot}`);
+                  const optProb =
+                    options?.optionalProbability ?? this.options.optionalProbability ?? 0.2;
+                  for (const wrapper of outerWrappers) {
+                    if (prng.random() < optProb) {
+                      // No counter mutation on skip — the per-schema slot was already
+                      // advanced by `nextSchemaSlot` above (the next call gets slot+1).
+                      return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
+                    }
                   }
                 }
+                return this.generateArray(
+                  d.element!,
+                  current,
+                  options as GenerateOptions<unknown[]> | undefined,
+                ) as z.infer<TSchema>;
               }
-              return this.generateArray(
-                d.element!,
-                current,
-                options as GenerateOptions<unknown[]> | undefined,
-              ) as z.infer<TSchema>;
-            }
 
-            return this.generateSingleItem(
-              schema,
-              options as GenerateOptions<unknown>,
-            ) as z.infer<TSchema>;
-          }),
+              return this.generateSingleItem(
+                schema,
+                options as GenerateOptions<unknown>,
+              ) as z.infer<TSchema>;
+            }),
           ),
         ),
       ),
@@ -1059,7 +1060,8 @@ export class WorldImpl implements World {
       // construction option. `withEffectiveLocale` set it in scope; without it,
       // fall back to the world's `options.locale`, then `defaultLocale`.
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
-      defaultArrayLength: this.effectiveDefaultArrayLength ?? this.options.defaultArrayLength ?? [1, 5],
+      defaultArrayLength: this.effectiveDefaultArrayLength ??
+        this.options.defaultArrayLength ?? [1, 5],
     };
     state.ctx = ctx;
     return ctx;
@@ -1252,7 +1254,8 @@ export class WorldImpl implements World {
     const { id: arrayId, slot: arraySlot } = this.nextSchemaSlot(arraySchema);
     const genPrng = this.prng.fork(`array:${arrayId}:${arraySlot}`);
 
-    const [defMin, defMax] = this.effectiveDefaultArrayLength ?? this.options.defaultArrayLength ?? [1, 5];
+    const [defMin, defMax] = this.effectiveDefaultArrayLength ??
+      this.options.defaultArrayLength ?? [1, 5];
     const mode = this.resolveMode(innerSchema);
 
     let result: unknown[];

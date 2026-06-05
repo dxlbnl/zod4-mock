@@ -2005,5 +2005,5 @@ export const adjectives: readonly string[] = [
   "garenloos",
   "bladloos",
   "onbespeelbaar",
-  "wereldlijk"
+  "wereldlijk",
 ];

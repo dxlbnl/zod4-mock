@@ -891,13 +891,13 @@ describe("DEFAULT_KEY_MAP — number domain keys", () => {
 
 describe("number key heuristics — finance money keys", () => {
   const moneyKeys: Array<[string, number, number]> = [
-    ["balance",  1,      100_000],
-    ["total",    1,      10_000],
-    ["subtotal", 1,      10_000],
-    ["revenue",  1_000,  1_000_000_000],
-    ["cost",     1,      1_000],
-    ["fee",      1,      1_000],
-    ["salary",   20_000, 500_000],
+    ["balance", 1, 100_000],
+    ["total", 1, 10_000],
+    ["subtotal", 1, 10_000],
+    ["revenue", 1_000, 1_000_000_000],
+    ["cost", 1, 1_000],
+    ["fee", 1, 1_000],
+    ["salary", 20_000, 500_000],
   ];
 
   for (const [key, min, max] of moneyKeys) {
@@ -922,10 +922,10 @@ describe("number key heuristics — finance money keys", () => {
 
 describe("number key heuristics — log-uniform measurement keys", () => {
   const intMeasurementKeys: Array<[string, number, number]> = [
-    ["filesize",   100,  1_000_000_000],
-    ["bytes",      100,  1_000_000_000],
-    ["views",      1,    10_000_000],
-    ["population", 1,    10_000_000],
+    ["filesize", 100, 1_000_000_000],
+    ["bytes", 100, 1_000_000_000],
+    ["views", 1, 10_000_000],
+    ["population", 1, 10_000_000],
   ];
 
   for (const [key, min, max] of intMeasurementKeys) {
