@@ -970,3 +970,33 @@ describe("number key heuristics — bounded-uniform shaped keys", () => {
     expect(v).toBeLessThanOrEqual(3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// logUniformInt / logUniformFloat fallback when min <= 0 (lines 20, 29)
+// These private helpers fall back to uniform when min <= 0 because
+// log-uniform is undefined for non-positive ranges.
+// ---------------------------------------------------------------------------
+
+describe("number key heuristics — log-uniform fallback when min <= 0", () => {
+  it("filesize with z.number().min(-10) falls back to uniform (no crash, result in range)", () => {
+    // min <= 0 disables log-uniform; uniform int fallback is used instead.
+    const v = generateFromKey("filesize", z.number().min(-10).max(1000), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(-10);
+    expect(v).toBeLessThanOrEqual(1000);
+  });
+
+  it("bytes with z.number().min(0) falls back to uniform (boundary)", () => {
+    const v = generateFromKey("bytes", z.number().min(0).max(500), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(500);
+  });
+
+  it("distance with z.number().min(-100) falls back to uniform float (no crash)", () => {
+    const v = generateFromKey("distance", z.number().min(-100).max(100), makeCtx()) as number;
+    expect(typeof v).toBe("number");
+    expect(v).toBeGreaterThanOrEqual(-100);
+    expect(v).toBeLessThanOrEqual(100);
+  });
+});
