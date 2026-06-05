@@ -58,6 +58,33 @@ interface LegacyBlobShape {
   adjectives: string[];
 }
 
+/**
+ * Deterministic hash-shuffle so emitted word lists are not alphabetically
+ * ordered. Alphabetical order causes the PRNG — whose per-field seeds hash
+ * common field names to small indices — to disproportionately pick words from
+ * the start of the list (all "aa…" in Dutch). Sorting by djb2(word) scatters
+ * the list uniformly without requiring any random seed or network call.
+ */
+function hashShuffle(arr: string[]): string[] {
+  function djb2(s: string): number {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = (((h * 33) ^ s.charCodeAt(i)) >>> 0);
+    return h;
+  }
+  return [...arr].sort((a, b) => djb2(a) - djb2(b));
+}
+
+/**
+ * Sample N entries evenly spaced across arr so the resulting slice has the
+ * same letter distribution as the full list. A plain `.slice(0, N)` on an
+ * alphabetically-sorted wordlist would only yield words starting with 'a'.
+ */
+function sampleEvenly(arr: string[], n: number): string[] {
+  if (arr.length <= n) return arr;
+  const step = arr.length / n;
+  return Array.from({ length: n }, (_, i) => arr[Math.floor(i * step)]!);
+}
+
 async function fetchText(url: string): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
@@ -190,9 +217,9 @@ try {
     .filter((w) => /^[a-z]{4,14}$/.test(w));
 
   const adjSuffixes = ["lijk", "isch", "ig", "baar", "loos", "rijk", "vol", "zaam"];
-  const adj = words.filter((w) => adjSuffixes.some((s) => w.endsWith(s))).slice(0, 2000);
+  const adj = hashShuffle(sampleEvenly(words.filter((w) => adjSuffixes.some((s) => w.endsWith(s))), 2000));
   const adjSet = new Set(adj);
-  const nn = words.filter((w) => !adjSet.has(w)).slice(0, 5000);
+  const nn = hashShuffle(sampleEvenly(words.filter((w) => !adjSet.has(w)), 5000));
 
   if (nn.length === 0 || adj.length === 0) {
     throw new Error(`OpenTaal returned empty buckets (nouns=${nn.length}, adj=${adj.length})`);
