@@ -310,6 +310,16 @@ export class WorldImpl implements World {
   private effectiveLocale: LocaleData | undefined = undefined;
 
   /**
+   * Per-call `defaultArrayLength`, set when the caller passes
+   * `{ defaultArrayLength }` to `world.generate(...)`. Propagates through
+   * nested recursion (object fields, nested arrays) via the
+   * `withEffectiveDefaultArrayLength` push/pop scope so inner
+   * `generateArray` calls honour the outer call's intent. When `undefined`,
+   * `generateArray` falls back to `this.options.defaultArrayLength ?? [1, 5]`.
+   */
+  private effectiveDefaultArrayLength: readonly [number, number] | undefined = undefined;
+
+  /**
    * B55-R6 — per-call unique-mode flag, set when the caller passes
    * `{ unique: true }` to `world.generate(...)`. Read by {@link makeFieldCtx}
    * so the field-bound `ctx.prng.pickZipf` substitutes `s = 0` for the
@@ -634,6 +644,7 @@ export class WorldImpl implements World {
       // create-path delegate call).
       this.withEffectiveLocale(options?.locale, () =>
         this.withEffectiveUniqueMode(options?.unique, () =>
+          this.withEffectiveDefaultArrayLength(options?.defaultArrayLength, () =>
           this.withEffectiveStore(options?.store, () => {
             const stripped = stripOuterOptionalNullable(schema);
             let current: ZodTypeAny = stripped.inner;
@@ -650,7 +661,7 @@ export class WorldImpl implements World {
                 // regardless of intervening `generate(Y)` calls.
                 const { id, slot } = this.nextSchemaSlot(schema);
                 const prng = this.prng.fork(`wrap:${id}:${slot}`);
-                const optProb = this.options.optionalProbability ?? 0.2;
+                const optProb = options?.optionalProbability ?? this.options.optionalProbability ?? 0.2;
                 for (const wrapper of outerWrappers) {
                   if (prng.random() < optProb) {
                     // No counter mutation on skip — the per-schema slot was already
@@ -671,6 +682,7 @@ export class WorldImpl implements World {
               options as GenerateOptions<unknown>,
             ) as z.infer<TSchema>;
           }),
+          ),
         ),
       ),
     );
@@ -822,6 +834,20 @@ export class WorldImpl implements World {
       return fn();
     } finally {
       this.effectiveLocale = previous;
+    }
+  }
+
+  private withEffectiveDefaultArrayLength<R>(
+    value: readonly [number, number] | undefined,
+    fn: () => R,
+  ): R {
+    if (value === undefined) return fn();
+    const previous = this.effectiveDefaultArrayLength;
+    this.effectiveDefaultArrayLength = value;
+    try {
+      return fn();
+    } finally {
+      this.effectiveDefaultArrayLength = previous;
     }
   }
 
@@ -995,6 +1021,7 @@ export class WorldImpl implements World {
       // construction option. `withEffectiveLocale` set it in scope; without it,
       // fall back to the world's `options.locale`, then `defaultLocale`.
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
+      defaultArrayLength: this.effectiveDefaultArrayLength ?? this.options.defaultArrayLength ?? [1, 5],
     };
     state.ctx = ctx;
     return ctx;
@@ -1177,7 +1204,7 @@ export class WorldImpl implements World {
   ): unknown[] {
     const fieldPath = options?.fieldPath ?? "";
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
-    if (depth > (this.options.recursionLimit ?? 5)) return [];
+    if (depth > (options?.recursionLimit ?? this.options.recursionLimit ?? 5)) return [];
 
     // B39 — site 2: key the array's PRNG on the outer `arraySchema` reference
     // (NOT the inner element schema). Keying on the inner schema would
@@ -1187,7 +1214,7 @@ export class WorldImpl implements World {
     const { id: arrayId, slot: arraySlot } = this.nextSchemaSlot(arraySchema);
     const genPrng = this.prng.fork(`array:${arrayId}:${arraySlot}`);
 
-    const [defMin, defMax] = this.options.defaultArrayLength ?? [1, 5];
+    const [defMin, defMax] = this.effectiveDefaultArrayLength ?? this.options.defaultArrayLength ?? [1, 5];
     const mode = this.resolveMode(innerSchema);
 
     let result: unknown[];
@@ -1333,7 +1360,9 @@ export class WorldImpl implements World {
     const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
     const target = Math.max(
       existingCount,
-      genPrng.int(Math.min(minRequired, maxAllowed), Math.max(minRequired, maxAllowed)),
+      // minRequired always wins as lower bound — schema .min(N) must be
+      // honoured even when N exceeds defMax.
+      genPrng.int(minRequired, Math.max(minRequired, maxAllowed)),
     );
 
     // B43 / B52-R2: honour caller-side `.max()` / `.length()` slice on
@@ -1395,7 +1424,9 @@ export class WorldImpl implements World {
     // B52-R7: share the bound-resolution helpers instead of inlining.
     const minN = resolveMinRequired(arraySchema, defMin);
     const maxN = resolveMaxAllowed(arraySchema, defMax);
-    const N = genPrng.int(Math.min(minN, maxN), Math.max(minN, maxN));
+    // minN always wins as lower bound — schema .min(N) must be honoured even
+    // when N exceeds defMax (e.g. defaultArrayLength:[1,4] + .min(100) → 100).
+    const N = genPrng.int(minN, Math.max(minN, maxN));
 
     let result: unknown[] = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);
@@ -1488,7 +1519,7 @@ export class WorldImpl implements World {
   private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
     const fieldPath = options?.fieldPath ?? "";
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
-    if (depth > (this.options.recursionLimit ?? 5)) return null;
+    if (depth > (options?.recursionLimit ?? this.options.recursionLimit ?? 5)) return null;
 
     // B39 — only the derived-without-source pair picker (below, at the
     // `pairs[idx]` site) still reads this counter. The three former

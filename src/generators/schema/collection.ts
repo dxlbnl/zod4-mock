@@ -55,7 +55,8 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
 
 export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unknown[] {
   const d = def(schema);
-  const length = resolveArrayLength(schema, 1, 5, ctx.prng);
+  const [defMin, defMax] = ctx.defaultArrayLength ?? [1, 5];
+  const length = resolveArrayLength(schema, defMin, defMax, ctx.prng);
 
   const innerDef = def(d.element!);
   if (innerDef.type === "object" && innerDef.shape) {
