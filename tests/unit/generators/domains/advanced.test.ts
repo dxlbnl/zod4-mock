@@ -32,6 +32,7 @@ function ctx(seed = 42): GeneratorContext {
     },
     recursionLimit: 5,
     locale: en,
+    defaultArrayLength: [1, 5] as const,
   };
   return c;
 }

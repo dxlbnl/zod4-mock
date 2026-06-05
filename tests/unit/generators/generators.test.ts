@@ -56,6 +56,7 @@ function makeCtx(seed = 42, fieldPath = "test"): GeneratorContext {
     recursionLimit: 5,
     current: {},
     locale: en,
+    defaultArrayLength: [1, 5] as const,
   };
   return ctx;
 }

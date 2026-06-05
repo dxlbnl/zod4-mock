@@ -81,8 +81,10 @@ describe("defaultArrayLength per-call passthrough", () => {
 // ---------------------------------------------------------------------------
 
 describe("recursionLimit per-call passthrough", () => {
-  // A self-referencing structure to trigger recursion
-  type Node = { id: string; child?: Node };
+  // A self-referencing structure to trigger recursion.
+  // `child` includes `undefined` explicitly to satisfy
+  // exactOptionalPropertyTypes against the ZodOptional output type.
+  type Node = { id: string; child?: Node | undefined };
   const nodeSchema: z.ZodType<Node> = z.lazy(() =>
     z.object({ id: z.string(), child: nodeSchema.optional() }),
   );

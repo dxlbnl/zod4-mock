@@ -123,6 +123,7 @@ function makeCtx(seed: number, locale: LocaleData): GeneratorContext {
     recursionLimit: 5,
     current: {},
     locale,
+    defaultArrayLength: [1, 5] as const,
   };
   return ctx;
 }
