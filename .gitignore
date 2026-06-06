@@ -9,6 +9,10 @@ packages/*/data/
 .vercel/
 site/build/
 
+# Playwright smoke-suite output (site/, B75)
+site/test-results/
+site/playwright-report/
+
 # Site bench history (latest.json is committed; history.json grows unbounded)
 site/bench/results/history.json
 

@@ -5,6 +5,7 @@ type: feature
 priority: medium
 created: 2026-06-03
 provenance: gen-bench X1
+spec: wiki/specs/B75-site-playwright-smoke.md
 ---
 
 ## Description

@@ -19,6 +19,7 @@
     "test": "pnpm test:unit && pnpm test:component",
     "test:unit": "vitest --config vitest.unit.config.ts --run",
     "test:component": "vitest --run",
+    "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

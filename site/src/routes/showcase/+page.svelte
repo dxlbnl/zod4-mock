@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { Button, Tabs } from '@dxlbnl/ui';
 	import CodePanel from '$lib/widgets/CodePanel.svelte';
 	import JsonTree from '$lib/widgets/JsonTree.svelte';
@@ -125,6 +126,32 @@
 	<JsonTree value={world[key]} highlightIds={allIds} />
 {/snippet}
 
+{#snippet usersPanel()}{@render entityPanel('users')}{/snippet}
+{#snippet categoriesPanel()}{@render entityPanel('categories')}{/snippet}
+{#snippet productsPanel()}{@render entityPanel('products')}{/snippet}
+{#snippet variantsPanel()}{@render entityPanel('variants')}{/snippet}
+{#snippet reviewsPanel()}{@render entityPanel('reviews')}{/snippet}
+{#snippet ordersPanel()}{@render entityPanel('orders')}{/snippet}
+
+{#snippet entityTabs()}
+	{@const panelByKey: Record<EntityKey, Snippet> = {
+		users: usersPanel,
+		categories: categoriesPanel,
+		products: productsPanel,
+		variants: variantsPanel,
+		reviews: reviewsPanel,
+		orders: ordersPanel
+	}}
+	<Tabs
+		active="reviews"
+		tabs={entityOptions.map((opt) => ({
+			id: opt.key,
+			label: `${opt.label} (${world[opt.key].length})`,
+			panel: panelByKey[opt.key]
+		}))}
+	/>
+{/snippet}
+
 <div class="page">
 	<header class="page-header">
 		<h1 class="t-title">Relational Data Demo</h1>
@@ -147,14 +174,7 @@
 		<div class="right">
 			<p class="t-caption section-label">Generated output</p>
 			<div class="json-wrap">
-				<Tabs
-					active="reviews"
-					tabs={entityOptions.map((opt) => ({
-						id: opt.key,
-						label: `${opt.label} (${world[opt.key].length})`,
-						panel: () => entityPanel(opt.key)
-					}))}
-				/>
+				{@render entityTabs()}
 			</div>
 		</div>
 	</div>
