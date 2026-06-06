@@ -30,6 +30,9 @@ export const ROUTE_TABLE = [
   "/explorer",
   "/docs",
   "/docs/getting-started",
+  // B101-R9 — the rebuilt Concepts page joins the smoke route table so it is
+  // guarded against load-time console.error / pageerror / SSR-500 regressions.
+  "/docs/concepts",
 ] as const;
 
 /**

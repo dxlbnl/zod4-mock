@@ -6,6 +6,7 @@ priority: high
 created: 2026-06-04
 predecessor: B100
 phase: 2b
+spec: wiki/specs/B101-docs-rebuild-getting-started-concepts.md
 ---
 
 ## Description

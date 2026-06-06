@@ -11,7 +11,6 @@
 	import { within, expect } from 'storybook/test';
 	import DocsLayout from '../../../routes/docs/+layout.svelte';
 	import DocsLanding from '../../../routes/docs/+page.svelte';
-	import ConceptsStub from '../../../routes/docs/concepts/+page.svelte';
 
 	const { Story } = defineMeta({
 		title: 'B100/Chrome',
@@ -63,19 +62,13 @@
 	<DocsLanding />
 </Story>
 
-<Story
-	name="B100-R13 / stub route renders a canonical reference link"
-	play={async ({ canvasElement }) => {
-		const canvas = within(canvasElement);
-		// Stub renders a level-1 heading and a "canonical reference" link
-		// whose href ends in docs/concepts.md.
-		await expect(canvas.getByRole('heading', { level: 1 })).toBeInTheDocument();
-		const canonical = canvas.getByRole('link', { name: /canonical reference/i });
-		await expect((canonical.getAttribute('href') ?? '').endsWith('docs/concepts.md')).toBe(true);
-	}}
->
-	<ConceptsStub />
-</Story>
+<!--
+	B100-R13's runtime story (the /docs/concepts stub rendering a "canonical
+	reference" link) was retired by B101: B101-R6 rebuilds /docs/concepts from
+	a link-only stub into a bespoke <DocPage>, so the canonical-reference link
+	no longer exists. The structural file-presence guard for the remaining
+	stubs lives in site/src/lib/docs/B100-files.test.ts (B100-R13 describe).
+-->
 
 <Story
 	name="B100-R15 / chrome ignored + prose marked for Pagefind"
