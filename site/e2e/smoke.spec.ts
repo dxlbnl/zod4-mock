@@ -36,6 +36,14 @@ export const ROUTE_TABLE = [
   // B102-R4 — the rebuilt structured /docs/api view joins the smoke route table so it
   // is guarded against load-time console.error / pageerror / SSR-500 regressions.
   "/docs/api",
+  // B103-R9 — the four narrative docs pages rebuilt on the B100 primitives join the
+  // smoke route table so each is guarded against load-time console.error / pageerror /
+  // SSR-500 regressions. They load clean against the B100 stubs today; their rebuilt
+  // *content* is asserted RED by the B103-R1..R6 suite in docs-remaining.spec.ts.
+  "/docs/key-heuristics",
+  "/docs/recipes",
+  "/docs/zod4-schema-coverage",
+  "/docs/bugs",
 ] as const;
 
 /**
