@@ -320,7 +320,7 @@ const person = world.generate(PersonSchema);`}</code></pre>
 
 	<hr />
 
-	<h2>Localization</h2>
+	<h2 id="localization">Localization</h2>
 	<p>
 		A <strong>locale</strong> decides what data the generators draw from — names, words, currencies,
 		date formats, address shapes, phone formats, and so on. The world carries a single locale; all

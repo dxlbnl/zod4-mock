@@ -845,3 +845,40 @@ read-only inspector.
   `ts-morph` as the approved build-time API-docs extractor.
 - **Supersedes**: amends D5 (the same-step doc obligation now points at the exported
   symbol's TSDoc + `pnpm docs:generate`, not a hand-edit of `docs/api-reference.md`).
+
+## D25 — Pagefind is the docs search indexer (build-time devDependency of `site/`)
+
+- **Status**: accepted (B104; promoted to a one-line rule in `architecture.md` → D25).
+- **Context**: B104 adds static search over the prerendered `/docs` subtree. The docs system
+  research (B94 §5/§7) selected **Pagefind** — a fully static, ~50 kB-runtime search index over
+  prerendered HTML, no external service, no API key.
+- **Decision**:
+  - **New devDependency**: `pagefind` (`^1.5.2`) is added to **`site/`'s `devDependencies`**, plus
+    `tsx` (`^4.21.0`) to run the index script. Both are **build-time only** and **D13-exempt** (D13
+    binds shipped library/locale runtime code, not site build tooling — same exemption as `ts-morph`
+    under D24). They do not enter the shipped library or the site's client bundle.
+  - **Prerender**: the `/docs` subtree opts into static prerendering (`export const prerender = true`
+    in `site/src/routes/docs/+layout.ts`) so Pagefind can index docs HTML on disk; adapter-vercel
+    otherwise routes every path to a serverless function Pagefind cannot read.
+  - **Index step**: `site`'s `build` script runs `tsx scripts/pagefind-index.ts` **after** `vite build`.
+    It uses the Pagefind **Node API** (`createIndex` → `addDirectory` → `getFiles`) to index the
+    prerendered HTML and writes the `/pagefind/` bundle into **both** served static roots:
+    `.svelte-kit/output/client/pagefind` (what `vite preview` serves) **and**
+    `.vercel/output/static/pagefind` (what Vercel serves via `{ "handle": "filesystem" }`).
+    This resolves the preview-vs-Vercel split: SvelteKit's `vite preview` serves
+    `.svelte-kit/output/{client,prerendered}`, **not** `.vercel/output/static`, so the bundle must
+    land in both. (The spec's assumption that preview serves `.vercel/output/static` was wrong;
+    verified against `@sveltejs/kit`'s preview impl + `@sveltejs/adapter-vercel`.)
+  - **Synonyms (R6)**: Pagefind v1 has no native synonym table, so the supported mechanism is the
+    Node API's `addCustomRecord` — one record per canonical concept whose content is the synonym
+    phrases (`site/src/lib/docs/concepts.ts` manifest), pointing at the concept's docs page, so a
+    synonym query routes to that page.
+  - **Index policy**: the `/pagefind/` bundle is a build artifact produced on every `pnpm build`
+    (and on Vercel via `buildCommand: pnpm build`); it is **not committed** to git.
+- **Consequences**: `pnpm build` (site) now always emits a served search index; the B75 Playwright
+  harness (`pnpm build && pnpm preview`) exercises real search hits. No `vercel.json` change and no
+  separate CI stage required.
+- **Rule to add**: the manager promotes a one-line rule: "The site docs search index **MUST** be
+  built by `pagefind` (build-time devDependency of `site/`, D13-exempt) post-`vite build`, indexing
+  the prerendered `/docs` HTML and writing the `/pagefind/` bundle into both `vite preview`'s and
+  Vercel's served static roots. (→ D25)"

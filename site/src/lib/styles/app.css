@@ -12,6 +12,16 @@
 @import "./identity.css" layer(site);
 
 @layer site {
+  /* @dxlbnl/ui token gap (B104): `--overlay` has the same dark value in `:root`
+     and `[data-palette="paper"]`, so the Modal panel (`.modal-inner { background:
+     var(--overlay) }`) stays near-black in light mode and the Paper inks resolve
+     dark-on-dark (AA fail). Compose a light Paper surface site-side so the search
+     overlay is legible; the dark Phosphor `--overlay` is untouched. See the B104
+     card `## Notes` — fix upstream in @dxlbnl/ui's tokens. */
+  [data-palette="paper"] {
+    --overlay: rgba(245, 242, 234, 0.97);
+  }
+
   *,
   *::before,
   *::after {
