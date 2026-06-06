@@ -271,6 +271,23 @@ const DISPATCH: Record<ZodDefType, GenFn> = {
   file: generateUnsupported,
 };
 
+/**
+ * Schema-based fallback generator: produces a value purely from Zod type
+ * introspection (enum member, number in range, nested object, …). This is the
+ * pipeline's always-resolving final rung, with no field-name heuristics.
+ *
+ * @param schema - The Zod schema to introspect.
+ * @param ctx - The current field {@link GeneratorContext}.
+ *
+ * @example
+ * ```ts
+ * import { createWorld, generateFromSchema } from "zod4-mock";
+ * import { z } from "zod";
+ *
+ * const world = createWorld({ seed: 1 });
+ * const value = world.generate(z.number().int().min(1).max(10));
+ * ```
+ */
 export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const d = def(schema);
   const handler = (DISPATCH as Record<string, GenFn | undefined>)[d.type];

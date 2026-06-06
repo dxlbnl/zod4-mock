@@ -33,6 +33,9 @@ export const ROUTE_TABLE = [
   // B101-R9 — the rebuilt Concepts page joins the smoke route table so it is
   // guarded against load-time console.error / pageerror / SSR-500 regressions.
   "/docs/concepts",
+  // B102-R4 — the rebuilt structured /docs/api view joins the smoke route table so it
+  // is guarded against load-time console.error / pageerror / SSR-500 regressions.
+  "/docs/api",
 ] as const;
 
 /**

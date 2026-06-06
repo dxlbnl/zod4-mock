@@ -6,6 +6,7 @@
 
 	import { Card } from '@dxlbnl/ui';
 	import Playground from './Playground.svelte';
+	import { renderInline } from './inline.js';
 
 	interface Props {
 		signature: string;
@@ -19,7 +20,8 @@
 <Card>
 	<div class="sig-block">
 		<pre class="sig"><code>{signature}</code></pre>
-		<p class="desc">{description}</p>
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- escaped in renderInline -->
+		<p class="desc">{@html renderInline(description)}</p>
 		{#if playground}
 			<div class="inline-pg">
 				<Playground initialCode={playground.initialCode} />
@@ -34,6 +36,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+		/* Allow the flex column to shrink below the signature's intrinsic
+		   width so the <pre> below can clip+scroll instead of stretching the
+		   page (B102 horizontal-overflow blocker). */
+		min-width: 0;
 	}
 	.sig {
 		margin: 0;
@@ -45,6 +51,9 @@
 		border-radius: 6px;
 		border: 1px solid var(--rule);
 		overflow-x: auto;
+		/* A flex item won't shrink below its content's intrinsic width
+		   without this; required for overflow-x:auto to actually clip. */
+		min-width: 0;
 	}
 	.sig code {
 		background: none;

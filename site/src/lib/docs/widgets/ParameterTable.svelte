@@ -4,6 +4,8 @@
 	// Default / Description. Missing default renders an em-dash so screen
 	// readers don't skip an empty <td>.
 
+	import { renderInline } from './inline.js';
+
 	export type ParameterRow = {
 		name: string;
 		type: string;
@@ -33,7 +35,8 @@
 				<td><code>{row.name}</code></td>
 				<td><code>{row.type}</code></td>
 				<td>{row.default ?? '—'}</td>
-				<td>{row.description}</td>
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- escaped in renderInline -->
+				<td>{@html renderInline(row.description)}</td>
 			</tr>
 		{/each}
 	</tbody>
@@ -42,6 +45,11 @@
 <style>
 	.param-table {
 		width: 100%;
+		/* fixed layout: the table can't grow past its container's width, so the
+		   long Type/Description cells wrap instead of forcing a ~540px
+		   min-content width that overflows the narrow doc-grid track and paints
+		   over the "On this page" rail (B102 overlap blocker). */
+		table-layout: fixed;
 		border-collapse: collapse;
 		font-size: 13px;
 	}
@@ -50,6 +58,11 @@
 		text-align: left;
 		padding: var(--u) 12px;
 		border-bottom: 1px solid var(--rule);
+		/* allow the cell to shrink below its content and wrap long, unbroken
+		   tokens (TS types, identifiers) rather than overflow the track. */
+		min-width: 0;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 	th {
 		color: var(--ink-dim);
@@ -69,5 +82,9 @@
 		background: var(--bg-elev);
 		padding: 2px 5px;
 		border-radius: 4px;
+		/* a long type token in the Name/Type column must break to fit the
+		   fixed cell rather than push the table past its track. */
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 </style>

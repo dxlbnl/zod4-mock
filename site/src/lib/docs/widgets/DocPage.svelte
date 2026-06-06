@@ -107,7 +107,10 @@
 <style>
 	.doc-grid {
 		display: grid;
-		grid-template-columns: 1fr 200px;
+		/* minmax(0, 1fr) — not 1fr — so the content column can shrink below its
+		   min-content width; otherwise a wide signature/table/code block grows
+		   the track and pushes the "On this page" rail off-screen (B102). */
+		grid-template-columns: minmax(0, 1fr) 200px;
 		gap: var(--u3);
 		align-items: start;
 	}

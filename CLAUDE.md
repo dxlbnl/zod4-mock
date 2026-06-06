@@ -70,7 +70,7 @@ Zod v4 stores schema definitions at `schema._zod.def` (not `schema._def` as in v
 
 ### Documentation rule
 
-**Whenever a public API changes — new method, removed method, changed signature, or changed behaviour — update `docs/api-reference.md` in the same step.** Do not defer documentation to a follow-up; it will be forgotten.
+**Whenever a public API changes — new method, removed method, changed signature, or changed behaviour — update the exported symbol's TSDoc in `src/` in the same step, then run `pnpm docs:generate`.** The TSDoc on each `src/` public export (and the files `src/index.ts` re-exports) is the prose source of truth; `docs/api-reference.md` and the site's `site/src/lib/docs/api/manifest.generated.ts` are **generated artifacts** — do NOT hand-edit them. The signature shown is extracted from the real types, never hand-typed. Regenerate with `pnpm docs:generate`; `pnpm docs:check` (part of `pnpm validate`) fails on un-regenerated drift, naming the drifted symbol. Do not defer documentation to a follow-up; it will be forgotten. (See D5/D24 in `wiki/decisions.md`.)
 
 ### TypeScript strictness
 

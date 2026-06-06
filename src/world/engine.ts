@@ -1827,6 +1827,23 @@ export class WorldImpl implements World {
 // Public factory
 // ---------------------------------------------------------------------------
 
+/**
+ * Create a {@link World} — the central, deterministic generation session.
+ * Chain `.withSchema` / `.withGenerators` / `.withKeyMap` to configure it, then
+ * `.generate` / `.populate` to produce data. One world = one seed = one dataset.
+ *
+ * @param options - World-wide settings ({@link WorldOptions}); the `seed`
+ * fixes determinism.
+ *
+ * @example
+ * ```ts
+ * import { createWorld } from "zod4-mock";
+ *
+ * const world = createWorld({ seed: 1 });
+ * world.withSchema(UserSchema);
+ * const user = world.generate(UserSchema);
+ * ```
+ */
 export function createWorld(options?: WorldOptions): World {
   return new WorldImpl(options ?? {});
 }

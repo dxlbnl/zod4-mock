@@ -110,7 +110,10 @@ describe("B100-R12 / D18 successor ADR landed in wiki/decisions.md", () => {
 });
 
 describe("B100-R13 / stub routes exist for every not-yet-rebuilt doc page", () => {
-  it("each of the nine stub routes ships a +page.svelte that references DocPage and points at the listed canonical docs/<file>.md", () => {
+  it("each of the eight stub routes ships a +page.svelte that references DocPage and points at the listed canonical docs/<file>.md", () => {
+    // B102 rebuilt /docs/api into the structured, manifest-driven view, so it is
+    // no longer a stub and no longer carries a canonical link to docs/api-reference.md.
+    // It is intentionally absent from this not-yet-rebuilt list.
     const stubs: ReadonlyArray<{ route: string; canonical: string }> = [
       { route: "concepts", canonical: "docs/concepts.md" },
       { route: "key-heuristics", canonical: "docs/key-heuristics.md" },
@@ -118,7 +121,6 @@ describe("B100-R13 / stub routes exist for every not-yet-rebuilt doc page", () =
       { route: "zod4-schema-coverage", canonical: "docs/zod4-schema-coverage.md" },
       { route: "bugs", canonical: "docs/bugs.md" },
       { route: "getting-started", canonical: "docs/getting-started.md" },
-      { route: "api", canonical: "docs/api-reference.md" },
       { route: "relational", canonical: "docs/api-reference.md#relations" },
       { route: "comparison", canonical: "docs/api-reference.md" },
     ];

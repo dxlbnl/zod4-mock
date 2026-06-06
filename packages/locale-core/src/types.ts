@@ -43,6 +43,10 @@ export interface LastNamePrefix {
   weight: number;
 }
 
+/**
+ * An ISO 4217 currency record drawn by money generators: alphabetic `code`,
+ * display `name`, `symbol`, and the ISO `numeric` code.
+ */
 export interface Currency {
   code: string;
   name: string;
@@ -62,6 +66,11 @@ export interface LocaleSentenceContext {
   readonly locale?: LocaleData;
 }
 
+/**
+ * The full set of locale-specific word lists and formatting callbacks a world
+ * draws from. Bundled locales (`en`, `nl`) implement it; pass a custom one via
+ * `WorldOptions.locale` or compose one with {@link extend}.
+ */
 export interface LocaleData {
   id: string;
 

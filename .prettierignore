@@ -1,0 +1,6 @@
+# Generated API docs artifacts (B102) — emitted byte-for-byte by
+# `pnpm docs:generate` and verified by `pnpm docs:check`. They are NOT
+# hand-formatted: oxfmt must not rewrite them, or it would fight the generator
+# and break `docs:check` parity. Edit the source TSDoc in `src/` + regenerate.
+docs/api-reference.md
+site/src/lib/docs/api/manifest.generated.ts

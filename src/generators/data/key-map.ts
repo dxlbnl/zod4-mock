@@ -82,6 +82,18 @@ const textWithLength: PrngGen<string> = (p, ctx, schema) => {
   return generateTextToLength(p, ctx, min, max);
 };
 
+/**
+ * Built-in exact-field-name heuristics, keyed by Zod leaf type then lower-cased
+ * field name (e.g. `string.email` → a realistic email). The first table the
+ * key-based pipeline step consults before {@link DEFAULT_KEY_PATTERNS}.
+ *
+ * @example
+ * ```ts
+ * import { DEFAULT_KEY_MAP } from "zod4-mock";
+ *
+ * const emailGen = DEFAULT_KEY_MAP.string?.email;
+ * ```
+ */
 export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined> = {
   string: {
     // Person
@@ -382,6 +394,18 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 // DEFAULT_KEY_PATTERNS
 // ---------------------------------------------------------------------------
 
+/**
+ * Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. a
+ * `string` field ending in `name` → a full name, `...At` → an ISO date). The
+ * regex-like fallback consulted after {@link DEFAULT_KEY_MAP}.
+ *
+ * @example
+ * ```ts
+ * import { DEFAULT_KEY_PATTERNS } from "zod4-mock";
+ *
+ * const stringRules = DEFAULT_KEY_PATTERNS.string;
+ * ```
+ */
 export const DEFAULT_KEY_PATTERNS: Record<string, KeyPattern[]> = {
   string: [
     {
@@ -432,6 +456,25 @@ export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
 // generateFromKey
 // ---------------------------------------------------------------------------
 
+/**
+ * Key-based heuristic generator: resolves a value from a field's name by
+ * consulting {@link DEFAULT_KEY_MAP} (exact keys) then
+ * {@link DEFAULT_KEY_PATTERNS} (regex-like rules). Returns `undefined` when no
+ * heuristic matches, letting the pipeline fall through to the schema-based step.
+ *
+ * @param key - The field name being generated (e.g. `"email"`).
+ * @param schema - The field's Zod schema.
+ * @param ctx - The current field {@link GeneratorContext}.
+ *
+ * @example
+ * ```ts
+ * import { createWorld } from "zod4-mock";
+ * import { z } from "zod";
+ *
+ * // The field name `email` triggers the key-based heuristic.
+ * const out = createWorld({ seed: 1 }).generate(z.object({ email: z.string() }));
+ * ```
+ */
 export function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const lk = key.toLowerCase();
   const schemaType = getLeafDef(schema).type;
