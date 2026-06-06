@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Inline, Text } from '@dxlbnl/ui';
+
 	export const LIBRARIES = [
 		{ key: 'zod4mock', label: 'zod4-mock', color: 'var(--lib-zod4mock)' },
 		{ key: 'zodmock', label: 'zod-mock', color: 'var(--lib-zodmock)' },
@@ -6,25 +8,16 @@
 	] as const;
 </script>
 
-<div class="legend">
+<Inline gap="md" class="legend">
 	{#each LIBRARIES as lib}
-		<div class="item">
+		<Inline gap="xs">
 			<span class="dot" style="background:{lib.color}"></span>
-			<span class="t-small">{lib.label}</span>
-		</div>
+			<Text variant="body" style="font-size: 13px;">{lib.label}</Text>
+		</Inline>
 	{/each}
-</div>
+</Inline>
 
 <style>
-	.legend {
-		display: flex;
-		gap: var(--space-4);
-	}
-	.item {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-	}
 	.dot {
 		width: 8px;
 		height: 8px;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { Button, Tabs } from '@dxlbnl/ui';
+	import { Button, Tabs, Stack, Inline, Heading, Text } from '@dxlbnl/ui';
 	import CodePanel from '$lib/widgets/CodePanel.svelte';
 	import JsonTree from '$lib/widgets/JsonTree.svelte';
 	import RelationCallout from '$lib/widgets/RelationCallout.svelte';
@@ -152,55 +152,39 @@
 	/>
 {/snippet}
 
-<div class="page">
-	<header class="page-header">
-		<h1 class="t-title">Relational Data Demo</h1>
-		<p class="t-small" style="color:var(--ink-dim)">
+<Stack gap="xl">
+	<Stack gap="xs">
+		<Heading level={1} variant="title">Relational Data Demo</Heading>
+		<Text variant="body" color="dim">
 			zod4-mock generates referentially consistent data — IDs cross-reference real entities.
-		</p>
-	</header>
+		</Text>
+	</Stack>
 
-	<div class="toolbar">
+	<Inline gap="sm">
 		<Button variant="ghost" onclick={regenerate}>Regenerate</Button>
-	</div>
+	</Inline>
 
 	<RelationCallout proofs={proofs()} />
 
 	<div class="split">
 		<div class="left">
-			<p class="t-caption section-label">Schema</p>
+			<Text variant="mono" color="dim" class="section-label">Schema</Text>
 			<CodePanel tabs={schemaTabs} />
 		</div>
 		<div class="right">
-			<p class="t-caption section-label">Generated output</p>
+			<Text variant="mono" color="dim" class="section-label">Generated output</Text>
 			<div class="json-wrap">
 				{@render entityTabs()}
 			</div>
 		</div>
 	</div>
-</div>
+</Stack>
 
 <style>
-	.page {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-5);
-	}
-	.page-header {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
-	}
-	.toolbar {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		flex-wrap: wrap;
-	}
 	.split {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: var(--space-5);
+		gap: var(--u3);
 		align-items: start;
 	}
 	@media (max-width: 800px) {
@@ -208,8 +192,9 @@
 			grid-template-columns: 1fr;
 		}
 	}
-	.section-label {
-		margin-bottom: var(--space-2);
+	:global(.section-label) {
+		display: block;
+		margin-bottom: var(--u);
 	}
 	.json-wrap {
 		font-family: var(--mono);

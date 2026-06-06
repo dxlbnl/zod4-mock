@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { codeToHtml } from 'shiki';
+	import { Text } from '@dxlbnl/ui';
 
 	interface Tab {
 		label: string;
@@ -33,7 +34,7 @@
 	<div class="tabs">
 		{#each tabs as tab, i}
 			<button
-				class="tab seg-item {activeIndex === i ? 'active' : ''}"
+				class="tab {activeIndex === i ? 'active' : ''}"
 				onclick={() => (activeIndex = i)}
 				type="button"
 			>
@@ -45,7 +46,7 @@
 		{#if rendered[activeIndex]}
 			{@html rendered[activeIndex]}
 		{:else}
-			<pre class="t-mono">{tabs[activeIndex]?.code ?? ''}</pre>
+			<Text variant="mono" as="pre">{tabs[activeIndex]?.code ?? ''}</Text>
 		{/if}
 	</div>
 </div>
@@ -54,30 +55,48 @@
 	.panel {
 		display: flex;
 		flex-direction: column;
-		border: 1px solid var(--border);
+		border: 1px solid var(--rule);
 		border-radius: 8px;
 		overflow: hidden;
-		background: var(--bg-raised);
+		background: var(--bg-rail);
 	}
 	.tabs {
 		display: flex;
-		border-bottom: 1px solid var(--border);
-		background: var(--bg-base);
+		border-bottom: 1px solid var(--rule);
+		background: var(--bg);
 	}
 	.tab {
-		border-radius: 0;
-		border-right: 1px solid var(--border);
 		height: 32px;
+		padding: 0 12px;
+		border: none;
+		border-right: 1px solid var(--rule);
+		border-radius: 0;
+		background: transparent;
+		color: var(--ink-dim);
+		font-family: var(--mono);
 		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			background var(--transition),
+			color var(--transition);
 	}
 	.tab:last-child {
 		border-right: none;
 	}
+	.tab:hover:not(.active) {
+		background: var(--bg-elev);
+		color: var(--ink);
+	}
+	.tab.active {
+		background: color-mix(in srgb, var(--amber) 20%, transparent);
+		color: var(--amber);
+	}
 	.code {
-		padding: var(--space-4);
+		padding: var(--u2);
 		overflow: auto;
 		max-height: 480px;
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 12px;
 		line-height: 1.6;
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHero } from '@dxlbnl/ui';
+	import { PageHero, Text } from '@dxlbnl/ui';
 </script>
 
 <PageHero
@@ -8,6 +8,6 @@
 	lede="Interactive schema explorer with field-level resolution tracing (world.trace()) and a live playground."
 />
 
-<p class="t-small" style="color:var(--ink-dim)">
+<Text variant="body" color="dim">
 	<a href="/">← Back to home</a>
-</p>
+</Text>

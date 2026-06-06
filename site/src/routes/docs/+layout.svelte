@@ -40,7 +40,7 @@
 		{#each SIDEBAR as group}
 			{#if group.links.length > 0}
 				<div class="group">
-					<p class="sidebar-heading t-label">{group.label}</p>
+					<p class="sidebar-heading">{group.label}</p>
 					{#each group.links as link}
 						{#if link.href === activeHref}
 							<a
@@ -67,21 +67,22 @@
 	.docs-layout {
 		display: grid;
 		grid-template-columns: 220px 1fr;
-		gap: var(--space-6);
+		gap: var(--u4);
 		align-items: start;
 	}
 	.group {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		margin-bottom: var(--space-4);
+		margin-bottom: var(--u2);
 	}
 	.sidebar-heading {
 		color: var(--ink-dim);
-		padding: var(--space-1) var(--space-3);
-		margin-bottom: var(--space-1);
+		padding: 4px 12px;
+		margin-bottom: 4px;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		font-size: 11px;
+		font-weight: 500;
 	}
 </style>

@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-04
 predecessor: B95
 phase: 1
+spec: wiki/specs/B96-site-finish-dxlbnl-layout-migration.md
 ---
 
 ## Description
@@ -114,3 +115,35 @@ nothing reads them.
 - Could conceivably be chunked (one card per route) but recommendation is
   one card: every file the migration touches shares the same patterns,
   and a piecemeal migration leaves a half-and-half state for longer.
+
+#### Implementer notes (B96 green)
+
+- **No `@dxlbnl/ui` gaps required vendoring.** Every primitive the migration
+  needed (`Stack` / `Inline` / `Spread` / `Container` / `Card` / `Grid` /
+  `Rule` / `Heading` / `Text`) was present. Two compose-around cases, both
+  handled with the documented `Stack`/`Inline` glue + `:global()` chrome
+  styling (B95 precedent), no new dep:
+  - `SegmentedControl` and `CodePanel` tabs used the old global `.seg`/`.seg-item`
+    classes from `app.css` (deleted by R5). Since `@dxlbnl/ui` has no segmented-
+    control primitive, the seg styling was inlined into each widget's own scoped
+    `<style>` (self-contained, behaviour-identical).
+  - `--accent-soft` had no canonical token; replaced with the inline
+    `color-mix(in srgb, var(--amber) 20%, transparent)` it aliased.
+  - `.t-num` tabular numerals were load-bearing in `MetricBadge`/`WinnerCallout`;
+    kept via `font-variant-numeric: tabular-nums` on the migrated element (per
+    spec open-question #2).
+  - `4px`/`12px` literals kept where no exact `--u*` token matched (per spec
+    open-question #3).
+  - Child-targeting classes passed to `@dxlbnl/ui` components (`Text`/`Stack`/
+    `Inline` `class=`) are styled via `:global(...)` because Svelte scoped CSS
+    cannot reach a child component's root (per `docs/layout.md` notable behaviour).
+- **`pnpm validate` fmt:check caveat (for the manager).** `typecheck`, `test:all`
+  (1160 lib + 117 site unit + 47 site component + playground), `lint:all`, and
+  `site:check` are all green; `site:test:e2e` is 7/7 on the production build.
+  The only `validate` non-zero is `oxfmt --check`, which flags four **upstream
+  pipeline artifacts** that were already dirty before implementation —
+  `site/src/lib/B96.test.ts` (test-writer), `wiki/specs/B96-…md` (spec-writer),
+  `wiki/progress.md`, and `wiki/specs/README.md` (manager). None are implementer
+  product files (all migrated `.svelte`/`.css` pass fmt). Left untouched so the
+  implementer does not reformat the committed test/spec; the manager should run
+  `oxfmt` over these as the trivial-chore fmt pass before committing.

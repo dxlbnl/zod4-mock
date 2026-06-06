@@ -45,7 +45,7 @@
 	</div>
 	<div class="stops">
 		{#each stops as stop}
-			<span class="stop t-caption" style="left:{stop.pct}%">{stop.label}</span>
+			<span class="stop" style="left:{stop.pct}%">{stop.label}</span>
 		{/each}
 	</div>
 </div>
@@ -61,7 +61,7 @@
 	}
 	.slider {
 		width: 100%;
-		accent-color: var(--accent);
+		accent-color: var(--amber);
 		cursor: pointer;
 	}
 	.stops {
@@ -71,7 +71,7 @@
 	.stop {
 		position: absolute;
 		transform: translateX(-50%);
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		font-size: 10px;
 	}
 </style>

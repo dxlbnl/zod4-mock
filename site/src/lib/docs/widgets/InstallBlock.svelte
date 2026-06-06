@@ -134,7 +134,7 @@
 		appearance: none;
 		background: none;
 		border: none;
-		padding: var(--space-2) var(--space-3);
+		padding: var(--u) 12px;
 		font-family: var(--mono);
 		font-size: 12px;
 		color: var(--ink-dim);
@@ -156,7 +156,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--space-3);
+		padding: 12px;
 		background: var(--bg-elev);
 	}
 	.cmd {
@@ -188,8 +188,8 @@
 	}
 	.toast {
 		position: absolute;
-		bottom: var(--space-2);
-		right: var(--space-3);
+		bottom: var(--u);
+		right: 12px;
 		background: var(--amber);
 		color: var(--bg);
 		font-family: var(--mono);

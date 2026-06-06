@@ -73,49 +73,49 @@
 		background: none;
 		border: none;
 		padding: 0;
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		cursor: pointer;
 		user-select: none;
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 12px;
 	}
 	.brace:hover {
-		color: var(--text-primary);
+		color: var(--ink);
 	}
 	.indent {
-		padding-left: var(--space-4);
+		padding-left: var(--u2);
 	}
 	.row {
 		line-height: 1.6;
 	}
 	.key {
-		color: var(--syn-keyword);
+		color: var(--shiki-token-keyword);
 	}
 	.colon {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 	}
 	.value {
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 12px;
 	}
 	.value.string {
-		color: var(--syn-string);
+		color: var(--shiki-token-string);
 	}
 	.value.number {
-		color: var(--syn-number);
+		color: var(--amber);
 	}
 	.value.boolean {
-		color: var(--accent);
+		color: var(--amber);
 	}
 	.value.highlight {
-		background: var(--accent-soft);
+		background: color-mix(in srgb, var(--amber) 20%, transparent);
 		border-radius: 3px;
 		padding: 0 2px;
-		color: var(--accent);
+		color: var(--amber);
 		font-weight: 600;
 	}
 	.ellipsis {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 		font-size: 11px;
 	}
 </style>

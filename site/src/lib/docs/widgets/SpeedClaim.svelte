@@ -25,7 +25,7 @@
 	.speed-claim {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-1);
+		gap: 4px;
 	}
 	.source {
 		font-family: var(--mono);

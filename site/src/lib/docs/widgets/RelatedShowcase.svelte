@@ -48,10 +48,10 @@
 	.related-showcase {
 		border: 1px solid var(--rule);
 		border-radius: 8px;
-		padding: var(--space-4);
+		padding: var(--u2);
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: 12px;
 		background: var(--bg-rail);
 	}
 	.json-slice {

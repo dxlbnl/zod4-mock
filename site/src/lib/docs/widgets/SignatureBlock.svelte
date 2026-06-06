@@ -30,10 +30,10 @@
 
 <style>
 	.sig-block {
-		padding: var(--space-4);
+		padding: var(--u2);
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: 12px;
 	}
 	.sig {
 		margin: 0;
@@ -41,7 +41,7 @@
 		font-size: 13px;
 		color: var(--ink);
 		background: var(--bg-rail);
-		padding: var(--space-3);
+		padding: 12px;
 		border-radius: 6px;
 		border: 1px solid var(--rule);
 		overflow-x: auto;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHero } from '@dxlbnl/ui';
+	import { PageHero, Text } from '@dxlbnl/ui';
 </script>
 
 <PageHero
@@ -8,6 +8,6 @@
 	lede="Side-by-side comparison vs @anatine/zod-mock, @faker-js/faker, and hand-coded fixtures."
 />
 
-<p class="t-small" style="color:var(--ink-dim)">
+<Text variant="body" color="dim">
 	<a href="/">← Back to home</a>
-</p>
+</Text>

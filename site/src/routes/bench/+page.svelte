@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '@dxlbnl/ui';
+	import { Button, Stack, Inline, Card, Heading, Text } from '@dxlbnl/ui';
 	import SegmentedControl from '$lib/widgets/SegmentedControl.svelte';
 	import RangeSlider from '$lib/widgets/RangeSlider.svelte';
 	import BenchChart from '$lib/widgets/BenchChart.svelte';
@@ -87,145 +87,94 @@
 	);
 </script>
 
-<div class="page">
-	<header class="page-header">
-		<h1 class="t-title">Live Benchmarks</h1>
-		<p class="t-small" style="color:var(--ink-dim)">
+<Stack gap="lg">
+	<Stack gap="xs">
+		<Heading level={1} variant="title">Live Benchmarks</Heading>
+		<Text variant="body" color="dim">
 			Runs in the browser via <code>performance.now()</code>.
-		</p>
-	</header>
+		</Text>
+	</Stack>
 
-	<div class="controls">
+	<Inline gap="lg" style="align-items: flex-start;">
 		<SegmentedControl
 			options={schemaOptions}
 			bind:value={schema}
 		/>
-		<div class="slider-wrap">
-			<span class="t-caption">N records: <strong>{n.toLocaleString()}</strong></span>
+		<Stack gap="xs" style="min-width: 240px;">
+			<Text variant="mono" color="dim">N records: <strong>{n.toLocaleString()}</strong></Text>
 			<RangeSlider bind:value={n} min={10} max={10000} />
-		</div>
+		</Stack>
 		<Button variant="primary" disabled={running} onclick={run}>
 			{running ? 'Running…' : 'Run'}
 		</Button>
-		<span class="budget-badge t-caption">budget: 200ms per cell</span>
-	</div>
+		<Text variant="mono" color="dim" class="budget-badge">budget: 200ms per cell</Text>
+	</Inline>
 
-	<div class="results">
-		<div class="chart-section">
-			<div class="legend-row">
+	<Stack gap="xl">
+		<Stack gap="sm">
+			<Inline gap="lg">
 				<LibraryLegend />
 				{#if winnerRatio}<WinnerCallout ratio={winnerRatio} />{/if}
-			</div>
+			</Inline>
 			<BenchChart results={chartResults} />
-		</div>
+		</Stack>
 
-		<div class="badges">
+		<Inline gap="lg">
 			{#each [
 				{ key: 'zod4mock' as const, label: 'zod4-mock', color: 'var(--lib-zod4mock)' },
 				{ key: 'zodmock' as const, label: 'zod-mock', color: 'var(--lib-zodmock)' },
 				{ key: 'faker' as const, label: 'faker', color: 'var(--lib-faker)' }
 			] as lib}
-				<div class="badge-group">
-					<span class="lib-name t-label" style="color:{lib.color}">{lib.label}</span>
-					<MetricBadge
-						value={results[lib.key]?.opsPerSec ?? null}
-						unit="ops/sec"
-						label="warm"
-						color={lib.color}
-					/>
-					<MetricBadge
-						value={results[lib.key]?.coldStart ?? null}
-						unit="ms"
-						label="cold start"
-						color={lib.color}
-					/>
-				</div>
+				<Card>
+					<Stack gap="sm" class="badge-group">
+						<Text variant="eyebrow" class="lib-name" style="color:{lib.color}">{lib.label}</Text>
+						<MetricBadge
+							value={results[lib.key]?.opsPerSec ?? null}
+							unit="ops/sec"
+							label="warm"
+							color={lib.color}
+						/>
+						<MetricBadge
+							value={results[lib.key]?.coldStart ?? null}
+							unit="ms"
+							label="cold start"
+							color={lib.color}
+						/>
+					</Stack>
+				</Card>
 			{/each}
-		</div>
-	</div>
+		</Inline>
+	</Stack>
 
-	<div class="note">
-		<p class="t-caption">
+	<Card>
+		<Text variant="mono" color="dim" class="note">
 			Schema scenarios: <strong>Simple</strong> — 4 primitive fields;
 			<strong>Nested order</strong> — 3-level object (order → customer → address);
 			<strong>Array</strong> — 50-item variant array.
 			zod-mock uses equivalent Zod v3 schemas.
-		</p>
-	</div>
-</div>
+		</Text>
+	</Card>
+</Stack>
 
 <style>
-	.page {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-6);
-	}
-	.page-header {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
-	}
-	.controls {
-		display: flex;
-		align-items: flex-start;
-		gap: var(--space-4);
-		flex-wrap: wrap;
-	}
-	.slider-wrap {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
-		min-width: 240px;
-	}
-	.results {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-5);
-	}
-	.chart-section {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-	}
-	.legend-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-4);
-		flex-wrap: wrap;
-	}
-	.badges {
-		display: flex;
-		gap: var(--space-6);
-		flex-wrap: wrap;
-	}
-	.badge-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		padding: var(--space-4);
-		border: 1px solid var(--rule);
-		border-radius: 8px;
-		background: var(--bg-rail);
-		min-width: 140px;
-	}
-	.lib-name {
+	:global(.lib-name) {
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 	}
-	.budget-badge {
+	:global(.budget-badge) {
 		display: inline-flex;
 		align-items: center;
-		padding: var(--space-1) var(--space-2);
+		padding: 4px var(--u);
 		border: 1px solid var(--rule);
 		border-radius: 4px;
 		background: var(--bg-rail);
-		color: var(--ink-dim);
 		white-space: nowrap;
 	}
-	.note {
-		padding: var(--space-3);
-		border: 1px solid var(--rule);
-		border-radius: 6px;
-		background: var(--bg-rail);
+	:global(.badge-group) {
+		padding: var(--u2);
+		min-width: 140px;
+	}
+	:global(.note) {
+		padding: 12px;
 	}
 </style>

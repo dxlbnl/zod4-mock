@@ -48,7 +48,7 @@
 	th,
 	td {
 		text-align: left;
-		padding: var(--space-2) var(--space-3);
+		padding: var(--u) 12px;
 		border-bottom: 1px solid var(--rule);
 	}
 	th {

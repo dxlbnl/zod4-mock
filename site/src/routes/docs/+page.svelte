@@ -32,14 +32,14 @@
 	.card-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: var(--space-4);
-		margin-top: var(--space-4);
+		gap: var(--u2);
+		margin-top: var(--u2);
 	}
 	.group-card {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
-		padding: var(--space-4);
+		gap: var(--u);
+		padding: var(--u2);
 		text-decoration: none;
 		color: inherit;
 	}

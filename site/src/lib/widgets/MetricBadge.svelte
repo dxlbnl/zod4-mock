@@ -6,7 +6,7 @@
 		color?: string;
 	}
 
-	let { value, unit, label, color = 'var(--text-primary)' }: Props = $props();
+	let { value, unit, label, color = 'var(--ink)' }: Props = $props();
 
 	const formatted = $derived(
 		value == null ? '—' : value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toFixed(0)
@@ -14,8 +14,8 @@
 </script>
 
 <div class="badge">
-	<span class="value t-num" style="color:{color}">{formatted}<span class="unit t-caption"> {unit}</span></span>
-	<span class="label t-caption">{label}</span>
+	<span class="value" style="color:{color}">{formatted}<span class="unit"> {unit}</span></span>
+	<span class="label">{label}</span>
 </div>
 
 <style>
@@ -27,15 +27,17 @@
 	.value {
 		font-size: 22px;
 		font-weight: 600;
-		font-family: var(--font-mono);
+		font-family: var(--mono);
+		font-variant-numeric: tabular-nums;
 		line-height: 1;
 	}
 	.unit {
 		font-size: 13px;
 		font-weight: 400;
-		color: var(--text-muted);
+		color: var(--ink-dim);
 	}
 	.label {
-		color: var(--text-muted);
+		font-size: 11px;
+		color: var(--ink-dim);
 	}
 </style>

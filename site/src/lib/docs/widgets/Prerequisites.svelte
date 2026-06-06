@@ -31,7 +31,7 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-1);
+		gap: 4px;
 	}
 	.prereq-list a {
 		color: var(--amber);

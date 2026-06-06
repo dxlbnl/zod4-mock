@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Stack, Inline, Text } from '@dxlbnl/ui';
+
 	interface Proof {
 		label: string;
 		value: string;
@@ -13,59 +15,57 @@
 </script>
 
 <div class="callout">
-	<p class="heading t-label">Cross-entity ID consistency</p>
-	<ul class="list">
+	<Text variant="eyebrow" class="heading">Cross-entity ID consistency</Text>
+	<Stack gap="xs" as="ul" class="list">
 		{#each proofs as p}
-			<li class="item">
-				<span class="field t-mono">{p.label}</span>
-				<span class="eq t-caption">=</span>
-				<span class="id t-mono highlight">{p.value.slice(0, 8)}…</span>
+			<Inline gap="xs" as="li" class="item">
+				<span class="field">{p.label}</span>
+				<span class="eq">=</span>
+				<span class="id highlight">{p.value.slice(0, 8)}…</span>
 				<span class="check">✓</span>
-				<span class="resolves t-caption">{p.resolves}</span>
-			</li>
+				<span class="resolves">{p.resolves}</span>
+			</Inline>
 		{/each}
-	</ul>
+	</Stack>
 </div>
 
 <style>
 	.callout {
-		padding: var(--space-3) var(--space-4);
-		border: 1px solid var(--accent);
+		padding: 12px var(--u2);
+		border: 1px solid var(--amber);
 		border-radius: 8px;
-		background: var(--accent-soft);
+		background: color-mix(in srgb, var(--amber) 20%, transparent);
 	}
-	.heading {
-		color: var(--accent);
-		margin-bottom: var(--space-2);
+	:global(.heading) {
+		display: block;
+		color: var(--amber);
+		margin-bottom: var(--u);
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 	}
-	.list {
+	:global(.list) {
 		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
 	}
-	.item {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
+	:global(.item) {
 		font-size: 12px;
 	}
 	.field {
-		color: var(--syn-keyword);
+		font-family: var(--mono);
+		color: var(--shiki-token-keyword);
 	}
 	.eq {
-		color: var(--text-muted);
+		color: var(--ink-dim);
 	}
 	.id {
-		color: var(--accent);
+		font-family: var(--mono);
+		color: var(--amber);
 		font-size: 11px;
 	}
 	.check {
-		color: var(--success);
+		color: var(--ok);
 	}
 	.resolves {
-		color: var(--text-muted);
+		color: var(--ink-dim);
+		font-size: 11px;
 	}
 </style>

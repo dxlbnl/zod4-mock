@@ -103,7 +103,7 @@
 	<div class="toolbar">
 		<Button variant="ghost" onclick={randomize}>Randomize</Button>
 		{#if error}
-			<span class="error t-caption">{error}</span>
+			<span class="error">{error}</span>
 		{/if}
 	</div>
 	{#if output !== null}
@@ -118,7 +118,7 @@
 		border: 1px solid #373e47;
 		border-radius: 8px;
 		overflow: hidden;
-		margin: var(--space-3) 0;
+		margin: 12px 0;
 	}
 
 	.editor-area {
@@ -128,15 +128,15 @@
 	.toolbar {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-2) var(--space-3);
+		gap: 12px;
+		padding: var(--u) 12px;
 		background: #1c2128;
 		border-bottom: 1px solid #373e47;
 	}
 
 	.error {
 		color: var(--danger);
-		font-family: var(--font-mono);
+		font-family: var(--mono);
 		font-size: 11px;
 		flex: 1;
 		overflow: hidden;
@@ -145,8 +145,8 @@
 	}
 
 	.output {
-		padding: var(--space-4);
-		font-family: var(--font-mono);
+		padding: var(--u2);
+		font-family: var(--mono);
 		font-size: 12px;
 		overflow: auto;
 		background: #22272e;

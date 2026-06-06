@@ -108,7 +108,7 @@
 	.doc-grid {
 		display: grid;
 		grid-template-columns: 1fr 200px;
-		gap: var(--space-5);
+		gap: var(--u3);
 		align-items: start;
 	}
 	.doc-prose-body {
@@ -116,7 +116,7 @@
 	}
 	.on-this-page {
 		position: sticky;
-		top: var(--space-5);
+		top: var(--u3);
 		font-size: 12px;
 	}
 	.on-this-page ul,
@@ -126,7 +126,7 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-1);
+		gap: 4px;
 	}
 	.on-this-page a,
 	.related a {
@@ -142,11 +142,11 @@
 		color: var(--ink-faint, var(--ink-dim));
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
-		margin-bottom: var(--space-2);
+		margin-bottom: var(--u);
 	}
 	.prereqs {
 		display: flex;
-		gap: var(--space-3);
+		gap: 12px;
 		font-size: 12px;
 	}
 	.edit-link a {

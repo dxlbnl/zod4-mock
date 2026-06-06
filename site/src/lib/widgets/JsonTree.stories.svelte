@@ -56,7 +56,7 @@
 />
 
 <Story name="Nested array">
-	<div style="padding:24px;font-family:var(--font-mono);font-size:12px">
+	<div style="padding:24px;font-family:var(--mono);font-size:12px">
 		<JsonTree value={{ items: [{ id: 'a', qty: 2 }, { id: 'b', qty: 1 }], total: 49.99 }} />
 	</div>
 </Story>
