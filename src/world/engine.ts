@@ -71,6 +71,7 @@ import type {
   SchemaOpts,
   ExplainResult,
 } from "../types.js";
+import type { WorldTrace, TraceNode } from "../trace.js";
 import { SchemaRegistry } from "../registry.js";
 import { createPrng, fieldSeed, fnv1a } from "../prng.js";
 import { generateFromSchema } from "../generators/schema/index.js";
@@ -751,6 +752,48 @@ export class WorldImpl implements World {
       customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
       relations: reg?.relations ?? {},
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // trace — JSON-serializable provenance projection (B85 stub)
+  //
+  // Emits one TraceNode per stored registry record, in registration order.
+  // Node id / type derive from the schema's registration order (`regId`) and
+  // polarity (primary → `node<regId>`, derived → `derived<regId>`). Field-
+  // level provenance (`fields`) and relation edges (`edges`) are empty at this
+  // card — capture lands in B86 / B87 under the opt-in `trace` gate.
+  // -------------------------------------------------------------------------
+
+  trace(): WorldTrace {
+    const nodes: TraceNode[] = [];
+    const seen = new Set<ZodTypeAny>();
+    for (const reg of this.schemaRegs) {
+      if (seen.has(reg.schema)) continue;
+      seen.add(reg.schema);
+
+      const derived = reg.from !== null;
+      const type = `${derived ? "derived" : "node"}${reg.regId}`;
+      const sourceRegId = derived ? (this.findPrimaryRegs(reg.from!)[0]?.regId ?? -1) : -1;
+
+      const records = this.registry.all(reg.schema);
+      records.forEach((value, index) => {
+        const node: TraceNode = {
+          id: `${type}#${index}`,
+          type,
+          index,
+          value,
+          store: true,
+          fields: [],
+          // Derived records carry their source node's id; primary records OMIT
+          // the key entirely (R5: `"derivedFrom" in node === false`). The stub
+          // pairs derived record `index` with source record `index` (mirroring
+          // `populateFrom`'s in-order iteration).
+          ...(derived ? { derivedFrom: `node${sourceRegId}#${index}` } : {}),
+        };
+        nodes.push(node);
+      });
+    }
+    return { seed: this.rootSeed, nodes, edges: [] };
   }
 
   // -------------------------------------------------------------------------

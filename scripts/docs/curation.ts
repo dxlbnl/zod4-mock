@@ -67,6 +67,13 @@ export const CURATION: ReadonlyArray<CurationEntry> = [
   { name: "FieldExplanation", group: "Explain" },
   { name: "RelationExplanation", group: "Explain" },
 
+  // World Explorer (trace)
+  { name: "WorldTrace", group: "World Explorer" },
+  { name: "TraceNode", group: "World Explorer" },
+  { name: "TraceField", group: "World Explorer" },
+  { name: "TraceEdge", group: "World Explorer" },
+  { name: "TraceResolution", group: "World Explorer" },
+
   // Localization types
   { name: "LocaleData", group: "Localization types" },
   { name: "LastNamePrefix", group: "Localization types" },

@@ -43,25 +43,29 @@ All per-call figures are for **100 records/call**; deltas are median-of-5 vs bas
 Absolute numbers are machine-relative; the **deltas and allocation figures are the signal**.
 
 **1. Baseline throughput (no trace)**
+
 - `nested` ad-hoc: ~7.6 ms / 100 records (~131 call/s) → ~76 µs/record.
 - `matcher` `populate`: ~2.8 ms / 100 records (~360 call/s) → ~28 µs/record.
 
 **2. Approach A — OFF-path (gated sink threaded, `trace:false`)**
+
 - `nested`: delta **−0.9% to +2.1%** across runs (both directions).
 - `matcher`: delta **−2% to +10%** across runs (both directions).
 - **No measurable regression.** The off-path is a single boolean branch per field that V8
-  predicts perfectly; the delta is run-to-run noise and frequently *negative*. The B97-R2
+  predicts perfectly; the delta is run-to-run noise and frequently _negative_. The B97-R2
   allocation-budget test (1000 `generate` calls < 5 MB) **passes** with the patch — the
   off-path allocates nothing.
 
 **3. Approach A — ON-path (`trace:true`)**
+
 - Throughput delta also within noise (**−1.7% to +3.4%**) — the field pipeline dominates;
-  one object push per field is not a detectable *time* cost.
+  one object push per field is not a detectable _time_ cost.
 - **Allocation is the real ON-path cost:** GC-settled retained size of a `TraceField` ≈
   **193 bytes**. For `nested` (700 fields/100 records) ≈ **~132 KiB** retained per 100
-  records — linear in fields×records, and *retained* (the point is to keep it).
+  records — linear in fields×records, and _retained_ (the point is to keep it).
 
 **4. Approach B — re-derive on demand**
+
 - `trace()` latency to replay 100 `nested` records: **~7.9 ms** — **≈ a full second
   generation pass** (≈ the ~7.6 ms baseline). Paid at `trace()`-call time.
 - Peak allocation for the replay: **~11 MB** for 100 records — one extra generation's worth
@@ -75,12 +79,12 @@ Absolute numbers are machine-relative; the **deltas and allocation figures are t
 A `ctx.related` pick is `items = registry.all(relSchema)` snapshot **at pick time** (filtered
 by `where`), then `recordPrng.fork("rel:<name>").int(0, items.length−1)`. The fork key is
 reconstructible from `recordId`; **`items.length` is not** — it depends on how many related
-records existed *at the moment of the pick*.
+records existed _at the moment of the pick_.
 
 Probe: a user generated when the Company pool held **3** picked `eababfd8`. Replayed against
 the **final 8-company** registry it picked `acb83262` — **DIFFERS**. Replayed against a
 reconstructed **3-company pool-at-pick-time** it picked `eababfd8` again — **MATCH**.
-(Company identities are stable across replays — same seed — so pool *content* is
+(Company identities are stable across replays — same seed — so pool _content_ is
 reconstructible; the missing ingredient is its **size/membership at pick time**.)
 
 ## Edge analysis
@@ -109,24 +113,25 @@ mechanism**, because the measurements remove A's only feared downside:
    `trace:false`. The "instrumented hot loop" concern does not materialize: one predicted
    branch per field.
 2. **A's on-path time cost is also in the noise** — the only real on-path cost is ~193 B/field
-   of *retained* trace, inherent to any design that keeps provenance (B retains the same data
+   of _retained_ trace, inherent to any design that keeps provenance (B retains the same data
    once `trace()` is called).
 3. **B cannot do edges faithfully** without replaying the whole world in insertion order and
-   *still* needs per-record metadata captured at generation time — so B does not avoid touching
+   _still_ needs per-record metadata captured at generation time — so B does not avoid touching
    the generate path; it defers and complicates it. B's per-call cost (≈ a full extra
    generation + ~11 MB transient/100 records) is strictly worse than A's incremental capture
    for any workload that calls `trace()`.
 
 **Concretely:**
+
 - **Capture edges during generation (mandatory).** Emit a `TraceEdge` at each
   `resolveRelationPool` pick — `poolSize`/`pickedIndex` already computed there. This part
-  *must* be capture-during; re-derivation is proven lossy.
+  _must_ be capture-during; re-derivation is proven lossy.
 - **Capture fields during generation, gated (recommended).** Off-path is free, on-path is
   allocation-bounded; capture `TraceField`s in the `generateObjectFields` loop under the
   `traceOn` gate, reusing the exact `resolution.kind` the pipeline already returns (map
   internal `FieldResolution["kind"]` → public `TraceResolution` at the capture boundary, per
   B85-R11).
-- The **only** scenario favoring re-derive (B) is introspecting records generated *before*
+- The **only** scenario favoring re-derive (B) is introspecting records generated _before_
   `trace` was requested — which requires retaining the per-record replay-metadata anyway, i.e.
   most of A's bookkeeping without A's correctness simplicity. Not worth it.
 
@@ -153,7 +158,7 @@ mechanism**, because the measurements remove A's only feared downside:
 - **B87 (edge capture):** emit `TraceEdge` at the `resolveRelationPool` pick site (single +
   many), reading the already-computed `poolSize`/`pickedIndex`. **Do not attempt edge
   re-derivation** — proven lossy against any non-trivial generation timeline.
-- Neither card should build a re-derive/replay engine. `explain()` is the right *pattern* for
+- Neither card should build a re-derive/replay engine. `explain()` is the right _pattern_ for
   read-only per-field decisions, but the value/edge capture `trace()` needs is cheaper and
   strictly more correct done in-line under the gate.
 

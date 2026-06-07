@@ -250,7 +250,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
     "kind": "type",
     "group": "Core types",
     "signature": "interface World",
-    "description": "One deterministic generation session, built fluently from `createWorld`.\nRegister schemas (`withSchema`), wire generators (`withGenerators`,\n`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),\nand introspect resolution (`explain`); all records live in its `registry`.",
+    "description": "One deterministic generation session, built fluently from `createWorld`.\nRegister schemas (`withSchema`), wire generators (`withGenerators`,\n`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),\nand introspect resolution (`explain`) or provenance (`trace`); all records\nlive in its `registry`.",
     "examples": [],
     "since": "",
     "seeAlso": []
@@ -411,6 +411,56 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
     "group": "Explain",
     "signature": "interface RelationExplanation",
     "description": "Per-relation record on `ExplainResult.relations`. `schema` is the leaf\n`def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`\nreports whether the relation entry was the B11 object form\n`{ schema, where }` with a predicate.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "WorldTrace",
+    "kind": "type",
+    "group": "World Explorer",
+    "signature": "interface WorldTrace",
+    "description": "The full provenance structure returned by {@link World.trace}: the world's\nroot `seed`, one {@link TraceNode} per stored record, and one\n{@link TraceEdge} per relation pick. Fully JSON-serializable.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceNode",
+    "kind": "type",
+    "group": "World Explorer",
+    "signature": "interface TraceNode",
+    "description": "One generated record in a {@link WorldTrace}. `id` is the stable\nregistration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``\nfor a primary record or `` `derived${regId}` `` for a derived one; `index` is\nthe record's position within its registration; `value` is the stored record;\n`store` reflects whether the record was written to the registry. `derivedFrom`\nis present only for derived records and holds the source node's id. `fields`\nis the per-field provenance (empty at the B85 stub; B86 populates it).",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceField",
+    "kind": "type",
+    "group": "World Explorer",
+    "signature": "interface TraceField",
+    "description": "Per-field provenance entry on a {@link TraceNode}. Extends `FieldExplanation`\nso `world.trace()` and `world.explain()` speak one provenance language:\n`generator` (a stable generator-id string, e.g. `'person.firstName'`,\n`'matcher:<key>'`, `'schema-based'`) and `reason` (a short human-readable\nexplanation) carry the identical meaning in both. Adds the trace-only fields:\nthe field `path`, the produced `value`, the resolving `resolution` rung, the\nPRNG `forkKey`, whether an override won (`overridden`), and the relation/field\n`dependsOn` keys consulted.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceEdge",
+    "kind": "type",
+    "group": "World Explorer",
+    "signature": "interface TraceEdge",
+    "description": "One relation pick in a {@link WorldTrace}: the `from` node's `fromField`\nreferenced the `to` node via the named `relation`, a one-to-one (`\"one\"`) or\none-to-many (`\"many\"`) pick drawn from a pool of `poolSize` candidates at\n`pickedIndex`. (Empty at the B85 stub; B87 populates `edges`.)",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceResolution",
+    "kind": "type",
+    "group": "World Explorer",
+    "signature": "export type TraceResolution = | \"override\" | \"matcher\" | \"keymap\" | \"absent\" | \"default\" | \"custom-gen\" | \"key-based\" | \"schema-based\";",
+    "description": "Which pipeline rung resolved a {@link TraceField}'s value. A standalone,\npublic-stable union — intentionally decoupled from the internal\n`FieldResolution[\"kind\"]` so a future pipeline rename forces a deliberate\nupdate to the capture-boundary mapping (B86) rather than silently breaking\nthis public contract.",
     "examples": [],
     "since": "",
     "seeAlso": []

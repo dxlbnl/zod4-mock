@@ -28,8 +28,8 @@ review checkpoint.
   (`src/explain.ts`), so the pattern exists. Zero hot-path cost; no opt-in flag. The hard
   part is **edges** (`ctx.related` picks depend on registry/pool state at generation time —
   replay must reconstruct it faithfully).
-- **Hybrid:** re-derive *fields* (the expensive ~per-field-allocation part → on-demand),
-  cheaply capture *edges* (rare — one per relation pick) plus lightweight **per-record**
+- **Hybrid:** re-derive _fields_ (the expensive ~per-field-allocation part → on-demand),
+  cheaply capture _edges_ (rare — one per relation pick) plus lightweight **per-record**
   metadata (schema + options each record was generated with) to drive the replay.
 
 ### What to measure / answer

@@ -882,3 +882,45 @@ read-only inspector.
   built by `pagefind` (build-time devDependency of `site/`, D13-exempt) post-`vite build`, indexing
   the prerendered `/docs` HTML and writing the `/pagefind/` bundle into both `vite preview`'s and
   Vercel's served static roots. (→ D25)"
+
+## D26 — `WorldTrace` is a binding public contract; trace provenance is captured during generation under the opt-in gate
+
+- **Date**: 2026-06-07.
+- **By**: implementer (B85); flagged for the manager to promote the one-line Rule at Done.
+- **Context**: B85 ships the public surface of the World Explorer's provenance data API —
+  `world.trace(): WorldTrace` plus the five types `WorldTrace` / `TraceNode` / `TraceField` /
+  `TraceEdge` / `TraceResolution` (`src/trace.ts`). It is an intentional stub: nodes are the
+  registry projection (record value + stable registration-order id), with `fields: []` (field
+  capture is B86) and `edges: []` (edge capture is B87). The B113 spike
+  (`wiki/research/engine/trace-capture-architecture.md`) validated this contract unchanged and
+  decided the **capture mechanism** for B86/B87: capture-during-generation (re-derive rejected).
+- **Decision**:
+  - `WorldTrace` / `TraceNode` / `TraceField` / `TraceEdge` / `TraceResolution` and the
+    `world.trace()` method are a **binding public contract**. B86 (field capture), B87 (edge
+    capture), and B88 (friendly type names) fill in the substance against these exact shapes;
+    the site `/explorer` route (B90) and the future `writeExplorer` artifact consume it. The
+    structure is JSON-serializable end-to-end (no class instances, functions, or symbols). A
+    breaking change to the shape is a SemVer bump (zod4-mock is pre-1.0, so a **minor** bump
+    under the 0.x convention until 1.0).
+  - `TraceResolution` is its **own** public-stable union declared in `src/trace.ts`, NOT
+    `FieldResolution["kind"]` from `src/pipeline.ts`. Its members start identical to the internal
+    enum, but B86 MUST map `FieldResolution["kind"]` to `TraceResolution` as a **total** mapping at
+    the capture boundary, so a future internal pipeline rename forces a deliberate update to that
+    mapping rather than silently breaking the public contract.
+  - `TraceField extends FieldExplanation` so `world.trace()` and `world.explain()` speak one
+    provenance language (`generator` / `reason` carry identical meaning in both).
+  - **Capture mechanism (B113 spike, `wiki/research/engine/trace-capture-architecture.md`)**:
+    trace provenance MUST be captured **during generation** under the opt-in `trace` gate (not
+    re-derived after the fact). In particular, `ctx.related` edges MUST be captured at the
+    `resolveRelationPool` pick site and MUST NOT be re-derived — pool size is path-dependent, so a
+    post-hoc re-derivation cannot reconstruct the pick faithfully. The `createWorld({ trace: true })`
+    flag gates retained provenance memory; the spike measured the off-path regression as zero.
+- **Consequences**: B86/B87/B88 build against a frozen shape; the reviewer confirms this ADR
+  exists. The `trace?: boolean` flag and the five types are new public API → minor bump.
+- **Rule added/changed**: the manager promotes a one-line rule at Done, e.g. "`WorldTrace` /
+  `TraceNode` / `TraceField` / `TraceEdge` / `TraceResolution` + `world.trace()` are a binding,
+  JSON-serializable public contract; `TraceResolution` is its own public union (mapped from
+  `FieldResolution[\"kind\"]` at the capture boundary), and trace provenance is captured during
+  generation under the opt-in `trace` gate (`ctx.related` edges captured at the
+  `resolveRelationPool` pick site, never re-derived). (→ D26)"
+- **Supersedes**: none.

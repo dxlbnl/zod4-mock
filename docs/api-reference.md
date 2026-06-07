@@ -34,6 +34,11 @@
 | `ExplainResult` | type | Structured introspection result for `world.explain(schema)`. |
 | `FieldExplanation` | type | Per-field resolution record returned by `world.explain(schema)`. |
 | `RelationExplanation` | type | Per-relation record on `ExplainResult.relations`. |
+| `WorldTrace` | type | The full provenance structure returned by {@link World.trace}: the world's root `seed`, one {@link TraceNode} per stored record, and one {@link TraceEdge} per relation pick. |
+| `TraceNode` | type | One generated record in a {@link WorldTrace}. |
+| `TraceField` | type | Per-field provenance entry on a {@link TraceNode}. |
+| `TraceEdge` | type | One relation pick in a {@link WorldTrace}: the `from` node's `fromField` referenced the `to` node via the named `relation`, a one-to-one (`"one"`) or one-to-many (`"many"`) pick drawn from a pool of `poolSize` candidates at `pickedIndex`. |
+| `TraceResolution` | type | Which pipeline rung resolved a {@link TraceField}'s value. |
 | `LocaleData` | type | The full set of locale-specific word lists and formatting callbacks a world draws from. |
 | `LastNamePrefix` | type | A surname prefix (tussenvoegsel) with its relative sampling weight. |
 | `Currency` | type | An ISO 4217 currency record drawn by money generators: alphabetic `code`, display `name`, `symbol`, and the ISO `numeric` code. |
@@ -312,7 +317,8 @@ interface World
 One deterministic generation session, built fluently from `createWorld`.
 Register schemas (`withSchema`), wire generators (`withGenerators`,
 `withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),
-and introspect resolution (`explain`); all records live in its `registry`.
+and introspect resolution (`explain`) or provenance (`trace`); all records
+live in its `registry`.
 
 ## WorldOptions
 
@@ -473,6 +479,68 @@ Per-relation record on `ExplainResult.relations`. `schema` is the leaf
 `def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`
 reports whether the relation entry was the B11 object form
 `{ schema, where }` with a predicate.
+
+## WorldTrace
+
+```ts
+interface WorldTrace
+```
+
+The full provenance structure returned by {@link World.trace}: the world's
+root `seed`, one {@link TraceNode} per stored record, and one
+{@link TraceEdge} per relation pick. Fully JSON-serializable.
+
+## TraceNode
+
+```ts
+interface TraceNode
+```
+
+One generated record in a {@link WorldTrace}. `id` is the stable
+registration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``
+for a primary record or `` `derived${regId}` `` for a derived one; `index` is
+the record's position within its registration; `value` is the stored record;
+`store` reflects whether the record was written to the registry. `derivedFrom`
+is present only for derived records and holds the source node's id. `fields`
+is the per-field provenance (empty at the B85 stub; B86 populates it).
+
+## TraceField
+
+```ts
+interface TraceField
+```
+
+Per-field provenance entry on a {@link TraceNode}. Extends `FieldExplanation`
+so `world.trace()` and `world.explain()` speak one provenance language:
+`generator` (a stable generator-id string, e.g. `'person.firstName'`,
+`'matcher:<key>'`, `'schema-based'`) and `reason` (a short human-readable
+explanation) carry the identical meaning in both. Adds the trace-only fields:
+the field `path`, the produced `value`, the resolving `resolution` rung, the
+PRNG `forkKey`, whether an override won (`overridden`), and the relation/field
+`dependsOn` keys consulted.
+
+## TraceEdge
+
+```ts
+interface TraceEdge
+```
+
+One relation pick in a {@link WorldTrace}: the `from` node's `fromField`
+referenced the `to` node via the named `relation`, a one-to-one (`"one"`) or
+one-to-many (`"many"`) pick drawn from a pool of `poolSize` candidates at
+`pickedIndex`. (Empty at the B85 stub; B87 populates `edges`.)
+
+## TraceResolution
+
+```ts
+export type TraceResolution = | "override" | "matcher" | "keymap" | "absent" | "default" | "custom-gen" | "key-based" | "schema-based";
+```
+
+Which pipeline rung resolved a {@link TraceField}'s value. A standalone,
+public-stable union — intentionally decoupled from the internal
+`FieldResolution["kind"]` so a future pipeline rename forces a deliberate
+update to the capture-boundary mapping (B86) rather than silently breaking
+this public contract.
 
 ## LocaleData
 

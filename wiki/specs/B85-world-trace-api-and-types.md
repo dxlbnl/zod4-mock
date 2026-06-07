@@ -28,17 +28,17 @@ Grounding in the current `src/`:
   This is an **internal** pipeline type — its member names are the pipeline rung names, and
   re-publishing them verbatim as public API would couple the public contract to an internal
   enum (a future pipeline rename would silently break consumers). B85 therefore does **not**
-  type `TraceField.resolution` as `FieldResolution["kind"]`; see the *Resolution-type
-  decoupling* note below.
+  type `TraceField.resolution` as `FieldResolution["kind"]`; see the _Resolution-type
+  decoupling_ note below.
 - `world.explain(schema)` (B16) already speaks a per-field provenance vocabulary via
   `FieldExplanation { generator: string; reason: string }` in `src/types.ts`: `generator` is a
   stable generator-id string (e.g. `'person.firstName'`, `'matcher:<key>'`, `'schema-based'`),
   `reason` is a short human-readable explanation of which pipeline step picked the field.
   `world.trace()` and `world.explain()` MUST speak **one** provenance language, so
-  `TraceField` reuses that `generator`/`reason` contract; see the *Explain alignment* note below.
+  `TraceField` reuses that `generator`/`reason` contract; see the _Explain alignment_ note below.
 
 **Resolution-type decoupling decision (B85 scope, settled at review).** `TraceField.resolution`
-is typed as a **new public-stable union `TraceResolution`** declared in `src/trace.ts`, *not* the
+is typed as a **new public-stable union `TraceResolution`** declared in `src/trace.ts`, _not_ the
 internal `FieldResolution["kind"]`. `TraceResolution`'s members start **identical** to the
 current `FieldResolution["kind"]` set
 (`"override" | "matcher" | "keymap" | "absent" | "default" | "custom-gen" | "key-based" | "schema-based"`)
@@ -59,13 +59,13 @@ and `world.trace()` thus stay one provenance language by construction. Because B
 field-capture sink.
 
 **Type-name source decision (B85 scope).** CLAUDE.md is explicit that there is **no
-`defineSubjectType` API** — a `ZodTypeAny` reference *is* the identity. The B84 §10 Q3
+`defineSubjectType` API** — a `ZodTypeAny` reference _is_ the identity. The B84 §10 Q3
 answer ("friendly `person#1` from `defineSubjectType(name, …)`") assumed an API that does
 not exist; resolving the friendly type-name source is **B88's** job, not this stub's. B85
 therefore ships a concrete registration-order id scheme now (`node<regId>#<index>` for
 primary records, `derived<regId>#<index>` for derived), with `TraceNode.type` set to the
 same `node<regId>` / `derived<regId>` string. B88 later refines `type` (and, transitively,
-the `id` prefix) to a friendly name without changing the *shape* of the contract. The id
+the `id` prefix) to a friendly name without changing the _shape_ of the contract. The id
 scheme is a local, one-off scoping choice for the stub — recorded here, not in
 `decisions.md`.
 
@@ -253,7 +253,7 @@ members are exactly
 `TraceField extends FieldExplanation` so it inherits the identical `generator: string` and
 `reason: string` contract and adds `path` / `value` / `resolution` / `forkKey` / `overridden` /
 `dependsOn` — so `world.trace()` and `world.explain()` speak one provenance language. (No
-node emits a populated `TraceField` at this stub; this pins the *type shape* only — generator-id
+node emits a populated `TraceField` at this stub; this pins the _type shape_ only — generator-id
 strings are wired in B86.)
 
 - Scenario: TraceField is assignable to FieldExplanation's generator/reason shape
@@ -266,10 +266,10 @@ strings are wired in B86.)
 
 ## Out of scope
 
-- **No field-level provenance capture** — `TraceField` is the public *type*, but no node
+- **No field-level provenance capture** — `TraceField` is the public _type_, but no node
   emits a non-empty `fields` array at this card. The capture sink threaded through
   `generateObjectFields` / `walkPipeline` is **B86**.
-- **No relation-edge capture** — `TraceEdge` is the public *type*, but `edges` is always
+- **No relation-edge capture** — `TraceEdge` is the public _type_, but `edges` is always
   `[]` here. Recording `ctx.related` picks is **B87**.
 - **No friendly type names** — `TraceNode.type` is the registration-order `node<regId>` /
   `derived<regId>` string at this card. Mapping a `ZodTypeAny` registration to a friendly
@@ -288,13 +288,13 @@ strings are wired in B86.)
 (rationale: the trace shape is consumed by the standalone artifact and the site, so a
 breaking change is a SemVer bump); the reviewer confirms the ADR; the manager promotes the
 one-line Rule into `architecture.md`'s Rules at Done. Comply with **D1** (no `any` —
-`value: unknown` on `TraceNode`/`TraceField` is intentional, *not* `any`) and **D13** (no
+`value: unknown` on `TraceNode`/`TraceField` is intentional, _not_ `any`) and **D13** (no
 `node:*` imports; `src/trace.ts` is pure types and `world.trace()` builds plain objects).
 
 ## Open questions
 
 - **(non-blocking)** Friendly type-name source for `TraceNode.type` / the `id` prefix.
-  Settled for *this* card: B85 ships the registration-order `node<regId>` / `derived<regId>`
+  Settled for _this_ card: B85 ships the registration-order `node<regId>` / `derived<regId>`
   scheme (decisive — derivable from the repo today, no maintainer decision needed). The
   friendly `person`-style source is explicitly **B88's** problem; B85 does not block on it.
   Non-blocking: the stub's id scheme is concrete and testable now.

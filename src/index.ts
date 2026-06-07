@@ -178,3 +178,12 @@ export type {
   LastNamePrefix,
   Currency,
 } from "./types.js";
+
+export type {
+  // World Explorer provenance (B85)
+  WorldTrace,
+  TraceNode,
+  TraceField,
+  TraceEdge,
+  TraceResolution,
+} from "./trace.js";

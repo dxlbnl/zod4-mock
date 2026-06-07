@@ -7,6 +7,7 @@ import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
 // Note: Prng is defined in @zod4-mock/locale-core (see packages/locale-core/src/types.ts).
 import type { LocaleData, Prng } from "@zod4-mock/locale-core";
+import type { WorldTrace } from "./trace.js";
 export type { LocaleData, LastNamePrefix, Currency, Prng } from "@zod4-mock/locale-core";
 
 // ---------------------------------------------------------------------------
@@ -241,6 +242,15 @@ export interface WorldOptions {
   readonly recursionLimit?: number;
   /** Override the default English locale. Import `nl` from `zod4-mock` for Dutch, or supply your own. */
   readonly locale?: LocaleData;
+  /**
+   * Opt in to provenance capture for {@link World.trace}. When omitted (or
+   * `false`), `world.trace()` still returns the registry projection — one
+   * {@link TraceNode} per stored record — but no per-field or relation-edge
+   * provenance is captured. (At the current stub the flag is plumbing only:
+   * field and edge capture land in later cards, so an enabled trace returns the
+   * same shape as a default one.)
+   */
+  readonly trace?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -337,7 +347,8 @@ export interface ExplainResult<TSchema extends ZodTypeAny> {
  * One deterministic generation session, built fluently from `createWorld`.
  * Register schemas (`withSchema`), wire generators (`withGenerators`,
  * `withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),
- * and introspect resolution (`explain`); all records live in its `registry`.
+ * and introspect resolution (`explain`) or provenance (`trace`); all records
+ * live in its `registry`.
  */
 export interface World {
   /**
@@ -460,6 +471,23 @@ export interface World {
    * counter (B16).
    */
   explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema>;
+
+  /**
+   * Return the provenance structure for everything generated so far in this
+   * world's lifetime — a plain, JSON-serializable {@link WorldTrace}.
+   *
+   * Emits one {@link TraceNode} per stored registry record (in registration
+   * order), each carrying the record's stable id, its value, and its
+   * registration polarity (`node<regId>` for primary, `derived<regId>` for
+   * derived, with `derivedFrom` set on derived nodes). `seed` echoes the world's
+   * root seed.
+   *
+   * Provenance capture is opt-in via `createWorld({ trace: true })`. At the
+   * current stub every node's `fields` and the trace's `edges` are empty (field
+   * and relation-edge capture land in later cards), so an enabled trace returns
+   * the same shape as a default one.
+   */
+  trace(): WorldTrace;
 
   /** Access to all data generated and stored in this world. */
   readonly registry: Registry;
