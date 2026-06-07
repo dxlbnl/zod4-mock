@@ -19,6 +19,15 @@ it records the reason here AND states it in chat.
 
 <!-- entries start here -->
 
+## 2026-06-07 — Session pause (user-requested)
+
+- manager: **paused at user request** after B85. Clean checkpoint — doing/ empty, tree clean.
+  Session shipped: B96 (Phase 1 finish), B101/B102/B103/B104 (full docs system — Phase 2),
+  B113 (trace-capture spike), B85 (Phase 4a trace contract foundation). New Rules D24/D25/D26.
+  Follow-ups filed: B108–B112. **Resume:** run `/manager`. Next in Phase 4a: B86 (field capture
+  sink), B87 (edge capture), B88 (friendly IDs) — all carry the B113-decided capture-during
+  approach in their cards. Other ready work: B110 bug (JsonTree Date→{}), docs polish B108/B109/B111/B112.
+
 ## 2026-06-07 — B85: world.trace() API + WorldTrace types (public contract)
 
 - manager: user chose Phase 4a (library Explorer). start B85, track: feature (user-flagged review); git mv inbox/ → doing/. Foundation card — establishes the public WorldTrace contract that B86/B87/B88 fill in + B90 consumes. dispatch spec-writer. **Two flags for the pipeline:** (1) the card's "D5: update docs/api-reference.md" is the OLD D5 — post-B102 the rule is TSDoc-on-export + `pnpm docs:generate` (api-reference.md is generated, not hand-edited; manifest covers public exports → the new trace() + types must be added to the api manifest/curation + TSDoc'd); (2) card forward-references B88 (friendly `<typeName>#<index>` IDs) + a type-name source, but CLAUDE.md says there's no defineSubjectType API — spec-writer must resolve what id/typeName the B85 stub uses (likely a blocking open question).
