@@ -19,8 +19,12 @@ export function renderInline(text: string): string {
   out = out.replace(
     /\{@link\s+([^}|\s]+)(?:\s*\|\s*([^}]+))?\}/g,
     (_m, target: string, label?: string) => {
-      const text = (label ?? target).trim();
-      return `<a href="#${target.trim()}">${text}</a>`;
+      const trimmed = target.trim();
+      const text = (label ?? trimmed).trim();
+      // A member target `X.y(.z…)` only ever has a top-level `#X` anchor on
+      // the page; strip the member path for the href so it resolves.
+      const anchor = trimmed.split(".")[0] ?? trimmed;
+      return `<a href="#${anchor}">${text}</a>`;
     },
   );
   // Inline `code` → <code>code</code>.

@@ -29,6 +29,11 @@ const config = {
   },
   kit: {
     adapter: adapter({ runtime: "nodejs22.x" }),
+    prerender: {
+      // A dangling doc cross-reference anchor should warn, not hard-fail the
+      // whole build/deploy.
+      handleMissingId: "warn",
+    },
   },
 };
 
