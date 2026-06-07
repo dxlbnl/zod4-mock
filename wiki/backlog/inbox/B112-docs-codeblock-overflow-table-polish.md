@@ -11,14 +11,13 @@ provenance: B103 per-page designer pass
 ## Description
 
 The B103 designer pass (light + dark, all 4 rebuilt pages) found **no blockers** but
-three non-blocking rendering-polish items across the docs pages:
+non-blocking rendering-polish items across the docs pages:
 
-1. **Static code blocks clip at the right edge with no visible scrollbar** (both themes,
-   on the code-heavy pages — key-heuristics, recipes). Wide non-wrapping lines like
-   `const world = createWorld({…}).withSche[ma…` and wide table cells get cut with no
-   affordance to scroll. Fix: give static `<pre><code>` blocks (and wide table cells)
-   `overflow-x: auto` with a visible scrollbar, or wrap. (Same overflow family as B102's
-   `/docs/api`, but for static code blocks rather than the signature/param-table.)
+> **Item 1 folded into B114 (2026-06-07)** — "static code blocks clip with no scrollbar":
+> B114's responsive rework bounded the `<pre>` scroll containers (R6, no page overflow) and
+> widened the prose track, addressing the code-block overflow. If clipping persists on
+> specific code-heavy pages after B114, re-file. The remaining B112 items below stand.
+
 2. **Light/Paper Playground _output_ text is dim** — the generated-JSON output sits on the
    dark sunken code surface in Paper mode and reads low-contrast (faint keys/braces).
    Lift the output ink/punctuation contrast in the Paper palette. (Relates to [[B109]]'s

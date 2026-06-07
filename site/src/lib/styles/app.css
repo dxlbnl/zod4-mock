@@ -111,6 +111,28 @@
     background: color-mix(in srgb, var(--amber) 20%, transparent);
   }
 
+  /* B114-R5/R6: the <DocPage> prose body (<Prose> → .doc-prose-body) renders
+     hand-authored markdown tables and code blocks. The <Prose> primitive styles
+     `table` with auto layout, so a wide cell (a long type token like
+     `Record<string, KeyGenerator>` or a package name) forces an intrinsic table
+     min-width that overflows the content track and widens the page. Pin a fixed
+     layout + cell wrapping so wide content wraps inside its column, and bound code
+     blocks to a horizontal scroll inside their own box. */
+  .doc-prose-body table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .doc-prose-body th,
+  .doc-prose-body td,
+  .doc-prose-body td code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .doc-prose-body pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   /* ── Docs prose ────── */
   .docs-prose h1 {
     font-size: 28px;
@@ -168,6 +190,11 @@
   }
   .docs-prose table {
     width: 100%;
+    /* B114-R5/R6: fixed layout so a wide cell (a long type token like
+       `Record<string, KeyGenerator>` or `@zod4-mock/locale-en`) wraps inside its
+       column instead of forcing an intrinsic table min-width that overflows the
+       content track and widens the page. */
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 12px 0;
     font-size: 13px;
@@ -190,6 +217,14 @@
     padding: var(--u) 12px;
     border-bottom: 1px solid var(--rule);
     color: var(--ink-dim);
+    /* wrap long, unbroken tokens (TS types, package names) inside the fixed cell
+       rather than overflow the column (B114-R6). */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .docs-prose td code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .docs-prose tr:last-child td {
     border-bottom: none;

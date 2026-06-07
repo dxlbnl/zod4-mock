@@ -49,6 +49,26 @@
 	const editHref = $derived(
 		editPath ? `https://github.com/dxlbnl/zod4-mock/edit/main/${editPath}` : null
 	);
+
+	// B114-R1/R3: below 1024 the "On this page" rail is a collapsed <details>
+	// disclosure below the content (mobile and tablet both keep it collapsed so
+	// the prose track has room); at ≥1024 it becomes the normal sticky right rail
+	// (the three-column desktop reflow). A closed <details> drops its links from
+	// the accessibility tree even when CSS shows them, so at ≥1024 the disclosure
+	// must be genuinely `open` (keeps the B102 docs-api TOC links role-exposed).
+	// Track the viewport and reflect it into the `open` attribute; default open
+	// (SSR / pre-mount) so server HTML exposes the links, then collapse below 1024
+	// after mount.
+	let tocOpen = $state(true);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 1023px)');
+		const sync = () => {
+			tocOpen = !mq.matches;
+		};
+		sync();
+		mq.addEventListener('change', sync);
+		return () => mq.removeEventListener('change', sync);
+	});
 </script>
 
 <Container size="lg">
@@ -68,19 +88,25 @@
 		{/if}
 
 		<div class="doc-grid">
-			<Prose>
+			<Prose maxWidth="720px">
 				<div bind:this={proseEl} data-pagefind-body class="doc-prose-body">
 					{#if children}{@render children()}{/if}
 				</div>
 			</Prose>
+			<!-- B114-R1 (mobile + tablet, <1024): the "On this page" rail moves below
+			     the prose and becomes a collapsed <details> disclosure; at desktop
+			     (≥1024) the <details> is transparent and the <aside> is the sticky
+			     right column with its <summary> hidden. -->
 			<aside class="on-this-page" aria-label="On this page" data-pagefind-ignore>
 				{#if anchors.length > 0}
-					<p class="rail-heading">On this page</p>
-					<ul>
-						{#each anchors as a}
-							<li><a href="#{a.id}">{a.text}</a></li>
-						{/each}
-					</ul>
+					<details class="toc-disclosure" open={tocOpen}>
+						<summary>On this page</summary>
+						<ul>
+							{#each anchors as a}
+								<li><a href="#{a.id}">{a.text}</a></li>
+							{/each}
+						</ul>
+					</details>
 				{/if}
 			</aside>
 		</div>
@@ -107,10 +133,14 @@
 <style>
 	.doc-grid {
 		display: grid;
-		/* minmax(0, 1fr) — not 1fr — so the content column can shrink below its
-		   min-content width; otherwise a wide signature/table/code block grows
-		   the track and pushes the "On this page" rail off-screen (B102). */
-		grid-template-columns: minmax(0, 1fr) 200px;
+		/* B114: below 1024 (mobile + tablet) the TOC is a collapsed <details> below
+		   the prose, so the grid is a single content column — at 768 the layout
+		   already spends horizontal space on the section sidebar, and a second
+		   200px rail here would crush the prose track to ~165px. The right TOC rail
+		   only returns as a column at ≥1024 (see the @media (min-width: 1024px)
+		   block). minmax(0, 1fr) — not 1fr — so a wide table/code block can shrink
+		   and scroll inside its own container rather than widen the page (B114-R6). */
+		grid-template-columns: minmax(0, 1fr);
 		gap: var(--u3);
 		align-items: start;
 	}
@@ -121,6 +151,34 @@
 		position: sticky;
 		top: var(--u3);
 		font-size: 12px;
+	}
+	/* B114-R3 (desktop ≥1024): the right TOC rail returns as a column. The grid
+	   takes a 200px track and the TOC disclosure goes transparent — its links are
+	   always shown and the <summary> hidden, so the rail reads as a normal sticky
+	   right column rather than a collapsed details. */
+	@media (min-width: 1024px) {
+		.doc-grid {
+			/* minmax(0, 1fr) — not 1fr — so the content column can shrink below its
+			   min-content width; otherwise a wide signature/table/code block grows
+			   the track and pushes the "On this page" rail off-screen (B102). */
+			grid-template-columns: minmax(0, 1fr) 200px;
+		}
+		.toc-disclosure > summary {
+			display: none;
+		}
+		.toc-disclosure > ul {
+			/* force the list visible regardless of the (unset) `open` state */
+			display: flex;
+		}
+		/* B114-R5: keep every TOC entry on a single line — a long heading
+		   ("Step 1 — Generate without any setup") truncates with an ellipsis in
+		   the rail rather than wrapping to a second line. */
+		.toc-disclosure a {
+			display: block;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 	}
 	.on-this-page ul,
 	.related ul {
@@ -160,12 +218,39 @@
 	.edit-link a:hover {
 		color: var(--amber);
 	}
-	@media (max-width: 720px) {
-		.doc-grid {
-			grid-template-columns: 1fr;
-		}
+	/* B114-R1 (mobile + tablet, ≤1023): the grid is a single content column and
+	   the TOC stacks below as a collapsed <details> with a visible <summary>. The
+	   right TOC rail only returns at ≥1024 (above), so at 768 the prose has room
+	   beside the section sidebar without a second rail crushing it. */
+	@media (max-width: 1023px) {
 		.on-this-page {
 			position: static;
+			font-size: 13px;
+		}
+		.toc-disclosure {
+			border: 1px solid var(--rule);
+			border-radius: 8px;
+			background: var(--bg-rail);
+		}
+		.toc-disclosure > summary {
+			cursor: pointer;
+			padding: var(--u) 12px;
+			font-weight: 500;
+			color: var(--ink);
+			list-style: none;
+		}
+		.toc-disclosure > summary::-webkit-details-marker {
+			display: none;
+		}
+		.toc-disclosure > summary::before {
+			content: "▸ ";
+			color: var(--ink-dim);
+		}
+		.toc-disclosure[open] > summary::before {
+			content: "▾ ";
+		}
+		.toc-disclosure > ul {
+			padding: 0 12px var(--u);
 		}
 	}
 </style>

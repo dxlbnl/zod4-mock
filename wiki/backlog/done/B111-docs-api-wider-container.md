@@ -4,9 +4,15 @@ title: Widen the /docs/api content container so long generic types don't break m
 type: feature
 priority: low
 mode: lite
+flags: [cancelled]
 created: 2026-06-06
 provenance: B102 per-page designer pass
 ---
+
+> **Folded into B114 (2026-06-07).** B114's responsive rework widened the shared `DocPage`
+> prose track from ~420px to ~720px (incl. `/docs/api`) while keeping the B102 overlap guard
+> green — which is exactly this card's ask. Cancelled as superseded; if long generic types
+> still read tight on `/docs/api` specifically after B114, re-file a narrower follow-up.
 
 ## Description
 
