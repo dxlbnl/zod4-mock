@@ -6,6 +6,7 @@ priority: high
 created: 2026-06-07
 predecessor: B124
 plan: wiki/research/reports/docs-ux-rework.md
+spec: wiki/specs/B125-typedoc-api-reference.md
 ---
 
 ## Description
