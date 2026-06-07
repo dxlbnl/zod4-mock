@@ -27,8 +27,8 @@ here rather than folded into B96.
    beside a label, or use a bordered/secondary variant.
 
 3. **Inconsistent top margin across pages (maintainer review 2026-06-07).** Pages
-   *without* a `PageHero` (e.g. `/docs`, `/bench`) have a different top margin than
-   pages *with* a `PageHero` — the gap below the nav is not uniform. Generalize item 1:
+   _without_ a `PageHero` (e.g. `/docs`, `/bench`) have a different top margin than
+   pages _with_ a `PageHero` — the gap below the nav is not uniform. Generalize item 1:
    normalize the top spacing so every page starts at a consistent offset below the nav,
    whether or not it leads with a `PageHero`/eyebrow. (Likely a shared page-shell top
    padding rather than per-page ad-hoc spacing.)
