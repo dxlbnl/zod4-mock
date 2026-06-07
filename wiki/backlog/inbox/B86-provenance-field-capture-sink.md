@@ -67,3 +67,8 @@ overhead in the bench output. Used to inform the v2 "always-on" ADR.
 - Predecessor: [B85](B85-world-trace-api-and-types.md) (types must exist).
 - Sibling: [B87](B87-provenance-relation-edge-sink.md) (relations).
 - ADR + Rule at close: opt-in trace flag is a standing constraint until v2.
+- **B113 spike ([report](../../research/engine/trace-capture-architecture.md)) decided the approach:**
+  gated **capture-during** in `generateObjectFields`/`walkPipeline` (NOT re-derive) — off-path
+  (`trace:false`) measured allocation- and throughput-neutral. Map internal `FieldResolution["kind"]`
+  → public `TraceResolution` at the capture boundary; reuse the `explain()` generator/reason
+  vocabulary (B85-R12). Extract capture into a helper to keep the B23-R9 body-length guard green.

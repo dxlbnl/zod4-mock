@@ -56,3 +56,8 @@ B90 has nodes but no edges.
 
 - Predecessor: [B85](B85-world-trace-api-and-types.md) (TraceEdge type).
 - Sibling: [B86](B86-provenance-field-capture-sink.md) (field-level sink).
+- **B113 spike ([report](../../research/engine/trace-capture-architecture.md)) decided the approach:**
+  emit `TraceEdge` **at the `resolveRelationPool` pick site** (single + many), reading the
+  already-computed `poolSize`/`pickedIndex`. **MUST NOT re-derive edges** — the spike proved
+  `ctx.related` pool size at pick time is path-dependent and unrecoverable from final registry
+  state (auto-provision + `store:false` ephemerals + `where` filters).

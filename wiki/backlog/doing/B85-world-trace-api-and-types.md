@@ -7,7 +7,16 @@ flags: [review]
 created: 2026-06-03
 predecessor: B84
 phase: 4a
+spec: wiki/specs/B85-world-trace-api-and-types.md
 ---
+
+> **B113 spike resolved (2026-06-07):** the trace-capture research
+> ([report](../../research/engine/trace-capture-architecture.md)) **validated this card's
+> contract unchanged** — keep `createWorld({ trace: true })` (it gates retained memory, not
+> an off-path regression, which the spike measured as zero). Capture-during is the chosen
+> mechanism for B86/B87 (re-derive rejected — `ctx.related` edges aren't re-derivable).
+> Unblocked; resuming the implementer against the existing spec + RED tests
+> (`tests/unit/core/world-trace.test.ts`).
 
 ## Description
 
