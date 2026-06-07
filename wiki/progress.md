@@ -19,6 +19,19 @@ it records the reason here AND states it in chat.
 
 <!-- entries start here -->
 
+## 2026-06-07 — B110: JsonTree renders Date as {} (+ zip word-salad)
+
+- manager: user direction "B110, B115, then check again". start B110, track: bug; git mv inbox/ → doing/. Primary: JsonTree renders `z.date()` Date as empty `{}` (user saw it live in the generated preview). Secondary: `zip` field gets word-salad (library key-heuristic gap). dispatch spec-writer (scope: date-render fix is a site JsonTree widget bug; decide whether the zip heuristic is in-scope here or split to its own item — it's a library public-behaviour change). Regression test required (D6).
+- spec-writer: wrote `wiki/specs/B110-jsontree-date-and-zip-data-quality.md` — **scoped to Defect 1 only** (Date→{}): R1 Date renders as toISOString() string not {}; R2 regression (showcase user `createdAt` shows ISO not {}, D6 anchor); R3 behaviour-neutral for non-Date values. Root cause: JsonTree `isObj` catches Date (no enumerable keys → {}), shadowing the existing `instanceof Date`→ISO path in formatPrimitive; raw Date reaches the widget, same SSR/client. **Recommended splitting the zip defect** (library public-behaviour change w/ own changeset) → manager filed **B122**. No blocking questions.
+- manager: spec-validation gate PASS (R1–R3 one keyword each + observable; R2 regression scenario). Filed B122 (zip key-heuristic, library bug). B110 not review-flagged → dispatch test-writer (one regression test for R2 = the D6 anchor; R1/R3 covered minimally).
+- test-writer: added 4 stories to `site/src/lib/widgets/JsonTree.stories.svelte` (play-tests). RED confirmed via `pnpm site:test:component`: R1 (Date field + top-level Date) ×2 fail, R2 (real `generateWorld(42).users[0]` createdAt) fails — all because Date renders as empty `{}`; R3 (plain object still expands) green-by-design guard. 3 failed / 47 passed. R2 reproduces the reported defect end-to-end.
+- manager: dispatch implementer (JsonTree: treat Date — and only Date — as a leaf so the existing formatPrimitive `instanceof Date`→ISO path applies; behaviour-neutral for real objects/arrays/primitives per R3).
+- implementer: one-line fix in `JsonTree.svelte` — `isObj` now excludes `!(value instanceof Date)`, so Date falls to the leaf branch + the existing formatPrimitive ISO path. R1 ×2 + R2 green, R3 green (behaviour-neutral). site:test:component 50✓, site:check 0, unit 123, e2e 50 (build prerenders, no /showcase regression), validate exit 0. No changeset (site private).
+- manager: dispatch reviewer (confirm R1–R3 + the D6 regression test reproduces the createdAt:{} failure; behaviour-neutral for non-Date; no scope creep).
+- reviewer: **PASS** — R1–R3 met with file:line; fix is the single narrow `!(value instanceof Date)` at JsonTree.svelte:21; D6 regression renders real generateWorld(42).users[0] (createdAt z.date()) asserting ISO not {}; no scope creep (zip untouched → B122); no `any`/dep/changeset.
+- manager (Done): site private → no changeset; no issue refs. No standing constraint. git mv card → done/.
+- result: **B110 done** — commit 9cd7aff. The date-renders-as-{} bug the maintainer saw live is fixed. doing/ empty. Next per user: B115.
+
 ## 2026-06-07 — Site quick-wins batch (B116 + B118 + B117 + B108) — user-requested batch
 
 - manager: user chose "batch the quick site wins". Processing B116 (bug: getting-started "where to go next" links not linking), B118 (chore: remove /docs/bugs page), B117 (lite: GitHub+npm nav icon links), B108 (lite: docs H1/top-margin consistency + showcase Regenerate affordance) as one coordinated effort — all 4 → doing/. One implementer (B116 gets a regression test, D6), one reviewer, one designer pass (nav + spacing). Per-item commits at the end. Lite gate re-checked: B117/B108 are cosmetic/behaviour-neutral ≤handful files no dep → lite OK; B118 chore (removal); B116 bug full (regression test).
