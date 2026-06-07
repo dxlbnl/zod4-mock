@@ -5,6 +5,7 @@ type: bug
 priority: medium
 created: 2026-06-06
 provenance: B101 per-page designer pass
+spec: wiki/specs/B110-jsontree-date-and-zip-data-quality.md
 ---
 
 ## Description

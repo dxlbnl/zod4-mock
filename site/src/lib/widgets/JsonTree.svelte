@@ -14,7 +14,12 @@
 	// Each tree node instance has a fixed depth — explicitly untrack to avoid false positive
 	let collapsed = $state(untrack(() => depth > 2));
 
-	const isObj = $derived(value !== null && typeof value === 'object' && !Array.isArray(value));
+	const isObj = $derived(
+		value !== null &&
+			typeof value === 'object' &&
+			!Array.isArray(value) &&
+			!(value instanceof Date)
+	);
 	const isArr = $derived(Array.isArray(value));
 	const entries = $derived(isObj ? Object.entries(value as Record<string, unknown>) : []);
 	const items = $derived(isArr ? (value as unknown[]) : []);
