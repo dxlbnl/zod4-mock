@@ -69,8 +69,17 @@ function renderMarkdown(manifest: ReadonlyArray<ManifestSymbol>): string {
   }
   lines.push("");
 
-  // Per-symbol sections.
+  // Per-symbol sections, grouped under their curated group heading (B115-R5).
+  // Group headings are level-3 (`### <Group>`) so they sit ABOVE their symbols'
+  // `## <Name>` sections without colliding with the `^## ` per-symbol split that
+  // `docs:check` uses to localise drift (see sectionMap / diffSymbols below).
+  let lastGroup: string | null = null;
   for (const sym of manifest) {
+    if (sym.group !== lastGroup) {
+      lines.push(`### ${sym.group}`);
+      lines.push("");
+      lastGroup = sym.group;
+    }
     lines.push(`## ${sym.name}`);
     lines.push("");
     lines.push("```ts");

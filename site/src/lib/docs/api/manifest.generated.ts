@@ -30,7 +30,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "generate",
     "kind": "function",
-    "group": "Entry points",
+    "group": "Getting started",
     "signature": "function generate<TSchema extends z.ZodTypeAny>(schema: TSchema, options?: GenerateOptions<z.infer<TSchema>>): z.infer<TSchema>",
     "description": "Zero-config entry point. Generates a value from any Zod schema without\nany world setup. Internally creates a temporary world and discards it.",
     "examples": [
@@ -54,7 +54,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "createWorld",
     "kind": "function",
-    "group": "Entry points",
+    "group": "Getting started",
     "signature": "function createWorld(options?: WorldOptions): World",
     "description": "Create a {@link World} — the central, deterministic generation session.\nChain `.withSchema` / `.withGenerators` / `.withKeyMap` to configure it, then\n`.generate` / `.populate` to produce data. One world = one seed = one dataset.",
     "examples": [
@@ -71,59 +71,109 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
     ]
   },
   {
-    "name": "createPrng",
-    "kind": "function",
-    "group": "PRNG",
-    "signature": "function createPrng(seed: number): Prng",
-    "description": "Create a seeded PRNG.",
-    "examples": [
-      "```ts\nimport { createPrng } from \"zod4-mock\";\nconst prng = createPrng(1);\n```",
-      "```ts\nimport { createPrng, fieldSeed } from \"zod4-mock\";\nconst fieldPrng = createPrng(fieldSeed(1, \"user#0\", \"name\"));\n```"
-    ],
+    "name": "World",
+    "kind": "type",
+    "group": "World & registry",
+    "signature": "interface World",
+    "description": "One deterministic generation session, built fluently from `createWorld`.\nRegister schemas (`withSchema`), wire generators (`withGenerators`,\n`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),\nand introspect resolution (`explain`) or provenance (`trace`); all records\nlive in its `registry`.",
+    "examples": [],
     "since": "",
-    "seeAlso": [],
-    "parameters": [
-      {
-        "name": "seed",
-        "type": "number",
-        "description": "Any 32-bit integer.  The same seed always produces the same sequence."
-      }
-    ]
+    "seeAlso": []
   },
   {
-    "name": "fieldSeed",
-    "kind": "function",
-    "group": "PRNG",
-    "signature": "function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number",
-    "description": "Derive a deterministic field-level seed from three stable inputs.\n\nUsed to give each field its own independent PRNG so that schema changes\n(adding / removing fields) do not affect unrelated fields.",
-    "examples": [
-      "```ts\nimport { createPrng } from \"zod4-mock\";\nconst prng = createPrng(1);\n```",
-      "```ts\nimport { createPrng, fieldSeed } from \"zod4-mock\";\nconst fieldPrng = createPrng(fieldSeed(1, \"user#0\", \"name\"));\n```"
-    ],
+    "name": "WorldOptions",
+    "kind": "type",
+    "group": "World & registry",
+    "signature": "interface WorldOptions",
+    "description": "Options passed to `createWorld`. Sets the master `seed` and world-wide\ndefaults — optional-field probability, unconstrained-array length, custom\nkey generators, recursion limit, and the active locale.",
+    "examples": [],
     "since": "",
-    "seeAlso": [],
-    "parameters": [
-      {
-        "name": "worldSeed",
-        "type": "number",
-        "description": "The world's master seed."
-      },
-      {
-        "name": "subjectId",
-        "type": "string",
-        "description": "The subject instance's unique ID (e.g. `'person#3'`)."
-      },
-      {
-        "name": "fieldPath",
-        "type": "string",
-        "description": "Dot-separated field path (e.g. `'address.street'`)."
-      }
-    ]
+    "seeAlso": []
+  },
+  {
+    "name": "Registry",
+    "kind": "type",
+    "group": "World & registry",
+    "signature": "interface Registry",
+    "description": "In-memory store of every record generated within one world, keyed by Zod\nschema reference. Matchers reach across schemas through it (`pick`, `all`,\n`find`) to keep generated data mutually consistent.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "GeneratorContext",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "interface GeneratorContext<T = any>",
+    "description": "The per-field context handed to every generator and matcher. Carries the\nfield-seeded `prng`, the bound `gen` namespace, registry access, the\nrelation resolver, accumulated sibling values (`current`), and the active\nlocale for one field of one record.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "MatcherCtx",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "export type MatcherCtx< TRelations extends Record<string, ZodTypeAny> = Record<never, never>, TSource = undefined, TOutput = any, > = Omit<GeneratorContext<TOutput>, \"related\" | \"source\"> & { readonly source: TSource; readonly related: { <K extends keyof TRelations & string>(name: K): input<TRelations[K]>; (name: string): Record<string, unknown>; many<K extends keyof TRelations & string>(name: K, count: number): input<TRelations[K]>[]; many<T = unknown>(name: string, count: number): T[]; }; };",
+    "description": "The {@link GeneratorContext} variant passed to `withSchema` matchers, with\n`related()` typed from the schema's declared `relations` and `source` typed\nfrom its `from:` binding. For a primary schema `source` is `undefined`.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "BoundGenerators",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "export type BoundGenerators = CoreGenerators;",
+    "description": "The built-in `generators` namespace with the field-seeded `Prng` pre-bound\nas the first argument of every generator. Exposed on `ctx.gen` so matchers\ncall `ctx.gen.person.firstName()` instead of passing a `Prng` by hand.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "SchemaOpts",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "interface SchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny | undefined = undefined, TRelations extends Record<string, ZodTypeAny> = Record<never, never>>",
+    "description": "Options for withSchema.\n- If `from` is provided, the schema is \"derived\" and matchers receive `ctx.source`.\n- If `from` is omitted, the schema is \"primary\" and `ctx.source` is undefined.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "SchemaKeyMap",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "export type SchemaKeyMap<TSchema extends ZodTypeAny> = { [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K]; };",
+    "description": "A per-schema map of field name → generator, registered via\n`world.withKeyMap`. Each entry is typed against the matching field of the\nschema's input shape and receives a {@link GeneratorContext}.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "KeyGenerator",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;",
+    "description": "A field-name generator registered via `world.withGenerators`. Receives the\nfield's Zod schema and its {@link GeneratorContext} and returns the value for\nthat field; matched case-insensitively by field name.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "KeyPattern",
+    "kind": "type",
+    "group": "Matchers & generation context",
+    "signature": "export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };",
+    "description": "A pattern rule: a key test function + a PrngGen generator.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
   },
   {
     "name": "generators",
     "kind": "object",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "const generators: typeof dataNs",
     "description": "Built-in generators organised into sub-namespaces (`generators.person`,\n`generators.internet`, …). Each function takes a `Prng` as its first\nargument; pass `ctx.prng` from a matcher or key map.",
     "examples": [
@@ -135,7 +185,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "data",
     "kind": "object",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "const data: typeof dataNs",
     "description": "The raw built-in generator namespace (`data.person`, `data.internet`, …).\nEach function takes a `Prng` as its first argument; prefer `generators` or\n`ctx.gen` (which pre-bind the field-seeded `Prng`) inside matchers.",
     "examples": [
@@ -147,7 +197,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "generateFromSchema",
     "kind": "function",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown",
     "description": "Schema-based fallback generator: produces a value purely from Zod type\nintrospection (enum member, number in range, nested object, …). This is the\npipeline's always-resolving final rung, with no field-name heuristics.",
     "examples": [
@@ -171,7 +221,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "generateFromKey",
     "kind": "function",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorContext): unknown",
     "description": "Key-based heuristic generator: resolves a value from a field's name by\nconsulting {@link DEFAULT_KEY_MAP} (exact keys) then\n{@link DEFAULT_KEY_PATTERNS} (regex-like rules). Returns `undefined` when no\nheuristic matches, letting the pipeline fall through to the schema-based step.",
     "examples": [
@@ -200,7 +250,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "DEFAULT_KEY_MAP",
     "kind": "object",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined>",
     "description": "Built-in exact-field-name heuristics, keyed by Zod leaf type then lower-cased\nfield name (e.g. `string.email` → a realistic email). The first table the\nkey-based pipeline step consults before {@link DEFAULT_KEY_PATTERNS}.",
     "examples": [
@@ -212,12 +262,182 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "DEFAULT_KEY_PATTERNS",
     "kind": "object",
-    "group": "Generators",
+    "group": "Generators & key heuristics",
     "signature": "const DEFAULT_KEY_PATTERNS: Record<string, KeyPattern[]>",
     "description": "Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. a\n`string` field ending in `name` → a full name, `...At` → an ISO date). The\nregex-like fallback consulted after {@link DEFAULT_KEY_MAP}.",
     "examples": [
       "```ts\nimport { DEFAULT_KEY_PATTERNS } from \"zod4-mock\";\n\nconst stringRules = DEFAULT_KEY_PATTERNS.string;\n```"
     ],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "GenerateOptions",
+    "kind": "type",
+    "group": "Options, overrides & explain",
+    "signature": "interface GenerateOptions<T>",
+    "description": "Per-call options for `generate` / `world.generate`: `overrides` (deep-merged\nonto the result), a `transform` post-processor, the `seed`, and tuning knobs\nfor optional probability, array length, recursion, and registry writes.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "DeepPartial",
+    "kind": "type",
+    "group": "Options, overrides & explain",
+    "signature": "export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;",
+    "description": "Recursively makes every property of `T` optional. Used to type\n`GenerateOptions.overrides`, so a caller may override only the nested fields\nthey care about.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "ExplainResult",
+    "kind": "type",
+    "group": "Options, overrides & explain",
+    "signature": "interface ExplainResult<TSchema extends ZodTypeAny>",
+    "description": "Structured introspection result for `world.explain(schema)`. The `fields`\nmap is keyed by top-level field name in schema-shape order; the\n`relations` map is keyed by relation name (empty `{}` when none). The\n`toString()` method produces a human-readable aligned table — see\nB16-R7.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "FieldExplanation",
+    "kind": "type",
+    "group": "Options, overrides & explain",
+    "signature": "interface FieldExplanation",
+    "description": "Per-field resolution record returned by `world.explain(schema)`.\n\n`generator` is a stable identifier (e.g. `'person.firstName'`,\n`'matcher:<key>'`, `'schema-based'`); `reason` is a short human-readable\nexplanation of which step of the pipeline picked it.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "RelationExplanation",
+    "kind": "type",
+    "group": "Options, overrides & explain",
+    "signature": "interface RelationExplanation",
+    "description": "Per-relation record on `ExplainResult.relations`. `schema` is the leaf\n`def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`\nreports whether the relation entry was the B11 object form\n`{ schema, where }` with a predicate.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "createPrng",
+    "kind": "function",
+    "group": "Randomness",
+    "signature": "function createPrng(seed: number): Prng",
+    "description": "Create a seeded PRNG.",
+    "examples": [
+      "```ts\nimport { createPrng } from \"zod4-mock\";\nconst prng = createPrng(1);\n```",
+      "```ts\nimport { createPrng, fieldSeed } from \"zod4-mock\";\nconst fieldPrng = createPrng(fieldSeed(1, \"user#0\", \"name\"));\n```"
+    ],
+    "since": "",
+    "seeAlso": [],
+    "parameters": [
+      {
+        "name": "seed",
+        "type": "number",
+        "description": "Any 32-bit integer.  The same seed always produces the same sequence."
+      }
+    ]
+  },
+  {
+    "name": "fieldSeed",
+    "kind": "function",
+    "group": "Randomness",
+    "signature": "function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number",
+    "description": "Derive a deterministic field-level seed from three stable inputs.\n\nUsed to give each field its own independent PRNG so that schema changes\n(adding / removing fields) do not affect unrelated fields.",
+    "examples": [
+      "```ts\nimport { createPrng } from \"zod4-mock\";\nconst prng = createPrng(1);\n```",
+      "```ts\nimport { createPrng, fieldSeed } from \"zod4-mock\";\nconst fieldPrng = createPrng(fieldSeed(1, \"user#0\", \"name\"));\n```"
+    ],
+    "since": "",
+    "seeAlso": [],
+    "parameters": [
+      {
+        "name": "worldSeed",
+        "type": "number",
+        "description": "The world's master seed."
+      },
+      {
+        "name": "subjectId",
+        "type": "string",
+        "description": "The subject instance's unique ID (e.g. `'person#3'`)."
+      },
+      {
+        "name": "fieldPath",
+        "type": "string",
+        "description": "Dot-separated field path (e.g. `'address.street'`)."
+      }
+    ]
+  },
+  {
+    "name": "Prng",
+    "kind": "type",
+    "group": "Randomness",
+    "signature": "interface Prng",
+    "description": "Seeded pseudo-random number generator. Implemented in the main `zod4-mock` package.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "PrngGen",
+    "kind": "type",
+    "group": "Randomness",
+    "signature": "export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;",
+    "description": "A generator that takes a Prng and an optional full context.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "WorldTrace",
+    "kind": "type",
+    "group": "World Explorer (trace)",
+    "signature": "interface WorldTrace",
+    "description": "The full provenance structure returned by {@link World.trace}: the world's\nroot `seed`, one {@link TraceNode} per stored record, and one\n{@link TraceEdge} per relation pick. Fully JSON-serializable.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceNode",
+    "kind": "type",
+    "group": "World Explorer (trace)",
+    "signature": "interface TraceNode",
+    "description": "One generated record in a {@link WorldTrace}. `id` is the stable\nregistration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``\nfor a primary record or `` `derived${regId}` `` for a derived one; `index` is\nthe record's position within its registration; `value` is the stored record;\n`store` reflects whether the record was written to the registry. `derivedFrom`\nis present only for derived records and holds the source node's id. `fields`\nis the per-field provenance (empty at the B85 stub; B86 populates it).",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceField",
+    "kind": "type",
+    "group": "World Explorer (trace)",
+    "signature": "interface TraceField",
+    "description": "Per-field provenance entry on a {@link TraceNode}. Extends `FieldExplanation`\nso `world.trace()` and `world.explain()` speak one provenance language:\n`generator` (a stable generator-id string, e.g. `'person.firstName'`,\n`'matcher:<key>'`, `'schema-based'`) and `reason` (a short human-readable\nexplanation) carry the identical meaning in both. Adds the trace-only fields:\nthe field `path`, the produced `value`, the resolving `resolution` rung, the\nPRNG `forkKey`, whether an override won (`overridden`), and the relation/field\n`dependsOn` keys consulted.",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceEdge",
+    "kind": "type",
+    "group": "World Explorer (trace)",
+    "signature": "interface TraceEdge",
+    "description": "One relation pick in a {@link WorldTrace}: the `from` node's `fromField`\nreferenced the `to` node via the named `relation`, a one-to-one (`\"one\"`) or\none-to-many (`\"many\"`) pick drawn from a pool of `poolSize` candidates at\n`pickedIndex`. (Empty at the B85 stub; B87 populates `edges`.)",
+    "examples": [],
+    "since": "",
+    "seeAlso": []
+  },
+  {
+    "name": "TraceResolution",
+    "kind": "type",
+    "group": "World Explorer (trace)",
+    "signature": "export type TraceResolution = | \"override\" | \"matcher\" | \"keymap\" | \"absent\" | \"default\" | \"custom-gen\" | \"key-based\" | \"schema-based\";",
+    "description": "Which pipeline rung resolved a {@link TraceField}'s value. A standalone,\npublic-stable union — intentionally decoupled from the internal\n`FieldResolution[\"kind\"]` so a future pipeline rename forces a deliberate\nupdate to the capture-boundary mapping (B86) rather than silently breaking\nthis public contract.",
+    "examples": [],
     "since": "",
     "seeAlso": []
   },
@@ -246,229 +466,9 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
     ]
   },
   {
-    "name": "World",
-    "kind": "type",
-    "group": "Core types",
-    "signature": "interface World",
-    "description": "One deterministic generation session, built fluently from `createWorld`.\nRegister schemas (`withSchema`), wire generators (`withGenerators`,\n`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),\nand introspect resolution (`explain`) or provenance (`trace`); all records\nlive in its `registry`.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "WorldOptions",
-    "kind": "type",
-    "group": "Core types",
-    "signature": "interface WorldOptions",
-    "description": "Options passed to `createWorld`. Sets the master `seed` and world-wide\ndefaults — optional-field probability, unconstrained-array length, custom\nkey generators, recursion limit, and the active locale.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "Registry",
-    "kind": "type",
-    "group": "Core types",
-    "signature": "interface Registry",
-    "description": "In-memory store of every record generated within one world, keyed by Zod\nschema reference. Matchers reach across schemas through it (`pick`, `all`,\n`find`) to keep generated data mutually consistent.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "GeneratorContext",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "interface GeneratorContext<T = any>",
-    "description": "The per-field context handed to every generator and matcher. Carries the\nfield-seeded `prng`, the bound `gen` namespace, registry access, the\nrelation resolver, accumulated sibling values (`current`), and the active\nlocale for one field of one record.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "MatcherCtx",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "export type MatcherCtx< TRelations extends Record<string, ZodTypeAny> = Record<never, never>, TSource = undefined, TOutput = any, > = Omit<GeneratorContext<TOutput>, \"related\" | \"source\"> & { readonly source: TSource; readonly related: { <K extends keyof TRelations & string>(name: K): input<TRelations[K]>; (name: string): Record<string, unknown>; many<K extends keyof TRelations & string>(name: K, count: number): input<TRelations[K]>[]; many<T = unknown>(name: string, count: number): T[]; }; };",
-    "description": "The {@link GeneratorContext} variant passed to `withSchema` matchers, with\n`related()` typed from the schema's declared `relations` and `source` typed\nfrom its `from:` binding. For a primary schema `source` is `undefined`.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "BoundGenerators",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "export type BoundGenerators = CoreGenerators;",
-    "description": "The built-in `generators` namespace with the field-seeded `Prng` pre-bound\nas the first argument of every generator. Exposed on `ctx.gen` so matchers\ncall `ctx.gen.person.firstName()` instead of passing a `Prng` by hand.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "Prng",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "interface Prng",
-    "description": "Seeded pseudo-random number generator. Implemented in the main `zod4-mock` package.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "PrngGen",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;",
-    "description": "A generator that takes a Prng and an optional full context.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "KeyGenerator",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;",
-    "description": "A field-name generator registered via `world.withGenerators`. Receives the\nfield's Zod schema and its {@link GeneratorContext} and returns the value for\nthat field; matched case-insensitively by field name.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "KeyPattern",
-    "kind": "type",
-    "group": "Generation types",
-    "signature": "export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };",
-    "description": "A pattern rule: a key test function + a PrngGen generator.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "SchemaOpts",
-    "kind": "type",
-    "group": "Schema registration",
-    "signature": "interface SchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny | undefined = undefined, TRelations extends Record<string, ZodTypeAny> = Record<never, never>>",
-    "description": "Options for withSchema.\n- If `from` is provided, the schema is \"derived\" and matchers receive `ctx.source`.\n- If `from` is omitted, the schema is \"primary\" and `ctx.source` is undefined.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "SchemaKeyMap",
-    "kind": "type",
-    "group": "Schema registration",
-    "signature": "export type SchemaKeyMap<TSchema extends ZodTypeAny> = { [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K]; };",
-    "description": "A per-schema map of field name → generator, registered via\n`world.withKeyMap`. Each entry is typed against the matching field of the\nschema's input shape and receives a {@link GeneratorContext}.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "GenerateOptions",
-    "kind": "type",
-    "group": "Override / transform",
-    "signature": "interface GenerateOptions<T>",
-    "description": "Per-call options for `generate` / `world.generate`: `overrides` (deep-merged\nonto the result), a `transform` post-processor, the `seed`, and tuning knobs\nfor optional probability, array length, recursion, and registry writes.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "DeepPartial",
-    "kind": "type",
-    "group": "Override / transform",
-    "signature": "export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;",
-    "description": "Recursively makes every property of `T` optional. Used to type\n`GenerateOptions.overrides`, so a caller may override only the nested fields\nthey care about.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "ExplainResult",
-    "kind": "type",
-    "group": "Explain",
-    "signature": "interface ExplainResult<TSchema extends ZodTypeAny>",
-    "description": "Structured introspection result for `world.explain(schema)`. The `fields`\nmap is keyed by top-level field name in schema-shape order; the\n`relations` map is keyed by relation name (empty `{}` when none). The\n`toString()` method produces a human-readable aligned table — see\nB16-R7.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "FieldExplanation",
-    "kind": "type",
-    "group": "Explain",
-    "signature": "interface FieldExplanation",
-    "description": "Per-field resolution record returned by `world.explain(schema)`.\n\n`generator` is a stable identifier (e.g. `'person.firstName'`,\n`'matcher:<key>'`, `'schema-based'`); `reason` is a short human-readable\nexplanation of which step of the pipeline picked it.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "RelationExplanation",
-    "kind": "type",
-    "group": "Explain",
-    "signature": "interface RelationExplanation",
-    "description": "Per-relation record on `ExplainResult.relations`. `schema` is the leaf\n`def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`\nreports whether the relation entry was the B11 object form\n`{ schema, where }` with a predicate.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "WorldTrace",
-    "kind": "type",
-    "group": "World Explorer",
-    "signature": "interface WorldTrace",
-    "description": "The full provenance structure returned by {@link World.trace}: the world's\nroot `seed`, one {@link TraceNode} per stored record, and one\n{@link TraceEdge} per relation pick. Fully JSON-serializable.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "TraceNode",
-    "kind": "type",
-    "group": "World Explorer",
-    "signature": "interface TraceNode",
-    "description": "One generated record in a {@link WorldTrace}. `id` is the stable\nregistration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``\nfor a primary record or `` `derived${regId}` `` for a derived one; `index` is\nthe record's position within its registration; `value` is the stored record;\n`store` reflects whether the record was written to the registry. `derivedFrom`\nis present only for derived records and holds the source node's id. `fields`\nis the per-field provenance (empty at the B85 stub; B86 populates it).",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "TraceField",
-    "kind": "type",
-    "group": "World Explorer",
-    "signature": "interface TraceField",
-    "description": "Per-field provenance entry on a {@link TraceNode}. Extends `FieldExplanation`\nso `world.trace()` and `world.explain()` speak one provenance language:\n`generator` (a stable generator-id string, e.g. `'person.firstName'`,\n`'matcher:<key>'`, `'schema-based'`) and `reason` (a short human-readable\nexplanation) carry the identical meaning in both. Adds the trace-only fields:\nthe field `path`, the produced `value`, the resolving `resolution` rung, the\nPRNG `forkKey`, whether an override won (`overridden`), and the relation/field\n`dependsOn` keys consulted.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "TraceEdge",
-    "kind": "type",
-    "group": "World Explorer",
-    "signature": "interface TraceEdge",
-    "description": "One relation pick in a {@link WorldTrace}: the `from` node's `fromField`\nreferenced the `to` node via the named `relation`, a one-to-one (`\"one\"`) or\none-to-many (`\"many\"`) pick drawn from a pool of `poolSize` candidates at\n`pickedIndex`. (Empty at the B85 stub; B87 populates `edges`.)",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
-    "name": "TraceResolution",
-    "kind": "type",
-    "group": "World Explorer",
-    "signature": "export type TraceResolution = | \"override\" | \"matcher\" | \"keymap\" | \"absent\" | \"default\" | \"custom-gen\" | \"key-based\" | \"schema-based\";",
-    "description": "Which pipeline rung resolved a {@link TraceField}'s value. A standalone,\npublic-stable union — intentionally decoupled from the internal\n`FieldResolution[\"kind\"]` so a future pipeline rename forces a deliberate\nupdate to the capture-boundary mapping (B86) rather than silently breaking\nthis public contract.",
-    "examples": [],
-    "since": "",
-    "seeAlso": []
-  },
-  {
     "name": "LocaleData",
     "kind": "type",
-    "group": "Localization types",
+    "group": "Localization",
     "signature": "interface LocaleData",
     "description": "The full set of locale-specific word lists and formatting callbacks a world\ndraws from. Bundled locales (`en`, `nl`) implement it; pass a custom one via\n`WorldOptions.locale` or compose one with {@link extend}.",
     "examples": [],
@@ -478,7 +478,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "LastNamePrefix",
     "kind": "type",
-    "group": "Localization types",
+    "group": "Localization",
     "signature": "interface LastNamePrefix",
     "description": "A surname prefix (tussenvoegsel) with its relative sampling weight.",
     "examples": [],
@@ -488,7 +488,7 @@ export const API_MANIFEST: ReadonlyArray<ApiSymbol> = [
   {
     "name": "Currency",
     "kind": "type",
-    "group": "Localization types",
+    "group": "Localization",
     "signature": "interface Currency",
     "description": "An ISO 4217 currency record drawn by money generators: alphabetic `code`,\ndisplay `name`, `symbol`, and the ISO `numeric` code.",
     "examples": [],

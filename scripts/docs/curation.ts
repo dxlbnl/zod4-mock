@@ -19,65 +19,67 @@ export interface CurationEntry {
   readonly group: string;
 }
 
-/** Ordered, name-keyed curation list. Render order = array order. */
+/**
+ * Ordered, name-keyed curation list. Render order = array order.
+ *
+ * B115: consolidated to a small set of clearly-labelled, evaluator-orientable
+ * groups (a clean mental model) — the zero-config + world entry points, the
+ * session/store types, the matcher/generator authoring surface, the built-in
+ * generators + key heuristics, per-call tuning + introspection, the PRNG
+ * surface, the World Explorer trace contract, and localization.
+ */
 export const CURATION: ReadonlyArray<CurationEntry> = [
-  // Entry points
-  { name: "generate", group: "Entry points" },
-  { name: "createWorld", group: "Entry points" },
+  // Getting started — the zero-config + world entry points.
+  { name: "generate", group: "Getting started" },
+  { name: "createWorld", group: "Getting started" },
 
-  // PRNG
-  { name: "createPrng", group: "PRNG" },
-  { name: "fieldSeed", group: "PRNG" },
+  // World & registry — the session + store types a consumer reads.
+  { name: "World", group: "World & registry" },
+  { name: "WorldOptions", group: "World & registry" },
+  { name: "Registry", group: "World & registry" },
 
-  // Generators
-  { name: "generators", group: "Generators" },
-  { name: "data", group: "Generators" },
-  { name: "generateFromSchema", group: "Generators" },
-  { name: "generateFromKey", group: "Generators" },
-  { name: "DEFAULT_KEY_MAP", group: "Generators" },
-  { name: "DEFAULT_KEY_PATTERNS", group: "Generators" },
+  // Matchers & generation context — what a matcher/generator author touches.
+  { name: "GeneratorContext", group: "Matchers & generation context" },
+  { name: "MatcherCtx", group: "Matchers & generation context" },
+  { name: "BoundGenerators", group: "Matchers & generation context" },
+  { name: "SchemaOpts", group: "Matchers & generation context" },
+  { name: "SchemaKeyMap", group: "Matchers & generation context" },
+  { name: "KeyGenerator", group: "Matchers & generation context" },
+  { name: "KeyPattern", group: "Matchers & generation context" },
 
-  // Localization
+  // Generators & key heuristics — the built-in generator surface.
+  { name: "generators", group: "Generators & key heuristics" },
+  { name: "data", group: "Generators & key heuristics" },
+  { name: "generateFromSchema", group: "Generators & key heuristics" },
+  { name: "generateFromKey", group: "Generators & key heuristics" },
+  { name: "DEFAULT_KEY_MAP", group: "Generators & key heuristics" },
+  { name: "DEFAULT_KEY_PATTERNS", group: "Generators & key heuristics" },
+
+  // Options, overrides & explain — per-call tuning + introspection.
+  { name: "GenerateOptions", group: "Options, overrides & explain" },
+  { name: "DeepPartial", group: "Options, overrides & explain" },
+  { name: "ExplainResult", group: "Options, overrides & explain" },
+  { name: "FieldExplanation", group: "Options, overrides & explain" },
+  { name: "RelationExplanation", group: "Options, overrides & explain" },
+
+  // Randomness — the PRNG surface.
+  { name: "createPrng", group: "Randomness" },
+  { name: "fieldSeed", group: "Randomness" },
+  { name: "Prng", group: "Randomness" },
+  { name: "PrngGen", group: "Randomness" },
+
+  // World Explorer (trace) — the provenance contract.
+  { name: "WorldTrace", group: "World Explorer (trace)" },
+  { name: "TraceNode", group: "World Explorer (trace)" },
+  { name: "TraceField", group: "World Explorer (trace)" },
+  { name: "TraceEdge", group: "World Explorer (trace)" },
+  { name: "TraceResolution", group: "World Explorer (trace)" },
+
+  // Localization — locales + locale data.
   { name: "extend", group: "Localization" },
-
-  // Core types
-  { name: "World", group: "Core types" },
-  { name: "WorldOptions", group: "Core types" },
-  { name: "Registry", group: "Core types" },
-
-  // Generation types
-  { name: "GeneratorContext", group: "Generation types" },
-  { name: "MatcherCtx", group: "Generation types" },
-  { name: "BoundGenerators", group: "Generation types" },
-  { name: "Prng", group: "Generation types" },
-  { name: "PrngGen", group: "Generation types" },
-  { name: "KeyGenerator", group: "Generation types" },
-  { name: "KeyPattern", group: "Generation types" },
-
-  // Schema registration
-  { name: "SchemaOpts", group: "Schema registration" },
-  { name: "SchemaKeyMap", group: "Schema registration" },
-
-  // Override / transform
-  { name: "GenerateOptions", group: "Override / transform" },
-  { name: "DeepPartial", group: "Override / transform" },
-
-  // Explain
-  { name: "ExplainResult", group: "Explain" },
-  { name: "FieldExplanation", group: "Explain" },
-  { name: "RelationExplanation", group: "Explain" },
-
-  // World Explorer (trace)
-  { name: "WorldTrace", group: "World Explorer" },
-  { name: "TraceNode", group: "World Explorer" },
-  { name: "TraceField", group: "World Explorer" },
-  { name: "TraceEdge", group: "World Explorer" },
-  { name: "TraceResolution", group: "World Explorer" },
-
-  // Localization types
-  { name: "LocaleData", group: "Localization types" },
-  { name: "LastNamePrefix", group: "Localization types" },
-  { name: "Currency", group: "Localization types" },
+  { name: "LocaleData", group: "Localization" },
+  { name: "LastNamePrefix", group: "Localization" },
+  { name: "Currency", group: "Localization" },
 ];
 
 /** Public export names intentionally excluded from the rendered docs (none today). */

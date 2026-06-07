@@ -6,6 +6,7 @@ priority: medium
 created: 2026-06-07
 provenance: maintainer site review
 predecessor: B102
+spec: wiki/specs/B115-docs-api-grouped-by-category.md
 ---
 
 ## Description

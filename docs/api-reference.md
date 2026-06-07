@@ -8,40 +8,42 @@
 | ------ | ---- | ------- |
 | `generate` | function | Zero-config entry point. |
 | `createWorld` | function | Create a {@link World} — the central, deterministic generation session. |
-| `createPrng` | function | Create a seeded PRNG. |
-| `fieldSeed` | function | Derive a deterministic field-level seed from three stable inputs. |
-| `generators` | object | Built-in generators organised into sub-namespaces (`generators.person`, `generators.internet`, …). |
-| `data` | object | The raw built-in generator namespace (`data.person`, `data.internet`, …). |
-| `generateFromSchema` | function | Schema-based fallback generator: produces a value purely from Zod type introspection (enum member, number in range, nested object, …). |
-| `generateFromKey` | function | Key-based heuristic generator: resolves a value from a field's name by consulting {@link DEFAULT_KEY_MAP} (exact keys) then {@link DEFAULT_KEY_PATTERNS} (regex-like rules). |
-| `DEFAULT_KEY_MAP` | object | Built-in exact-field-name heuristics, keyed by Zod leaf type then lower-cased field name (e.g. |
-| `DEFAULT_KEY_PATTERNS` | object | Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. |
-| `extend` | function | Shallow-per-section merge: creates a new locale by overriding individual sections. |
 | `World` | type | One deterministic generation session, built fluently from `createWorld`. |
 | `WorldOptions` | type | Options passed to `createWorld`. |
 | `Registry` | type | In-memory store of every record generated within one world, keyed by Zod schema reference. |
 | `GeneratorContext` | type | The per-field context handed to every generator and matcher. |
 | `MatcherCtx` | type | The {@link GeneratorContext} variant passed to `withSchema` matchers, with `related()` typed from the schema's declared `relations` and `source` typed from its `from:` binding. |
 | `BoundGenerators` | type | The built-in `generators` namespace with the field-seeded `Prng` pre-bound as the first argument of every generator. |
-| `Prng` | type | Seeded pseudo-random number generator. |
-| `PrngGen` | type | A generator that takes a Prng and an optional full context. |
-| `KeyGenerator` | type | A field-name generator registered via `world.withGenerators`. |
-| `KeyPattern` | type | A pattern rule: a key test function + a PrngGen generator. |
 | `SchemaOpts` | type | Options for withSchema. |
 | `SchemaKeyMap` | type | A per-schema map of field name → generator, registered via `world.withKeyMap`. |
+| `KeyGenerator` | type | A field-name generator registered via `world.withGenerators`. |
+| `KeyPattern` | type | A pattern rule: a key test function + a PrngGen generator. |
+| `generators` | object | Built-in generators organised into sub-namespaces (`generators.person`, `generators.internet`, …). |
+| `data` | object | The raw built-in generator namespace (`data.person`, `data.internet`, …). |
+| `generateFromSchema` | function | Schema-based fallback generator: produces a value purely from Zod type introspection (enum member, number in range, nested object, …). |
+| `generateFromKey` | function | Key-based heuristic generator: resolves a value from a field's name by consulting {@link DEFAULT_KEY_MAP} (exact keys) then {@link DEFAULT_KEY_PATTERNS} (regex-like rules). |
+| `DEFAULT_KEY_MAP` | object | Built-in exact-field-name heuristics, keyed by Zod leaf type then lower-cased field name (e.g. |
+| `DEFAULT_KEY_PATTERNS` | object | Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. |
 | `GenerateOptions` | type | Per-call options for `generate` / `world.generate`: `overrides` (deep-merged onto the result), a `transform` post-processor, the `seed`, and tuning knobs for optional probability, array length, recursion, and registry writes. |
 | `DeepPartial` | type | Recursively makes every property of `T` optional. |
 | `ExplainResult` | type | Structured introspection result for `world.explain(schema)`. |
 | `FieldExplanation` | type | Per-field resolution record returned by `world.explain(schema)`. |
 | `RelationExplanation` | type | Per-relation record on `ExplainResult.relations`. |
+| `createPrng` | function | Create a seeded PRNG. |
+| `fieldSeed` | function | Derive a deterministic field-level seed from three stable inputs. |
+| `Prng` | type | Seeded pseudo-random number generator. |
+| `PrngGen` | type | A generator that takes a Prng and an optional full context. |
 | `WorldTrace` | type | The full provenance structure returned by {@link World.trace}: the world's root `seed`, one {@link TraceNode} per stored record, and one {@link TraceEdge} per relation pick. |
 | `TraceNode` | type | One generated record in a {@link WorldTrace}. |
 | `TraceField` | type | Per-field provenance entry on a {@link TraceNode}. |
 | `TraceEdge` | type | One relation pick in a {@link WorldTrace}: the `from` node's `fromField` referenced the `to` node via the named `relation`, a one-to-one (`"one"`) or one-to-many (`"many"`) pick drawn from a pool of `poolSize` candidates at `pickedIndex`. |
 | `TraceResolution` | type | Which pipeline rung resolved a {@link TraceField}'s value. |
+| `extend` | function | Shallow-per-section merge: creates a new locale by overriding individual sections. |
 | `LocaleData` | type | The full set of locale-specific word lists and formatting callbacks a world draws from. |
 | `LastNamePrefix` | type | A surname prefix (tussenvoegsel) with its relative sampling weight. |
 | `Currency` | type | An ISO 4217 currency record drawn by money generators: alphabetic `code`, display `name`, `symbol`, and the ISO `numeric` code. |
+
+### Getting started
 
 ## generate
 
@@ -94,66 +96,112 @@ world.withSchema(UserSchema);
 const user = world.generate(UserSchema);
 ```
 
-## createPrng
+### World & registry
+
+## World
 
 ```ts
-function createPrng(seed: number): Prng
+interface World
 ```
 
-Create a seeded PRNG.
+One deterministic generation session, built fluently from `createWorld`.
+Register schemas (`withSchema`), wire generators (`withGenerators`,
+`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),
+and introspect resolution (`explain`) or provenance (`trace`); all records
+live in its `registry`.
 
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `seed` | `number` | — | Any 32-bit integer.  The same seed always produces the same sequence. |
-
-**Example**
+## WorldOptions
 
 ```ts
-import { createPrng } from "zod4-mock";
-const prng = createPrng(1);
+interface WorldOptions
 ```
 
-**Example**
+Options passed to `createWorld`. Sets the master `seed` and world-wide
+defaults — optional-field probability, unconstrained-array length, custom
+key generators, recursion limit, and the active locale.
+
+## Registry
 
 ```ts
-import { createPrng, fieldSeed } from "zod4-mock";
-const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
+interface Registry
 ```
 
-## fieldSeed
+In-memory store of every record generated within one world, keyed by Zod
+schema reference. Matchers reach across schemas through it (`pick`, `all`,
+`find`) to keep generated data mutually consistent.
+
+### Matchers & generation context
+
+## GeneratorContext
 
 ```ts
-function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number
+interface GeneratorContext<T = any>
 ```
 
-Derive a deterministic field-level seed from three stable inputs.
+The per-field context handed to every generator and matcher. Carries the
+field-seeded `prng`, the bound `gen` namespace, registry access, the
+relation resolver, accumulated sibling values (`current`), and the active
+locale for one field of one record.
 
-Used to give each field its own independent PRNG so that schema changes
-(adding / removing fields) do not affect unrelated fields.
-
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `worldSeed` | `number` | — | The world's master seed. |
-| `subjectId` | `string` | — | The subject instance's unique ID (e.g. `'person#3'`). |
-| `fieldPath` | `string` | — | Dot-separated field path (e.g. `'address.street'`). |
-
-**Example**
+## MatcherCtx
 
 ```ts
-import { createPrng } from "zod4-mock";
-const prng = createPrng(1);
+export type MatcherCtx< TRelations extends Record<string, ZodTypeAny> = Record<never, never>, TSource = undefined, TOutput = any, > = Omit<GeneratorContext<TOutput>, "related" | "source"> & { readonly source: TSource; readonly related: { <K extends keyof TRelations & string>(name: K): input<TRelations[K]>; (name: string): Record<string, unknown>; many<K extends keyof TRelations & string>(name: K, count: number): input<TRelations[K]>[]; many<T = unknown>(name: string, count: number): T[]; }; };
 ```
 
-**Example**
+The {@link GeneratorContext} variant passed to `withSchema` matchers, with
+`related()` typed from the schema's declared `relations` and `source` typed
+from its `from:` binding. For a primary schema `source` is `undefined`.
+
+## BoundGenerators
 
 ```ts
-import { createPrng, fieldSeed } from "zod4-mock";
-const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
+export type BoundGenerators = CoreGenerators;
 ```
+
+The built-in `generators` namespace with the field-seeded `Prng` pre-bound
+as the first argument of every generator. Exposed on `ctx.gen` so matchers
+call `ctx.gen.person.firstName()` instead of passing a `Prng` by hand.
+
+## SchemaOpts
+
+```ts
+interface SchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny | undefined = undefined, TRelations extends Record<string, ZodTypeAny> = Record<never, never>>
+```
+
+Options for withSchema.
+- If `from` is provided, the schema is "derived" and matchers receive `ctx.source`.
+- If `from` is omitted, the schema is "primary" and `ctx.source` is undefined.
+
+## SchemaKeyMap
+
+```ts
+export type SchemaKeyMap<TSchema extends ZodTypeAny> = { [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K]; };
+```
+
+A per-schema map of field name → generator, registered via
+`world.withKeyMap`. Each entry is typed against the matching field of the
+schema's input shape and receives a {@link GeneratorContext}.
+
+## KeyGenerator
+
+```ts
+export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
+```
+
+A field-name generator registered via `world.withGenerators`. Receives the
+field's Zod schema and its {@link GeneratorContext} and returns the value for
+that field; matched case-insensitively by field name.
+
+## KeyPattern
+
+```ts
+export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
+```
+
+A pattern rule: a key test function + a PrngGen generator.
+
+### Generators & key heuristics
 
 ## generators
 
@@ -285,145 +333,7 @@ import { DEFAULT_KEY_PATTERNS } from "zod4-mock";
 const stringRules = DEFAULT_KEY_PATTERNS.string;
 ```
 
-## extend
-
-```ts
-function extend(base: LocaleData, overrides: LocaleOverrides): LocaleData
-```
-
-Shallow-per-section merge: creates a new locale by overriding individual sections.
-
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `base` | `LocaleData` | — |  |
-| `overrides` | `LocaleOverrides` | — |  |
-
-**Example**
-
-```ts
-import { extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
-const myLocale = extend(en, { id: "en-custom" });
-```
-
-## World
-
-```ts
-interface World
-```
-
-One deterministic generation session, built fluently from `createWorld`.
-Register schemas (`withSchema`), wire generators (`withGenerators`,
-`withKeyMap`), produce data (`generate`, `get`, `populate`, `populateFrom`),
-and introspect resolution (`explain`) or provenance (`trace`); all records
-live in its `registry`.
-
-## WorldOptions
-
-```ts
-interface WorldOptions
-```
-
-Options passed to `createWorld`. Sets the master `seed` and world-wide
-defaults — optional-field probability, unconstrained-array length, custom
-key generators, recursion limit, and the active locale.
-
-## Registry
-
-```ts
-interface Registry
-```
-
-In-memory store of every record generated within one world, keyed by Zod
-schema reference. Matchers reach across schemas through it (`pick`, `all`,
-`find`) to keep generated data mutually consistent.
-
-## GeneratorContext
-
-```ts
-interface GeneratorContext<T = any>
-```
-
-The per-field context handed to every generator and matcher. Carries the
-field-seeded `prng`, the bound `gen` namespace, registry access, the
-relation resolver, accumulated sibling values (`current`), and the active
-locale for one field of one record.
-
-## MatcherCtx
-
-```ts
-export type MatcherCtx< TRelations extends Record<string, ZodTypeAny> = Record<never, never>, TSource = undefined, TOutput = any, > = Omit<GeneratorContext<TOutput>, "related" | "source"> & { readonly source: TSource; readonly related: { <K extends keyof TRelations & string>(name: K): input<TRelations[K]>; (name: string): Record<string, unknown>; many<K extends keyof TRelations & string>(name: K, count: number): input<TRelations[K]>[]; many<T = unknown>(name: string, count: number): T[]; }; };
-```
-
-The {@link GeneratorContext} variant passed to `withSchema` matchers, with
-`related()` typed from the schema's declared `relations` and `source` typed
-from its `from:` binding. For a primary schema `source` is `undefined`.
-
-## BoundGenerators
-
-```ts
-export type BoundGenerators = CoreGenerators;
-```
-
-The built-in `generators` namespace with the field-seeded `Prng` pre-bound
-as the first argument of every generator. Exposed on `ctx.gen` so matchers
-call `ctx.gen.person.firstName()` instead of passing a `Prng` by hand.
-
-## Prng
-
-```ts
-interface Prng
-```
-
-Seeded pseudo-random number generator. Implemented in the main `zod4-mock` package.
-
-## PrngGen
-
-```ts
-export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;
-```
-
-A generator that takes a Prng and an optional full context.
-
-## KeyGenerator
-
-```ts
-export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
-```
-
-A field-name generator registered via `world.withGenerators`. Receives the
-field's Zod schema and its {@link GeneratorContext} and returns the value for
-that field; matched case-insensitively by field name.
-
-## KeyPattern
-
-```ts
-export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
-```
-
-A pattern rule: a key test function + a PrngGen generator.
-
-## SchemaOpts
-
-```ts
-interface SchemaOpts<TSchema extends ZodTypeAny, TSource extends ZodTypeAny | undefined = undefined, TRelations extends Record<string, ZodTypeAny> = Record<never, never>>
-```
-
-Options for withSchema.
-- If `from` is provided, the schema is "derived" and matchers receive `ctx.source`.
-- If `from` is omitted, the schema is "primary" and `ctx.source` is undefined.
-
-## SchemaKeyMap
-
-```ts
-export type SchemaKeyMap<TSchema extends ZodTypeAny> = { [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K]; };
-```
-
-A per-schema map of field name → generator, registered via
-`world.withKeyMap`. Each entry is typed against the matching field of the
-schema's input shape and receives a {@link GeneratorContext}.
+### Options, overrides & explain
 
 ## GenerateOptions
 
@@ -479,6 +389,87 @@ Per-relation record on `ExplainResult.relations`. `schema` is the leaf
 `def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`
 reports whether the relation entry was the B11 object form
 `{ schema, where }` with a predicate.
+
+### Randomness
+
+## createPrng
+
+```ts
+function createPrng(seed: number): Prng
+```
+
+Create a seeded PRNG.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `seed` | `number` | — | Any 32-bit integer.  The same seed always produces the same sequence. |
+
+**Example**
+
+```ts
+import { createPrng } from "zod4-mock";
+const prng = createPrng(1);
+```
+
+**Example**
+
+```ts
+import { createPrng, fieldSeed } from "zod4-mock";
+const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
+```
+
+## fieldSeed
+
+```ts
+function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number
+```
+
+Derive a deterministic field-level seed from three stable inputs.
+
+Used to give each field its own independent PRNG so that schema changes
+(adding / removing fields) do not affect unrelated fields.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `worldSeed` | `number` | — | The world's master seed. |
+| `subjectId` | `string` | — | The subject instance's unique ID (e.g. `'person#3'`). |
+| `fieldPath` | `string` | — | Dot-separated field path (e.g. `'address.street'`). |
+
+**Example**
+
+```ts
+import { createPrng } from "zod4-mock";
+const prng = createPrng(1);
+```
+
+**Example**
+
+```ts
+import { createPrng, fieldSeed } from "zod4-mock";
+const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
+```
+
+## Prng
+
+```ts
+interface Prng
+```
+
+Seeded pseudo-random number generator. Implemented in the main `zod4-mock` package.
+
+## PrngGen
+
+```ts
+export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;
+```
+
+A generator that takes a Prng and an optional full context.
+
+### World Explorer (trace)
 
 ## WorldTrace
 
@@ -541,6 +532,31 @@ public-stable union — intentionally decoupled from the internal
 `FieldResolution["kind"]` so a future pipeline rename forces a deliberate
 update to the capture-boundary mapping (B86) rather than silently breaking
 this public contract.
+
+### Localization
+
+## extend
+
+```ts
+function extend(base: LocaleData, overrides: LocaleOverrides): LocaleData
+```
+
+Shallow-per-section merge: creates a new locale by overriding individual sections.
+
+**Parameters**
+
+| Name | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `base` | `LocaleData` | — |  |
+| `overrides` | `LocaleOverrides` | — |  |
+
+**Example**
+
+```ts
+import { extend } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+const myLocale = extend(en, { id: "en-custom" });
+```
 
 ## LocaleData
 

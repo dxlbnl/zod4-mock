@@ -10,7 +10,7 @@
 	import DocPage from '$lib/docs/widgets/DocPage.svelte';
 	import SignatureBlock from '$lib/docs/widgets/SignatureBlock.svelte';
 	import ParameterTable from '$lib/docs/widgets/ParameterTable.svelte';
-	import { API_MANIFEST } from '$lib/docs/api/manifest.generated.js';
+	import { API_MANIFEST, type ApiSymbol } from '$lib/docs/api/manifest.generated.js';
 
 	// Manifest examples are stored as fenced TSDoc blocks (```ts … ```); strip
 	// the fence so the body renders cleanly inside a <pre><code>.
@@ -20,25 +20,40 @@
 			.replace(/\n?```$/, '')
 			.trim();
 	}
+
+	// B115-R2: group the flat manifest into curated sections, preserving the
+	// manifest's curation order both across groups and within each group. The
+	// data already carries `group` per symbol (B102), so this is a render-time
+	// fold — no taxonomy is decided here.
+	type ApiGroup = { label: string; symbols: ApiSymbol[] };
+	const groups: ApiGroup[] = [];
+	for (const sym of API_MANIFEST) {
+		const last = groups.at(-1);
+		if (last && last.label === sym.group) last.symbols.push(sym);
+		else groups.push({ label: sym.group, symbols: [sym] });
+	}
 </script>
 
 <DocPage title="API Reference" sidebarGroup="reference" order={1}>
-	{#each API_MANIFEST as sym (sym.name)}
-		<section aria-label={sym.name} class="api-symbol">
-			<h2 id={sym.name}>{sym.name}</h2>
-			<SignatureBlock signature={sym.signature} description={sym.description} />
-			{#if sym.parameters && sym.parameters.length > 0}
-				<ParameterTable rows={sym.parameters} />
-			{/if}
-			{#if sym.examples.length > 0}
-				<div class="examples">
-					<p class="examples-label">Example</p>
-					{#each sym.examples as example}
-						<pre class="example"><code>{exampleCode(example)}</code></pre>
-					{/each}
-				</div>
-			{/if}
-		</section>
+	{#each groups as group (group.label)}
+		<h2 class="api-group">{group.label}</h2>
+		{#each group.symbols as sym (sym.name)}
+			<section aria-label={sym.name} class="api-symbol">
+				<h2 id={sym.name} class="api-symbol-heading">{sym.name}</h2>
+				<SignatureBlock signature={sym.signature} description={sym.description} />
+				{#if sym.parameters && sym.parameters.length > 0}
+					<ParameterTable rows={sym.parameters} />
+				{/if}
+				{#if sym.examples.length > 0}
+					<div class="examples">
+						<p class="examples-label">Example</p>
+						{#each sym.examples as example}
+							<pre class="example"><code>{exampleCode(example)}</code></pre>
+						{/each}
+					</div>
+				{/if}
+			</section>
+		{/each}
 	{/each}
 </DocPage>
 
@@ -49,9 +64,24 @@
 		   that stretches the prose column and pushes the TOC off-screen. */
 		min-width: 0;
 	}
-	.api-symbol h2 {
+	.api-symbol-heading {
 		font-family: var(--mono);
 		scroll-margin-top: var(--u3);
+	}
+	/* B115-R2: a visible group section heading above each cluster of symbols.
+	   Distinct from the per-symbol (mono) headings — prose font, an upper rule,
+	   and dim/larger so a reader can orient between groups. */
+	.api-group {
+		margin-top: var(--u3);
+		padding-bottom: var(--u);
+		border-bottom: 1px solid var(--rule);
+		font-size: 13px;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--ink-dim);
+	}
+	.api-group:first-child {
+		margin-top: 0;
 	}
 	.examples {
 		margin-top: var(--u2);
