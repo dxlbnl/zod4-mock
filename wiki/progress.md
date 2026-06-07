@@ -19,6 +19,14 @@ it records the reason here AND states it in chat.
 
 <!-- entries start here -->
 
+## 2026-06-07 — B123: Nest/differentiate the /docs/api TOC group labels
+
+- manager: user chose B123. start, track: feature (small); git mv inbox/ → doing/. **Lite gate fails** (observable TOC structure + touches shared DocPage) → run full-but-fast: card `### Ask` serves as the contract (no separate spec page), tests-first. The fix: mark group `<h2>`s (the /docs/api page already emits `<h2 class="api-group">`) so DocPage's TOC harvest renders group rows distinctly + indents symbol links under them; keep the B102 #generate TOC-link + B114 responsive green. dispatch test-writer.
+- test-writer: added `B123 / TOC distinguishes group rows from symbol rows while keeping per-symbol links` to docs-api-grouped.spec.ts. RED: no `[data-toc-group]` marker exists (DocPage harvest emits every h2 as identical `<li><a>`). Pinned marker = **`data-toc-group`** on group `<li>` rows; symbol rows (#generate) must NOT carry it; #generate link must survive. Existing B102/B115 TOC guards stay green.
+- manager: dispatch implementer (DocPage TOC harvest: detect `api-group` h2s → mark their rail rows `data-toc-group` + style distinctly [reuse .rail-heading uppercase/dim] + indent symbol links under groups; keep #generate link + B102 overlap + B114 responsive green).
+- implementer: done — DocPage harvest sets `group: h.classList.contains('api-group')`; group rows render `<li data-toc-group class="toc-group rail-heading">` (bare text), symbol rows `<li class="toc-symbol"><a>`; `.grouped` indents symbols by --u2; narrative docs (no api-group) render unchanged. Flagged a **test bug** (not impl): the B123 assertion used `has: generateLink.first()` — Playwright `has:` can't take a positional-modified inner locator → always 0. Correctly did NOT edit the test.
+- manager: test bug confirmed → test-writer one-line locator fix (`has: page.locator('a[href="#generate"]')`, intent-preserving/sharper). GREEN: site:test:e2e **54 passed** (B123 + B102/B115/B114/smoke/docs-\*), site:check 0, unit 123, component 50. No changeset (site private). B123 done — finalizing while triaging a large batch of new maintainer feedback (see below).
+
 ## 2026-06-07 — B115: Group /docs/api by category
 
 - manager: start B115 (user direction, after B110), track: feature; git mv inbox/ → doing/. The curation layer (scripts/docs/curation.ts) already carries a `group` per symbol (B102 + B85's "World Explorer"); surface grouped sections + grouped TOC in /docs/api/+page.svelte and curate the taxonomy (World methods / matchers / types / Explorer). Keep the B102 parity guard + B114 overlap/responsive green. dispatch spec-writer.

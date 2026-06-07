@@ -24,8 +24,14 @@
 	let { title, prerequisites = [], related = [], editPath, children }: Props = $props();
 
 	// On-this-page rail — derived from <h2> headings after mount.
-	type Anchor = { id: string; text: string };
+	// B123: group <h2>s (the `api-group` headings emitted by /docs/api) are flagged
+	// so the rail can mark them distinctly from per-symbol headings and nest the
+	// symbol links under their group.
+	type Anchor = { id: string; text: string; group: boolean };
 	let anchors: Anchor[] = $state([]);
+	// True only when this page has group headings (i.e. /docs/api). Narrative docs
+	// pages have no api-group <h2>, so the rail stays a flat list exactly as before.
+	const hasGroups = $derived(anchors.some((a) => a.group));
 	// eslint-disable-next-line no-unassigned-vars -- assigned by bind:this
 	let proseEl: HTMLElement;
 
@@ -42,7 +48,7 @@
 			const text = (h.textContent ?? '').trim();
 			const id = h.id || text.toLowerCase().replace(/\s+/g, '-');
 			if (!h.id) h.id = id;
-			return { id, text };
+			return { id, text, group: h.classList.contains('api-group') };
 		});
 	});
 
@@ -101,9 +107,15 @@
 				{#if anchors.length > 0}
 					<details class="toc-disclosure" open={tocOpen}>
 						<summary>On this page</summary>
-						<ul>
+						<ul class:grouped={hasGroups}>
 							{#each anchors as a}
-								<li><a href="#{a.id}">{a.text}</a></li>
+								{#if a.group}
+									<!-- B123: group heading row — distinct (not a link), reusing the
+									     rail-heading uppercase/dim treatment, marked for the rail. -->
+									<li data-toc-group class="toc-group rail-heading">{a.text}</li>
+								{:else}
+									<li class="toc-symbol"><a href="#{a.id}">{a.text}</a></li>
+								{/if}
 							{/each}
 						</ul>
 					</details>
@@ -204,6 +216,20 @@
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		margin-bottom: var(--u);
+	}
+	/* B123: group rows in the "On this page" TOC read as headings (reusing the
+	   rail-heading uppercase/dim treatment), and per-symbol rows nest one level
+	   under their group label. Only /docs/api emits api-group headings, so on
+	   narrative docs pages there are no `.toc-group` rows and nothing indents. */
+	.on-this-page .toc-group {
+		margin-bottom: 0;
+		margin-top: var(--u);
+	}
+	.on-this-page .toc-group:first-child {
+		margin-top: 0;
+	}
+	.on-this-page .grouped .toc-symbol {
+		padding-left: var(--u2);
 	}
 	.prereqs {
 		display: flex;

@@ -131,3 +131,67 @@ test("B115-R4 / the right-rail On this page TOC reflects the grouping and keeps 
     'the "On this page" TOC must surface group labels (e.g. "World Explorer")',
   ).toContain("world explorer");
 });
+
+/**
+ * B123 — Docs "On this page" TOC: visually nest / differentiate group headings from
+ * symbol links (card: wiki/backlog/doing/B123-docs-toc-group-nesting.md, its `### Ask`
+ * is the contract — there is no separate spec page).
+ *
+ * Observable: after B115 the rail TOC lists every group label AND every symbol name, but
+ * renders them as ONE undifferentiated flat list of identical `<li><a>` rows — a reader
+ * cannot tell which rows are categories ("Getting started") and which are symbols
+ * ("generate"). B123's ask is to make group rows programmatically distinguishable from
+ * symbol rows (preferably nest symbols under their group).
+ *
+ * Pinned DOM marker for the implementer: mark group TOC rows with a `data-toc-group`
+ * attribute (the implementer wires DocPage's <h2> harvest to flag api-group headings and
+ * stamp that attribute on the group `<li>`). Symbol rows MUST NOT carry it — so the two
+ * row kinds are distinguishable. The implementer may additionally indent symbols, but the
+ * `data-toc-group` marker is the contract this test asserts. The B102/B115 guards above
+ * (the `#generate` TOC link survives, group labels appear) stay green.
+ *
+ * RED today: the harvest emits every <h2> as the same `<li><a href="#{id}">{text}</a></li>`
+ * with NO distinguishing marker, so no `[data-toc-group]` row exists — the differentiation
+ * is absent. That is the correct red ("TOC group differentiation absent").
+ */
+test("B123 / the On this page TOC distinguishes group rows from symbol rows while keeping per-symbol links", async ({
+  page,
+}) => {
+  await page.goto(API);
+  await page.waitForLoadState("networkidle");
+
+  const toc = page.getByRole("complementary", { name: /On this page/i });
+  await expect(toc).toBeVisible();
+
+  // Guard (B102-R4 / B115-R4 carry-over): the per-symbol `#generate` TOC link must still
+  // be present and navigable — differentiating the rows MUST NOT drop symbol links.
+  const generateLink = toc.getByRole("link", { name: /generate/i }).first();
+  await expect(generateLink).toHaveAttribute("href", /#generate/);
+
+  // (1) RED today: at least one TOC row is marked as a GROUP row (the pinned
+  // `data-toc-group` marker). The flat post-B115 TOC has no such marker, so this is 0.
+  const groupRows = toc.locator("[data-toc-group]");
+  await expect(
+    groupRows.first(),
+    "group TOC rows must carry a distinguishing marker (data-toc-group)",
+  ).toBeVisible();
+
+  // (2) The marked group row carries a GROUP label (e.g. "Getting started"), not a symbol
+  // name — confirms the marker tags the right rows.
+  await expect(
+    toc.locator("[data-toc-group]", { hasText: /Getting started/i }).first(),
+    'a group TOC row must carry the group label "Getting started"',
+  ).toBeVisible();
+
+  // (3) The `#generate` symbol row is NOT a group row — symbol rows are distinguishable
+  // from group rows (the marker partitions the two kinds, not stamped on everything).
+  // Pin the exact `#generate` row by its href (sharper than /generate/i, which also
+  // matches generateFromSchema/generateFromKey) — no positional modifier in `has:`,
+  // since Playwright's `has:` does not support an inner locator carrying `.first()`/`.nth()`.
+  const generateRow = toc.locator("li", { has: page.locator('a[href="#generate"]') });
+  await expect(
+    generateRow,
+    "the per-symbol `#generate` TOC row must NOT be marked as a group row",
+  ).toHaveCount(1);
+  await expect(generateRow).not.toHaveAttribute("data-toc-group", /.*/);
+});
