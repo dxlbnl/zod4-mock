@@ -46,4 +46,4 @@
 - The two remaining data-generation pillars (Markov character entropy for synthetic strings,
   conjugation-based word compression) — priority and scope (tracked as backlog items).
 - Self-referential relations (a schema relating to itself, e.g. category → parent) are
-  not yet supported (tracked as a bug; see `docs/bugs.md`).
+  supported (resolved by B1; the `docs/bugs.md` note and `/docs/bugs` route were removed in B118).

@@ -43,7 +43,6 @@ export const ROUTE_TABLE = [
   "/docs/key-heuristics",
   "/docs/recipes",
   "/docs/zod4-schema-coverage",
-  "/docs/bugs",
 ] as const;
 
 /**

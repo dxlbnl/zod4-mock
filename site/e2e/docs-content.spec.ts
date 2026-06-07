@@ -112,6 +112,69 @@ test("B101-R5 / getting-started embeds a RelatedShowcase demo link", async ({ pa
   await expect(demoLink).toHaveAttribute("href", /^\/showcase#(review|order|user|product)$/);
 });
 
+test("B116 / getting-started 'Where to go next' entries are working /docs links", async ({
+  page,
+}) => {
+  await page.goto(GETTING_STARTED);
+  await page.waitForLoadState("networkidle");
+
+  // The "Where to go next" section lists onward docs pages. Each named target
+  // MUST be a real anchor pointing at its /docs/* route (B116 regression: the
+  // entries used to render as plain text that did not navigate).
+  const targets: ReadonlyArray<{ name: RegExp; href: string }> = [
+    { name: /^Concepts$/, href: "/docs/concepts" },
+    { name: /^API Reference$/, href: "/docs/api" },
+    { name: /Key-Based Field Heuristics/, href: "/docs/key-heuristics" },
+    { name: /^Recipes$/, href: "/docs/recipes" },
+  ];
+
+  // Resolve the site's amber link colour and the grey body inks to compare the
+  // *computed* colour against — a class-name mismatch (the `.docs-prose a` rule
+  // not matching the real `.doc-prose-body` wrapper) made these links fall back
+  // to grey + underline, reading as plain text. Resolving the tokens off the
+  // live document means the assertion tracks the design token, not a hard-coded
+  // rgb. `--amber` is the intended link colour; `--ink-dim`/`--ink` is the grey
+  // body text the broken links rendered as.
+  const tokens = await page.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const resolve = (name: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = cs.getPropertyValue(name).trim();
+      document.body.appendChild(probe);
+      const rgb = getComputedStyle(probe).color;
+      probe.remove();
+      return rgb;
+    };
+    return { amber: resolve("--amber"), inkDim: resolve("--ink-dim"), ink: resolve("--ink") };
+  });
+
+  // Scope to the <DocPage> prose body so we assert the actual "Where to go next"
+  // prose link, not the section sidebar's same-href `.docs-nav-link` (which has
+  // its own grey nav styling and would mask the prose-link colour regression).
+  const proseBody = page.locator(".doc-prose-body");
+
+  for (const { name, href } of targets) {
+    const link = proseBody.getByRole("link", { name }).first();
+    await expect(link, `"${name}" must be an anchor`).toHaveAttribute("href", href);
+
+    // B116 regression: the prose link must carry the site's amber link affordance,
+    // not render as grey body text. Assert the *computed* colour resolves to
+    // --amber and is NOT the grey body inks. This is the assertion that catches
+    // the class-name mismatch the href check alone could not.
+    const color = await link.evaluate((el) => getComputedStyle(el).color);
+    expect(color, `"${name}" link must render amber, not grey body text`).toBe(tokens.amber);
+    expect(color).not.toBe(tokens.inkDim);
+    expect(color).not.toBe(tokens.ink);
+
+    // The href resolves: navigating to it lands on the named docs page (a 200,
+    // not a 404), proving the link is real and the target route exists.
+    const response = await page.goto(href);
+    expect(response?.ok(), `${href} must resolve`).toBe(true);
+    await page.goBack();
+    await page.waitForLoadState("networkidle");
+  }
+});
+
 // ── Concepts ───────────────────────────────────────────────────────────────
 
 test("B101-R6 / concepts renders as a DocPage with ported prose", async ({ page }) => {

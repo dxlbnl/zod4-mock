@@ -38,6 +38,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* B108: uniform top offset below the (non-sticky) nav for every page. Pages
+     that lead with a <PageHero> already carry the hero's own --u6 top padding,
+     so the shell padding is dropped there to avoid doubling it — the result is a
+     consistent gap below the nav whether or not a page leads with a PageHero,
+     so the docs <h1> no longer hugs the nav. */
+  .page-shell {
+    padding-top: var(--u6);
+  }
+  .page-shell:has(.page-hero) {
+    padding-top: 0;
+  }
+
   /* Inputs */
   input[type="text"],
   input[type="search"] {
@@ -133,14 +145,19 @@
     overflow-x: auto;
   }
 
-  /* ── Docs prose ────── */
-  .docs-prose h1 {
+  /* ── Docs prose ──────
+     B116: the real <DocPage> prose wrapper is `.doc-prose-body` (DocPage.svelte).
+     These typography rules — including the amber link affordance below — formerly
+     targeted an orphaned `.docs-prose` class that no markup carried, so docs body
+     links silently fell back to grey + underline (read as plain text). Retargeted
+     to `.doc-prose-body` so the intended site typography and link style apply. */
+  .doc-prose-body h1 {
     font-size: 28px;
     font-weight: 600;
     margin-bottom: var(--u3);
     color: var(--ink);
   }
-  .docs-prose h2 {
+  .doc-prose-body h2 {
     font-size: 18px;
     font-weight: 600;
     margin: var(--u4) 0 12px;
@@ -148,7 +165,7 @@
     border-top: 1px solid var(--rule);
     padding-top: var(--u2);
   }
-  .docs-prose h3 {
+  .doc-prose-body h3 {
     font-size: 14px;
     font-weight: 600;
     margin: var(--u2) 0 var(--u);
@@ -156,31 +173,31 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
-  .docs-prose p {
+  .doc-prose-body p {
     font-size: 14px;
     line-height: 1.75;
     color: var(--ink-dim);
     margin-bottom: 12px;
   }
-  .docs-prose ul {
+  .doc-prose-body ul {
     margin: var(--u) 0 12px var(--u2);
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  .docs-prose li {
+  .doc-prose-body li {
     font-size: 14px;
     line-height: 1.6;
     color: var(--ink-dim);
   }
-  .docs-prose a {
+  .doc-prose-body a {
     color: var(--amber);
     text-decoration: none;
   }
-  .docs-prose a:hover {
+  .doc-prose-body a:hover {
     text-decoration: underline;
   }
-  .docs-prose code {
+  .doc-prose-body code {
     font-family: var(--mono);
     font-size: 12px;
     background: var(--bg-elev);
@@ -188,7 +205,7 @@
     border-radius: 4px;
     color: var(--amber);
   }
-  .docs-prose table {
+  .doc-prose-body table {
     width: 100%;
     /* B114-R5/R6: fixed layout so a wide cell (a long type token like
        `Record<string, KeyGenerator>` or `@zod4-mock/locale-en`) wraps inside its
@@ -202,7 +219,7 @@
     border-radius: 8px;
     overflow: hidden;
   }
-  .docs-prose th {
+  .doc-prose-body th {
     text-align: left;
     padding: var(--u) 12px;
     border-bottom: 1px solid var(--rule);
@@ -213,7 +230,7 @@
     letter-spacing: 0.05em;
     background: var(--bg-rail);
   }
-  .docs-prose td {
+  .doc-prose-body td {
     padding: var(--u) 12px;
     border-bottom: 1px solid var(--rule);
     color: var(--ink-dim);
@@ -222,14 +239,14 @@
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-  .docs-prose td code {
+  .doc-prose-body td code {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-  .docs-prose tr:last-child td {
+  .doc-prose-body tr:last-child td {
     border-bottom: none;
   }
-  .docs-prose .shiki {
+  .doc-prose-body .shiki {
     background: var(--bg-elev) !important;
     border: 1px solid var(--rule);
     border-radius: 8px;
@@ -240,7 +257,7 @@
     line-height: 1.65;
     overflow-x: auto;
   }
-  .docs-prose .shiki code {
+  .doc-prose-body .shiki code {
     background: none;
     padding: 0;
     border-radius: 0;

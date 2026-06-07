@@ -160,8 +160,11 @@
 		</Text>
 	</Stack>
 
+	<!-- B108: a bordered (cta) variant beside a label reads as a deliberate action
+	     rather than a stray amber text link. -->
 	<Inline gap="sm">
-		<Button variant="ghost" onclick={regenerate}>Regenerate</Button>
+		<Text variant="mono" color="dim">New dataset:</Text>
+		<Button variant="cta" onclick={regenerate}>Regenerate</Button>
 	</Inline>
 
 	<RelationCallout proofs={proofs()} />

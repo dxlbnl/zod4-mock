@@ -73,7 +73,7 @@ Ground-truth of the current responsive state (read 2026-06-07):
   `.docs-layout` sidebar grid does **not** reflow yet — that is the visible mobile gap).
   **No new dependency is required.**
 - The `/` funnel already reflows its exhibit grid at `@media (max-width: 640px)`.
-- The Concepts "Options" table is a **plain prose `<table>`** (styled by `.docs-prose
+- The Concepts "Options" table is a **plain prose `<table>`** (styled by `.doc-prose-body
 table` in `app.css`), not a `<ParameterTable>` — so its cramping is purely a function of
   the content-column width, fixed by the reading-width requirement below.
 

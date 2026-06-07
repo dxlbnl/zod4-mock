@@ -7,8 +7,12 @@
 	//
 	// After the migration, +layout.svelte must render the new top-bar
 	// with: brand wordmark "zod4-mock" (linking to /), then the labels
-	// Docs / Explorer / Showcase / Comparison / Bench, and right-aligned
-	// GitHub + npm links. /table must NOT appear anywhere in the nav.
+	// Docs / Explorer / Showcase / Comparison / Bench. /table must NOT
+	// appear anywhere in the nav.
+	//
+	// B117: GitHub + npm are no longer textual nav items — they render as
+	// right-aligned icon links (aria-label "GitHub" / "npm") set apart from
+	// the textual nav, so they are absent from the textual nav order.
 
 	const { Story } = defineMeta({
 		title: 'B95/Layout',
@@ -16,7 +20,7 @@
 		tags: ['!autodocs']
 	});
 
-	const expectedOrder = ['zod4-mock', 'Docs', 'Explorer', 'Showcase', 'Comparison', 'Bench', 'GitHub', 'npm'];
+	const expectedOrder = ['zod4-mock', 'Docs', 'Explorer', 'Showcase', 'Comparison', 'Bench'];
 </script>
 
 {#snippet emptyChildren()}

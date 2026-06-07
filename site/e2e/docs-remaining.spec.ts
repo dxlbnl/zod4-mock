@@ -1,13 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * B103 — rebuilt /docs/key-heuristics + /docs/recipes + /docs/zod4-schema-coverage +
- * /docs/bugs content suite (spec: wiki/specs/B103-docs-port-remaining-pages.md).
+ * B103 — rebuilt /docs/key-heuristics + /docs/recipes + /docs/zod4-schema-coverage
+ * content suite (spec: wiki/specs/B103-docs-port-remaining-pages.md).
+ *
+ * (B118 removed the /docs/bugs route, so its B103-R4 scenario is gone.)
  *
  * These are the UI scenarios for B103-R1 .. B103-R7: each route is rebuilt from a
  * link-only B100 stub into a bespoke <DocPage> authored on the B100 primitives, with
  * prose ported verbatim from the matching docs/*.md (key-heuristics, recipes,
- * zod4-schema-coverage, bugs). Recipes and Key Heuristics additionally embed at least
+ * zod4-schema-coverage). Recipes and Key Heuristics additionally embed at least
  * one <Playground> (B103-R5 / B103-R6).
  *
  * One test per requirement ID, named `B103-R<k> / <scenario>`, asserting the observable
@@ -16,7 +18,7 @@ import { expect, test } from "@playwright/test";
  * (see playwright.config.ts), settling on `networkidle` (the B75 smoke settle point) so
  * hydration-mounted widgets (Playground/CodeMirror) settle before assertion.
  *
- * RED expectation: all four routes are still B100-R13 stubs — each a <DocPage> whose
+ * RED expectation: all three routes are still B100-R13 stubs — each a <DocPage> whose
  * body is a single paragraph linking to the canonical docs/<file>.md (a
  * `/canonical reference/i` link), with no ported section headings and no <Playground>.
  * Every assertion below therefore fails because the rebuilt content is absent — that is
@@ -26,9 +28,8 @@ import { expect, test } from "@playwright/test";
 const KEY_HEURISTICS = "/docs/key-heuristics";
 const RECIPES = "/docs/recipes";
 const SCHEMA_COVERAGE = "/docs/zod4-schema-coverage";
-const BUGS = "/docs/bugs";
 
-const ALL_FOUR = [KEY_HEURISTICS, RECIPES, SCHEMA_COVERAGE, BUGS] as const;
+const ALL_PAGES = [KEY_HEURISTICS, RECIPES, SCHEMA_COVERAGE] as const;
 
 // ── B103-R1: Key Heuristics ──────────────────────────────────────────────────
 
@@ -85,20 +86,6 @@ test("B103-R3 / zod4-schema-coverage renders as a DocPage with the ported suppor
   ).toBeVisible();
 });
 
-// ── B103-R4: Known Bugs ──────────────────────────────────────────────────────
-
-test("B103-R4 / bugs renders as a DocPage with ported prose", async ({ page }) => {
-  await page.goto(BUGS);
-  await page.waitForLoadState("networkidle");
-
-  await expect(page.getByRole("heading", { level: 1, name: "Known Bugs" })).toBeVisible();
-
-  await expect(page.getByRole("link", { name: /canonical reference/i })).toHaveCount(0);
-
-  // At least one ported section heading from docs/bugs.md ("## Resolved").
-  await expect(page.getByRole("heading", { name: /Resolved/i }).first()).toBeVisible();
-});
-
 // ── B103-R5: Recipes embeds a Playground ─────────────────────────────────────
 
 test("B103-R5 / recipes embeds a Playground that mounts after hydration", async ({ page }) => {
@@ -141,7 +128,7 @@ test("B103-R6 / key-heuristics embeds a Playground that mounts after hydration",
 // ── B103-R7: no un-cited speed superlative on any rebuilt page ────────────────
 
 test("B103-R7 / no un-cited speed superlative on any rebuilt page", async ({ page }) => {
-  for (const route of ALL_FOUR) {
+  for (const route of ALL_PAGES) {
     await page.goto(route);
     await page.waitForLoadState("networkidle");
 

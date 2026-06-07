@@ -38,7 +38,6 @@ export const SIDEBAR: ReadonlyArray<SidebarGroup> = [
       { href: "/docs/key-heuristics", label: "Key Heuristics", order: 2 },
       { href: "/docs/zod4-schema-coverage", label: "Schema Coverage", order: 3 },
       { href: "/docs/comparison", label: "Comparison", order: 4 },
-      { href: "/docs/bugs", label: "Known Bugs", order: 5 },
     ],
   },
   {
