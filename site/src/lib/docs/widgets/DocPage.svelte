@@ -8,6 +8,7 @@
 	import { onMount, type Snippet } from 'svelte';
 	import { Container, Stack, Prose, Heading } from '@dxlbnl/ui';
 	import type { SidebarGroupId } from '../sidebar.js';
+	import { slugify } from '../slug.js';
 
 	type PrereqPage = { href: string; label: string };
 
@@ -60,7 +61,7 @@
 		const heads = Array.from(proseEl.querySelectorAll(selector)).filter(owns);
 		anchors = heads.map((h) => {
 			const text = (h.textContent ?? '').trim();
-			const id = h.id || text.toLowerCase().replace(/\s+/g, '-');
+			const id = h.id || slugify(text);
 			if (!h.id) h.id = id;
 			// In member-toc mode a symbol <h2> is the parent (group) row and its
 			// member <h3>s nest beneath it. Otherwise the B123 api-group flag drives

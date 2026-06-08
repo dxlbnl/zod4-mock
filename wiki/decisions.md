@@ -1054,3 +1054,34 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
 - **Rule added**: docs code samples MUST be Shiki + Twoslash-rendered and **type-checked at build time**;
   `@shikijs/twoslash` + `twoslash` are build-time (D13-exempt) devDependencies; the token→`/docs/api`
   type-link join MUST be `src`-aligned (LS `paths` `zod4-mock` → `src/index.ts`, matching TypeDoc). (→ D30)
+
+## D31 — Prerendered /docs heading ids are injected at build time (node-html-parser)
+
+- **Date**: 2026-06-08.
+- **By**: implementer (docs-search scroll-to-anchor bug), to be promoted by the manager at Done.
+- **Context**: The narrative docs pages (`/docs/concepts`, `/docs/recipes`, `/docs/relational`,
+  `/docs/key-heuristics`, `/docs/getting-started`) assigned their `<h2>`/`<h3>` heading ids
+  CLIENT-SIDE in `DocPage.svelte`'s `onMount`, so the prerendered HTML shipped with NO heading ids.
+  Pagefind (which indexes the prerendered HTML, D25) therefore anchored nothing — search-hit
+  `sub_results` carried no `#heading`, so clicking a hit could not scroll to the matched section —
+  and `#fragment` deep-links did not resolve on initial (pre-hydration) load. (`/docs/api` was
+  unaffected because TypeDoc renders its ids at build time.)
+- **Decision**: heading ids for the prerendered `/docs` HTML are produced at **build time**. The
+  slug function `DocPage` uses is extracted to a shared module (`site/src/lib/docs/slug.ts`, one
+  `slugify(text)`) so client + build agree. A new build step (`site/scripts/inject-heading-ids.ts`)
+  walks the prerendered docs HTML with a **real HTML parser** (`node-html-parser`) and injects
+  `id="<slugify(text)>"` into every `<h2>`/`<h3>` inside the docs prose body
+  (`[data-pagefind-body]`) that lacks an id (collisions get a `-2`/`-3`/… suffix; pre-existing ids
+  are preserved). It runs in the site `build` AFTER `vite build` and BEFORE `pagefind-index.ts` (so
+  the index gets the anchors) and mutates both served roots' HTML in place
+  (`.svelte-kit/output/prerendered/pages/docs` for `vite preview` and, when present,
+  `.vercel/output/static/docs` for production) so deep-links persist. `DocsSearchInput` builds each
+  hit href from Pagefind `sub_results?.[0]?.url ?? d.url`, and `strip()` preserves the `#fragment`.
+- **Consequences**: `node-html-parser` is a **build-time devDependency** of `site/` only (D13-exempt,
+  like `typedoc`/`pagefind`/`twoslash`) — nothing enters the shipped library `dist/` or the site
+  client bundle. The step is idempotent. Builds on D25 (Pagefind indexes prerendered `/docs` HTML);
+  does not replace it.
+- **Rule proposed** (manager to promote): prerendered `/docs` `<h2>`/`<h3>` heading ids MUST be
+  present at build time — produced by the build-time id-injection step using the shared `slugify`
+  (so Pagefind anchors them and `#fragment` deep-links resolve on load); HTML MUST be mutated with a
+  real parser (`node-html-parser`, build-time/D13-exempt), never regex. (→ D31)

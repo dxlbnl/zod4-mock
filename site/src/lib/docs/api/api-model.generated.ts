@@ -1147,7 +1147,7 @@ export const API_MODEL: ReadonlyArray<ApiSymbol> = [
     signatureHtml:
       '<pre class="shiki shiki-themes site-paper site-phosphor" style="--shiki-light:#14110b;--shiki-dark:#d6e2dc;--shiki-light-bg:#dfdbce;--shiki-dark-bg:#070908" tabindex="0"><code><span class="line"><span style="--shiki-light:#A04E00;--shiki-dark:#FFB347">interface</span><span style="--shiki-light:#14110B;--shiki-dark:#D6E2DC"> LocaleData</span></span></code></pre>',
     description:
-      "The full set of locale-specific word lists and formatting callbacks a world\ndraws from. Bundled locales (`en`, `nl`) implement it; pass a custom one via\n`WorldOptions.locale` or compose one with extend.",
+      "The full set of locale-specific word lists and formatting callbacks a world\ndraws from. Bundled locales (`en`, `nl`) implement it; pass a custom one via\n`WorldOptions.locale` or compose one with `extend` (from\n`@zod4-mock/locale-en` / `@zod4-mock/locale-nl`).",
     examples: [],
     examplesHtml: [],
     fields: [
@@ -1341,12 +1341,7 @@ export const API_MODEL: ReadonlyArray<ApiSymbol> = [
         description: "",
       },
     ],
-    links: [
-      {
-        text: "extend",
-        anchor: null,
-      },
-    ],
+    links: [],
   },
   {
     name: "Prng",

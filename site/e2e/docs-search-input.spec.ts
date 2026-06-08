@@ -145,6 +145,66 @@ test("B128-R3 / searching a concept term surfaces a concept summary with a page 
   ).toBeVisible();
 });
 
+// ── B128-R2 (regression) / clicking a hit scrolls to the matched sub-heading ──
+
+test("B128-R2 / clicking a search hit scrolls to the matched heading (sub_result anchor)", async ({
+  page,
+}) => {
+  const consoleErrors: string[] = [];
+  const pageErrors: Error[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+  page.on("pageerror", (err) => pageErrors.push(err));
+
+  await page.goto(DOCS_ROUTE);
+  await page.waitForLoadState("networkidle");
+
+  // `determinism` matches the `## Determinism` section on /docs/concepts. With the
+  // prerendered headings now carrying build-time ids, Pagefind's top sub_result
+  // anchors that section, so the hit href gains a `#determinism` fragment.
+  const input = visibleSearchInput(page);
+  await input.fill("determinism");
+
+  const results = resultsRegion(page);
+  await expect(results).toBeVisible();
+
+  // The top hit linking to /docs/concepts must carry an anchored fragment.
+  const hit = results.locator('a[href*="/docs/concepts#"]').first();
+  await expect(
+    hit,
+    "the top /docs/concepts hit has no `#fragment` — sub_result anchors are missing (heading ids absent from prerendered HTML)",
+  ).toBeVisible();
+  const href = await hit.getAttribute("href");
+  expect(href, "search hit href").toMatch(/\/docs\/concepts#.+/);
+  const fragment = href!.split("#")[1]!;
+
+  await hit.click();
+
+  // (a) the URL gained the `#` fragment.
+  await expect(page).toHaveURL(new RegExp(`/docs/concepts#${fragment}$`));
+
+  // (b) the target heading exists and is scrolled into view (near the top of the
+  // viewport), proving the build-time id let the in-page anchor resolve.
+  const target = page.locator(`#${fragment}`);
+  await expect(target, `heading #${fragment} must exist in the served HTML`).toHaveCount(1);
+  const box = await target.boundingBox();
+  expect(box, "target heading has no layout box").not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(box!.y, "matched heading is not scrolled near the top of the viewport").toBeLessThan(
+    (viewport?.height ?? 720) * 0.5,
+  );
+
+  expect(
+    pageErrors,
+    `pageerror during scroll-to-anchor: ${pageErrors.map((e) => e.message).join("; ")}`,
+  ).toEqual([]);
+  expect(
+    consoleErrors,
+    `console.error during scroll-to-anchor: ${consoleErrors.join("; ")}`,
+  ).toEqual([]);
+});
+
 // ── B128-R4: keyboard-operable (Escape dismisses) + SSR-safe (no load error) ──
 
 test("B128-R4 / Escape dismisses the results and the input stays focusable; no error on load", async ({

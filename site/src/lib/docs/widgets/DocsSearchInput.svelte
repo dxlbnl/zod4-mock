@@ -64,7 +64,11 @@
 		const response = await api.search(term);
 		const datas = await Promise.all(response.results.slice(0, 10).map((r) => r.data()));
 		hits = datas.map((d) => ({
-			url: d.url,
+			// sub_results[0] is the most relevant anchored location — now that the
+			// prerendered headings carry build-time ids, its url carries `#heading`
+			// so clicking the hit scrolls to the matched section. Fall back to the
+			// page url when a result has no anchored sub-result.
+			url: d.sub_results?.[0]?.url ?? d.url,
 			title: d.meta.title ?? d.url,
 			excerpt: d.excerpt
 		}));
@@ -97,8 +101,11 @@
 	}
 
 	function strip(url: string): string {
-		// Normalise pagefind URLs to a site-rooted /docs path.
-		return url.replace(/\.html$/, '').replace(/\/index$/, '');
+		// Normalise pagefind URLs to a site-rooted /docs path while preserving any
+		// `#fragment` (the anchored sub_result heading) so the hit scrolls into view.
+		const [path = '', fragment] = url.split('#');
+		const cleanPath = path.replace(/\.html$/, '').replace(/\/index$/, '');
+		return fragment ? `${cleanPath}#${fragment}` : cleanPath;
 	}
 </script>
 
