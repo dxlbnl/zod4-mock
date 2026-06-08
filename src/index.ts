@@ -14,49 +14,17 @@
 export { createWorld } from "./world.js";
 
 /**
- * Seeded-PRNG helpers. See {@link createPrng} and {@link fieldSeed}.
+ * Seeded-PRNG helpers. See {@link createPrng}.
  *
  * @example
  * ```ts
  * import { createPrng } from "zod4-mock";
  * const prng = createPrng(1);
  * ```
- * @example
- * ```ts
- * import { createPrng, fieldSeed } from "zod4-mock";
- * const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
- * ```
  */
-export { createPrng, fieldSeed } from "./prng.js";
-
-/**
- * Pipeline generator rungs. See {@link generateFromSchema} and
- * {@link generateFromKey}.
- *
- * @example
- * ```ts
- * import { generateFromSchema } from "zod4-mock";
- * ```
- * @example
- * ```ts
- * import { generateFromKey } from "zod4-mock";
- * ```
- */
-export { generateFromSchema, generateFromKey } from "./generators/index.js";
+export { createPrng } from "./prng.js";
 
 import * as dataNs from "./generators/data/index.js";
-/**
- * The raw built-in generator namespace (`data.person`, `data.internet`, …).
- * Each function takes a `Prng` as its first argument; prefer `generators` or
- * `ctx.gen` (which pre-bind the field-seeded `Prng`) inside matchers.
- *
- * @example
- * ```ts
- * import { data, createPrng } from "zod4-mock";
- * const name = data.person.fullName(createPrng(1));
- * ```
- */
-export const data: typeof dataNs = dataNs;
 
 /**
  * Built-in field-name heuristic tables. See {@link DEFAULT_KEY_MAP} and
@@ -74,18 +42,6 @@ export const data: typeof dataNs = dataNs;
 export { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS } from "./generators/index.js";
 
 export type { PrngGen, KeyPattern } from "./generators/index.js";
-
-/**
- * Compose a locale by shallow-merging overrides onto a base. See {@link extend}.
- *
- * @example
- * ```ts
- * import { extend } from "zod4-mock";
- * import { en } from "@zod4-mock/locale-en";
- * const myLocale = extend(en, { id: "en-custom" });
- * ```
- */
-export { extend } from "@zod4-mock/locale-core";
 
 import { z } from "zod";
 import type { GenerateOptions, WorldOptions } from "./types.js";
@@ -164,6 +120,7 @@ export type {
   // Override / transform
   DeepPartial,
   GenerateOptions,
+  GenerationDefaults,
 
   // Key maps
   SchemaKeyMap,

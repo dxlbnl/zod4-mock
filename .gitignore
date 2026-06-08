@@ -16,6 +16,12 @@ site/playwright-report/
 # Site bench history (latest.json is committed; history.json grows unbounded)
 site/bench/results/history.json
 
+# B125 TypeDoc build artifacts. `api-model.generated.ts` (the small render model the
+# /docs/api page imports) IS committed so dev/check work without a full build; the raw
+# TypeDoc JSON and emitted HTML are large, regenerated each build, and not committed.
+site/src/lib/docs/api/typedoc.json
+site/static/api-html/
+
 # Claude Code per-session state (wiki-gate markers, etc.)
 .claude/state/
 

@@ -347,9 +347,12 @@ createWorld({ seed: 42, locale: nl });`}</code></pre>
 		arrays (<code>simpleFirstNamesMale</code>, <code>nouns</code>); generators prefer the model when
 		present.
 	</p>
-	<p>For variants, use <code>extend()</code> (re-exported from <code>zod4-mock</code>):</p>
-	<pre><code>{`import { createWorld, extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
+	<p>
+		For variants, use <code>extend()</code> (re-exported from each locale package, e.g.
+		<code>@zod4-mock/locale-en</code>):
+	</p>
+	<pre><code>{`import { createWorld } from "zod4-mock";
+import { en, extend } from "@zod4-mock/locale-en";
 
 const enGB = extend(en, {
   address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },

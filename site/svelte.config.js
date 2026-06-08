@@ -16,7 +16,8 @@ const config = {
           }
           const html = await codeToHtml(code, {
             lang: lang ?? "text",
-            theme: "github-dark-dimmed",
+            themes: { light: "github-light", dark: "github-dark-dimmed" },
+            defaultColor: false,
           });
           return escapeSvelte(html);
         },

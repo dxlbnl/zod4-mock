@@ -15,9 +15,9 @@
  *
  * @example
  * ```ts
- * import { data, createPrng } from "zod4-mock";
+ * import { generators, createPrng } from "zod4-mock";
  *
- * const name = data.person.fullName(createPrng(1));
+ * const name = generators.person.fullName(createPrng(1));
  * ```
  */
 export * as data from "./data/index.js";

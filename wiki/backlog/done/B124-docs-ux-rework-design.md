@@ -27,6 +27,7 @@ resolves; it must always work for the user.**
 ### Concrete failures to fix (from the review)
 
 **API reference** ("misses all points"):
+
 - The ParameterTable doesn't work; the rendered "types" aren't useful.
 - `generate` shows `GenerateOptions<z.infer<TSchema>>` — opaque; it **never lists the actual
   options**.
@@ -36,6 +37,7 @@ resolves; it must always work for the user.**
 - The rail TOC is **too long and not scrollable**.
 
 **Getting Started** ("rework the entire guide"):
+
 - It's framed as steps, but they don't build on each other — they're alternatives.
 - Step 1 doesn't show imports; snippets use an undefined `UserSchema`.
 - Code isn't color-coded; the `<Playground>` shows output but no step content.
@@ -63,6 +65,7 @@ resolves; it must always work for the user.**
 ## Acceptance (the report)
 
 `wiki/research/reports/docs-ux-rework.md` must:
+
 1. State the guiding principle and the per-surface design (API reference member-level model;
    Getting Started variations model; search; code highlighting; TOC), grounded in what the
    **`ts-morph` extractor can actually pull** (member-level data: interface members, type

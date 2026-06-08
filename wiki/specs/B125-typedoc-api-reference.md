@@ -6,11 +6,49 @@ B125 replaces the bespoke `ts-morph` API-docs pipeline (B102, refined by B115 gr
 and B123 TOC nesting) with **TypeDoc**, per the maintainer-approved docs-UX plan
 [wiki/research/reports/docs-ux-rework.md](../research/reports/docs-ux-rework.md). The plan
 is binding: API reference = TypeDoc, reading `src/index.ts` + the in-source TSDoc, producing
-**member-level** documentation natively — functions with their parameters and an **expanded
-options table** (not the opaque `GenerateOptions<z.infer<TSchema>>`), option/config types
+**member-level** documentation natively — functions with their parameters and **each option
+expanded** (not the opaque `GenerateOptions<z.infer<TSchema>>`), option/config types
 (`GenerateOptions`/`WorldOptions`) with **every field**, interfaces (`World`/`Registry`) with
 **every method**, all cross-linked. The card:
 [wiki/backlog/doing/B125-typedoc-api-reference.md](../backlog/doing/B125-typedoc-api-reference.md).
+
+### Render shape and option surface, as actually shipped (maintainer-directed, mid-B125)
+
+The reference was built and reviewed live under maintainer direction, which changed two
+things this spec now reflects (see `wiki/progress.md` → the B125 / B125-cont. entries):
+
+- **Render shape: heading-per-member, not a table.** Four CSS loops proved a fixed
+  4-column options **table** could not read well for this content (long types _and_ long
+  prose → column starvation or multi-thousand-pixel rows; unusable at 390px). The
+  maintainer pivoted to a **heading-per-member** render (React.dev / TanStack style):
+  the symbol is an `h2`, each member (function option, config-type field, interface
+  method) is an `h3` whose **name + type sit on one line**, the description as prose
+  beneath, deep-linkable per member and nested in the "On this page" rail (DocPage gained
+  a gated 2-level `memberToc`). R4/R5/R6 below assert the member-level **entries** rather
+  than table rows; the observable intent (every field/option/method listed with type +
+  description + a resolvable anchor) is unchanged.
+
+- **Option surface curated (maintainer decision).** Three `GenerateOptions` fields the
+  engine threads internally (`source`, `fieldPath`, `prng`) are now `@internal` and
+  **excluded** from the reference (TypeDoc `excludeInternal: true`); they keep working by
+  structural identity (non-breaking). The **5 fields shared** by `GenerateOptions` and
+  `WorldOptions` (`seed`, `optionalProbability`, `defaultArrayLength`, `recursionLimit`,
+  `locale`) were extracted into a new exported base interface **`GenerationDefaults`**;
+  `WorldOptions extends GenerationDefaults` (own fields: `generators`, `trace`) and
+  `GenerateOptions<T> extends GenerationDefaults` (own fields: `overrides`, `transform`,
+  `store`, `unique`). The reference renders each type's **own** fields plus a compact
+  "Inherited from GenerationDefaults" link row, and documents `GenerationDefaults` once as
+  its own symbol. R5/R11 below reflect this curated surface.
+
+### Static `docs/api-reference.md` and the barrel (cross-ref B129)
+
+The static `docs/api-reference.md` is no longer regenerated (it is a committed reference;
+`/docs/api` is the canonical living surface). **B129** (run inline under the same
+maintainer direction) curated the public barrel: `extend`, `data`, `generateFromSchema`,
+`generateFromKey`, and `fieldSeed` **left the `zod4-mock` barrel** (`extend` relocated to
+the locale packages; the rest were internal-only). B129 updated `docs/api-reference.md` to
+drop the removed symbols and fixed the `{@link}`s that would otherwise dangle. See the
+B129 entry in `wiki/progress.md`.
 
 This supersedes the predecessor spec
 [B102](B102-docs-structured-api-parity-guard.md) (the `ts-morph` extractor +
@@ -28,14 +66,15 @@ or the join silently yields 0.
 
 ### Why a content gap is in scope (per-field TSDoc)
 
-The plan's "Content gap to close" notes that `GenerateOptions`/`WorldOptions` option **fields**
-lack per-field TSDoc, so their descriptions render blank. Ground truth confirms this:
-[src/types.ts](../../src/types.ts) — `GenerateOptions` has `overrides`, `transform`, `seed`,
-`optionalProbability`, `defaultArrayLength`, `recursionLimit`, `source`, `fieldPath`, `prng`,
-`locale`, `store`, `unique`; only `store` and `unique` carry per-field TSDoc. `WorldOptions`
-has `seed`, `optionalProbability`, `defaultArrayLength`, `generators`, `recursionLimit`,
-`locale`, `trace` (7 fields); only `locale` and `trace` carry per-field TSDoc. Closing this is
-authored content, not tooling.
+The plan's "Content gap to close" notes that the option **fields** lacked per-field TSDoc,
+so their descriptions rendered blank. As shipped, the documented option surface is the
+curated one (above): the 5 shared fields live on **`GenerationDefaults`** (`seed`,
+`optionalProbability`, `defaultArrayLength`, `recursionLimit`, `locale`), `GenerateOptions`
+adds its own `overrides`, `transform`, `store`, `unique` (with `source`/`fieldPath`/`prng`
+`@internal` and out of the documented surface), and `WorldOptions` adds its own `generators`,
+`trace`. Every **documented** field (GenerationDefaults' 5 + each type's own) carries a
+one-line TSDoc description so no rendered entry is blank. Closing this is authored content,
+not tooling.
 
 ### Standing-constraint change (flagged for the manager to promote at Done)
 
@@ -121,39 +160,49 @@ The site `build` script **MUST** run the TypeDoc generation as part of `pnpm bui
   - THEN the build completes successfully, the TypeDoc JSON model is present, the `/docs/api`
     route prerenders to HTML, and the Pagefind index step still runs afterward (D25 preserved).
 
-### B125-R4: Functions render signature + parameters + an expanded options table
+### B125-R4: Functions render signature + parameters + each option as its own member entry
 
 The `/docs/api` page **MUST**, for each documented **function** in the model, render its
 signature and a parameter list, and where a parameter is an options/config object type, render
-that object's fields as an **expanded options table** rather than the opaque type alias name.
+that object's fields as **per-member entries** (each option a heading-per-member entry with its
+name + type on one line and a description beneath) rather than the opaque type alias name.
 
-- Scenario (UI): `generate` shows expanded options, not `GenerateOptions<…>`
+- Scenario (UI): `generate` shows expanded option entries, not `GenerateOptions<…>`
   - GIVEN the prerendered build of `/docs/api`
   - WHEN the page loads in a real browser and the `generate` function block is located
   - THEN the block shows `generate`'s signature and its `schema` and `options` parameters, and
-    the named option fields of `GenerateOptions` (`seed`, `overrides`, `transform`, `store`,
-    `unique` among them) appear as enumerated rows/entries — the opaque text
-    `GenerateOptions<z.infer<TSchema>>` is NOT the only rendering of the options parameter — with
-    no `console.error` / `pageerror` during load.
+    the named option fields of `GenerateOptions` (`overrides`, `transform`, `store`, `unique`,
+    and the inherited `seed`) appear as their own member entries (name + type, description
+    beneath) — the opaque text `GenerateOptions<z.infer<TSchema>>` is NOT the only rendering of
+    the options parameter — with no `console.error` / `pageerror` during load.
 
-### B125-R5: Option/config types list every field with name, type, optionality, and description
+### B125-R5: Option/config types list their own fields + an inherited-defaults link; internals excluded
 
 The `/docs/api` page **MUST**, for each documented **option/config type** (`GenerateOptions`,
-`WorldOptions`, and the other option/config types), list **every** declared field with its name,
-type, optionality, and TSDoc description.
+`WorldOptions`, `GenerationDefaults`, and the other option/config types), render each **own**
+field as a member entry (name + type + optionality + TSDoc description), render a compact
+"Inherited from `GenerationDefaults`" link row for the 5 shared defaults, and **MUST NOT**
+render the `@internal` fields `source`, `fieldPath`, `prng`.
 
-- Scenario: WorldOptions shows all 7 fields
+- Scenario: WorldOptions shows its 2 own fields + the inherited-defaults link
   - GIVEN the TypeDoc JSON model and the rendered `/docs/api`
   - WHEN the `WorldOptions` section is queried (component test or Playwright)
-  - THEN it enumerates all seven fields — `seed`, `optionalProbability`, `defaultArrayLength`,
-    `generators`, `recursionLimit`, `locale`, `trace` — each with its type and (after R11) a
-    non-empty description, and each marked optional.
-- Scenario: GenerateOptions shows all its fields
+  - THEN it enumerates its two own fields — `generators` and `trace` — each with its type and a
+    non-empty description and marked optional, plus a "Inherited from `GenerationDefaults`" row
+    linking the 5 shared fields (it does NOT re-render all 5 defaults inline as own members).
+- Scenario: GenerateOptions shows its 4 own fields + the inherited-defaults link, no internals
   - GIVEN the same model and page
   - WHEN the `GenerateOptions` section is queried
-  - THEN it enumerates every declared field of `GenerateOptions` (`overrides`, `transform`,
-    `seed`, `optionalProbability`, `defaultArrayLength`, `recursionLimit`, `source`, `fieldPath`,
-    `prng`, `locale`, `store`, `unique`), each with its type.
+  - THEN it enumerates exactly its four own fields — `overrides`, `transform`, `store`, `unique`
+    — each with its type, plus the "Inherited from `GenerationDefaults`" link row; and the
+    `@internal` fields `source`, `fieldPath`, and `prng` do NOT appear anywhere in the section.
+- Scenario: GenerationDefaults documents the 5 shared fields once
+  - GIVEN the same model and page
+  - WHEN the `GenerationDefaults` section is queried
+  - THEN it enumerates all five shared fields — `seed`, `optionalProbability`,
+    `defaultArrayLength`, `recursionLimit`, `locale` — each with its type and a non-empty
+    description and marked optional, and the inherited-link rows on `WorldOptions` /
+    `GenerateOptions` resolve to these member anchors.
 
 ### B125-R6: Interfaces list every method with signature, description, and a working member anchor
 
@@ -244,20 +293,24 @@ TypeDoc-driven render instead.
     asserts `.sig` / `.param-table` / manifest-specific structure, and `pnpm validate` +
     `site:check` are green.
 
-### B125-R11: Per-field TSDoc on every option/config field in `src/types.ts`
+### B125-R11: Per-field TSDoc on every documented option/config field in `src/types.ts`
 
-Every field of `GenerateOptions` and `WorldOptions` (and the other option/config types in
-`src/types.ts`) **MUST** carry a one-line TSDoc description, so the rendered option tables show a
-non-empty description per field rather than a blank cell.
+Every **documented** field of the option/config types in `src/types.ts` — the five
+`GenerationDefaults` fields plus the own fields of `GenerateOptions` and `WorldOptions` (and the
+other option/config types) — **MUST** carry a one-line TSDoc description, so each rendered
+member entry shows a non-empty description rather than a blank one. The `@internal` fields
+(`source`, `fieldPath`, `prng`) are out of the documented surface and are not covered by this
+obligation.
 
-- Scenario: no option field renders a blank description
+- Scenario: no documented option field renders a blank description
   - GIVEN the working tree after B125 and the TypeDoc JSON model
-  - WHEN the model's `GenerateOptions` and `WorldOptions` members are inspected
-  - THEN every field of each carries a non-empty `comment`/description (in particular the fields
-    that have no TSDoc today — `GenerateOptions.overrides`/`transform`/`seed`/`optionalProbability`/
-    `defaultArrayLength`/`recursionLimit`/`source`/`fieldPath`/`prng`/`locale`, and
-    `WorldOptions.seed`/`optionalProbability`/`defaultArrayLength`/`generators`/`recursionLimit`),
-    and the rendered `/docs/api` option tables show a description for each.
+  - WHEN the model's `GenerationDefaults`, `GenerateOptions`, and `WorldOptions` members are
+    inspected
+  - THEN every documented field carries a non-empty `comment`/description — the five
+    `GenerationDefaults` fields (`seed`, `optionalProbability`, `defaultArrayLength`,
+    `recursionLimit`, `locale`), `GenerateOptions`' own `overrides`/`transform`/`store`/`unique`,
+    and `WorldOptions`' own `generators`/`trace` — and the rendered `/docs/api` member entries
+    show a description for each; the excluded `@internal` fields are absent from the model.
 
 ### B125-R12: D5/D24 amendment recorded in decisions.md + CLAUDE.md synced
 
@@ -286,30 +339,36 @@ promotes the amended D5 / retires D24 at item-close; the reviewer confirms the d
 
 The `/docs/api` "On this page" navigation **MUST** be usable on this member-dense surface — it
 **MUST NOT** truncate entries with the B114 single-line ellipsis on this page; long member lists
-wrap and/or scroll so every entry is readable and reachable.
+wrap and/or scroll so every entry is readable and reachable. As shipped, the rail is a 2-level
+"On this page" structure (symbols → their members), fed by DocPage's gated `memberToc` harvest.
 
-- Scenario (UI): the API nav shows full, reachable member entries
+- Scenario (UI): the 2-level API nav shows full, reachable member entries
   - GIVEN the prerendered build of `/docs/api` at a desktop viewport (≥1024)
   - WHEN the "On this page" rail is inspected in a real browser
   - THEN its entries are not clipped by a single-line `text-overflow: ellipsis` (entries wrap or
-    the rail scrolls), and a representative member entry is fully readable and its link resolves
-    to that member's anchor on the page.
+    the rail scrolls), member entries appear nested under their parent symbol, and a
+    representative member entry is fully readable and its link resolves to that member's anchor on
+    the page.
 
 ### B125-R14: The reference reads as a useful member-level reference (designer pass)
 
 The rebuilt `/docs/api` **SHOULD** read as a coherent, useful member-level reference — the
-`@dxlbnl/ui` look is preserved, Pagefind search and the B114 responsive shell stay intact, and a
-reader can scan a function's options, a config type's fields, and an interface's methods without
-hitting a dead link or an opaque type alias.
+compact **heading-per-member** layout (name + type on one line, prose beneath) reads cleanly,
+the `@dxlbnl/ui` look is preserved, code is dual-theme syntax-highlighted, Pagefind search and
+the B114 responsive shell stay intact, and a reader can scan a function's options, a config
+type's fields, and an interface's methods without hitting a dead link or an opaque type alias.
 
-- Scenario (UI): a member-level reference, visually coherent
+- Scenario (UI): a compact, highlighted, member-level reference, visually coherent
   - GIVEN the prerendered `/docs/api` loaded in a real browser at mobile (390), tablet (768), and
-    desktop (1440) widths (Playwright + a Chrome DevTools MCP screenshot at the review pass)
+    desktop (1440) widths, in both the phosphor (default) and paper palettes (Playwright + a
+    Chrome DevTools MCP screenshot at the review pass)
   - WHEN a reviewer/designer scans the page
-  - THEN the page presents `generate` with its expanded options, `WorldOptions` with its fields,
-    and `Registry` with its methods under the `@dxlbnl/ui` styling, the Pagefind search box is
-    present and functional, there is no page-level horizontal overflow at any of the three widths,
-    and no `console.error` / `pageerror` occurs during load.
+  - THEN the page presents `generate` with its expanded option entries, `WorldOptions` with its
+    own fields + the inherited-defaults link row, and `Registry` with its methods under the
+    `@dxlbnl/ui` styling in the compact heading-per-member layout, code (signatures/examples) is
+    syntax-highlighted readably in both palettes, the Pagefind search box is present and
+    functional, there is no page-level horizontal overflow at any of the three widths, and no
+    `console.error` / `pageerror` occurs during load.
 
 ### B125-R15: Gates stay green
 
@@ -324,12 +383,31 @@ and Pagefind search remain working (the B75 route smoke for `/docs/api` stays gr
     guard passing, `validate`/`site:check` exit 0, and the `/docs/api` route smoke (no
     `console.error`/`pageerror`) passes.
 
+### B125-R16: `/docs/api` code is dual-theme syntax-highlighted and wraps
+
+All code rendered on `/docs/api` — symbol signatures, method signatures, and `@example` code —
+**MUST** be syntax-highlighted with Shiki using the site's dual themes (`github-light` /
+`github-dark-dimmed`, switched by palette) and **MUST** wrap rather than horizontally scroll, so
+no code block forces page-level horizontal overflow.
+
+- Scenario (UI): code is highlighted and wraps, no horizontal overflow
+  - GIVEN the prerendered build of `/docs/api` loaded in a real browser
+  - WHEN a code region (a symbol signature or an `@example` block) is inspected
+  - THEN it is rendered through Shiki — at least one `.shiki` token `<span>` carrying a color
+    style is present (the code is not plain white `<pre>` text) — the block wraps
+    (`white-space: pre-wrap`, no per-block horizontal scrollbar), the page has no page-level
+    horizontal overflow, and toggling the palette switches the token colors (the
+    `--shiki-light` / `--shiki-dark` variables resolve per palette) with no `console.error` /
+    `pageerror` during load.
+
 ## Out of scope
 
-- **Twoslash / Shiki code samples and clickable type-token links** — the plan's item 2 and the
-  card's B126 (the spike's offset→`getDefinitionAtPosition`→`sources.{fileName,line}`→URL mapping).
-  B125 produces the TypeDoc reference + the HTML link **target** B126 will point at; it does **not**
-  build the type-token link injection.
+- **Twoslash clickable type-token links** — the plan's item 2 and the card's B126 (the spike's
+  offset→`getDefinitionAtPosition`→`sources.{fileName,line}`→URL mapping). B125 produces the
+  TypeDoc reference + the HTML link **target** B126 will point at, and B125 **does** Shiki-highlight
+  `/docs/api` code (R16); it does **not** build the Twoslash type-checking or the clickable
+  type-token link injection. (Guide-page code blocks — getting-started / concepts — are also not
+  Shiki-highlighted by B125; only `/docs/api`. That is B126/B127 scope.)
 - **Getting Started / Concepts / remaining guides rewrite** — plan items 3 and 6 (B127+).
 - **Pagefind search UI rework** (button→modal→visible input) — plan item 4; B125 only keeps the
   existing search working.
@@ -341,30 +419,23 @@ and Pagefind search remain working (the B75 route smoke for `/docs/api` stays gr
 
 ## Open questions
 
-1. **Does TypeDoc emit `docs/api-reference.md`, or is it dropped? (Non-blocking — implementer's
-   call within the contract.)** The plan says "Keep `docs/api-reference.md` only if TypeDoc can
-   emit it (markdown plugin) or drop it; the site reference is the canonical surface now." Two
-   acceptable resolutions: (a) add `typedoc-plugin-markdown` and emit `docs/api-reference.md` from
-   the same model, or (b) drop `docs/api-reference.md` and make `/docs/api` the single canonical
-   surface. Either satisfies B125 (no requirement here pins the markdown file). Recorded; not
-   blocking — the requirements are written so the in-site render + guards are the contract, and the
-   reviewer/maintainer can ratify drop-vs-emit at review. If dropped, the implementer must also
-   remove `docs/api-reference.md`'s references in the wiki/INDEX note and `CLAUDE.md` (folded into
-   R12's sync).
+All three open questions were non-blocking and have been **resolved by the shipped
+implementation** (this spec now reconciles to that reality):
+
+1. **Does TypeDoc emit `docs/api-reference.md`, or is it dropped? (Non-blocking — resolved.)**
+   Resolution: `docs/api-reference.md` is **kept as a now-static committed file** (no longer
+   regenerated); `/docs/api` is the canonical living surface. B129 updated it to drop the symbols
+   removed from the barrel. The reviewer flagged the resulting drift-risk (no parity guard) as a
+   track-it note, not a blocker.
 
 2. **src-vs-dist alignment: tsconfig `paths` → `src` vs point TypeDoc at `dist`. (Non-blocking —
-   implementation detail provided R2's observable holds.)** The site tsconfig uses
-   `moduleResolution: bundler` and resolves `zod4-mock` via the SvelteKit alias / workspace symlink
-   (which the spike found resolves only 5 nodes). The contract (R1/R2) is "TypeDoc resolves the real
-   `src/index.ts` surface and `sources.fileName` points into `src/`". Whether that is achieved by a
-   TypeDoc-specific tsconfig `paths` entry (`zod4-mock` → `src/index.ts`) or by building `dist`
-   first and pointing TypeDoc at it is an implementation choice; both satisfy R1/R2. Recommended:
-   tsconfig `paths` → `src` (no build dependency, matches the spike). Recorded; not blocking.
+   resolved.)** Resolution: a TypeDoc-specific tsconfig `paths` entry (`zod4-mock` → `src/index.ts`)
+   was used — TypeDoc resolved the real surface (36 members, not the 5-node symlink stub) and
+   `sources.fileName` points into `src/`, satisfying R1/R2.
 
 3. **Member anchor scheme: literal `#<Symbol>.<member>` vs TypeDoc's own anchor format.
-   (Non-blocking.)** R6 requires a *resolvable* member anchor and uses `#Registry.pick` as the
-   example; the exact slug (e.g. TypeDoc's `#pick` within a per-interface page, or a flattened
-   `#registry-pick`) is an implementation detail provided the deep link resolves on the page. The
-   implementer/test-writer pin the concrete scheme when wiring the tests. Recorded; not blocking.
+   (Non-blocking — resolved.)** Resolution: `#<Symbol>.<member>` anchors are emitted (e.g.
+   `#Registry.pick`, `#GenerationDefaults.seed`) and verified to resolve/scroll on the page, with
+   0 dangling anchors under the build-time guard.
 
 No blocking open questions.

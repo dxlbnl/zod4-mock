@@ -203,11 +203,11 @@ createWorld({ seed: 42, locale: nl });
 
 A locale is a plain `LocaleData` object — sections for `person`, `address`, `commerce`, `company`, `word`, `finance`, `date`, `color`, `phone`. Locales can supply either Markov models (`firstNamesMale`, `nounModel`) or plain arrays (`simpleFirstNamesMale`, `nouns`); generators prefer the model when present.
 
-For variants, use `extend()` (re-exported from `zod4-mock`):
+For variants, use `extend()` (re-exported from each locale package, e.g. `@zod4-mock/locale-en`):
 
 ```ts
-import { createWorld, extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
+import { createWorld } from "zod4-mock";
+import { en, extend } from "@zod4-mock/locale-en";
 
 const enGB = extend(en, {
   address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },

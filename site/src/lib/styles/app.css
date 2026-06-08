@@ -247,7 +247,6 @@
     border-bottom: none;
   }
   .doc-prose-body .shiki {
-    background: var(--bg-elev) !important;
     border: 1px solid var(--rule);
     border-radius: 8px;
     padding: var(--u2);
@@ -258,10 +257,26 @@
     overflow-x: auto;
   }
   .doc-prose-body .shiki code {
-    background: none;
     padding: 0;
     border-radius: 0;
-    color: inherit;
     font-size: inherit;
+  }
+
+  /* Shiki dual-theme palette switching (B125 follow-up).
+     Shiki emits each block + token with `--shiki-light` / `--shiki-dark` (and
+     `--shiki-light-bg` / `--shiki-dark-bg` on the <pre>) via `defaultColor: false`.
+     The site DEFAULT palette is dark "phosphor" → use the `--shiki-dark*` vars;
+     `[data-palette="paper"]` is light → use the `--shiki-light*` vars. This covers
+     BOTH the markdown `.shiki` blocks and the /docs/api `.code-block .shiki` blocks
+     (all `.shiki`), and wins over no remaining `!important` override. */
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+  [data-palette="paper"] .shiki,
+  [data-palette="paper"] .shiki span {
+    color: var(--shiki-light);
+    background-color: var(--shiki-light-bg);
   }
 }

@@ -193,21 +193,47 @@ export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T
 // ---------------------------------------------------------------------------
 
 /**
+ * World-wide generation defaults shared by `WorldOptions` (set once) and
+ * `GenerateOptions` (override per call).
+ */
+export interface GenerationDefaults {
+  /** Seed for this call's PRNG; same seed + schema yields the same value. */
+  readonly seed?: number;
+  /** Probability (0–1) that an optional field is present. */
+  readonly optionalProbability?: number;
+  /** Default `[min, max]` length for unconstrained arrays. */
+  readonly defaultArrayLength?: readonly [number, number];
+  /** Maximum recursion depth for self-referential / nested schemas. */
+  readonly recursionLimit?: number;
+  /** Locale supplying names, words, and other locale-specific data. */
+  readonly locale?: LocaleData;
+}
+
+/**
  * Per-call options for `generate` / `world.generate`: `overrides` (deep-merged
  * onto the result), a `transform` post-processor, the `seed`, and tuning knobs
  * for optional probability, array length, recursion, and registry writes.
  */
-export interface GenerateOptions<T> {
+export interface GenerateOptions<T> extends GenerationDefaults {
+  /** Partial values deep-merged onto the generated result, overriding any field. */
   readonly overrides?: DeepPartial<T>;
+  /** Post-processor applied to the generated value before it is returned/stored. */
   readonly transform?: (data: T) => T;
-  readonly seed?: number;
-  readonly optionalProbability?: number;
-  readonly defaultArrayLength?: readonly [number, number];
-  readonly recursionLimit?: number;
+  /**
+   * Source record driving generation of a derived schema.
+   * @internal
+   */
   readonly source?: any;
+  /**
+   * Dotted field path used to seed per-field PRNG forks.
+   * @internal
+   */
   readonly fieldPath?: string;
+  /**
+   * Explicit PRNG instance to use instead of one derived from `seed`.
+   * @internal
+   */
   readonly prng?: ReturnType<typeof createPrng>;
-  readonly locale?: LocaleData;
   /**
    * When `false`, suppress the registry write for this `world.generate` call —
    * useful for ephemeral generation (search-bucket envelopes, paginated
@@ -234,14 +260,9 @@ export interface GenerateOptions<T> {
  * defaults — optional-field probability, unconstrained-array length, custom
  * key generators, recursion limit, and the active locale.
  */
-export interface WorldOptions {
-  readonly seed?: number;
-  readonly optionalProbability?: number;
-  readonly defaultArrayLength?: readonly [number, number];
+export interface WorldOptions extends GenerationDefaults {
+  /** Custom field-name generators, matched case-insensitively by field name. */
   readonly generators?: Record<string, KeyGenerator>;
-  readonly recursionLimit?: number;
-  /** Override the default English locale. Import `nl` from `zod4-mock` for Dutch, or supply your own. */
-  readonly locale?: LocaleData;
   /**
    * Opt in to provenance capture for {@link World.trace}. When omitted (or
    * `false`), `world.trace()` still returns the registry projection — one

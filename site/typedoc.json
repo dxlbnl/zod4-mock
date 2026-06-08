@@ -1,0 +1,14 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["../src/index.ts"],
+  "tsconfig": "./typedoc.tsconfig.json",
+  "json": "./src/lib/docs/api/typedoc.json",
+  "out": "./static/api-html",
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "sourceLinkExternal": false,
+  "disableSources": false,
+  "gitRevision": "main"
+}

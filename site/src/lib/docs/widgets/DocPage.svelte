@@ -18,37 +18,55 @@
 		prerequisites?: ReadonlyArray<string | PrereqPage>;
 		related?: ReadonlyArray<string>;
 		editPath?: string;
+		// B125: opt-in 2-level "On this page" rail — harvest <h2> symbols AND their
+		// <h3> members, nesting the member links under their symbol. Off by default so
+		// narrative pages keep their flat h2-only rail exactly as before.
+		memberToc?: boolean;
 		children?: Snippet;
 	}
 
-	let { title, prerequisites = [], related = [], editPath, children }: Props = $props();
+	let {
+		title,
+		prerequisites = [],
+		related = [],
+		editPath,
+		memberToc = false,
+		children
+	}: Props = $props();
 
-	// On-this-page rail — derived from <h2> headings after mount.
+	// On-this-page rail — derived from headings after mount.
 	// B123: group <h2>s (the `api-group` headings emitted by /docs/api) are flagged
 	// so the rail can mark them distinctly from per-symbol headings and nest the
 	// symbol links under their group.
+	// B125: when `memberToc` is on, each symbol <h2> is a (linked) parent row and
+	// each member <h3> is a nested child row under the preceding symbol, reusing the
+	// B123 group/nest treatment. `group: true` flags a parent/symbol row.
 	type Anchor = { id: string; text: string; group: boolean };
 	let anchors: Anchor[] = $state([]);
-	// True only when this page has group headings (i.e. /docs/api). Narrative docs
-	// pages have no api-group <h2>, so the rail stays a flat list exactly as before.
+	// True when this page has parent/group rows (api-group <h2> on narrative-grouped
+	// pages, or the member-toc symbol rows on /docs/api). Plain narrative pages have
+	// neither, so the rail stays a flat list exactly as before.
 	const hasGroups = $derived(anchors.some((a) => a.group));
 	// eslint-disable-next-line no-unassigned-vars -- assigned by bind:this
 	let proseEl: HTMLElement;
 
 	onMount(() => {
-		// Only consider h2s belonging to *this* DocPage's prose container —
+		// Only consider headings belonging to *this* DocPage's prose container —
 		// if a nested <DocPage> appears inside our slot (e.g. when the
 		// storybook-svelte-csf auto-wrapper renders us around the test's
-		// own <DocPage>), its h2s belong to the inner page's rail, not ours.
-		const heads = Array.from(proseEl.querySelectorAll('h2')).filter((h) => {
-			const owner = h.closest('[data-pagefind-body]');
-			return owner === proseEl;
-		});
+		// own <DocPage>), its headings belong to the inner page's rail, not ours.
+		const owns = (h: Element) => h.closest('[data-pagefind-body]') === proseEl;
+		const selector = memberToc ? 'h2, h3' : 'h2';
+		const heads = Array.from(proseEl.querySelectorAll(selector)).filter(owns);
 		anchors = heads.map((h) => {
 			const text = (h.textContent ?? '').trim();
 			const id = h.id || text.toLowerCase().replace(/\s+/g, '-');
 			if (!h.id) h.id = id;
-			return { id, text, group: h.classList.contains('api-group') };
+			// In member-toc mode a symbol <h2> is the parent (group) row and its
+			// member <h3>s nest beneath it. Otherwise the B123 api-group flag drives
+			// grouping (and h3s are never harvested).
+			const group = memberToc ? h.tagName === 'H2' : h.classList.contains('api-group');
+			return { id, text, group };
 		});
 	});
 
@@ -110,9 +128,17 @@
 						<ul class:grouped={hasGroups}>
 							{#each anchors as a}
 								{#if a.group}
-									<!-- B123: group heading row — distinct (not a link), reusing the
-									     rail-heading uppercase/dim treatment, marked for the rail. -->
-									<li data-toc-group class="toc-group rail-heading">{a.text}</li>
+									{#if memberToc}
+										<!-- B125: in member-toc mode the parent/symbol row is a real link
+										     to its anchor while still reading as a group header. -->
+										<li data-toc-group class="toc-group rail-heading">
+											<a href="#{a.id}">{a.text}</a>
+										</li>
+									{:else}
+										<!-- B123: group heading row — distinct (not a link), reusing the
+										     rail-heading uppercase/dim treatment, marked for the rail. -->
+										<li data-toc-group class="toc-group rail-heading">{a.text}</li>
+									{/if}
 								{:else}
 									<li class="toc-symbol"><a href="#{a.id}">{a.text}</a></li>
 								{/if}
@@ -230,6 +256,16 @@
 	}
 	.on-this-page .grouped .toc-symbol {
 		padding-left: var(--u2);
+	}
+	/* B125: in member-toc mode the symbol/parent row is a link that still reads as a
+	   group header — inherit the rail-heading uppercase/dim treatment for the anchor
+	   and only brighten on hover. */
+	.on-this-page .toc-group a {
+		color: var(--ink-faint, var(--ink-dim));
+		text-decoration: none;
+	}
+	.on-this-page .toc-group a:hover {
+		color: var(--amber);
 	}
 	.prereqs {
 		display: flex;

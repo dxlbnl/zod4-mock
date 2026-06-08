@@ -69,7 +69,8 @@ export interface LocaleSentenceContext {
 /**
  * The full set of locale-specific word lists and formatting callbacks a world
  * draws from. Bundled locales (`en`, `nl`) implement it; pass a custom one via
- * `WorldOptions.locale` or compose one with {@link extend}.
+ * `WorldOptions.locale` or compose one with `extend` (from
+ * `@zod4-mock/locale-en` / `@zod4-mock/locale-nl`).
  */
 export interface LocaleData {
   id: string;

@@ -1,6 +1,6 @@
 # API Reference
 
-> Generated from the TSDoc and types of the `src/` public exports by `pnpm docs:generate`. Do not edit by hand — update the exported symbol's TSDoc in `src/` and regenerate. Parity is verified by `pnpm docs:check`.
+> Static reference for the `src/` public exports. The canonical living reference is the in-site `/docs/api` (generated from the same TSDoc by TypeDoc). Update the exported symbol's TSDoc in `src/` on any public API change.
 
 ## Exports overview
 
@@ -19,9 +19,6 @@
 | `KeyGenerator` | type | A field-name generator registered via `world.withGenerators`. |
 | `KeyPattern` | type | A pattern rule: a key test function + a PrngGen generator. |
 | `generators` | object | Built-in generators organised into sub-namespaces (`generators.person`, `generators.internet`, …). |
-| `data` | object | The raw built-in generator namespace (`data.person`, `data.internet`, …). |
-| `generateFromSchema` | function | Schema-based fallback generator: produces a value purely from Zod type introspection (enum member, number in range, nested object, …). |
-| `generateFromKey` | function | Key-based heuristic generator: resolves a value from a field's name by consulting {@link DEFAULT_KEY_MAP} (exact keys) then {@link DEFAULT_KEY_PATTERNS} (regex-like rules). |
 | `DEFAULT_KEY_MAP` | object | Built-in exact-field-name heuristics, keyed by Zod leaf type then lower-cased field name (e.g. |
 | `DEFAULT_KEY_PATTERNS` | object | Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. |
 | `GenerateOptions` | type | Per-call options for `generate` / `world.generate`: `overrides` (deep-merged onto the result), a `transform` post-processor, the `seed`, and tuning knobs for optional probability, array length, recursion, and registry writes. |
@@ -30,7 +27,6 @@
 | `FieldExplanation` | type | Per-field resolution record returned by `world.explain(schema)`. |
 | `RelationExplanation` | type | Per-relation record on `ExplainResult.relations`. |
 | `createPrng` | function | Create a seeded PRNG. |
-| `fieldSeed` | function | Derive a deterministic field-level seed from three stable inputs. |
 | `Prng` | type | Seeded pseudo-random number generator. |
 | `PrngGen` | type | A generator that takes a Prng and an optional full context. |
 | `WorldTrace` | type | The full provenance structure returned by {@link World.trace}: the world's root `seed`, one {@link TraceNode} per stored record, and one {@link TraceEdge} per relation pick. |
@@ -224,79 +220,6 @@ world.withKeyMap(ProductSchema, {
 });
 ```
 
-## data
-
-```ts
-const data: typeof dataNs
-```
-
-The raw built-in generator namespace (`data.person`, `data.internet`, …).
-Each function takes a `Prng` as its first argument; prefer `generators` or
-`ctx.gen` (which pre-bind the field-seeded `Prng`) inside matchers.
-
-**Example**
-
-```ts
-import { data, createPrng } from "zod4-mock";
-const name = data.person.fullName(createPrng(1));
-```
-
-## generateFromSchema
-
-```ts
-function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown
-```
-
-Schema-based fallback generator: produces a value purely from Zod type
-introspection (enum member, number in range, nested object, …). This is the
-pipeline's always-resolving final rung, with no field-name heuristics.
-
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `schema` | `ZodTypeAny` | — | The Zod schema to introspect. |
-| `ctx` | `GeneratorContext` | — | The current field {@link GeneratorContext}. |
-
-**Example**
-
-```ts
-import { createWorld, generateFromSchema } from "zod4-mock";
-import { z } from "zod";
-
-const world = createWorld({ seed: 1 });
-const value = world.generate(z.number().int().min(1).max(10));
-```
-
-## generateFromKey
-
-```ts
-function generateFromKey(key: string, schema: ZodTypeAny, ctx: GeneratorContext): unknown
-```
-
-Key-based heuristic generator: resolves a value from a field's name by
-consulting {@link DEFAULT_KEY_MAP} (exact keys) then
-{@link DEFAULT_KEY_PATTERNS} (regex-like rules). Returns `undefined` when no
-heuristic matches, letting the pipeline fall through to the schema-based step.
-
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `key` | `string` | — | The field name being generated (e.g. `"email"`). |
-| `schema` | `ZodTypeAny` | — | The field's Zod schema. |
-| `ctx` | `GeneratorContext` | — | The current field {@link GeneratorContext}. |
-
-**Example**
-
-```ts
-import { createWorld } from "zod4-mock";
-import { z } from "zod";
-
-// The field name `email` triggers the key-based heuristic.
-const out = createWorld({ seed: 1 }).generate(z.object({ email: z.string() }));
-```
-
 ## DEFAULT_KEY_MAP
 
 ```ts
@@ -413,46 +336,6 @@ import { createPrng } from "zod4-mock";
 const prng = createPrng(1);
 ```
 
-**Example**
-
-```ts
-import { createPrng, fieldSeed } from "zod4-mock";
-const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
-```
-
-## fieldSeed
-
-```ts
-function fieldSeed(worldSeed: number, subjectId: string, fieldPath: string): number
-```
-
-Derive a deterministic field-level seed from three stable inputs.
-
-Used to give each field its own independent PRNG so that schema changes
-(adding / removing fields) do not affect unrelated fields.
-
-**Parameters**
-
-| Name | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `worldSeed` | `number` | — | The world's master seed. |
-| `subjectId` | `string` | — | The subject instance's unique ID (e.g. `'person#3'`). |
-| `fieldPath` | `string` | — | Dot-separated field path (e.g. `'address.street'`). |
-
-**Example**
-
-```ts
-import { createPrng } from "zod4-mock";
-const prng = createPrng(1);
-```
-
-**Example**
-
-```ts
-import { createPrng, fieldSeed } from "zod4-mock";
-const fieldPrng = createPrng(fieldSeed(1, "user#0", "name"));
-```
-
 ## Prng
 
 ```ts
@@ -553,8 +436,7 @@ Shallow-per-section merge: creates a new locale by overriding individual section
 **Example**
 
 ```ts
-import { extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
+import { en, extend } from "@zod4-mock/locale-en";
 const myLocale = extend(en, { id: "en-custom" });
 ```
 

@@ -617,7 +617,11 @@ describe("generators.string", () => {
 // DEFAULT_KEY_MAP and DEFAULT_KEY_PATTERNS
 // ---------------------------------------------------------------------------
 
-import { DEFAULT_KEY_MAP, DEFAULT_KEY_PATTERNS, generateFromKey } from "../../../src/index.js";
+import {
+  DEFAULT_KEY_MAP,
+  DEFAULT_KEY_PATTERNS,
+  generateFromKey,
+} from "../../../src/generators/data/key-map.js";
 
 describe("DEFAULT_KEY_MAP", () => {
   it("is exported and is a plain object", () => {

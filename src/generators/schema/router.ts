@@ -281,7 +281,7 @@ const DISPATCH: Record<ZodDefType, GenFn> = {
  *
  * @example
  * ```ts
- * import { createWorld, generateFromSchema } from "zod4-mock";
+ * import { createWorld } from "zod4-mock";
  * import { z } from "zod";
  *
  * const world = createWorld({ seed: 1 });

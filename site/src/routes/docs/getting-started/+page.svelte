@@ -204,8 +204,8 @@ const nlWorld = createWorld({ seed: 42, locale: nl });`}</code></pre>
 		British English or <code>nl-BE</code>, use the <code>extend()</code> helper:
 	</p>
 
-	<pre><code>{`import { createWorld, extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
+	<pre><code>{`import { createWorld } from "zod4-mock";
+import { en, extend } from "@zod4-mock/locale-en";
 
 const enGB = extend(en, {
   address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },

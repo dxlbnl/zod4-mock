@@ -34,6 +34,7 @@ hand-rolling what a standard tool gives for free.
 ## Spike result (the load-bearing proof)
 
 The **clickable-type → TypeDoc-anchor seam WORKS** (proven against the real API):
+
 - Join key = **declaration location** (`file:line`), not token text — so two `seed` tokens
   correctly resolve to `GenerateOptions.seed` vs `WorldOptions.seed`.
 - Twoslash gives per-token offsets → a TS language service gives `getDefinitionAtPosition` →
@@ -65,18 +66,18 @@ empty. Add one-line TSDoc per field in `src/types.ts` as part of the rewrite.
 
 ## Keep / revert / re-scope
 
-| Prior work | Disposition |
-| --- | --- |
-| B102 ts-morph extractor + manifest + parity guard (`scripts/docs/**`, `docs:generate`/`docs:check`) | **DELETE** — replaced by TypeDoc |
-| B102 `SignatureBlock`/`ParameterTable` + custom `/docs/api` renderer | **DELETE / re-scope** — TypeDoc-driven render |
-| B115 grouping + B123 TOC nesting | **REVERT** (depend on the deleted manifest/renderer) |
-| B114 responsive shell | **KEEP**; **revert only** the single-line TOC **ellipsis** (R5) → shorter headings + scroll |
-| B104 Pagefind search **engine** | **KEEP**; **re-scope** the button→modal UI → a visible, working, styled input |
-| B109 Shiki highlighting | **DO IT**, via the Twoslash transformer |
-| B101 Getting Started | **REWRITE** (variations not steps) |
-| `<SpeedClaim>` primitive | keep the primitive; **remove from Getting Started** |
-| B118 Known Bugs removal, B110 date fix, B116/B117/B108 | already done — keep |
-| D5/D24 (TSDoc-source + ts-morph + parity-guard rules) | **amend/supersede** — TSDoc stays the source, TypeDoc replaces the generator + parity guard |
+| Prior work                                                                                          | Disposition                                                                                 |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| B102 ts-morph extractor + manifest + parity guard (`scripts/docs/**`, `docs:generate`/`docs:check`) | **DELETE** — replaced by TypeDoc                                                            |
+| B102 `SignatureBlock`/`ParameterTable` + custom `/docs/api` renderer                                | **DELETE / re-scope** — TypeDoc-driven render                                               |
+| B115 grouping + B123 TOC nesting                                                                    | **REVERT** (depend on the deleted manifest/renderer)                                        |
+| B114 responsive shell                                                                               | **KEEP**; **revert only** the single-line TOC **ellipsis** (R5) → shorter headings + scroll |
+| B104 Pagefind search **engine**                                                                     | **KEEP**; **re-scope** the button→modal UI → a visible, working, styled input               |
+| B109 Shiki highlighting                                                                             | **DO IT**, via the Twoslash transformer                                                     |
+| B101 Getting Started                                                                                | **REWRITE** (variations not steps)                                                          |
+| `<SpeedClaim>` primitive                                                                            | keep the primitive; **remove from Getting Started**                                         |
+| B118 Known Bugs removal, B110 date fix, B116/B117/B108                                              | already done — keep                                                                         |
+| D5/D24 (TSDoc-source + ts-morph + parity-guard rules)                                               | **amend/supersede** — TSDoc stays the source, TypeDoc replaces the generator + parity guard |
 
 ## Implementation backlog (to file after approval)
 

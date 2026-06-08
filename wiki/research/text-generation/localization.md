@@ -111,7 +111,7 @@ Many locales share most of their data (e.g., `nl-BE` differs from `nl` only in `
 
 ```typescript
 // e.g. a user-defined nl-BE locale
-import { extend } from "zod4-mock"; // re-exported from @zod4-mock/locale-core
+import { extend } from "@zod4-mock/locale-nl"; // canonical in @zod4-mock/locale-core
 import { nl } from "@zod4-mock/locale-nl";
 
 export const nlBE = extend(nl, {

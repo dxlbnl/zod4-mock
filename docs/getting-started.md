@@ -176,8 +176,8 @@ const nlWorld = createWorld({ seed: 42, locale: nl });
 Locales are plain objects implementing the `LocaleData` interface — every section (names, words, currencies, addresses, phone formats, …) is overridable. For variants like British English or `nl-BE`, use the `extend()` helper:
 
 ```ts
-import { createWorld, extend } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en";
+import { createWorld } from "zod4-mock";
+import { en, extend } from "@zod4-mock/locale-en";
 
 const enGB = extend(en, {
   address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },
