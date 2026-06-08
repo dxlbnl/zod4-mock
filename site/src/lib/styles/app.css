@@ -22,6 +22,18 @@
     --overlay: rgba(245, 242, 234, 0.97);
   }
 
+  /* B109 (item 2): palette-reactive string-green for code surfaces. The Shiki
+     theme + the CodeMirror <Editor> colour all token classes from @dxlbnl/ui
+     palette vars except the string green, which has no matching token. Expose it
+     as a site var so the live editor recolours per palette like the rest (default
+     / phosphor dark green; Paper light green). */
+  :root {
+    --code-string: #7ec8a0;
+  }
+  [data-palette="paper"] {
+    --code-string: #2d7a50;
+  }
+
   *,
   *::before,
   *::after {

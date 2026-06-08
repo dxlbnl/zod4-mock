@@ -20,49 +20,49 @@
 	let container: HTMLDivElement;
 	let view: EditorView | undefined;
 
-	// github-dark-dimmed token colors
+	// B109 (item 2): palette-reactive token colours via site CSS vars (mirrors the
+	// static Shiki theme — same @dxlbnl/ui palette). CodeMirror accepts CSS custom
+	// properties as colour values, so these recolour automatically when `data-palette`
+	// flips — no editor reconfiguration needed.
 	const highlighting = HighlightStyle.define([
-		{ tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.controlKeyword], color: '#f47067' },
-		{ tag: [tags.string, tags.regexp, tags.special(tags.string)], color: '#96d0ff' },
-		{ tag: [tags.number, tags.integer, tags.float], color: '#6cb6ff' },
-		{ tag: [tags.bool, tags.null], color: '#6cb6ff' },
-		{ tag: tags.comment, color: '#768390', fontStyle: 'italic' },
-		{ tag: [tags.propertyName, tags.attributeName], color: '#6cb6ff' },
-		{ tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: '#dcbdfb' },
-		{ tag: [tags.className, tags.typeName, tags.self], color: '#dcbdfb' },
-		{ tag: [tags.operator, tags.punctuation, tags.separator], color: '#adbac7' },
-		{ tag: [tags.variableName, tags.definition(tags.variableName)], color: '#adbac7' },
-		{ tag: [tags.bracket, tags.squareBracket, tags.paren, tags.angleBracket], color: '#adbac7' },
-		{ tag: tags.meta, color: '#768390' },
-		{ tag: tags.invalid, color: '#f47067' }
+		{
+			tag: [tags.keyword, tags.controlKeyword, tags.moduleKeyword, tags.definitionKeyword],
+			color: 'var(--amber)'
+		},
+		{ tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'var(--amber)' },
+		{
+			tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
+			color: 'var(--cyan)'
+		},
+		{ tag: [tags.string, tags.special(tags.string)], color: 'var(--code-string)' },
+		{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: 'var(--ink-faint)' },
+		{ tag: [tags.punctuation, tags.bracket, tags.operator], color: 'var(--ink-dim)' },
+		{ tag: [tags.variableName, tags.propertyName], color: 'var(--ink)' }
 	]);
 
-	const theme = EditorView.theme(
-		{
-			'&': {
-				background: '#22272e',
-				color: '#adbac7',
-				fontFamily: "'JetBrains Mono', monospace",
-				fontSize: '13px'
-			},
-			'.cm-content': { caretColor: '#adbac7', padding: '12px 0' },
-			'.cm-cursor': { borderLeftColor: '#adbac7' },
-			'.cm-activeLine': { background: 'rgba(173,186,199,0.05)' },
-			'&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-				background: 'rgba(108,182,255,0.2) !important'
-			},
-			'.cm-gutters': {
-				background: '#1c2128',
-				color: '#768390',
-				border: 'none',
-				borderRight: '1px solid #373e47'
-			},
-			'.cm-lineNumbers .cm-gutterElement': { padding: '0 8px' },
-			'.cm-scroller': { overflow: 'visible' },
-			'.cm-editor': { height: 'auto' }
+	const theme = EditorView.theme({
+		'&': {
+			background: 'var(--bg-sunken)',
+			color: 'var(--ink)',
+			fontFamily: "'JetBrains Mono', monospace",
+			fontSize: '13px'
 		},
-		{ dark: true }
-	);
+		'.cm-content': { caretColor: 'var(--amber)', padding: '12px 0' },
+		'.cm-cursor': { borderLeftColor: 'var(--amber)' },
+		'.cm-activeLine': { background: 'color-mix(in srgb, var(--ink-dim) 6%, transparent)' },
+		'&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+			background: 'color-mix(in srgb, var(--amber) 22%, transparent) !important'
+		},
+		'.cm-gutters': {
+			background: 'var(--bg-sunken)',
+			color: 'var(--ink-faint)',
+			border: 'none',
+			borderRight: '1px solid var(--rule)'
+		},
+		'.cm-lineNumbers .cm-gutterElement': { padding: '0 8px' },
+		'.cm-scroller': { overflow: 'visible' },
+		'.cm-editor': { height: 'auto' }
+	});
 
 	onMount(() => {
 		const state = EditorState.create({
@@ -103,7 +103,7 @@
 
 <style>
 	.editor-wrap {
-		background: #22272e;
+		background: var(--bg-sunken);
 		overflow: hidden;
 	}
 

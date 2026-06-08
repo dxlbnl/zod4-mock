@@ -115,14 +115,14 @@
 
 <style>
 	.playground {
-		border: 1px solid #373e47;
+		border: 1px solid var(--rule);
 		border-radius: 8px;
 		overflow: hidden;
 		margin: 12px 0;
 	}
 
 	.editor-area {
-		border-bottom: 1px solid #373e47;
+		border-bottom: 1px solid var(--rule);
 	}
 
 	.toolbar {
@@ -130,8 +130,8 @@
 		align-items: center;
 		gap: 12px;
 		padding: var(--u) 12px;
-		background: #1c2128;
-		border-bottom: 1px solid #373e47;
+		background: var(--bg-rail);
+		border-bottom: 1px solid var(--rule);
 	}
 
 	.error {
@@ -149,6 +149,7 @@
 		font-family: var(--mono);
 		font-size: 12px;
 		overflow: auto;
-		background: #22272e;
+		background: var(--bg-rail);
+		color: var(--ink);
 	}
 </style>
