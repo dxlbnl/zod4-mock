@@ -1,5 +1,20 @@
 # @zod4-mock/site
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [cace7a4]
+- Updated dependencies [e99fa3d]
+- Updated dependencies [88a4efd]
+- Updated dependencies [88a4efd]
+- Updated dependencies [8f94cfc]
+- Updated dependencies [efd6390]
+- Updated dependencies [68f3e7b]
+  - zod4-mock@1.0.0
+  - @zod4-mock/locale-en@0.7.0
+  - @zod4-mock/locale-nl@0.7.0
+
 ## 0.0.3
 
 ### Patch Changes
