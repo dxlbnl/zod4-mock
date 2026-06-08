@@ -35,8 +35,8 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
-    "build:all": "pnpm -r --filter='./packages/*' build && pnpm build",
+    "build": "pnpm --filter \"./packages/*\" build && rm -rf dist && tsc -p tsconfig.build.json",
+    "build:all": "pnpm build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
