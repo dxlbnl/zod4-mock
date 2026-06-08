@@ -8,8 +8,8 @@
  *
  * Three jobs (the B126 contract):
  *  1. `highlightSample(source)` — highlight a TS sample through Shiki + `@shikijs/twoslash`
- *     with a MINIMAL renderer (NO hover popups), with the dual themes (github-light /
- *     github-dark-dimmed, `defaultColor:false`) the rest of the site uses. The sample is
+ *     with a MINIMAL renderer (NO hover popups), with the dual site themes (site-paper /
+ *     site-phosphor, `defaultColor:false`) the rest of the site uses. The sample is
  *     TYPE-CHECKED by twoslash; a sample that does not compile (undefined symbol, missing
  *     import, type error) REJECTS, naming the diagnostic (B126-R2).
  *  2. The token→anchor join (B126-R3): per twoslash hover token, resolve its declaration
@@ -38,6 +38,7 @@ import { transformerTwoslash, type TwoslashRenderer } from "@shikijs/twoslash";
 import { createHighlighter, type HighlighterGeneric } from "shiki";
 import type { Element, ElementContent } from "hast";
 import ts from "typescript";
+import { siteDark, siteLight } from "./shiki-theme.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const siteRoot = resolve(here, "..");
@@ -203,7 +204,7 @@ let warmShiki: Shiki | null = null;
 async function getShiki(): Promise<Shiki> {
   if (!warmShiki) {
     warmShiki = await createHighlighter({
-      themes: ["github-light", "github-dark-dimmed"],
+      themes: [siteLight, siteDark],
       langs: ["ts"],
     });
   }
@@ -279,7 +280,7 @@ export function createSampleHighlighter(): SampleHighlighter {
     try {
       html = shiki.codeToHtml(source, {
         lang: "ts",
-        themes: { light: "github-light", dark: "github-dark-dimmed" },
+        themes: { light: siteLight, dark: siteDark },
         defaultColor: false,
         transformers: [transformer],
       });

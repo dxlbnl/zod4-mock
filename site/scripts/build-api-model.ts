@@ -18,6 +18,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHighlighter } from "shiki";
+import { siteDark, siteLight } from "./shiki-theme.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const siteRoot = join(here, "..");
@@ -121,7 +122,7 @@ interface MethodEntry {
   name: string;
   anchor: string;
   signature: string;
-  /** Shiki-highlighted HTML of `signature` (dual themes github-light/github-dark-dimmed, lang ts). */
+  /** Shiki-highlighted HTML of `signature` (dual site themes site-paper/site-phosphor, lang ts). */
   signatureHtml: string;
   description: string;
 }
@@ -143,11 +144,11 @@ interface ApiSymbol {
   anchor: string;
   kind: "function" | "interface" | "type" | "value";
   signature: string;
-  /** Shiki-highlighted HTML of `signature` (dual themes github-light/github-dark-dimmed, lang ts). */
+  /** Shiki-highlighted HTML of `signature` (dual site themes site-paper/site-phosphor, lang ts). */
   signatureHtml: string;
   description: string;
   examples: string[];
-  /** Shiki-highlighted HTML of each `examples` entry (dual themes github-light/github-dark-dimmed, lang ts). */
+  /** Shiki-highlighted HTML of each `examples` entry (dual site themes site-paper/site-phosphor, lang ts). */
   examplesHtml: string[];
   params?: ParamRow[];
   fields?: FieldRow[];
@@ -461,19 +462,19 @@ const ORDER = [
 // Pre-highlight every code fragment (signatures, method signatures, examples) to
 // static HTML so the rendered /docs/api code blocks are syntax-coloured and visually
 // consistent with the site's markdown code blocks. Same DUAL theme config + lang as
-// `site/svelte.config.js` (`codeToHtml`, themes { light: github-light, dark:
-// github-dark-dimmed }, defaultColor: false, lang ts) so each token carries
+// `site/svelte.config.js` (`codeToHtml`, themes { light: siteLight, dark:
+// siteDark }, defaultColor: false, lang ts) so each token carries
 // `--shiki-light` / `--shiki-dark` CSS vars and the palette-switching CSS in
 // app.css selects which to apply. The emitted HTML is plain serializable data
 // (no node:* baked into the shipped module).
 const highlighter = await createHighlighter({
-  themes: ["github-light", "github-dark-dimmed"],
+  themes: [siteLight, siteDark],
   langs: ["ts"],
 });
 const highlight = (code: string): string =>
   highlighter.codeToHtml(code, {
     lang: "ts",
-    themes: { light: "github-light", dark: "github-dark-dimmed" },
+    themes: { light: siteLight, dark: siteDark },
     defaultColor: false,
   });
 

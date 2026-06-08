@@ -5,6 +5,7 @@
 	// Each major concept is introduced via <DefRef term=…> so it enters the
 	// B104 Pagefind concept index (data-pagefind-meta="concept:<term>").
 	import DocPage from '$lib/docs/widgets/DocPage.svelte';
+	import CodeBlock from '$lib/docs/widgets/CodeBlock.svelte';
 	import DefRef from '$lib/docs/widgets/DefRef.svelte';
 	import DefinitionList, {
 		type DefinitionEntry
@@ -89,9 +90,7 @@
 		registry, and all schema registrations.
 	</p>
 
-	<pre><code>{`const world = createWorld({ seed: 42 })
-  .withSchema(PersonSchema)
-  .withSchema(DocumentSchema, { relations: { author: PersonSchema } });`}</code></pre>
+	<CodeBlock id="concepts-world" />
 
 	<p>
 		One world = one seed = one deterministic dataset. All schemas registered on a world share the
@@ -110,7 +109,7 @@
 	</p>
 
 	<h3>Primary — identity anchor</h3>
-	<pre><code>world.withSchema(PersonSchema);</code></pre>
+	<CodeBlock id="concepts-primary" />
 	<p>
 		A primary schema generates independent instances. The world cycles through them
 		deterministically as you call <code>generate()</code>. Instances are stored in the registry and
@@ -118,13 +117,7 @@
 	</p>
 
 	<h3>Derived — projection of another schema</h3>
-	<pre><code>{`world.withSchema(PersonSummarySchema, {
-  from: PersonSchema,
-  matchers: {
-    id: (ctx) => ctx.source.personId,
-    name: (ctx) => \`\${ctx.source.firstName} \${ctx.source.lastName}\`,
-  },
-});`}</code></pre>
+	<CodeBlock id="concepts-derived" />
 	<p>
 		<code>from:</code> binds this schema to a primary schema. Each generated instance of
 		<code>PersonSummarySchema</code> is a projection of the corresponding <code>PersonSchema</code>
@@ -132,12 +125,7 @@
 	</p>
 
 	<h3>Relational — linked to other schemas</h3>
-	<pre><code>{`world.withSchema(DocumentSchema, {
-  relations: { author: PersonSchema },
-  matchers: {
-    authorId: (ctx) => ctx.related("author").personId,
-  },
-});`}</code></pre>
+	<CodeBlock id="concepts-relational" />
 	<p>
 		<code>relations</code> declares which other schemas this one references.
 		<code>ctx.related("author")</code> resolves to the data of a specific instance of
@@ -220,19 +208,12 @@
 		The full generator namespace, with the PRNG already bound. You never pass <code>prng</code>
 		manually:
 	</p>
-	<pre><code>{`matchers: {
-  name:     (ctx) => ctx.gen.person.fullName(),
-  email:    (ctx) => ctx.gen.internet.email(),
-  city:     (ctx) => ctx.gen.location.city(),
-  iban:     (ctx) => ctx.gen.finance.iban(),
-  sentence: (ctx) => ctx.gen.word.sentence(),
-}`}</code></pre>
+	<CodeBlock id="concepts-ctx-gen" />
 	<p>
 		Generators that take arguments work the same way — the PRNG is the first argument and is applied
 		automatically:
 	</p>
-	<pre><code>{`(ctx) => ctx.gen.string.alphanumeric(8)   // length = 8
-(ctx) => ctx.gen.finance.amount(10, 999)  // min, max`}</code></pre>
+	<CodeBlock id="concepts-ctx-gen-args" />
 
 	<hr />
 
@@ -242,14 +223,7 @@
 		<DefRef term="registry">registry</DefRef>. Other matchers can look it up to establish
 		cross-schema consistency.
 	</p>
-	<pre><code>{`// Pick a random instance of a registered schema
-const person = ctx.registry.pick(PersonSchema);
-
-// Pick all instances
-const people = ctx.registry.all(PersonSchema);
-
-// Filter all matching a predicate
-const active = ctx.registry.filter(PersonSchema, (p) => p.active);`}</code></pre>
+	<CodeBlock id="concepts-registry" />
 	<p>Registry lookups are typed from the schema — no manual type casts needed.</p>
 	<blockquote>
 		<p>
@@ -265,17 +239,7 @@ const active = ctx.registry.filter(PersonSchema, (p) => p.active);`}</code></pre
 		Matchers registered for a schema apply automatically wherever that schema appears — including
 		nested inside another schema's fields.
 	</p>
-	<pre><code>{`const world = createWorld({ seed: 42 })
-  .withSchema(AddressSchema, {
-    matchers: {
-      street: (ctx) => ctx.gen.location.street(),
-      city: (ctx) => ctx.gen.location.city(),
-    },
-  })
-  .withSchema(PersonSchema); // PersonSchema has address: AddressSchema
-
-// PersonSchema's address field uses AddressSchema's matchers automatically
-const person = world.generate(PersonSchema);`}</code></pre>
+	<CodeBlock id="concepts-nested" />
 
 	<hr />
 
@@ -311,12 +275,7 @@ const person = world.generate(PersonSchema);`}</code></pre>
 		<code>"$128.94"</code>.
 	</p>
 	<p>For realistic output, install a locale package and pass it to <code>createWorld</code>:</p>
-	<pre><code>{`import { createWorld } from "zod4-mock";
-import { en } from "@zod4-mock/locale-en"; // Markov-trained English
-import { nl } from "@zod4-mock/locale-nl"; // Markov-trained Dutch
-
-createWorld({ seed: 42, locale: en });
-createWorld({ seed: 42, locale: nl });`}</code></pre>
+	<CodeBlock id="concepts-locale-import" />
 	<p>
 		A locale is a plain <code>LocaleData</code> object — sections for <code>person</code>,
 		<code>address</code>, <code>commerce</code>, <code>company</code>, <code>word</code>,
@@ -329,13 +288,7 @@ createWorld({ seed: 42, locale: nl });`}</code></pre>
 		For variants, use <code>extend()</code> (re-exported from each locale package, e.g.
 		<code>@zod4-mock/locale-en</code>):
 	</p>
-	<pre><code>{`import { createWorld } from "zod4-mock";
-import { en, extend } from "@zod4-mock/locale-en";
-
-const enGB = extend(en, {
-  address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },
-  commerce: { ...en.commerce, formatPrice: (n) => \`£\${n.toFixed(2)}\` },
-});`}</code></pre>
+	<CodeBlock id="concepts-extend" />
 	<p>
 		See the <a href="/docs/api">API reference</a> for the full <code>LocaleData</code> interface.
 	</p>
@@ -411,13 +364,7 @@ const enGB = extend(en, {
 		Use <code>populate()</code> to pre-create a fixed number of instances before generation starts.
 		This is useful when you need other schemas to reference a specific number of entities:
 	</p>
-	<pre><code>{`const world = createWorld({ seed: 42 })
-  .withSchema(PersonSchema)
-  .withSchema(DocumentSchema, { relations: { author: PersonSchema } })
-  .populate(PersonSchema, 5); // ensure exactly 5 persons exist
-
-const documents = world.generate(z.array(DocumentSchema).min(20));
-// All 20 documents reference one of the 5 persons`}</code></pre>
+	<CodeBlock id="concepts-populate" />
 
 	<hr />
 
@@ -426,8 +373,7 @@ const documents = world.generate(z.array(DocumentSchema).min(20));
 		<code>optionalProbability</code> (default <code>0.2</code>) controls how often
 		<code>z.optional()</code> and <code>z.nullable()</code> fields are omitted.
 	</p>
-	<pre><code>{`createWorld({ seed: 42, optionalProbability: 0 }); // always present
-createWorld({ seed: 42, optionalProbability: 1 }); // always absent`}</code></pre>
+	<CodeBlock id="concepts-optional-probability" />
 	<p>
 		For test assertions on optional fields, either set <code>optionalProbability: 0</code> or pin
 		the field with <code>overrides</code>.

@@ -2,6 +2,7 @@ import adapter from "@sveltejs/adapter-vercel";
 import { mdsvex, escapeSvelte } from "mdsvex";
 import { codeToHtml } from "shiki";
 import { rendererRich, transformerTwoslash } from "@shikijs/twoslash";
+import { siteDark, siteLight } from "./scripts/shiki-theme.js";
 
 // B126 — the Twoslash transformer slotted into the EXISTING Shiki call (a transformer
 // add, not a new pipeline). It runs build-time only (D13-exempt). It is gated to fences
@@ -34,7 +35,7 @@ const config = {
           const useTwoslash = meta?.includes("twoslash");
           const html = await codeToHtml(code, {
             lang: lang ?? "text",
-            themes: { light: "github-light", dark: "github-dark-dimmed" },
+            themes: { light: siteLight, dark: siteDark },
             defaultColor: false,
             transformers: useTwoslash ? [twoslashTransformer] : [],
           });
