@@ -1,14 +1,11 @@
 # zod4-mock
 
-## 1.0.0
-
-### Major Changes
-
-- 88a4efd: Remove `generateFromSchema`, `generateFromKey`, `fieldSeed`, and `data` from the `zod4-mock` public barrel (internal-only; `data` was a duplicate of `generators`).
-  Move `extend` to the locale packages: `import { extend } from "zod4-mock"` becomes `import { extend } from "@zod4-mock/locale-en"` (or `@zod4-mock/locale-nl`).
+## 0.11.0
 
 ### Minor Changes
 
+- 88a4efd: **Breaking (pre-1.0, so a minor bump):** Remove `generateFromSchema`, `generateFromKey`, `fieldSeed`, and `data` from the `zod4-mock` public barrel (internal-only; `data` was a duplicate of `generators`).
+  Move `extend` to the locale packages: `import { extend } from "zod4-mock"` becomes `import { extend } from "@zod4-mock/locale-en"` (or `@zod4-mock/locale-nl`).
 - 88a4efd: Add per-field TSDoc to every `GenerateOptions` and `WorldOptions` field so the API reference shows a description for each option. Add the shared `GenerationDefaults` base type (`WorldOptions`/`GenerateOptions` now `extends` it — same public shape). `source`/`fieldPath`/`prng` on `GenerateOptions` are now `@internal` (doc-only; non-breaking).
 - 8f94cfc: Fix: `from:`-derived records are now order-independent of unrelated prior registrations.
 
@@ -38,8 +35,6 @@
 
 ### Patch Changes
 
-- cace7a4: Author fresh TSDoc on every public export and generate `docs/api-reference.md` (and the structured `/docs/api` site view) from it, with a `pnpm docs:check` parity guard wired into `pnpm validate`.
-- e99fa3d: Group `docs/api-reference.md` (and the `/docs/api` site view) into eight curated categories so the API reference reads as a clear mental model.
 - 68f3e7b: **Fix: `world.generate(DerivedSchema, { source })` collapsed all field seeds to one**
 
   The explicit-source derived path (`generateWithSourceOverride`) hardcoded the
