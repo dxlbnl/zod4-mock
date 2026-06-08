@@ -6,6 +6,7 @@
 	import InstallBlock from '$lib/docs/widgets/InstallBlock.svelte';
 	import SpeedClaim from '$lib/docs/widgets/SpeedClaim.svelte';
 	import Playground from '$lib/docs/widgets/Playground.svelte';
+	import CodeSample from '$lib/docs/widgets/CodeSample.svelte';
 	import RelatedShowcase from '$lib/docs/widgets/RelatedShowcase.svelte';
 
 	const step1Code = `z.object({
@@ -39,7 +40,13 @@
 	<hr />
 
 	<h2>Step 1 — Generate without any setup</h2>
-	<p>The simplest possible use: pass a schema, get data back.</p>
+	<p>The simplest possible use: pass a schema, get data back. This complete example is
+		type-checked at build time, and its type tokens link into the
+		<a href="/docs/api">API reference</a>:</p>
+
+	<CodeSample id="getting-started-lead" />
+
+	<p>Edit it live below:</p>
 
 	<Playground initialCode={step1Code} />
 

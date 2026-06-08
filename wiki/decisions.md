@@ -1021,3 +1021,36 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   Builds on D5/D27 (TSDoc → TypeDoc) rather than replacing them.
 - **Rule added**: promoted to `architecture.md` Rules — engine-threaded option fields with no user
   call path MUST be `@internal` so `excludeInternal` keeps them out of the reference. (→ D29)
+
+## D30 — Docs code samples are Shiki + Twoslash, build-time type-checked, src-aligned type-links
+
+- **Date**: 2026-06-08.
+- **By**: implementer (B126), promoted by the manager at Done.
+- **Context**: B125 made `/docs/api` the canonical, member-anchored reference. The docs guide code
+  samples were hand-written `<pre><code>` reaching no highlighter, no type-check, and no link into
+  the reference — the undefined-`UserSchema`/missing-import class of bug shipped silently. The
+  approved docs-UX rework (wiki/research/reports/docs-ux-rework.md) calls for Shiki + Twoslash:
+  highlighted, **type-checked at build**, with clickable type tokens linking into the reference.
+- **Decision**: render docs code samples through **Shiki + `@shikijs/twoslash`** at build time. Each
+  sample is **type-checked by Twoslash** against the real `zod4-mock` types — a sample that does not
+  compile (undefined symbol, missing import, type error) **fails the build**, naming the diagnostic.
+  Per twoslash token, its declaration `{fileName,line}` (TS language service `getDefinitionAtPosition`)
+  is joined to the TypeDoc JSON `sources.{fileName,line}` index to derive a `/docs/api#<anchor>` link
+  (via a **minimal Twoslash renderer** implementing only `nodeStaticInfo` to wrap documented tokens in
+  `<a>` — `rendererRich()`'s hover-popup markup is deliberately NOT used: it emitted ~96KB/sample of
+  unused Zod type-expansion popups, was the dominant build cost, and overlaid the link; the minimal
+  renderer is ~7KB/sample with no popups). The join is **src-aligned**: the language service is configured
+  with tsconfig `paths` `zod4-mock` → the real `src/index.ts` (mirroring `site/typedoc.tsconfig.json`),
+  so the LS agrees with TypeDoc on src-vs-dist — without it the join silently yields 0 links. The
+  highlight runs at build (`site/scripts/twoslash-highlight.ts` + `build-samples.ts`) and emits plain
+  serializable HTML into generated modules a `<CodeSample>` renders; the emitted type-links are recorded
+  in `sample-links.generated.ts` and validated by the dangling-link guard. A warm twoslasher + language
+  service is reused across samples for build speed.
+- **Consequences**: `@shikijs/twoslash` and `twoslash` are **build-time devDependencies** (D13-exempt,
+  like `typedoc`/`pagefind`) — nothing from twoslash enters the shipped library `dist/` or the site
+  client bundle. The site `build` runs the highlight + the extended guard before `vite build` prerenders.
+  The mdsvex `playground` fence (D18) is never routed through twoslash. Builds on D5/D27 (TSDoc → TypeDoc)
+  and D13; does not replace them.
+- **Rule added**: docs code samples MUST be Shiki + Twoslash-rendered and **type-checked at build time**;
+  `@shikijs/twoslash` + `twoslash` are build-time (D13-exempt) devDependencies; the token→`/docs/api`
+  type-link join MUST be `src`-aligned (LS `paths` `zod4-mock` → `src/index.ts`, matching TypeDoc). (→ D30)

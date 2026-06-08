@@ -6,6 +6,7 @@ priority: high
 created: 2026-06-07
 predecessor: B125
 plan: wiki/research/reports/docs-ux-rework.md
+spec: wiki/specs/B126-twoslash-code-samples.md
 ---
 
 ## Description

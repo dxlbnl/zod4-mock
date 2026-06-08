@@ -279,4 +279,18 @@
     color: var(--shiki-light);
     background-color: var(--shiki-light-bg);
   }
+  /* Explicit light/dark palette values resolve the matching Shiki theme vars (B126-R5:
+     toggling the palette switches token colours). `paper` (above) is the named light
+     palette; `light`/`dark` are honoured directly so a dual-theme sample recolours per
+     palette without depending on the default-dark fallthrough. */
+  [data-palette="light"] .shiki,
+  [data-palette="light"] .shiki span {
+    color: var(--shiki-light);
+    background-color: var(--shiki-light-bg);
+  }
+  [data-palette="dark"] .shiki,
+  [data-palette="dark"] .shiki span {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
 }

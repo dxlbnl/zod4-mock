@@ -12,6 +12,7 @@
  */
 
 import { API_MODEL, type ApiRef } from "../src/lib/docs/api/api-model.generated.js";
+import { SAMPLE_LINKS } from "../src/lib/docs/api/sample-links.generated.js";
 
 // The complete set of anchors the rendered page exposes:
 //  - every symbol anchor
@@ -57,16 +58,37 @@ for (const sym of API_MODEL) {
   }
 }
 
-if (dangling.length > 0) {
+// B126-R6 — the twoslash-emitted docs-sample type-links must also resolve to a real
+// /docs/api anchor. A dead sample type-link must fail the build rather than ship silently.
+const danglingSamples: { sample: string; text: string; anchor: string }[] = [];
+for (const link of SAMPLE_LINKS) {
+  if (!anchors.has(link.anchor)) {
+    danglingSamples.push({ sample: link.sample, text: link.text, anchor: link.anchor });
+  }
+}
+
+if (dangling.length > 0 || danglingSamples.length > 0) {
   // eslint-disable-next-line no-console -- build-time fatal
   console.error(
-    `api-link-guard: ${dangling.length} dangling /docs/api cross-reference(s):\n` +
-      dangling
-        .map((d) => `  - ${d.symbol} (${d.where}) → "${d.text}" #${d.anchor} (no such anchor)`)
-        .join("\n"),
+    `api-link-guard: ${dangling.length} dangling /docs/api cross-reference(s)` +
+      (dangling.length > 0
+        ? `:\n` +
+          dangling
+            .map((d) => `  - ${d.symbol} (${d.where}) → "${d.text}" #${d.anchor} (no such anchor)`)
+            .join("\n")
+        : "") +
+      (danglingSamples.length > 0
+        ? `\napi-link-guard: ${danglingSamples.length} dangling docs-sample type-link(s):\n` +
+          danglingSamples
+            .map((d) => `  - sample '${d.sample}' → "${d.text}" #${d.anchor} (no such anchor)`)
+            .join("\n")
+        : ""),
   );
   process.exit(1);
 }
 
 // eslint-disable-next-line no-console -- build-time progress log
-console.log(`api-link-guard: OK — ${anchors.size} anchors, 0 dangling cross-references`);
+console.log(
+  `api-link-guard: OK — ${anchors.size} anchors, 0 dangling cross-references, ` +
+    `${SAMPLE_LINKS.length} sample type-link(s) resolved`,
+);
