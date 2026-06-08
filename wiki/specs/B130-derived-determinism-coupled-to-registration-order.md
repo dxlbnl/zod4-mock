@@ -4,7 +4,7 @@
 
 A schema registered with `from:` ("derived") generates its field values from a PRNG
 whose seed is keyed on the schema's **registration ordinal** (`regId`), not on its
-**reference identity**. Inserting or reordering any `withSchema(...)` call *before* a
+**reference identity**. Inserting or reordering any `withSchema(...)` call _before_ a
 derived schema silently changes every field that derived schema generates — even though
 the derived schema, its source, and the world seed are all identical. This violates the
 binding determinism Rule (D4/D10): "Generation MUST be deterministic per `(seed + schema
@@ -24,12 +24,11 @@ converted — it is the one remaining path that still keys on the registration o
 
 - **[src/world/engine.ts:535](../../src/world/engine.ts#L535)** — `withSchema` assigns
   `regId: this.schemaRegs.length`, i.e. the running registration count. `regId` is
-  therefore the registration *ordinal*.
+  therefore the registration _ordinal_.
 - **[src/world/engine.ts:1182](../../src/world/engine.ts#L1182)** —
   `generateDerivedRecord` seeds the record's field PRNG from
-  `const recordId = \`dreg${reg.regId}#${sourceIndex}\`` and then
-  `createPrng(fieldSeed(this.rootSeed, recordId, ""))`. The recordId is also passed as
-  the `fieldPathPrefix`/relation key.
+  `const recordId = \`dreg${reg.regId}#${sourceIndex}\``and then`createPrng(fieldSeed(this.rootSeed, recordId, ""))`. The recordId is also passed as
+the `fieldPathPrefix`/relation key.
 
 So a derived record's field PRNG seed depends on `regId`, and `regId` depends on how many
 schemas were registered before it. Insert one `withSchema` earlier → every later schema's
@@ -42,10 +41,10 @@ source)` constant, the output is **not** stable.
 The registered-**primary** path
 ([engine.ts:1142](../../src/world/engine.ts#L1142),
 `reg${effectiveRegId}#${recordIndex}`) intentionally keys on `regId` and is **out of
-scope**: per B39-R9, reordering `withSchema(X)` vs `withSchema(Y)` *can* legitimately
+scope**: per B39-R9, reordering `withSchema(X)` vs `withSchema(Y)` _can_ legitimately
 shift primary values because it shifts which `regId` each schema receives — that is the
 documented "same builder chain" caveat, not a defect. B130 changes **only** the derived
-record path, whose dependence on the ordinal of *other, unrelated* registrations is the
+record path, whose dependence on the ordinal of _other, unrelated_ registrations is the
 defect.
 
 ### Composition with B8 (must be preserved)
@@ -53,7 +52,7 @@ defect.
 B8 ([wiki/specs/B8-derived-schemas-identity.md](B8-derived-schemas-identity.md)) makes
 `world.generate(D, { source })` a per-pair upsert keyed by `(D, identity(source))`. The
 upsert map keys on schema reference + source identity — already pure identity, no `regId`.
-B130 changes only the **field-PRNG seed** of the *generating* call; the upsert lookup /
+B130 changes only the **field-PRNG seed** of the _generating_ call; the upsert lookup /
 write semantics, the `#<sourceIndex>` suffix, `unique`, `sourceKey`, and `store: false`
 behaviour are all unchanged.
 
@@ -144,7 +143,7 @@ The B8 upsert contract MUST continue to hold after B130: a default-mode
 instance (`===`), `registry.count(D)` does not grow past 1 for that pair, `{ unique: false }`
 still produces fresh records, `sourceKey` look-alike identity still resolves, and
 `store: false` derived calls stay fresh and unstored. B130 changes only the field-PRNG
-seed of the *generating* call, never the upsert lookup/write or its keying.
+seed of the _generating_ call, never the upsert lookup/write or its keying.
 
 - Scenario: same-source upsert still returns the same instance
   GIVEN the B8-R1 setup — `UserSchema`, `UserProfileSchema` (module scope), a world `createWorld({ seed: 42 }).withSchema(UserSchema).withSchema(UserProfileSchema, { from: UserSchema, matchers: { userId: (ctx) => ctx.source.id } })`, and one stored user
@@ -238,7 +237,7 @@ non-blocking open question below.
 
 - **Whether B130 promotes a new standing rule — Non-blocking.** D10 already states the
   binding invariant ("call order across distinct schemas MUST NOT affect any value"); B130
-  is bringing the derived path into compliance with the *existing* rule, not establishing a
+  is bringing the derived path into compliance with the _existing_ rule, not establishing a
   new one. No new ADR or `architecture.md` rule line is required — D10 covers it. Recorded;
   not blocking. (If the reviewer prefers an ADR cross-reference noting the derived path was
   the last hold-out, that is a documentation nicety, not a new constraint.)

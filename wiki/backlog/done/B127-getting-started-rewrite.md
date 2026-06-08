@@ -6,6 +6,7 @@ priority: high
 created: 2026-06-07
 predecessor: B126
 plan: wiki/research/reports/docs-ux-rework.md
+spec: wiki/specs/B127-getting-started-rewrite.md
 ---
 
 ## Description

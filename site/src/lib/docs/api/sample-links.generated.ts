@@ -22,4 +22,34 @@ export const SAMPLE_LINKS: ReadonlyArray<SampleLink> = [
     anchor: "generate",
     sample: "getting-started-lead",
   },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-seeded-world",
+  },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-seeded-world",
+  },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-matchers",
+  },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-matchers",
+  },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-relations",
+  },
+  {
+    text: "createWorld",
+    anchor: "createWorld",
+    sample: "getting-started-relations",
+  },
 ];

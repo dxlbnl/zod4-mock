@@ -38,4 +38,76 @@ const User = z.object({
 
 const users = generate(z.array(User).min(3).max(10));`,
   },
+  {
+    // Getting Started — seeded world variation (the options primer): wrap
+    // generation in a world with a fixed seed so the data is reproducible. Its
+    // `createWorld` token links to /docs/api#createWorld.
+    id: "getting-started-seeded-world",
+    source: `import { createWorld } from "zod4-mock";
+import { z } from "zod";
+
+const User = z.object({
+  id: z.uuid(),
+  firstName: z.string(),
+  email: z.email(),
+});
+
+const world = createWorld({ seed: 42 });
+const users = world.generate(z.array(User).min(5));`,
+  },
+  {
+    // Getting Started — matchers variation: take over how named fields are
+    // generated; every other field still falls through to the defaults.
+    id: "getting-started-matchers",
+    source: `import { createWorld } from "zod4-mock";
+import { z } from "zod";
+
+const Product = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  sku: z.string(),
+  priceCents: z.number().int(),
+});
+
+const world = createWorld({ seed: 42 }).withSchema(Product, {
+  matchers: {
+    name: (ctx) => ctx.gen.commerce.productName(),
+    sku: (ctx) => \`SKU-\${ctx.gen.string.alphanumeric(6)}\`,
+    priceCents: (ctx) => ctx.prng.int(100, 50_000),
+  },
+});
+
+const products = world.generate(z.array(Product).min(10));`,
+  },
+  {
+    // Getting Started — relations variation: declare a relation between two
+    // schemas and read the related record in a matcher (ctx.related) so foreign
+    // keys stay consistent across the dataset.
+    id: "getting-started-relations",
+    source: `import { createWorld } from "zod4-mock";
+import { z } from "zod";
+
+const Author = z.object({
+  authorId: z.uuid(),
+  name: z.string(),
+});
+
+const Post = z.object({
+  id: z.uuid(),
+  authorId: z.uuid(),
+  title: z.string(),
+});
+
+const world = createWorld({ seed: 42 })
+  .withSchema(Author)
+  .withSchema(Post, {
+    relations: { author: Author },
+    matchers: {
+      authorId: (ctx) => ctx.related("author").authorId,
+    },
+  });
+
+const authors = world.generate(z.array(Author).min(3));
+const posts = world.generate(z.array(Post).min(10));`,
+  },
 ];

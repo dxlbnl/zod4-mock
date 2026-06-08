@@ -410,4 +410,67 @@ const world = createWorld({ seed: 42 }).withGenerators({
 		<code>withGenerators</code> overrides win over the built-in key heuristics — see the pipeline
 		order in <a href="/docs/concepts">Concepts</a>.
 	</p>
+
+	<hr />
+
+	<h2>Derive one schema from another</h2>
+	<p>
+		When two API shapes represent the same entity, bind one to the other with <code>from</code>.
+		The source entity's data is available as <code>ctx.source</code>, so the derived record stays
+		consistent with its source:
+	</p>
+
+	<pre><code>{`const world = createWorld({ seed: 42 })
+  .withSchema(PersonSchema)
+  .withSchema(PersonSummarySchema, {
+    from: PersonSchema,
+    matchers: {
+      id: (ctx) => ctx.source.personId,
+      displayName: (ctx) => \`\${ctx.source.firstName} \${ctx.source.lastName}\`,
+    },
+  });
+
+const people = world.generate(z.array(PersonSchema).min(5));
+const summaries = world.generate(z.array(PersonSummarySchema));
+
+// people[0].personId === summaries[0].id — always`}</code></pre>
+
+	<hr />
+
+	<h2>Localize the output</h2>
+	<p>
+		By default, generators draw from a <strong>minimal built-in English locale</strong> — short
+		curated name/word lists, no Markov generation. For realistic, Markov-generated data or a
+		different language, install a locale package and pass it via <code>locale</code>:
+	</p>
+
+	<pre><code>{`npm install @zod4-mock/locale-en        # rich English
+npm install @zod4-mock/locale-nl        # Dutch (Markov names, € prices, tussenvoegsels)`}</code></pre>
+
+	<pre><code>{`import { createWorld } from "zod4-mock";
+import { en } from "@zod4-mock/locale-en";
+import { nl } from "@zod4-mock/locale-nl";
+
+const enWorld = createWorld({ seed: 42, locale: en });
+const nlWorld = createWorld({ seed: 42, locale: nl });`}</code></pre>
+
+	<p>
+		Locales are plain objects implementing the <code>LocaleData</code> interface — every section
+		(names, words, currencies, addresses, phone formats, …) is overridable. For variants like
+		British English or <code>nl-BE</code>, use the <code>extend()</code> helper:
+	</p>
+
+	<pre><code>{`import { createWorld } from "zod4-mock";
+import { en, extend } from "@zod4-mock/locale-en";
+
+const enGB = extend(en, {
+  address: { ...en.address, phonePrefix: "+44", countryCode: "GB", ibanPrefix: "GB" },
+  commerce: { ...en.commerce, formatPrice: (n) => \`£\${n.toFixed(2)}\` },
+});
+
+createWorld({ seed: 1, locale: enGB });`}</code></pre>
+
+	<p>
+		See <a href="/docs/api">Localization in the API reference</a> for the full interface.
+	</p>
 </DocPage>

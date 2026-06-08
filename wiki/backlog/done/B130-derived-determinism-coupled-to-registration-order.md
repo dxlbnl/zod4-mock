@@ -12,7 +12,7 @@ spec: wiki/specs/B130-derived-determinism-coupled-to-registration-order.md
 
 A `from:`-derived schema's generated field values are a function of its **registration
 order**, not of `(seed, schema reference, source)` as D4/D10 require. Inserting or reordering
-any `withSchema(...)` call *before* a derived schema silently changes every field that schema
+any `withSchema(...)` call _before_ a derived schema silently changes every field that schema
 generates — the transcription strings, sentence arrays, named-entity offsets, etc. — even
 though the derived schema, its source, and the seed are all identical.
 
@@ -26,10 +26,10 @@ still keys on the registration ordinal.
 ### Mechanism (confirmed in source)
 
 - **`src/world/engine.ts:535`** — `withSchema` assigns `regId: this.schemaRegs.length`, i.e.
-  the running registration count. `regId` is therefore the registration *ordinal*.
+  the running registration count. `regId` is therefore the registration _ordinal_.
 - **`src/world/engine.ts:1182`** — `generateDerivedRecord` seeds the record's field PRNG from
   `const recordId = `dreg${reg.regId}#${sourceIndex}``. (The lib documents this at ~line 237:
-  "seeds the record's field PRNG (`dreg<regId>#<index>`)".)
+"seeds the record's field PRNG (`dreg<regId>#<index>`)".)
 
 So a derived record's field PRNG seed depends on `regId`, and `regId` depends on how many
 schemas were registered before it. Insert one `withSchema` earlier → every later schema's
@@ -42,11 +42,11 @@ schemas were registered before it. Insert one `withSchema` earlier → every lat
 `audioSegment`, the sentence schemas, …). Moving `artifactServerEvent` earlier bumps the
 `regId` of every schema registered after it, including all the textsuite schemas, so their
 generated data drifts and 3 specs break. Removing `artifactServerEvent` fixes them; registering
-it *last* (highest `regId`, nothing after it shifts) also fixes them.
+it _last_ (highest `regId`, nothing after it shifts) also fixes them.
 
 ### Why the original repro missed it
 
-The first B130 reproduction registered the sibling *after* the generated schema, so its `regId`
+The first B130 reproduction registered the sibling _after_ the generated schema, so its `regId`
 never moved and nothing shifted — which made it look like "registration is inert". It is not:
 registration assigns `regId` (engine.ts:535) and generation consumes it (engine.ts:1182). The
 defect is registration-**order** dependence, and a correct repro must insert a prior
@@ -55,8 +55,8 @@ defect is registration-**order** dependence, and a correct repro must insert a p
 ### Reproduction (order-based, the correct one)
 
 ```ts
-import { z } from 'zod';
-import { createWorld } from 'zod4-mock';
+import { z } from "zod";
+import { createWorld } from "zod4-mock";
 
 const Parent = z.object({ id: z.string() });
 const Derived = z.object({ pid: z.string(), label: z.string() }); // a non-source field that the PRNG fills
