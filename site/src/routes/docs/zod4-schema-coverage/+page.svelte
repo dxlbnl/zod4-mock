@@ -2,7 +2,231 @@
 	// B103 — Zod v4 Schema Coverage, rebuilt on the B100 doc primitives.
 	// Prose ported verbatim from docs/zod4-schema-coverage.md (the §6 hand-authored
 	// convention; parity is human-policed). docs/zod4-schema-coverage.md stays canonical.
+	//
+	// B132 — the 18 status <table>s (Schema → Status → Notes) are replaced by the
+	// non-table <CoverageList> pip-list (no <table> in the docs site). Each
+	// section's rows map to a CoverageItem[]: ✅ → supported, ❌ → unsupported,
+	// ⚠️ / "partial" → partial; the Notes cell → note (surfaced inline per row).
 	import DocPage from '$lib/docs/widgets/DocPage.svelte';
+	import CoverageList, {
+		type CoverageItem
+	} from '$lib/docs/widgets/CoverageList.svelte';
+
+	const primitives: CoverageItem[] = [
+		{ schema: 'z.string()', status: 'supported' },
+		{ schema: 'z.number()', status: 'supported' },
+		{ schema: 'z.boolean()', status: 'supported' },
+		{ schema: 'z.bigint()', status: 'supported' },
+		{ schema: 'z.date()', status: 'supported' },
+		{ schema: 'z.symbol()', status: 'supported' },
+		{ schema: 'z.null()', status: 'supported' },
+		{ schema: 'z.undefined()', status: 'supported' },
+		{ schema: 'z.any()', status: 'supported' },
+		{ schema: 'z.unknown()', status: 'supported' },
+		{ schema: 'z.never()', status: 'supported' },
+		{ schema: 'z.void()', status: 'supported' },
+		{ schema: 'z.nan()', status: 'supported' }
+	];
+
+	const stringLengthPattern: CoverageItem[] = [
+		{ schema: '.min(n)', status: 'supported' },
+		{ schema: '.max(n)', status: 'supported' },
+		{ schema: '.length(n)', status: 'supported' },
+		{
+			schema: '.regex(pattern)',
+			status: 'supported',
+			note: 'Supports simple patterns and character sets natively; falls back safely'
+		},
+		{ schema: '.includes(str)', status: 'supported' },
+		{ schema: '.startsWith(str)', status: 'supported' },
+		{ schema: '.endsWith(str)', status: 'supported' }
+	];
+
+	const stringCase: CoverageItem[] = [
+		{ schema: '.trim()', status: 'supported' },
+		{ schema: '.toLowerCase() / .lowercase()', status: 'supported' },
+		{ schema: '.toUpperCase() / .uppercase()', status: 'supported' },
+		{ schema: '.normalize()', status: 'unsupported', note: 'Unicode normalization' }
+	];
+
+	const stringFormats: CoverageItem[] = [
+		{ schema: '.email() / z.email()', status: 'supported' },
+		{ schema: '.url() / z.url()', status: 'supported' },
+		{ schema: 'z.httpUrl()', status: 'unsupported' },
+		{ schema: '.uuid() / z.uuid()', status: 'supported' },
+		{ schema: 'z.uuidv4()', status: 'supported' },
+		{ schema: 'z.uuidv6()', status: 'unsupported' },
+		{ schema: 'z.uuidv7()', status: 'unsupported' },
+		{ schema: 'z.uuidv8()', status: 'unsupported' },
+		{ schema: 'z.guid()', status: 'supported', note: 'alias for uuid' },
+		{ schema: '.ip() / z.ip()', status: 'unsupported' },
+		{ schema: 'z.ipv4()', status: 'unsupported' },
+		{ schema: 'z.ipv6()', status: 'unsupported' },
+		{
+			schema: 'z.cidr() / z.cidrv4() / z.cidrv6()',
+			status: 'supported',
+			note: 'cidrv4 and cidrv6 supported'
+		},
+		{ schema: '.e164() / z.e164()', status: 'supported' },
+		{ schema: '.emoji()', status: 'supported' },
+		{ schema: '.base64() / z.base64()', status: 'supported' },
+		{ schema: 'z.base64url()', status: 'supported' },
+		{ schema: '.hex()', status: 'unsupported' },
+		{ schema: '.jwt() / z.jwt()', status: 'supported' },
+		{ schema: '.nanoid()', status: 'supported' },
+		{ schema: '.cuid()', status: 'supported' },
+		{ schema: '.cuid2()', status: 'supported' },
+		{ schema: '.ulid()', status: 'supported' },
+		{ schema: '.mac()', status: 'unsupported' },
+		{ schema: '.hostname()', status: 'supported' },
+		{ schema: '.hash()', status: 'unsupported' },
+		{ schema: 'z.stringbool()', status: 'unsupported' }
+	];
+
+	const isoFormats: CoverageItem[] = [
+		{ schema: 'z.iso.date()', status: 'supported', note: 'YYYY-MM-DD' },
+		{ schema: 'z.iso.time()', status: 'supported', note: 'HH:MM:SS[.ms]' },
+		{ schema: 'z.iso.datetime()', status: 'supported' },
+		{ schema: 'z.iso.duration()', status: 'supported' }
+	];
+
+	const numberValidators: CoverageItem[] = [
+		{ schema: '.gt(n)', status: 'supported' },
+		{ schema: '.gte(n) / .min(n)', status: 'supported' },
+		{ schema: '.lt(n)', status: 'supported' },
+		{ schema: '.lte(n) / .max(n)', status: 'supported' },
+		{ schema: '.positive()', status: 'unsupported' },
+		{ schema: '.nonnegative()', status: 'unsupported' },
+		{ schema: '.negative()', status: 'unsupported' },
+		{ schema: '.nonpositive()', status: 'unsupported' },
+		{ schema: '.multipleOf(n) / .step(n)', status: 'supported' },
+		{ schema: '.int()', status: 'supported' },
+		{ schema: '.finite()', status: 'unsupported' },
+		{ schema: '.safe()', status: 'partial', note: 'Handled contextually' }
+	];
+
+	const numberFormats: CoverageItem[] = [
+		{ schema: 'z.int()', status: 'supported' },
+		{ schema: 'z.float32()', status: 'unsupported' },
+		{ schema: 'z.float64()', status: 'unsupported' },
+		{ schema: 'z.int32()', status: 'supported' },
+		{ schema: 'z.uint32()', status: 'unsupported' },
+		{ schema: 'z.int64()', status: 'unsupported' },
+		{ schema: 'z.uint64()', status: 'unsupported' }
+	];
+
+	const bigintValidators: CoverageItem[] = [
+		{ schema: '.gt(n)', status: 'supported' },
+		{ schema: '.gte(n) / .min(n)', status: 'supported' },
+		{ schema: '.lt(n)', status: 'supported' },
+		{ schema: '.lte(n) / .max(n)', status: 'supported' },
+		{ schema: '.positive()', status: 'unsupported' },
+		{ schema: '.nonnegative()', status: 'unsupported' },
+		{ schema: '.negative()', status: 'unsupported' },
+		{ schema: '.nonpositive()', status: 'unsupported' },
+		{ schema: '.multipleOf(n)', status: 'unsupported' }
+	];
+
+	const arrayModifiers: CoverageItem[] = [
+		{ schema: '.min(n)', status: 'supported' },
+		{ schema: '.max(n)', status: 'supported' },
+		{ schema: '.length(n)', status: 'supported' },
+		{ schema: '.nonempty()', status: 'unsupported' }
+	];
+
+	const tupleFeatures: CoverageItem[] = [
+		{ schema: 'Fixed-length tuples', status: 'supported' },
+		{ schema: '.rest(schema)', status: 'supported' }
+	];
+
+	const objectMethods: CoverageItem[] = [
+		{
+			schema: '.extend({...}) / .safeExtend()',
+			status: 'supported',
+			note: 'Handled generically via def parsing'
+		},
+		{ schema: '.merge(schema)', status: 'supported' },
+		{ schema: '.pick({...})', status: 'supported' },
+		{ schema: '.omit({...})', status: 'supported' },
+		{ schema: '.partial()', status: 'supported' },
+		{ schema: '.partial({...})', status: 'supported' },
+		{ schema: '.required()', status: 'supported' },
+		{ schema: '.deepPartial()', status: 'supported' },
+		{ schema: '.keyof()', status: 'supported' },
+		{ schema: '.catchall(schema)', status: 'unsupported' },
+		{ schema: '.strict() / z.strictObject()', status: 'supported' },
+		{ schema: '.passthrough() / z.looseObject()', status: 'supported' },
+		{ schema: '.strip()', status: 'supported' }
+	];
+
+	const recordVariants: CoverageItem[] = [
+		{ schema: 'z.record(valueSchema)', status: 'supported' },
+		{
+			schema: 'z.record(keySchema, valueSchema)',
+			status: 'supported',
+			note: 'When keySchema is a finite-key type (z.enum([...])), the record is exhausted: one entry per enum member in declared order, so the output satisfies Zod’s strict-key inferred type. Open-key z.string() / z.number() keySchemas keep the 2–5 random-key shape.'
+		},
+		{ schema: 'z.partialRecord(keySchema, valueSchema)', status: 'unsupported' },
+		{ schema: 'z.looseRecord()', status: 'unsupported' }
+	];
+
+	const mapFeatures: CoverageItem[] = [{ schema: 'Basic Map', status: 'supported' }];
+
+	const setModifiers: CoverageItem[] = [
+		{ schema: '.min(n)', status: 'supported' },
+		{ schema: '.max(n)', status: 'supported' },
+		{ schema: '.size(n)', status: 'supported', note: 'Handled generically' },
+		{ schema: '.nonempty()', status: 'unsupported' }
+	];
+
+	const enumLiteral: CoverageItem[] = [
+		{ schema: 'z.enum([...values])', status: 'supported' },
+		{ schema: 'z.enum().extract([...])', status: 'supported' },
+		{ schema: 'z.enum().exclude([...])', status: 'supported' },
+		{ schema: 'z.nativeEnum(TsEnum)', status: 'unsupported' },
+		{ schema: 'z.literal(value)', status: 'supported' },
+		{ schema: 'z.literal([...values])', status: 'unsupported' }
+	];
+
+	const unionComposition: CoverageItem[] = [
+		{ schema: 'z.union([...schemas])', status: 'supported' },
+		{ schema: 'z.discriminatedUnion(key, [...schemas])', status: 'supported' },
+		{ schema: 'z.intersection(a, b)', status: 'supported' },
+		{ schema: 'z.pipe(a, b)', status: 'supported' }
+	];
+
+	const specialAdvanced: CoverageItem[] = [
+		{ schema: 'z.templateLiteral([...parts])', status: 'supported' },
+		{ schema: 'z.lazy(() => schema)', status: 'supported' },
+		{ schema: 'z.instanceof(Class)', status: 'unsupported', note: 'Throws UnsupportedSchemaError' },
+		{ schema: 'z.custom(fn)', status: 'unsupported', note: 'Throws UnsupportedSchemaError' },
+		{ schema: 'z.file()', status: 'unsupported', note: 'Throws UnsupportedSchemaError' },
+		{ schema: 'z.function()', status: 'unsupported', note: 'Throws UnsupportedSchemaError' },
+		{ schema: 'z.json()', status: 'supported', note: 'Generates valid JSON' },
+		{ schema: 'z.xor(a, b)', status: 'supported', note: 'Generates from left or right' }
+	];
+
+	const universalMethods: CoverageItem[] = [
+		{ schema: '.optional()', status: 'supported' },
+		{ schema: '.nullable()', status: 'supported' },
+		{ schema: '.nullish()', status: 'supported' },
+		{ schema: '.default(value)', status: 'supported' },
+		{ schema: '.prefault(value)', status: 'unsupported' },
+		{ schema: '.catch(value)', status: 'supported' },
+		{ schema: '.brand<T>()', status: 'unsupported' },
+		{ schema: '.readonly()', status: 'supported' },
+		{ schema: '.array()', status: 'supported' },
+		{ schema: '.promise()', status: 'supported', note: 'Returns undefined' },
+		{ schema: '.or(schema)', status: 'supported' },
+		{ schema: '.and(schema)', status: 'supported' },
+		{ schema: '.refine(fn, msg?)', status: 'unsupported', note: 'Runtime validation only' },
+		{ schema: '.superRefine(fn)', status: 'unsupported' },
+		{ schema: '.check(fn)', status: 'unsupported' },
+		{ schema: '.transform(fn)', status: 'unsupported', note: 'Runtime mapping only' },
+		{ schema: '.overwrite(fn)', status: 'unsupported' },
+		{ schema: '.preprocess(fn, schema)', status: 'unsupported' },
+		{ schema: '.pipe(schema)', status: 'supported' }
+	];
 </script>
 
 <DocPage title="Schema Coverage" sidebarGroup="reference" order={3}>
@@ -16,26 +240,7 @@
 	<hr />
 
 	<h2>Primitive types</h2>
-	<table>
-		<thead>
-			<tr><th>Schema</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.string()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.number()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.boolean()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.bigint()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.date()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.symbol()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.null()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.undefined()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.any()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.unknown()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.never()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.void()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.nan()</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={primitives} />
 
 	<hr />
 
@@ -46,309 +251,72 @@
 	</p>
 
 	<h3>Length &amp; pattern</h3>
-	<table>
-		<thead>
-			<tr><th>Validator</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.min(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.max(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.length(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.regex(pattern)</code></td><td>✅</td><td>Supports simple patterns and character sets natively; falls back safely</td></tr>
-			<tr><td><code>.includes(str)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.startsWith(str)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.endsWith(str)</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={stringLengthPattern} />
 
 	<h3>Case / normalization transforms</h3>
-	<table>
-		<thead>
-			<tr><th>Validator</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.trim()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.toLowerCase()</code> / <code>.lowercase()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.toUpperCase()</code> / <code>.uppercase()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.normalize()</code></td><td>❌</td><td>Unicode normalization</td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={stringCase} />
 
 	<h3>Semantic formats</h3>
-	<table>
-		<thead>
-			<tr><th>Format</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.email()</code> / <code>z.email()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.url()</code> / <code>z.url()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.httpUrl()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.uuid()</code> / <code>z.uuid()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.uuidv4()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.uuidv6()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.uuidv7()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.uuidv8()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.guid()</code></td><td>✅</td><td>alias for uuid</td></tr>
-			<tr><td><code>.ip()</code> / <code>z.ip()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.ipv4()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.ipv6()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.cidr()</code> / <code>z.cidrv4()</code> / <code>z.cidrv6()</code></td><td>✅</td><td>cidrv4 and cidrv6 supported</td></tr>
-			<tr><td><code>.e164()</code> / <code>z.e164()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.emoji()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.base64()</code> / <code>z.base64()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.base64url()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.hex()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.jwt()</code> / <code>z.jwt()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.nanoid()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.cuid()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.cuid2()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.ulid()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.mac()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.hostname()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.hash()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.stringbool()</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={stringFormats} />
 
 	<h3>ISO date/time formats</h3>
-	<table>
-		<thead>
-			<tr><th>Format</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.iso.date()</code></td><td>✅</td><td><code>YYYY-MM-DD</code></td></tr>
-			<tr><td><code>z.iso.time()</code></td><td>✅</td><td><code>HH:MM:SS[.ms]</code></td></tr>
-			<tr><td><code>z.iso.datetime()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.iso.duration()</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={isoFormats} />
 
 	<hr />
 
 	<h2>Number validators</h2>
-	<table>
-		<thead>
-			<tr><th>Validator</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.gt(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.gte(n)</code> / <code>.min(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.lt(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.lte(n)</code> / <code>.max(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.positive()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.nonnegative()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.negative()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.nonpositive()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.multipleOf(n)</code> / <code>.step(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.int()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.finite()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.safe()</code></td><td>⚠️</td><td>Handled contextually</td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={numberValidators} />
 
 	<h3>Numeric format schemas (top-level)</h3>
-	<table>
-		<thead>
-			<tr><th>Schema</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.int()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.float32()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.float64()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.int32()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.uint32()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.int64()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.uint64()</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={numberFormats} />
 
 	<hr />
 
 	<h2>BigInt validators</h2>
-	<table>
-		<thead>
-			<tr><th>Validator</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.gt(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.gte(n)</code> / <code>.min(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.lt(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.lte(n)</code> / <code>.max(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.positive()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.nonnegative()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.negative()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.nonpositive()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.multipleOf(n)</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={bigintValidators} />
 
 	<hr />
 
 	<h2>Collection types</h2>
 
 	<h3><code>z.array(schema)</code></h3>
-	<table>
-		<thead>
-			<tr><th>Modifier</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.min(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.max(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.length(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.nonempty()</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={arrayModifiers} />
 
 	<h3><code>z.tuple([...schemas])</code></h3>
-	<table>
-		<thead>
-			<tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td>Fixed-length tuples</td><td>✅</td><td></td></tr>
-			<tr><td><code>.rest(schema)</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={tupleFeatures} />
 
 	<h3><code>z.object({'{...}'})</code></h3>
-	<table>
-		<thead>
-			<tr><th>Method</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.extend({'{...}'})</code> / <code>.safeExtend()</code></td><td>✅</td><td>Handled generically via def parsing</td></tr>
-			<tr><td><code>.merge(schema)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.pick({'{...}'})</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.omit({'{...}'})</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.partial()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.partial({'{...}'})</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.required()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.deepPartial()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.keyof()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.catchall(schema)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.strict()</code> / <code>z.strictObject()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.passthrough()</code> / <code>z.looseObject()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.strip()</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={objectMethods} />
 
 	<h3><code>z.record(keySchema, valueSchema)</code></h3>
-	<table>
-		<thead>
-			<tr><th>Variant</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.record(valueSchema)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.record(keySchema, valueSchema)</code></td><td>✅</td><td>When <code>keySchema</code> is a finite-key type (<code>z.enum([...])</code>), the record is exhausted: one entry per enum member in declared order, so the output satisfies Zod's strict-key inferred type. Open-key <code>z.string()</code> / <code>z.number()</code> <code>keySchema</code>s keep the 2–5 random-key shape.</td></tr>
-			<tr><td><code>z.partialRecord(keySchema, valueSchema)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.looseRecord()</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={recordVariants} />
 
 	<h3><code>z.map(keySchema, valueSchema)</code></h3>
-	<table>
-		<thead>
-			<tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td>Basic Map</td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={mapFeatures} />
 
 	<h3><code>z.set(schema)</code></h3>
-	<table>
-		<thead>
-			<tr><th>Modifier</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.min(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.max(n)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.size(n)</code></td><td>✅</td><td>Handled generically</td></tr>
-			<tr><td><code>.nonempty()</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={setModifiers} />
 
 	<hr />
 
 	<h2>Enum and literal types</h2>
-	<table>
-		<thead>
-			<tr><th>Schema</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.enum([...values])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.enum().extract([...])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.enum().exclude([...])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.nativeEnum(TsEnum)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>z.literal(value)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.literal([...values])</code></td><td>❌</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={enumLiteral} />
 
 	<hr />
 
 	<h2>Union and composition types</h2>
-	<table>
-		<thead>
-			<tr><th>Schema</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.union([...schemas])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.discriminatedUnion(key, [...schemas])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.intersection(a, b)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.pipe(a, b)</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={unionComposition} />
 
 	<hr />
 
 	<h2>Special / advanced types</h2>
-	<table>
-		<thead>
-			<tr><th>Schema</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>z.templateLiteral([...parts])</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.lazy(() => schema)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>z.instanceof(Class)</code></td><td>❌</td><td>Throws UnsupportedSchemaError</td></tr>
-			<tr><td><code>z.custom(fn)</code></td><td>❌</td><td>Throws UnsupportedSchemaError</td></tr>
-			<tr><td><code>z.file()</code></td><td>❌</td><td>Throws UnsupportedSchemaError</td></tr>
-			<tr><td><code>z.function()</code></td><td>❌</td><td>Throws UnsupportedSchemaError</td></tr>
-			<tr><td><code>z.json()</code></td><td>✅</td><td>Generates valid JSON</td></tr>
-			<tr><td><code>z.xor(a, b)</code></td><td>✅</td><td>Generates from left or right</td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={specialAdvanced} />
 
 	<hr />
 
 	<h2>Universal schema methods</h2>
 	<p>These apply to every schema.</p>
-	<table>
-		<thead>
-			<tr><th>Method</th><th>Status</th><th>Notes</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>.optional()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.nullable()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.nullish()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.default(value)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.prefault(value)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.catch(value)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.brand&lt;T&gt;()</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.readonly()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.array()</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.promise()</code></td><td>✅</td><td>Returns undefined</td></tr>
-			<tr><td><code>.or(schema)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.and(schema)</code></td><td>✅</td><td></td></tr>
-			<tr><td><code>.refine(fn, msg?)</code></td><td>❌</td><td>Runtime validation only</td></tr>
-			<tr><td><code>.superRefine(fn)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.check(fn)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.transform(fn)</code></td><td>❌</td><td>Runtime mapping only</td></tr>
-			<tr><td><code>.overwrite(fn)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.preprocess(fn, schema)</code></td><td>❌</td><td></td></tr>
-			<tr><td><code>.pipe(schema)</code></td><td>✅</td><td></td></tr>
-		</tbody>
-	</table>
+	<CoverageList items={universalMethods} />
 
 	<hr />
 
