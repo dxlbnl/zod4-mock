@@ -318,18 +318,17 @@ test("B114-R5 / prose reading width is in the comfortable band on desktop", asyn
   expect(proseBox!.width).toBeGreaterThanOrEqual(600);
   expect(proseBox!.width).toBeLessThanOrEqual(760);
 
-  // Concepts "Options" <table>: readable, not squeezed. The page must not overflow,
-  // and the first body cell (the option-name <code>) renders on a single line — a
-  // short option name like `seed` is not broken mid-identifier across two lines.
-  const optionsTable = page
-    .locator("table", { has: page.getByRole("columnheader", { name: /Option/i }) })
-    .first();
-  await expect(optionsTable).toBeVisible();
+  // Concepts "Options" list (B121: now the non-table [data-deflist] layout, no
+  // <table>): readable, not squeezed. The page must not overflow, and the `seed`
+  // option's term renders on a single line — a short option name like `seed` is
+  // not broken mid-identifier across two lines.
+  const optionsList = page.locator("[data-deflist]").first();
+  await expect(optionsList).toBeVisible();
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scrollWidth).toBeLessThanOrEqual(DESKTOP.width + 1);
 
-  const seedCell = optionsTable.locator("tbody tr").first().locator("td code").first();
+  const seedCell = optionsList.locator('[data-term="seed"]').first();
   await expect(seedCell).toHaveText("seed");
   const seedMetrics = await seedCell.evaluate((el) => {
     const cs = getComputedStyle(el);

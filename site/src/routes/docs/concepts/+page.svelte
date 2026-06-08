@@ -6,7 +6,75 @@
 	// B104 Pagefind concept index (data-pagefind-meta="concept:<term>").
 	import DocPage from '$lib/docs/widgets/DocPage.svelte';
 	import DefRef from '$lib/docs/widgets/DefRef.svelte';
+	import DefinitionList, {
+		type DefinitionEntry
+	} from '$lib/docs/widgets/DefinitionList.svelte';
+
+	const optionEntries: DefinitionEntry[] = [
+		{ term: 'seed', type: 'number', value: '(required)', description: seedDesc },
+		{ term: 'locale', type: 'LocaleData', value: 'minimal en', description: localeDesc },
+		{
+			term: 'optionalProbability',
+			type: 'number',
+			value: '0.2',
+			description: optionalProbabilityDesc
+		},
+		{
+			term: 'defaultArrayLength',
+			type: '[number, number]',
+			value: '[1, 5]',
+			description: defaultArrayLengthDesc
+		},
+		{
+			term: 'generators',
+			type: 'Record<string, KeyGenerator>',
+			value: '{}',
+			description: generatorsDesc
+		},
+		{ term: 'recursionLimit', type: 'number', value: '8', description: recursionLimitDesc }
+	];
+
+	const ctxEntries: DefinitionEntry[] = [
+		{ term: 'ctx.gen', description: ctxGenDesc },
+		{ term: 'ctx.prng', description: ctxPrngDesc },
+		{ term: 'ctx.source', description: ctxSourceDesc },
+		{ term: 'ctx.related(name)', description: ctxRelatedDesc },
+		{ term: 'ctx.registry', description: ctxRegistryDesc },
+		{ term: 'ctx.fieldPath', description: ctxFieldPathDesc }
+	];
 </script>
+
+{#snippet seedDesc()}Master seed. Same seed → same output.{/snippet}
+{#snippet localeDesc()}
+	Active locale. Defaults to a built-in minimal English locale; import a richer one from
+	<code>@zod4-mock/locale-en</code> / <code>@zod4-mock/locale-nl</code>. See
+	<a href="#localization">Localization</a>.
+{/snippet}
+{#snippet optionalProbabilityDesc()}
+	Chance that <code>z.optional()</code> / <code>z.nullable()</code> fields are omitted.
+{/snippet}
+{#snippet defaultArrayLengthDesc()}
+	Fallback array length when no <code>.min()</code> / <code>.max()</code> is set.
+{/snippet}
+{#snippet generatorsDesc()}Custom key-based generators applied globally.{/snippet}
+{#snippet recursionLimitDesc()}Max depth for self-referential / recursive schemas.{/snippet}
+
+{#snippet ctxGenDesc()}
+	Generator library with PRNG pre-applied. <code>ctx.gen.person.firstName()</code>,
+	<code>ctx.gen.internet.email()</code>, <code>ctx.gen.finance.amount(10, 999)</code>.
+{/snippet}
+{#snippet ctxPrngDesc()}
+	Raw PRNG for custom ranges. <code>ctx.prng.int(min, max)</code>,
+	<code>ctx.prng.pick([...])</code>, <code>ctx.prng.random()</code>.
+{/snippet}
+{#snippet ctxSourceDesc()}
+	Data of the source schema instance (only when <code>from:</code> is declared).
+{/snippet}
+{#snippet ctxRelatedDesc()}Resolves and returns the data of a related schema instance.{/snippet}
+{#snippet ctxRegistryDesc()}Access to all generated data.{/snippet}
+{#snippet ctxFieldPathDesc()}
+	Dot-path of the field being generated, e.g. <code>"address.street"</code>.
+{/snippet}
 
 <DocPage title="Concepts" sidebarGroup="concepts" order={2}>
 	<p>
@@ -31,58 +99,7 @@
 	</p>
 
 	<h3>Options</h3>
-	<table>
-		<thead>
-			<tr>
-				<th>Option</th>
-				<th>Type</th>
-				<th>Default</th>
-				<th>Description</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td><code>seed</code></td>
-				<td><code>number</code></td>
-				<td><em>(required)</em></td>
-				<td>Master seed. Same seed → same output.</td>
-			</tr>
-			<tr>
-				<td><code>locale</code></td>
-				<td><code>LocaleData</code></td>
-				<td>minimal <code>en</code></td>
-				<td>
-					Active locale. Defaults to a built-in minimal English locale; import a richer one from
-					<code>@zod4-mock/locale-en</code> / <code>@zod4-mock/locale-nl</code>. See
-					<a href="#localization">Localization</a>.
-				</td>
-			</tr>
-			<tr>
-				<td><code>optionalProbability</code></td>
-				<td><code>number</code></td>
-				<td><code>0.2</code></td>
-				<td>Chance that <code>z.optional()</code> / <code>z.nullable()</code> fields are omitted.</td>
-			</tr>
-			<tr>
-				<td><code>defaultArrayLength</code></td>
-				<td><code>[number, number]</code></td>
-				<td><code>[1, 5]</code></td>
-				<td>Fallback array length when no <code>.min()</code> / <code>.max()</code> is set.</td>
-			</tr>
-			<tr>
-				<td><code>generators</code></td>
-				<td><code>Record&lt;string, KeyGenerator&gt;</code></td>
-				<td><code>{'{}'}</code></td>
-				<td>Custom key-based generators applied globally.</td>
-			</tr>
-			<tr>
-				<td><code>recursionLimit</code></td>
-				<td><code>number</code></td>
-				<td><code>8</code></td>
-				<td>Max depth for self-referential / recursive schemas.</td>
-			</tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={optionEntries} />
 
 	<hr />
 
@@ -196,46 +213,7 @@
 	<p>
 		Every <DefRef term="matcher">matcher</DefRef> receives a <code>ctx</code> with:
 	</p>
-	<table>
-		<thead>
-			<tr>
-				<th>Property</th>
-				<th>Description</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td><code>ctx.gen</code></td>
-				<td>
-					Generator library with PRNG pre-applied. <code>ctx.gen.person.firstName()</code>,
-					<code>ctx.gen.internet.email()</code>, <code>ctx.gen.finance.amount(10, 999)</code>.
-				</td>
-			</tr>
-			<tr>
-				<td><code>ctx.prng</code></td>
-				<td>
-					Raw PRNG for custom ranges. <code>ctx.prng.int(min, max)</code>,
-					<code>ctx.prng.pick([...])</code>, <code>ctx.prng.random()</code>.
-				</td>
-			</tr>
-			<tr>
-				<td><code>ctx.source</code></td>
-				<td>Data of the source schema instance (only when <code>from:</code> is declared).</td>
-			</tr>
-			<tr>
-				<td><code>ctx.related(name)</code></td>
-				<td>Resolves and returns the data of a related schema instance.</td>
-			</tr>
-			<tr>
-				<td><code>ctx.registry</code></td>
-				<td>Access to all generated data.</td>
-			</tr>
-			<tr>
-				<td><code>ctx.fieldPath</code></td>
-				<td>Dot-path of the field being generated, e.g. <code>"address.street"</code>.</td>
-			</tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={ctxEntries} />
 
 	<h3><code>ctx.gen</code> — generator library</h3>
 	<p>
