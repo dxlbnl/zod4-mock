@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { SIDEBAR } from '$lib/docs/sidebar.js';
+	import DocsSearchInput from '$lib/docs/widgets/DocsSearchInput.svelte';
 
 	let { children } = $props();
 
@@ -61,6 +62,7 @@
 	<details class="docs-sidebar-disclosure" open={sidebarOpen}>
 		<summary>Documentation</summary>
 		<aside class="docs-sidebar" data-pagefind-ignore aria-label="Documentation navigation">
+			<DocsSearchInput />
 			{#each SIDEBAR as group}
 				{#if group.links.length > 0}
 					<div class="group">

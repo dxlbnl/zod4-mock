@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '$lib/styles/app.css';
 	import { Container, Nav, Stack } from '@dxlbnl/ui';
-	import DocsSearch from '$lib/docs/widgets/DocsSearch.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 
 	let { children } = $props();
@@ -25,7 +24,6 @@
 <div class="site-header">
 	<Nav siteName="zod4-mock" links={navLinks} sticky={false} />
 	<div class="header-tools">
-		<DocsSearch />
 		<nav class="icon-links" aria-label="External links">
 			<a
 				class="icon-link"

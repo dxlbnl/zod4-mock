@@ -6,6 +6,7 @@ priority: medium
 created: 2026-06-07
 predecessor: B104
 plan: wiki/research/reports/docs-ux-rework.md
+spec: wiki/specs/B128-docs-search-visible-input.md
 ---
 
 ## Description

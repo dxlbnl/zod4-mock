@@ -1,59 +1,42 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * B104 — Pagefind docs search UI suite
+ * B104 — Pagefind docs search ENGINE suite
  * (spec: wiki/specs/B104-docs-pagefind-search-ui.md).
  *
- * These are the UI / build-output scenarios for B104. They run against the
+ * These are the engine / build-output scenarios for B104. They run against the
  * production build served by the Playwright `webServer` (playwright.config.ts:
  * `pnpm build && pnpm preview`). This matters: Pagefind indexes the *built*
  * prerendered HTML and writes `/pagefind/` into the served static dir, so any
  * search-hit assertion is only meaningful after a full build — `vite dev` never
  * emits the index. The B75 harness already builds before serving.
  *
+ * B128 supersedes B104's button→Modal *UI* with a visible search input mounted in
+ * the docs sidebar (see docs-search-input.spec.ts). The B104 *engine* contract is
+ * KEPT: the build emits a served `/pagefind/` bundle (B104-R2), a query returns a
+ * linked `/docs` hit that navigates (B104-R5), and a concept term surfaces its
+ * concept-filter summary (B104-R7, the synonym/concept manifest from concepts.ts).
+ * The assertions below are retargeted from the removed modal trigger/overlay onto
+ * the new always-visible input — the engine coverage is unchanged.
+ *
  * One test per requirement ID, named `B104-R<k> / <scenario>`, asserting the
  * observable THEN by role / text / href (never pixels).
- *
- * Observable→requirement mapping (read together with the test-writer report):
- *   - B104-R2/R3 (index emitted, covers prose) ride the index-reachability check
- *     below PLUS the real search-hit result in B104-R5: a search returning a
- *     prose/concept hit IS evidence the build emitted an index that covers the
- *     prose. The standalone check here only asserts `/pagefind/pagefind.js` is
- *     served (the lightest robust index-presence signal) — it does not re-read the
- *     built index dir off disk.
- *
- * RED expectation: `pagefind` is not installed, no Pagefind index step runs in the
- * build, `/docs` is not prerendered, `<DocsSearch>` does not exist, and
- * `site/src/lib/docs/concepts.ts` does not exist. Therefore:
- *   - the `/pagefind/pagefind.js` request 404s (R2/R3 red: index absent),
- *   - no search trigger is in the nav region (R4 red: widget absent),
- *   - no overlay / result / concept affordance appears (R5/R7 red: widget+index absent).
- * Each assertion fails as a clean assertion miss, not a harness crash.
  */
 
 const DOCS_ROUTE = "/docs/concepts";
 
-// ── B104-R4: search trigger present in the nav region on every route ──────────
+/** The visible searchbox in the docs chrome (B128 input that replaced the modal). */
+function visibleSearchInput(page: import("@playwright/test").Page) {
+  return page
+    .locator("[data-docs-search]")
+    .getByRole("searchbox", { name: /search/i })
+    .first();
+}
 
-test("B104-R4 / a search trigger with an accessible name is present in the header on docs + home", async ({
-  page,
-}) => {
-  for (const route of ["/", DOCS_ROUTE]) {
-    await page.goto(route);
-    await page.waitForLoadState("networkidle");
-
-    // The <DocsSearch> trigger: a button (or searchbox input) with an accessible
-    // name matching /search/i, mounted adjacent to <Nav> in the root layout.
-    const trigger = page
-      .getByRole("button", { name: /search/i })
-      .or(page.getByRole("searchbox", { name: /search/i }));
-
-    await expect(
-      trigger.first(),
-      `no search trigger (accessible name /search/i) found on ${route}`,
-    ).toBeVisible();
-  }
-});
+/** The styled results region beneath the input. */
+function resultsRegion(page: import("@playwright/test").Page) {
+  return page.locator("[data-docs-search-results]").first();
+}
 
 // ── B104-R2 / B104-R3: the build emits a served Pagefind index ────────────────
 
@@ -68,26 +51,21 @@ test("B104-R2 / the built site serves a /pagefind/ index bundle", async ({ page 
   ).toBe(200);
 });
 
-// ── B104-R5: search overlay queries the index and returns a linked docs hit ───
+// ── B104-R5: typing queries the index and returns a linked docs hit ───────────
 
 test("B104-R5 / typing a docs term returns a result linking to a /docs route", async ({ page }) => {
   await page.goto(DOCS_ROUTE);
   await page.waitForLoadState("networkidle");
 
-  const trigger = page
-    .getByRole("button", { name: /search/i })
-    .or(page.getByRole("searchbox", { name: /search/i }));
-  await trigger.first().click();
-
-  // Type a term that appears in the docs prose (the Concepts page discusses
-  // determinism inside its data-pagefind-body container).
-  const input = page.getByRole("searchbox").or(page.getByRole("textbox")).first();
+  // B128: type straight into the always-visible input (no modal to open first).
+  const input = visibleSearchInput(page);
   await input.fill("determinism");
 
   // At least one result hit references the term and links to a /docs/... route.
   // Pagefind queries resolve asynchronously, so the locator auto-waits for the
-  // overlay to render results.
-  const resultLink = page.locator('a[href^="/docs/"]', { hasText: /determinism/i }).first();
+  // results region to render results.
+  const results = resultsRegion(page);
+  const resultLink = results.locator('a[href^="/docs/"]', { hasText: /determinism/i }).first();
   await expect(
     resultLink,
     "search for `determinism` returned no result linking to a /docs route",
@@ -98,34 +76,31 @@ test("B104-R5 / typing a docs term returns a result linking to a /docs route", a
   await expect(page).toHaveURL(/\/docs\//);
 });
 
-// ── B104-R4 (a11y): focus enters the searchbox on open; Escape closes ─────────
+// ── B104-R4 (a11y): the input is keyboard-focusable; Escape closes results ────
 
-test("B104-R4 / opening the overlay focuses the search input and Escape closes it", async ({
-  page,
-}) => {
+test("B104-R4 / the search input is focusable and Escape closes the results", async ({ page }) => {
   await page.goto(DOCS_ROUTE);
   await page.waitForLoadState("networkidle");
 
-  const trigger = page
-    .getByRole("button", { name: /search/i })
-    .or(page.getByRole("searchbox", { name: /search/i }));
-  await trigger.first().click();
+  // B128: the searchbox is always visible (no trigger to open an overlay). A
+  // keyboard user focuses it directly and types; results open.
+  const input = visibleSearchInput(page);
+  await input.focus();
+  await expect(input, "the visible search input is not focusable").toBeFocused();
+  await page.keyboard.type("determinism");
 
-  // The keyboard user must land in the searchbox when the overlay opens.
-  const searchInput = page.getByRole("searchbox", { name: /search/i }).first();
-  await expect(
-    searchInput,
-    "the search input is not focused after opening the overlay",
-  ).toBeFocused();
+  const results = resultsRegion(page);
+  await expect(results, "results did not open after typing into the input").toBeVisible();
 
-  // Escape dismisses the overlay (the searchbox is no longer visible).
+  // Escape dismisses the results region; the input stays present + usable.
   await page.keyboard.press("Escape");
-  await expect(searchInput, "pressing Escape did not close the search overlay").toBeHidden();
+  await expect(results, "pressing Escape did not close the search results").toBeHidden();
+  await expect(input, "the search input disappeared after Escape").toBeVisible();
 });
 
-// ── B104-R4 (theming): the Paper/light overlay panel is a light surface ───────
+// ── B104-R4 (theming): the Paper/light results region is a light surface ──────
 
-test("B104-R4 / in Paper (light) mode the open overlay panel has a light background", async ({
+test("B104-R4 / in Paper (light) mode the open results region has a light background", async ({
   page,
 }) => {
   await page.goto(DOCS_ROUTE);
@@ -134,31 +109,28 @@ test("B104-R4 / in Paper (light) mode the open overlay panel has a light backgro
   // Switch to the Paper (light) palette the way the app does — data-palette on <html>.
   await page.evaluate(() => document.documentElement.setAttribute("data-palette", "paper"));
 
-  const trigger = page
-    .getByRole("button", { name: /search/i })
-    .or(page.getByRole("searchbox", { name: /search/i }));
-  await trigger.first().click();
+  const input = visibleSearchInput(page);
+  await input.fill("determinism");
 
-  const searchInput = page.getByRole("searchbox", { name: /search/i }).first();
-  await expect(searchInput).toBeVisible();
+  const results = resultsRegion(page);
+  await expect(results).toBeVisible();
 
-  // The @dxlbnl/ui Modal panel (`.modal-inner`) fills with var(--overlay); the
-  // site-side Paper override makes that a light translucent surface. Read the panel's
-  // computed background and assert it is light (high perceived luminance) — guarding
-  // the override so the dark-on-dark AA regression cannot return.
-  const panel = page.locator(".modal-inner").first();
-  const bg = await panel.evaluate((el) => getComputedStyle(el).backgroundColor);
+  // B128: the styled results region fills with a Paper-light token surface
+  // (var(--bg-rail) in the site layer). Read its computed background and assert it
+  // is light (high perceived luminance) — guarding the dark-on-dark AA regression
+  // that the removed modal panel suffered.
+  const bg = await results.evaluate((el) => getComputedStyle(el).backgroundColor);
   const nums = bg.match(/[\d.]+/g)?.map(Number) ?? [];
   const [r, g, b] = nums;
   expect(
     r !== undefined && g !== undefined && b !== undefined,
-    `could not parse the panel background-color: ${bg}`,
+    `could not parse the results background-color: ${bg}`,
   ).toBe(true);
-  // Perceived luminance > 128 ⇒ a light surface (Paper override ≈ rgb(245,242,234)).
+  // Perceived luminance > 128 ⇒ a light surface in the Paper palette.
   const luminance = 0.299 * (r ?? 0) + 0.587 * (g ?? 0) + 0.114 * (b ?? 0);
   expect(
     luminance,
-    `the Paper overlay panel background ${bg} is not a light surface (luminance ${luminance})`,
+    `the Paper results region background ${bg} is not a light surface (luminance ${luminance})`,
   ).toBeGreaterThan(128);
 });
 
@@ -170,12 +142,7 @@ test("B104-R7 / searching a concept term surfaces a concept summary with a page 
   await page.goto(DOCS_ROUTE);
   await page.waitForLoadState("networkidle");
 
-  const trigger = page
-    .getByRole("button", { name: /search/i })
-    .or(page.getByRole("searchbox", { name: /search/i }));
-  await trigger.first().click();
-
-  const input = page.getByRole("searchbox").or(page.getByRole("textbox")).first();
+  const input = visibleSearchInput(page);
   await input.fill("determinism");
 
   // A concept affordance distinct from the plain prose list: a "Concepts:" summary
