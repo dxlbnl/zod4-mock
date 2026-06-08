@@ -237,7 +237,9 @@ type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
  * seeds the record's field PRNG (`dreg<regId>#<index>`), so two distinct
  * sources MUST map to distinct indices or every derived record collapses to
  * the same field seed (only source-pulled fields like `ctx.source.id` would
- * vary).
+ * vary). The index becomes the `#<index>` suffix of the derived record id
+ * `dreg<schemaId>#<index>` (B130: `<schemaId>` is the module-global schema
+ * reference identity `getSchemaId(schema)`, not the registration ordinal).
  *
  * Keyed on the identity VALUE (not a call counter) so it stays order-
  * independent per D4/D10: the same identity always yields the same index
@@ -1179,7 +1181,14 @@ export class WorldImpl implements World {
     sourceIndex: number,
     options?: GenerateOptions<unknown>,
   ): unknown {
-    const recordId = `dreg${reg.regId}#${sourceIndex}`;
+    // B130: key the derived field-PRNG seed on the module-global schema
+    // reference identity (`getSchemaId`, as B39 did for the other paths), NOT
+    // on the registration ordinal `reg.regId`. Keying on `regId` made derived
+    // output depend on how many unrelated `withSchema(...)` calls preceded it,
+    // violating D4/D10 ("call order across distinct schemas MUST NOT affect any
+    // value"). The `#<sourceIndex>` suffix is preserved so distinct source
+    // indices keep distinct draws (B130-R4).
+    const recordId = `dreg${getSchemaId(schema)}#${sourceIndex}`;
     const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
     let result = this.generateObjectFields(
       schema,
