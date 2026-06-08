@@ -2,8 +2,16 @@
 	// B103 — Key-Based Field Heuristics, rebuilt on the B100 doc primitives.
 	// Prose ported verbatim from docs/key-heuristics.md (the §6 hand-authored
 	// convention; parity is human-policed). docs/key-heuristics.md stays canonical.
+	//
+	// B131 — every former <table> on this page is now an `entries` array rendered
+	// by the reusable B121 `DefinitionList` (no <table> in a mobile-first docs
+	// site). term = the key(s), value = the generator identifier, description = the
+	// description prose (a {#snippet} per entry, preserving inline <code>).
 	import DocPage from '$lib/docs/widgets/DocPage.svelte';
 	import Playground from '$lib/docs/widgets/Playground.svelte';
+	import DefinitionList, {
+		type DefinitionEntry
+	} from '$lib/docs/widgets/DefinitionList.svelte';
 
 	// A bare z.object(...) expression — the SchemaPlayground DEFAULT_CODE contract
 	// (a single valid expression buildExecutable evaluates and auto-generates from).
@@ -14,7 +22,407 @@
   homeAddress: z.string(),
   kind: z.string(),
 })`;
+
+	// ── How it works: full resolution order (was a 2-col table) ──────────────
+	const resolutionEntries: DefinitionEntry[] = [
+		{ term: 'matcher:<key>', description: resMatcher },
+		{ term: 'key-map:<key>', description: resKeyMap },
+		{ term: 'custom:<key>', description: resCustom },
+		{ term: '<namespace>.<fn> (exact key)', description: resExact },
+		{ term: '<namespace>.<fn> (pattern)', description: resPattern },
+		{ term: 'schema-based', description: resSchemaBased }
+	];
+
+	// ── Exact-key generators (string) ────────────────────────────────────────
+	const personEntries: DefinitionEntry[] = [
+		{ term: 'firstname, first_name', value: 'person.firstName', description: pFirstName },
+		{ term: 'lastname, last_name, surname', value: 'person.lastName', description: pLastName },
+		{ term: 'middlename, middle_name', value: 'person.middleName', description: pMiddleName },
+		{ term: 'fullname, full_name, name', value: 'person.fullName', description: pFullName },
+		{ term: 'prefix', value: 'person.prefix', description: pPrefix },
+		{ term: 'suffix', value: 'person.suffix', description: pSuffix },
+		{ term: 'bio', value: 'inline:bio', description: pBio },
+		{ term: 'gender', value: 'person.gender', description: pGender },
+		{ term: 'sex', value: 'person.sex', description: pSex },
+		{ term: 'jobtitle, job_title', value: 'person.jobTitle', description: pJobTitle },
+		{ term: 'jobarea, job_area', value: 'person.jobArea', description: pJobArea },
+		{ term: 'jobtype, job_type', value: 'person.jobType', description: pJobType }
+	];
+
+	const internetEntries: DefinitionEntry[] = [
+		{ term: 'email', value: 'internet.email', description: iEmail },
+		{ term: 'example_email', value: 'internet.exampleEmail', description: iExampleEmail },
+		{ term: 'username', value: 'internet.username', description: iUsername },
+		{ term: 'displayname, display_name', value: 'internet.displayName', description: iDisplayName },
+		{ term: 'password', value: 'inline:password', description: iPassword },
+		{ term: 'url, website, homepage', value: 'internet.url', description: iUrl },
+		{ term: 'ip', value: 'internet.ip', description: iIp },
+		{ term: 'ipv4', value: 'internet.ipv4', description: iIpv4 },
+		{ term: 'ipv6', value: 'internet.ipv6', description: iIpv6 },
+		{ term: 'mac', value: 'internet.mac', description: iMac },
+		{ term: 'useragent, user_agent', value: 'internet.userAgent', description: iUserAgent },
+		{ term: 'protocol', value: 'internet.protocol', description: iProtocol },
+		{
+			term: 'domain, domainname, domain_name',
+			value: 'internet.domainName',
+			description: iDomainName
+		}
+	];
+
+	const locationEntries: DefinitionEntry[] = [
+		{ term: 'city', value: 'location.city', description: lCity },
+		{ term: 'country', value: 'location.country', description: lCountry },
+		{ term: 'countrycode, country_code', value: 'location.countryCode', description: lCountryCode },
+		{ term: 'street, streetname, street_name', value: 'location.street', description: lStreet },
+		{
+			term: 'address, streetaddress, street_address',
+			value: 'location.streetAddress',
+			description: lStreetAddress
+		},
+		{
+			term: 'zipcode, postalcode, postal_code, postcode',
+			value: 'location.zipCode',
+			description: lZipCode
+		},
+		{ term: 'state', value: 'location.state', description: lState },
+		{ term: 'county', value: 'location.county', description: lCounty },
+		{ term: 'timezone, time_zone', value: 'location.timeZone', description: lTimeZone }
+	];
+
+	const financeEntries: DefinitionEntry[] = [
+		{ term: 'iban', value: 'finance.iban', description: fIban },
+		{ term: 'bic', value: 'finance.bic', description: fBic },
+		{
+			term: 'accountnumber, account_number',
+			value: 'inline:accountnumber',
+			description: fAccountNumber
+		},
+		{
+			term: 'creditcard, credit_card, creditcardnumber, credit_card_number',
+			value: 'inline:creditcard (and aliases)',
+			description: fCreditCard
+		},
+		{
+			term: 'currency, currencycode, currency_code',
+			value: 'finance.currencyCode',
+			description: fCurrency
+		},
+		{ term: 'bitcoin', value: 'finance.bitcoinAddress', description: fBitcoin },
+		{ term: 'ethereum', value: 'finance.ethereumAddress', description: fEthereum }
+	];
+
+	const commerceEntries: DefinitionEntry[] = [
+		{ term: 'product', value: 'commerce.product', description: cProduct },
+		{ term: 'productname, product_name', value: 'commerce.productName', description: cProductName },
+		{ term: 'isbn', value: 'commerce.isbn', description: cIsbn },
+		{ term: 'upc', value: 'commerce.upc', description: cUpc },
+		{ term: 'department', value: 'commerce.department', description: cDepartment },
+		{ term: 'material', value: 'commerce.productMaterial', description: cMaterial },
+		{ term: 'price', value: 'inline:price', description: cPrice },
+		{ term: 'sku', value: 'inline:sku', description: cSku }
+	];
+
+	const companyEntries: DefinitionEntry[] = [
+		{ term: 'company, companyname, company_name', value: 'company.name', description: coName },
+		{ term: 'buzzword', value: 'company.buzzPhrase', description: coBuzzword },
+		{ term: 'catchphrase', value: 'company.catchPhrase', description: coCatchphrase }
+	];
+
+	const phoneEntries: DefinitionEntry[] = [
+		{ term: 'phone, phonenumber, phone_number', value: 'phone.number', description: phNumber },
+		{ term: 'imei', value: 'phone.imei', description: phImei }
+	];
+
+	const vehicleEntries: DefinitionEntry[] = [
+		{ term: 'vin', value: 'vehicle.vin', description: vVin },
+		{ term: 'vrm', value: 'vehicle.vrm', description: vVrm },
+		{ term: 'vehicle', value: 'vehicle.vehicle', description: vVehicle },
+		{ term: 'manufacturer', value: 'vehicle.manufacturer', description: vManufacturer },
+		{ term: 'model', value: 'vehicle.model', description: vModel },
+		{ term: 'vehiclecolor, vehicle_color', value: 'vehicle.color', description: vColor },
+		{ term: 'fuel', value: 'vehicle.fuel', description: vFuel }
+	];
+
+	const colorEntries: DefinitionEntry[] = [
+		{ term: 'color, colour', value: 'color.colorName', description: clColor },
+		{
+			term: 'colorhex, color_hex, hexcolor, hex_color',
+			value: 'color.colorHex',
+			description: clColorHex
+		},
+		{
+			term: 'backgroundcolor, background_color, textcolor, text_color',
+			value: 'color.colorHex',
+			description: clBackgroundColor
+		}
+	];
+
+	const systemEntries: DefinitionEntry[] = [
+		{
+			term: 'platform, os, operatingsystem, operating_system',
+			value: 'system.platform',
+			description: sPlatform
+		},
+		{ term: 'browser', value: 'system.browser', description: sBrowser },
+		{ term: 'semver, version', value: 'system.semver', description: sSemver },
+		{ term: 'filename, file_name', value: 'system.fileName', description: sFileName },
+		{ term: 'filepath, file_path', value: 'system.filePath', description: sFilePath },
+		{
+			term: 'extension, fileextension, file_extension',
+			value: 'system.fileExtension',
+			description: sFileExtension
+		},
+		{
+			term: 'mimetype, mime_type, contenttype, content_type',
+			value: 'system.mimeType',
+			description: sMimeType
+		}
+	];
+
+	const wordEntries: DefinitionEntry[] = [
+		{ term: 'word', value: 'word.noun', description: wWord },
+		{
+			term: 'text, description, note, summary, comment, body, content, message',
+			value: 'inline:<key>',
+			description: wText
+		}
+	];
+
+	// ── Exact-key generators (number) — was a 4-col table; the Distribution
+	//    column is folded into the description prose ──────────────────────────
+	const numberEntries: DefinitionEntry[] = [
+		{ term: 'amount, bedrag', value: 'inline:amount', description: nAmount },
+		{ term: 'price, prijs', value: 'inline:price', description: nPrice },
+		{ term: 'balance', value: 'inline:balance', description: nBalance },
+		{ term: 'total, subtotal', value: 'inline:total', description: nTotal },
+		{ term: 'revenue', value: 'inline:revenue', description: nRevenue },
+		{ term: 'cost, fee', value: 'inline:cost', description: nCost },
+		{ term: 'salary', value: 'inline:salary', description: nSalary },
+		{ term: 'fileSize, bytes', value: 'inline:fileSize', description: nFileSize },
+		{ term: 'views, population', value: 'inline:views', description: nViews },
+		{ term: 'distance', value: 'inline:distance', description: nDistance },
+		{ term: 'rating', value: 'inline:rating', description: nRating },
+		{ term: 'score, percentage', value: 'inline:score', description: nScore },
+		{ term: 'latitude', value: 'location.latitude', description: nLatitude },
+		{ term: 'longitude', value: 'location.longitude', description: nLongitude },
+		{ term: 'port', value: 'internet.port', description: nPort },
+		{ term: 'quantity', value: 'inline:quantity', description: nQuantity },
+		{ term: 'count', value: 'inline:count', description: nCount },
+		{ term: 'age', value: 'inline:age', description: nAge },
+		{ term: 'year', value: 'inline:year', description: nYear }
+	];
+
+	// ── Pattern generators ───────────────────────────────────────────────────
+	const patternStringEntries: DefinitionEntry[] = [
+		{ term: 'string.uuid', description: psUuid },
+		{ term: 'person.fullName', description: psName },
+		{ term: 'internet.url', description: psUrl },
+		{ term: 'internet.email', description: psEmail },
+		{ term: 'date.anytime+toISOString', description: psDate }
+	];
+
+	const patternDateEntries: DefinitionEntry[] = [{ term: 'date.anytime', description: pdDate }];
+
+	const patternNumberEntries: DefinitionEntry[] = [
+		{ term: 'date.anytime+getTime', description: pnDate }
+	];
+
+	// ── Localised (Dutch) aliases ─────────────────────────────────────────────
+	const dutchStringEntries: DefinitionEntry[] = [
+		{ term: 'voornaam', value: 'person.firstName', description: dlVoornaam },
+		{ term: 'achternaam', value: 'person.lastName', description: dlAchternaam },
+		{ term: 'straat', value: 'location.street', description: dlStraat },
+		{ term: 'stad', value: 'location.city', description: dlStad },
+		{ term: 'land', value: 'location.country', description: dlLand },
+		{ term: 'kenteken', value: 'vehicle.vrm', description: dlKenteken },
+		{ term: 'voertuigkleur', value: 'vehicle.color', description: dlVoertuigkleur },
+		{ term: 'kleur', value: 'color.colorName', description: dlKleur },
+		{ term: 'telefoon', value: 'phone.number', description: dlTelefoon },
+		{ term: 'prijs', value: 'inline:prijs', description: dlPrijs },
+		{ term: 'omschrijving', value: 'inline:omschrijving', description: dlOmschrijving },
+		{ term: 'bericht', value: 'inline:bericht', description: dlBericht }
+	];
+
+	const dutchNumberEntries: DefinitionEntry[] = [
+		{ term: 'bedrag', value: 'inline:bedrag', description: dnBedrag },
+		{ term: 'prijs', value: 'inline:prijs', description: dnPrijs }
+	];
 </script>
+
+<!-- How it works -->
+{#snippet resMatcher()}<strong>1.</strong> Matcher registered via <code>world.withSchema(...)</code
+	>.{/snippet}
+{#snippet resKeyMap()}<strong>2.</strong> Per-schema key map registered via
+	<code>world.withKeyMap(...)</code>.{/snippet}
+{#snippet resCustom()}<strong>3.</strong> Custom world-level generator registered via
+	<code>world.withGenerators(...)</code>.{/snippet}
+{#snippet resExact()}<strong>4.</strong> <strong>Exact-key</strong> entry in
+	<code>DEFAULT_KEY_MAP</code> (e.g. <code>person.firstName</code>).{/snippet}
+{#snippet resPattern()}<strong>5.</strong> <strong>Pattern</strong> match in
+	<code>DEFAULT_KEY_PATTERNS</code> plus a leaf-type suffix for dates.{/snippet}
+{#snippet resSchemaBased()}<strong>6.</strong> Schema-based fallback (Zod-introspection).{/snippet}
+
+<!-- Person -->
+{#snippet pFirstName()}First name{/snippet}
+{#snippet pLastName()}Last name{/snippet}
+{#snippet pMiddleName()}Middle name{/snippet}
+{#snippet pFullName()}Full name{/snippet}
+{#snippet pPrefix()}Honorific prefix (Mr., Dr., …){/snippet}
+{#snippet pSuffix()}Name suffix (Jr., III, …){/snippet}
+{#snippet pBio()}Lorem text (respects <code>.min()</code>/<code>.max()</code>){/snippet}
+{#snippet pGender()}A gender label{/snippet}
+{#snippet pSex()}A sex label{/snippet}
+{#snippet pJobTitle()}Job title{/snippet}
+{#snippet pJobArea()}Job area{/snippet}
+{#snippet pJobType()}Job type{/snippet}
+
+<!-- Internet -->
+{#snippet iEmail()}Realistic email{/snippet}
+{#snippet iExampleEmail()}<code>@example.com</code> email{/snippet}
+{#snippet iUsername()}Username{/snippet}
+{#snippet iDisplayName()}Display name{/snippet}
+{#snippet iPassword()}16-character nanoid{/snippet}
+{#snippet iUrl()}HTTPS URL{/snippet}
+{#snippet iIp()}IPv4 or IPv6 address{/snippet}
+{#snippet iIpv4()}IPv4 address{/snippet}
+{#snippet iIpv6()}IPv6 address{/snippet}
+{#snippet iMac()}MAC address{/snippet}
+{#snippet iUserAgent()}User-Agent string{/snippet}
+{#snippet iProtocol()}<code>http</code> / <code>https</code>{/snippet}
+{#snippet iDomainName()}Domain name{/snippet}
+
+<!-- Location -->
+{#snippet lCity()}City name{/snippet}
+{#snippet lCountry()}Country name{/snippet}
+{#snippet lCountryCode()}ISO country code{/snippet}
+{#snippet lStreet()}Street name{/snippet}
+{#snippet lStreetAddress()}Full street address{/snippet}
+{#snippet lZipCode()}Postal code{/snippet}
+{#snippet lState()}State or region{/snippet}
+{#snippet lCounty()}County{/snippet}
+{#snippet lTimeZone()}IANA time zone{/snippet}
+
+<!-- Finance -->
+{#snippet fIban()}IBAN{/snippet}
+{#snippet fBic()}BIC / SWIFT code{/snippet}
+{#snippet fAccountNumber()}Bank account number (respects <code>.min()</code>){/snippet}
+{#snippet fCreditCard()}Credit-card number{/snippet}
+{#snippet fCurrency()}ISO currency code{/snippet}
+{#snippet fBitcoin()}Bitcoin address{/snippet}
+{#snippet fEthereum()}Ethereum address{/snippet}
+
+<!-- Commerce -->
+{#snippet cProduct()}Product noun{/snippet}
+{#snippet cProductName()}Product name{/snippet}
+{#snippet cIsbn()}ISBN{/snippet}
+{#snippet cUpc()}UPC{/snippet}
+{#snippet cDepartment()}Retail department{/snippet}
+{#snippet cMaterial()}Product material{/snippet}
+{#snippet cPrice()}Price string (respects <code>.min()</code>/<code>.max()</code>){/snippet}
+{#snippet cSku()}Code like <code>AB-1234</code>{/snippet}
+
+<!-- Company -->
+{#snippet coName()}Company name{/snippet}
+{#snippet coBuzzword()}Business buzzphrase{/snippet}
+{#snippet coCatchphrase()}Marketing catchphrase{/snippet}
+
+<!-- Phone -->
+{#snippet phNumber()}Phone number with country code{/snippet}
+{#snippet phImei()}IMEI{/snippet}
+
+<!-- Vehicle -->
+{#snippet vVin()}Vehicle Identification Number{/snippet}
+{#snippet vVrm()}Vehicle Registration Mark (license plate){/snippet}
+{#snippet vVehicle()}Vehicle make + model{/snippet}
+{#snippet vManufacturer()}Vehicle manufacturer{/snippet}
+{#snippet vModel()}Vehicle model{/snippet}
+{#snippet vColor()}Vehicle color{/snippet}
+{#snippet vFuel()}Fuel type{/snippet}
+
+<!-- Color -->
+{#snippet clColor()}Color name{/snippet}
+{#snippet clColorHex()}Hex color (e.g. <code>#a1b2c3</code>){/snippet}
+{#snippet clBackgroundColor()}Hex color{/snippet}
+
+<!-- System -->
+{#snippet sPlatform()}Operating system{/snippet}
+{#snippet sBrowser()}Browser name{/snippet}
+{#snippet sSemver()}Semver string{/snippet}
+{#snippet sFileName()}File name{/snippet}
+{#snippet sFilePath()}File path{/snippet}
+{#snippet sFileExtension()}File extension{/snippet}
+{#snippet sMimeType()}MIME type{/snippet}
+
+<!-- Word & free text -->
+{#snippet wWord()}A single noun{/snippet}
+{#snippet wText()}Lorem text (respects <code>.min()</code>/<code>.max()</code>){/snippet}
+
+<!-- Numbers -->
+{#snippet nAmount()}<em>log-uniform</em> — Currency amount, Benford-conforming
+	(<code>.min()</code>/<code>.max()</code>, default 1 – 10 000){/snippet}
+{#snippet nPrice()}<em>log-uniform</em> — Price amount, Benford-conforming
+	(<code>.min()</code>/<code>.max()</code>, default 1 – 500){/snippet}
+{#snippet nBalance()}<em>log-uniform</em> — Money balance (default 1 – 100 000){/snippet}
+{#snippet nTotal()}<em>log-uniform</em> — Order total / subtotal (default 1 – 10 000){/snippet}
+{#snippet nRevenue()}<em>log-uniform</em> — Revenue figure (default 1 000 – 1 × 10⁹){/snippet}
+{#snippet nCost()}<em>log-uniform</em> — Cost / fee amount (default 1 – 1 000){/snippet}
+{#snippet nSalary()}<em>log-uniform</em> — Annual salary (default 20 000 – 500 000){/snippet}
+{#snippet nFileSize()}<em>log-uniform-int</em> — Scale-free byte count (default 100 – 1 × 10⁹){/snippet}
+{#snippet nViews()}<em>log-uniform-int</em> — Scale-free count (default 1 – 1 × 10⁷){/snippet}
+{#snippet nDistance()}<em>log-uniform</em> — Continuous distance (default 1 – 10 000){/snippet}
+{#snippet nRating()}<em>uniform</em> — Bounded score on <code>[0, 5]</code>{/snippet}
+{#snippet nScore()}<em>uniform</em> — Bounded score on <code>[0, 100]</code>{/snippet}
+{#snippet nLatitude()}<em>uniform</em> — Latitude in degrees{/snippet}
+{#snippet nLongitude()}<em>uniform</em> — Longitude in degrees{/snippet}
+{#snippet nPort()}<em>uniform</em> — TCP/UDP port number{/snippet}
+{#snippet nQuantity()}<em>geometric</em> — Truncated geometric (<code>p = 0.5</code>), modal at lower
+	bound (default <code>[1, 100]</code>){/snippet}
+{#snippet nCount()}<em>geometric</em> — Truncated geometric (<code>p = 0.5</code>), modal at lower
+	bound; <code>min = 0</code> native (default <code>[0, 50]</code>){/snippet}
+{#snippet nAge()}<em>log-normal</em> — Clipped log-normal centred on μ = ln(36), σ = 0.35 (default
+	<code>[18, 80]</code>); tight bounds → uniform-int{/snippet}
+{#snippet nYear()}<em>exponential</em> — Exponential recent-skew (λ = 0.05); default
+	<code>[currentYear - 50, currentYear]</code>; tight → uniform-int{/snippet}
+
+<!-- Pattern (string) -->
+{#snippet psUuid()}<strong>Match:</strong> exactly <code>id</code>, or <strong>ends with</strong>
+	<code>id</code>, <code>uuid</code>, <code>guid</code>. UUID (RFC 4122 v4){/snippet}
+{#snippet psName()}<strong>Match:</strong> <strong>ends with</strong> <code>name</code>. Full name{/snippet}
+{#snippet psUrl()}<strong>Match:</strong> <strong>ends with</strong> <code>url</code>,
+	<code>link</code>, or <strong>starts with</strong> <code>url</code>. HTTPS URL{/snippet}
+{#snippet psEmail()}<strong>Match:</strong> <strong>ends with</strong> <code>email</code>. Realistic
+	email{/snippet}
+{#snippet psDate()}<strong>Match:</strong> <strong>ends with</strong> <code>at</code>,
+	<code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong>
+	<code>_on</code> (excluding <code>position</code>). ISO 8601 date string{/snippet}
+
+<!-- Pattern (date) -->
+{#snippet pdDate()}<strong>Match:</strong> <strong>ends with</strong> <code>at</code>,
+	<code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong>
+	<code>_on</code> (excluding <code>position</code>). A <code>Date</code> instance{/snippet}
+
+<!-- Pattern (number) -->
+{#snippet pnDate()}<strong>Match:</strong> <strong>ends with</strong> <code>at</code>,
+	<code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong>
+	<code>_on</code> (excluding <code>position</code>). Unix-ms timestamp{/snippet}
+
+<!-- Dutch strings -->
+{#snippet dlVoornaam()}First name{/snippet}
+{#snippet dlAchternaam()}Last name{/snippet}
+{#snippet dlStraat()}Street name{/snippet}
+{#snippet dlStad()}City{/snippet}
+{#snippet dlLand()}Country{/snippet}
+{#snippet dlKenteken()}License plate (VRM){/snippet}
+{#snippet dlVoertuigkleur()}Vehicle color{/snippet}
+{#snippet dlKleur()}Color name{/snippet}
+{#snippet dlTelefoon()}Phone number{/snippet}
+{#snippet dlPrijs()}Price string (respects <code>.min()</code>/<code>.max()</code>){/snippet}
+{#snippet dlOmschrijving()}Description (lorem text, length-aware){/snippet}
+{#snippet dlBericht()}Message (lorem text, length-aware){/snippet}
+
+<!-- Dutch numbers -->
+{#snippet dnBedrag()}Amount (respects <code>.min()</code>/<code>.max()</code>, default 1 – 10 000){/snippet}
+{#snippet dnPrijs()}Price (respects <code>.min()</code>/<code>.max()</code>, default 1 – 500){/snippet}
 
 <DocPage title="Key Heuristics" sidebarGroup="reference" order={2}>
 	<p>
@@ -65,42 +473,12 @@
 		to schema-based generation (no exact-key fire from <code>DEFAULT_KEY_MAP.string</code>).
 	</p>
 
-	<p>The full resolution order in <code>WorldImpl.generateObjectFields</code> is:</p>
+	<p>
+		The full resolution order in <code>WorldImpl.generateObjectFields</code> is (the term is the
+		identifier shown in <code>world.explain</code> output):
+	</p>
 
-	<table>
-		<thead>
-			<tr>
-				<th>Step</th>
-				<th>Identifier in <code>world.explain</code> output</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td>1. Matcher registered via <code>world.withSchema(...)</code></td>
-				<td><code>matcher:&lt;key&gt;</code></td>
-			</tr>
-			<tr>
-				<td>2. Per-schema key map registered via <code>world.withKeyMap(...)</code></td>
-				<td><code>key-map:&lt;key&gt;</code></td>
-			</tr>
-			<tr>
-				<td>3. Custom world-level generator registered via <code>world.withGenerators(...)</code></td>
-				<td><code>custom:&lt;key&gt;</code></td>
-			</tr>
-			<tr>
-				<td>4. <strong>Exact-key</strong> entry in <code>DEFAULT_KEY_MAP</code></td>
-				<td><code>&lt;namespace&gt;.&lt;fn&gt;</code> (e.g. <code>person.firstName</code>)</td>
-			</tr>
-			<tr>
-				<td>5. <strong>Pattern</strong> match in <code>DEFAULT_KEY_PATTERNS</code></td>
-				<td><code>&lt;namespace&gt;.&lt;fn&gt;</code> plus a leaf-type suffix for dates</td>
-			</tr>
-			<tr>
-				<td>6. Schema-based fallback (Zod-introspection)</td>
-				<td><code>schema-based</code></td>
-			</tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={resolutionEntries} />
 
 	<hr />
 
@@ -111,208 +489,44 @@
 	</p>
 
 	<h3>Person</h3>
-	<table>
-		<thead>
-			<tr><th>Key (case-insensitive)</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>firstname</code>, <code>first_name</code></td><td><code>person.firstName</code></td><td>First name</td></tr>
-			<tr><td><code>lastname</code>, <code>last_name</code>, <code>surname</code></td><td><code>person.lastName</code></td><td>Last name</td></tr>
-			<tr><td><code>middlename</code>, <code>middle_name</code></td><td><code>person.middleName</code></td><td>Middle name</td></tr>
-			<tr><td><code>fullname</code>, <code>full_name</code>, <code>name</code></td><td><code>person.fullName</code></td><td>Full name</td></tr>
-			<tr><td><code>prefix</code></td><td><code>person.prefix</code></td><td>Honorific prefix (Mr., Dr., …)</td></tr>
-			<tr><td><code>suffix</code></td><td><code>person.suffix</code></td><td>Name suffix (Jr., III, …)</td></tr>
-			<tr><td><code>bio</code></td><td><code>inline:bio</code></td><td>Lorem text (respects <code>.min()</code>/<code>.max()</code>)</td></tr>
-			<tr><td><code>gender</code></td><td><code>person.gender</code></td><td>A gender label</td></tr>
-			<tr><td><code>sex</code></td><td><code>person.sex</code></td><td>A sex label</td></tr>
-			<tr><td><code>jobtitle</code>, <code>job_title</code></td><td><code>person.jobTitle</code></td><td>Job title</td></tr>
-			<tr><td><code>jobarea</code>, <code>job_area</code></td><td><code>person.jobArea</code></td><td>Job area</td></tr>
-			<tr><td><code>jobtype</code>, <code>job_type</code></td><td><code>person.jobType</code></td><td>Job type</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={personEntries} />
 
 	<h3>Internet</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>email</code></td><td><code>internet.email</code></td><td>Realistic email</td></tr>
-			<tr><td><code>example_email</code></td><td><code>internet.exampleEmail</code></td><td><code>@example.com</code> email</td></tr>
-			<tr><td><code>username</code></td><td><code>internet.username</code></td><td>Username</td></tr>
-			<tr><td><code>displayname</code>, <code>display_name</code></td><td><code>internet.displayName</code></td><td>Display name</td></tr>
-			<tr><td><code>password</code></td><td><code>inline:password</code></td><td>16-character nanoid</td></tr>
-			<tr><td><code>url</code>, <code>website</code>, <code>homepage</code></td><td><code>internet.url</code></td><td>HTTPS URL</td></tr>
-			<tr><td><code>ip</code></td><td><code>internet.ip</code></td><td>IPv4 or IPv6 address</td></tr>
-			<tr><td><code>ipv4</code></td><td><code>internet.ipv4</code></td><td>IPv4 address</td></tr>
-			<tr><td><code>ipv6</code></td><td><code>internet.ipv6</code></td><td>IPv6 address</td></tr>
-			<tr><td><code>mac</code></td><td><code>internet.mac</code></td><td>MAC address</td></tr>
-			<tr><td><code>useragent</code>, <code>user_agent</code></td><td><code>internet.userAgent</code></td><td>User-Agent string</td></tr>
-			<tr><td><code>protocol</code></td><td><code>internet.protocol</code></td><td><code>http</code> / <code>https</code></td></tr>
-			<tr><td><code>domain</code>, <code>domainname</code>, <code>domain_name</code></td><td><code>internet.domainName</code></td><td>Domain name</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={internetEntries} />
 
 	<h3>Location</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>city</code></td><td><code>location.city</code></td><td>City name</td></tr>
-			<tr><td><code>country</code></td><td><code>location.country</code></td><td>Country name</td></tr>
-			<tr><td><code>countrycode</code>, <code>country_code</code></td><td><code>location.countryCode</code></td><td>ISO country code</td></tr>
-			<tr><td><code>street</code>, <code>streetname</code>, <code>street_name</code></td><td><code>location.street</code></td><td>Street name</td></tr>
-			<tr><td><code>address</code>, <code>streetaddress</code>, <code>street_address</code></td><td><code>location.streetAddress</code></td><td>Full street address</td></tr>
-			<tr><td><code>zipcode</code>, <code>postalcode</code>, <code>postal_code</code>, <code>postcode</code></td><td><code>location.zipCode</code></td><td>Postal code</td></tr>
-			<tr><td><code>state</code></td><td><code>location.state</code></td><td>State or region</td></tr>
-			<tr><td><code>county</code></td><td><code>location.county</code></td><td>County</td></tr>
-			<tr><td><code>timezone</code>, <code>time_zone</code></td><td><code>location.timeZone</code></td><td>IANA time zone</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={locationEntries} />
 
 	<h3>Finance</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>iban</code></td><td><code>finance.iban</code></td><td>IBAN</td></tr>
-			<tr><td><code>bic</code></td><td><code>finance.bic</code></td><td>BIC / SWIFT code</td></tr>
-			<tr><td><code>accountnumber</code>, <code>account_number</code></td><td><code>inline:accountnumber</code></td><td>Bank account number (respects <code>.min()</code>)</td></tr>
-			<tr><td><code>creditcard</code>, <code>credit_card</code>, <code>creditcardnumber</code>, <code>credit_card_number</code></td><td><code>inline:creditcard</code> (and aliases)</td><td>Credit-card number</td></tr>
-			<tr><td><code>currency</code>, <code>currencycode</code>, <code>currency_code</code></td><td><code>finance.currencyCode</code></td><td>ISO currency code</td></tr>
-			<tr><td><code>bitcoin</code></td><td><code>finance.bitcoinAddress</code></td><td>Bitcoin address</td></tr>
-			<tr><td><code>ethereum</code></td><td><code>finance.ethereumAddress</code></td><td>Ethereum address</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={financeEntries} />
 
 	<h3>Commerce</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>product</code></td><td><code>commerce.product</code></td><td>Product noun</td></tr>
-			<tr><td><code>productname</code>, <code>product_name</code></td><td><code>commerce.productName</code></td><td>Product name</td></tr>
-			<tr><td><code>isbn</code></td><td><code>commerce.isbn</code></td><td>ISBN</td></tr>
-			<tr><td><code>upc</code></td><td><code>commerce.upc</code></td><td>UPC</td></tr>
-			<tr><td><code>department</code></td><td><code>commerce.department</code></td><td>Retail department</td></tr>
-			<tr><td><code>material</code></td><td><code>commerce.productMaterial</code></td><td>Product material</td></tr>
-			<tr><td><code>price</code></td><td><code>inline:price</code></td><td>Price string (respects <code>.min()</code>/<code>.max()</code>)</td></tr>
-			<tr><td><code>sku</code></td><td><code>inline:sku</code></td><td>Code like <code>AB-1234</code></td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={commerceEntries} />
 
 	<h3>Company</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>company</code>, <code>companyname</code>, <code>company_name</code></td><td><code>company.name</code></td><td>Company name</td></tr>
-			<tr><td><code>buzzword</code></td><td><code>company.buzzPhrase</code></td><td>Business buzzphrase</td></tr>
-			<tr><td><code>catchphrase</code></td><td><code>company.catchPhrase</code></td><td>Marketing catchphrase</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={companyEntries} />
 
 	<h3>Phone</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>phone</code>, <code>phonenumber</code>, <code>phone_number</code></td><td><code>phone.number</code></td><td>Phone number with country code</td></tr>
-			<tr><td><code>imei</code></td><td><code>phone.imei</code></td><td>IMEI</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={phoneEntries} />
 
 	<h3>Vehicle</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>vin</code></td><td><code>vehicle.vin</code></td><td>Vehicle Identification Number</td></tr>
-			<tr><td><code>vrm</code></td><td><code>vehicle.vrm</code></td><td>Vehicle Registration Mark (license plate)</td></tr>
-			<tr><td><code>vehicle</code></td><td><code>vehicle.vehicle</code></td><td>Vehicle make + model</td></tr>
-			<tr><td><code>manufacturer</code></td><td><code>vehicle.manufacturer</code></td><td>Vehicle manufacturer</td></tr>
-			<tr><td><code>model</code></td><td><code>vehicle.model</code></td><td>Vehicle model</td></tr>
-			<tr><td><code>vehiclecolor</code>, <code>vehicle_color</code></td><td><code>vehicle.color</code></td><td>Vehicle color</td></tr>
-			<tr><td><code>fuel</code></td><td><code>vehicle.fuel</code></td><td>Fuel type</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={vehicleEntries} />
 
 	<h3>Color (CSS / UI)</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>color</code>, <code>colour</code></td><td><code>color.colorName</code></td><td>Color name</td></tr>
-			<tr><td><code>colorhex</code>, <code>color_hex</code>, <code>hexcolor</code>, <code>hex_color</code></td><td><code>color.colorHex</code></td><td>Hex color (e.g. <code>#a1b2c3</code>)</td></tr>
-			<tr><td><code>backgroundcolor</code>, <code>background_color</code>, <code>textcolor</code>, <code>text_color</code></td><td><code>color.colorHex</code></td><td>Hex color</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={colorEntries} />
 
 	<h3>System</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>platform</code>, <code>os</code>, <code>operatingsystem</code>, <code>operating_system</code></td><td><code>system.platform</code></td><td>Operating system</td></tr>
-			<tr><td><code>browser</code></td><td><code>system.browser</code></td><td>Browser name</td></tr>
-			<tr><td><code>semver</code>, <code>version</code></td><td><code>system.semver</code></td><td>Semver string</td></tr>
-			<tr><td><code>filename</code>, <code>file_name</code></td><td><code>system.fileName</code></td><td>File name</td></tr>
-			<tr><td><code>filepath</code>, <code>file_path</code></td><td><code>system.filePath</code></td><td>File path</td></tr>
-			<tr><td><code>extension</code>, <code>fileextension</code>, <code>file_extension</code></td><td><code>system.fileExtension</code></td><td>File extension</td></tr>
-			<tr><td><code>mimetype</code>, <code>mime_type</code>, <code>contenttype</code>, <code>content_type</code></td><td><code>system.mimeType</code></td><td>MIME type</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={systemEntries} />
 
 	<h3>Word &amp; free text</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>word</code></td><td><code>word.noun</code></td><td>A single noun</td></tr>
-			<tr><td><code>text</code>, <code>description</code>, <code>note</code>, <code>summary</code>, <code>comment</code>, <code>body</code>, <code>content</code>, <code>message</code></td><td><code>inline:&lt;key&gt;</code></td><td>Lorem text (respects <code>.min()</code>/<code>.max()</code>)</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={wordEntries} />
 
 	<hr />
 
 	<h2>Exact-key generators (number)</h2>
 	<p>These fire when the field is a <code>z.number()</code> (or unwrapped to one).</p>
 
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Distribution</th><th>Generator identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>amount</code>, <code>bedrag</code></td><td>log-uniform</td><td><code>inline:amount</code></td><td>Currency amount, Benford-conforming (<code>.min()</code>/<code>.max()</code>, default 1 – 10 000)</td></tr>
-			<tr><td><code>price</code>, <code>prijs</code></td><td>log-uniform</td><td><code>inline:price</code></td><td>Price amount, Benford-conforming (<code>.min()</code>/<code>.max()</code>, default 1 – 500)</td></tr>
-			<tr><td><code>balance</code></td><td>log-uniform</td><td><code>inline:balance</code></td><td>Money balance (default 1 – 100 000)</td></tr>
-			<tr><td><code>total</code>, <code>subtotal</code></td><td>log-uniform</td><td><code>inline:total</code></td><td>Order total / subtotal (default 1 – 10 000)</td></tr>
-			<tr><td><code>revenue</code></td><td>log-uniform</td><td><code>inline:revenue</code></td><td>Revenue figure (default 1 000 – 1 × 10⁹)</td></tr>
-			<tr><td><code>cost</code>, <code>fee</code></td><td>log-uniform</td><td><code>inline:cost</code></td><td>Cost / fee amount (default 1 – 1 000)</td></tr>
-			<tr><td><code>salary</code></td><td>log-uniform</td><td><code>inline:salary</code></td><td>Annual salary (default 20 000 – 500 000)</td></tr>
-			<tr><td><code>fileSize</code>, <code>bytes</code></td><td>log-uniform-int</td><td><code>inline:fileSize</code></td><td>Scale-free byte count (default 100 – 1 × 10⁹)</td></tr>
-			<tr><td><code>views</code>, <code>population</code></td><td>log-uniform-int</td><td><code>inline:views</code></td><td>Scale-free count (default 1 – 1 × 10⁷)</td></tr>
-			<tr><td><code>distance</code></td><td>log-uniform</td><td><code>inline:distance</code></td><td>Continuous distance (default 1 – 10 000)</td></tr>
-			<tr><td><code>rating</code></td><td>uniform</td><td><code>inline:rating</code></td><td>Bounded score on <code>[0, 5]</code></td></tr>
-			<tr><td><code>score</code>, <code>percentage</code></td><td>uniform</td><td><code>inline:score</code></td><td>Bounded score on <code>[0, 100]</code></td></tr>
-			<tr><td><code>latitude</code></td><td>uniform</td><td><code>location.latitude</code></td><td>Latitude in degrees</td></tr>
-			<tr><td><code>longitude</code></td><td>uniform</td><td><code>location.longitude</code></td><td>Longitude in degrees</td></tr>
-			<tr><td><code>port</code></td><td>uniform</td><td><code>internet.port</code></td><td>TCP/UDP port number</td></tr>
-			<tr><td><code>quantity</code></td><td>geometric</td><td><code>inline:quantity</code></td><td>Truncated geometric (<code>p = 0.5</code>), modal at lower bound (default <code>[1, 100]</code>)</td></tr>
-			<tr><td><code>count</code></td><td>geometric</td><td><code>inline:count</code></td><td>Truncated geometric (<code>p = 0.5</code>), modal at lower bound; <code>min = 0</code> native (default <code>[0, 50]</code>)</td></tr>
-			<tr><td><code>age</code></td><td>log-normal</td><td><code>inline:age</code></td><td>Clipped log-normal centred on μ = ln(36), σ = 0.35 (default <code>[18, 80]</code>); tight bounds → uniform-int</td></tr>
-			<tr><td><code>year</code></td><td>exponential</td><td><code>inline:year</code></td><td>Exponential recent-skew (λ = 0.05); default <code>[currentYear - 50, currentYear]</code>; tight → uniform-int</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={numberEntries} />
 
 	<hr />
 
@@ -323,46 +537,21 @@
 	</p>
 
 	<h3>Pattern generators (string)</h3>
-	<table>
-		<thead>
-			<tr><th>Match</th><th>Identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td>Exactly <code>id</code>, or <strong>ends with</strong> <code>id</code>, <code>uuid</code>, <code>guid</code></td><td><code>string.uuid</code></td><td>UUID (RFC 4122 v4)</td></tr>
-			<tr><td><strong>Ends with</strong> <code>name</code></td><td><code>person.fullName</code></td><td>Full name</td></tr>
-			<tr><td><strong>Ends with</strong> <code>url</code>, <code>link</code>, or <strong>starts with</strong> <code>url</code></td><td><code>internet.url</code></td><td>HTTPS URL</td></tr>
-			<tr><td><strong>Ends with</strong> <code>email</code></td><td><code>internet.email</code></td><td>Realistic email</td></tr>
-			<tr><td><strong>Ends with</strong> <code>at</code>, <code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong> <code>_on</code> (excluding <code>position</code>)</td><td><code>date.anytime+toISOString</code></td><td>ISO 8601 date string</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={patternStringEntries} />
 
 	<h3>Pattern generators (date)</h3>
 	<p>
 		When the field is a <code>z.date()</code> (or coerced/unwrapped to one), the date pattern produces
 		a <code>Date</code> object.
 	</p>
-	<table>
-		<thead>
-			<tr><th>Match</th><th>Identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><strong>Ends with</strong> <code>at</code>, <code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong> <code>_on</code> (excluding <code>position</code>)</td><td><code>date.anytime</code></td><td>A <code>Date</code> instance</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={patternDateEntries} />
 
 	<h3>Pattern generators (number)</h3>
 	<p>
 		When the field is a <code>z.number()</code>, the date pattern produces a Unix timestamp in
 		milliseconds.
 	</p>
-	<table>
-		<thead>
-			<tr><th>Match</th><th>Identifier</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><strong>Ends with</strong> <code>at</code>, <code>date</code>, <strong>starts with</strong> <code>date</code>, or <strong>ends with</strong> <code>_on</code> (excluding <code>position</code>)</td><td><code>date.anytime+getTime</code></td><td>Unix-ms timestamp</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={patternNumberEntries} />
 
 	<p>
 		The same key with a different Zod type yields a different output: <code>createdAt: z.string()</code>
@@ -384,36 +573,10 @@
 	<p>The Dutch aliases that ship today:</p>
 
 	<h3>Strings</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Maps to</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>voornaam</code></td><td><code>person.firstName</code></td><td>First name</td></tr>
-			<tr><td><code>achternaam</code></td><td><code>person.lastName</code></td><td>Last name</td></tr>
-			<tr><td><code>straat</code></td><td><code>location.street</code></td><td>Street name</td></tr>
-			<tr><td><code>stad</code></td><td><code>location.city</code></td><td>City</td></tr>
-			<tr><td><code>land</code></td><td><code>location.country</code></td><td>Country</td></tr>
-			<tr><td><code>kenteken</code></td><td><code>vehicle.vrm</code></td><td>License plate (VRM)</td></tr>
-			<tr><td><code>voertuigkleur</code></td><td><code>vehicle.color</code></td><td>Vehicle color</td></tr>
-			<tr><td><code>kleur</code></td><td><code>color.colorName</code></td><td>Color name</td></tr>
-			<tr><td><code>telefoon</code></td><td><code>phone.number</code></td><td>Phone number</td></tr>
-			<tr><td><code>prijs</code></td><td><code>inline:prijs</code></td><td>Price string (respects <code>.min()</code>/<code>.max()</code>)</td></tr>
-			<tr><td><code>omschrijving</code></td><td><code>inline:omschrijving</code></td><td>Description (lorem text, length-aware)</td></tr>
-			<tr><td><code>bericht</code></td><td><code>inline:bericht</code></td><td>Message (lorem text, length-aware)</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={dutchStringEntries} />
 
 	<h3>Numbers</h3>
-	<table>
-		<thead>
-			<tr><th>Key</th><th>Maps to</th><th>Description</th></tr>
-		</thead>
-		<tbody>
-			<tr><td><code>bedrag</code></td><td><code>inline:bedrag</code></td><td>Amount (respects <code>.min()</code>/<code>.max()</code>, default 1 – 10 000)</td></tr>
-			<tr><td><code>prijs</code></td><td><code>inline:prijs</code></td><td>Price (respects <code>.min()</code>/<code>.max()</code>, default 1 – 500)</td></tr>
-		</tbody>
-	</table>
+	<DefinitionList entries={dutchNumberEntries} />
 
 	<hr />
 
