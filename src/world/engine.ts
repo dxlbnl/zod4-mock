@@ -71,7 +71,7 @@ import type {
   SchemaOpts,
   ExplainResult,
 } from "../types.js";
-import type { WorldTrace, TraceNode } from "../trace.js";
+import type { WorldTrace, TraceNode, TraceField, TraceResolution } from "../trace.js";
 import { SchemaRegistry } from "../registry.js";
 import { createPrng, fieldSeed, fnv1a } from "../prng.js";
 import { generateFromSchema } from "../generators/schema/index.js";
@@ -86,7 +86,8 @@ import { deepMerge, deepEqual } from "../utils/merge.js";
 import { defaultLocale } from "../default-locale.js";
 import type { LocaleData } from "@zod4-mock/locale-core";
 import { explainSchema } from "../explain.js";
-import { PIPELINE, walkPipeline } from "../pipeline.js";
+import { PIPELINE, walkPipeline, traceResolutionForKind } from "../pipeline.js";
+import type { FieldResolution } from "../pipeline.js";
 import {
   EMPTY_REG,
   findDerivedRegs as findDerivedRegsPure,
@@ -198,6 +199,58 @@ function resolveTraceTypeNames(regs: readonly SchemaReg[]): Map<number, string> 
     names.set(reg.regId, n === 1 ? base : `${base}-${n}`);
   }
   return names;
+}
+
+// ---------------------------------------------------------------------------
+// B86 — captured per-field provenance (trace gate). A `TraceField` minus its
+// `forkKey`, which the `trace()` projection composes from the node's friendly
+// id (`<node.id> ▸ <path>`). Stored keyed by the produced record object so the
+// projection can attach each record's fields by reference (cache short-circuits
+// fabricate nothing — D9 / B86-R12).
+// ---------------------------------------------------------------------------
+
+type CapturedField = Omit<TraceField, "forkKey">;
+
+/**
+ * B86 — read-tracking `Proxy` over the in-progress record, installed only under
+ * the `trace: true` gate (see `decisions.md` D33). Its `get` trap records each
+ * string sibling key a field's matcher reads through `ctx.current`, populating
+ * `TraceField.dependsOn` from observed reads without mutating `ctx.current`'s
+ * shape. The off-path passes the bare record (no Proxy — B86-R10/R11).
+ */
+function trackReads(target: Record<string, unknown>, reads: Set<string>): Record<string, unknown> {
+  return new Proxy(target, {
+    get(t, prop, receiver) {
+      if (typeof prop === "string") reads.add(prop);
+      return Reflect.get(t, prop, receiver);
+    },
+  });
+}
+
+/**
+ * B86 — assemble a {@link CapturedField} at the capture boundary: the internal
+ * `FieldResolution["kind"]` maps to the public `TraceResolution` (total map),
+ * the explain `{ identifier, reason }` becomes `generator` / `reason`, and the
+ * tracked sibling reads become `dependsOn`. `forkKey` is composed later by the
+ * `trace()` projection from the friendly node id.
+ */
+function captureField(
+  path: string,
+  resolution: FieldResolution,
+  overridden: boolean,
+  explainMeta: { identifier?: string; reason?: string } | null,
+  reads: Set<string> | null,
+): CapturedField {
+  const traceResolution: TraceResolution = traceResolutionForKind(resolution.kind);
+  return {
+    path,
+    value: resolution.value,
+    resolution: traceResolution,
+    generator: explainMeta?.identifier ?? "schema-based",
+    reason: explainMeta?.reason ?? "no key match, no matcher",
+    overridden,
+    dependsOn: reads !== null ? [...reads] : [],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -427,7 +480,20 @@ export class WorldImpl implements World {
   private fieldState: FieldState | null = null;
   private boundGen: BoundGenerators | null = null;
 
+  /**
+   * B86 — provenance field-capture gate + sink. `traceEnabled` mirrors
+   * `createWorld({ trace: true })` (D26 opt-in gate). When `false` (the
+   * default) the per-field capture in {@link generateObjectFields} is a no-op:
+   * no Proxy is installed over `ctx.current` and no `CapturedField` is
+   * allocated, so the off-path stays allocation- and PRNG-neutral (B86-R10/R11).
+   * `captureSink` keys each produced record object to its captured fields; the
+   * {@link trace} projection attaches them by reference.
+   */
+  private readonly traceEnabled: boolean;
+  private captureSink: WeakMap<object, CapturedField[]> | null = null;
+
   constructor(private readonly options: WorldOptions = {}) {
+    this.traceEnabled = options.trace === true;
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
     this.registry = new SchemaRegistry(this.prng.fork("registry"));
@@ -484,6 +550,13 @@ export class WorldImpl implements World {
       this.relationPools = new Map();
     }
     return this.relationPools;
+  }
+
+  private ensureCaptureSink(): WeakMap<object, CapturedField[]> {
+    if (this.captureSink === null) {
+      this.captureSink = new WeakMap();
+    }
+    return this.captureSink;
   }
 
   private ensurePendingCounts(): Map<ZodTypeAny, number> {
@@ -828,15 +901,28 @@ export class WorldImpl implements World {
 
       const records = this.registry.all(reg.schema);
       records.forEach((value, index) => {
+        const nodeId = `${type}#${index + 1}`;
+        // B86: attach the per-field provenance captured during generation
+        // (keyed by the produced record object). Off-path (or a cache-short-
+        // circuited record the pipeline never produced) yields no captured
+        // fields, so `fields` stays `[]` (B86-R9/R12). `forkKey` is composed
+        // here from the friendly node id (`<node id> ▸ <path>`, B86-R6).
+        const captured =
+          value !== null && typeof value === "object"
+            ? this.captureSink?.get(value as object)
+            : undefined;
+        const fields: TraceField[] = captured
+          ? captured.map((cf) => ({ ...cf, forkKey: `${nodeId} ▸ ${cf.path}` }))
+          : [];
         const node: TraceNode = {
-          id: `${type}#${index + 1}`,
+          id: nodeId,
           type,
           // The numeric `index` field stays 0-based (B85-R3); only the string
           // `id` (and `derivedFrom`) is 1-based friendly.
           index,
           value,
           store: true,
-          fields: [],
+          fields,
           // Derived records carry their source node's friendly id; primary
           // records OMIT the key entirely (R5: `"derivedFrom" in node === false`).
           // The stub pairs derived record `index` with source record `index`
@@ -1290,39 +1376,85 @@ export class WorldImpl implements World {
 
     const shape = d.shape!;
     const result: Record<string, unknown> = {};
+    // B86: under the trace gate, collect each field's provenance into `captured`
+    // and attach it to the produced record object after the loop. Off-path
+    // `captured` stays `null` (no allocation, no Proxy — B86-R10/R11).
+    const captured: CapturedField[] | null = this.traceEnabled ? [] : null;
 
     for (const [key, fieldSchema] of Object.entries(shape)) {
       const fieldPrng = recordPrng.fork(key);
       const fieldPath = fieldPathPrefix ? `${fieldPathPrefix}.${key}` : key;
       const fs = fieldSchema as ZodTypeAny;
-      const fieldCtx = this.makeFieldCtx(
-        reg,
-        source,
-        recordPrng,
-        fieldPrng,
-        fieldPath,
-        recordId,
+      const resolution = this.resolveField(
+        key,
+        fs,
         result,
+        { schema, current, reg, source, recordPrng, fieldPrng, fieldPath, recordId, overrides },
+        captured,
       );
-      result[key] = walkPipeline(PIPELINE, {
-        fieldSchema: fs,
-        fieldName: key,
-        fieldCtx,
-        fieldOverride: overrides?.[key],
-        reg,
-        outerSchema: schema,
-        resolvedSchema: current,
-        // B97-R15: empty sentinels avoid a per-world Map allocation when
-        // neither was wired through `withGenerators` / `withKeyMap`.
-        customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
-        schemaKeyMaps: this.schemaKeyMaps ?? EMPTY_SCHEMA_KEY_MAPS,
-        optionalProbability: this.options.optionalProbability ?? 0.2,
-        dryRun: false,
-        state: { inner: fs },
-        explainMeta: null,
-      }).value;
+      // A skipped optional (`kind: "absent"`) omits the key from the record so
+      // `"key" in record === false` (B86-R4); all other rungs assign the value.
+      if (resolution.kind !== "absent") result[key] = resolution.value;
     }
+    if (captured !== null) this.ensureCaptureSink().set(result, captured);
     return result;
+  }
+
+  // B86 — resolve one field through PIPELINE, capturing its provenance into
+  // `captured` when the trace gate is on (a read-tracking Proxy over the
+  // in-progress record feeds `dependsOn`). Extracted from the per-field loop so
+  // `generateObjectFields` stays under the B23-R9 50-LOC body guard (B86-R13).
+  private resolveField(
+    key: string,
+    fs: ZodTypeAny,
+    result: Record<string, unknown>,
+    f: {
+      schema: ZodTypeAny;
+      current: ZodTypeAny;
+      reg: SchemaReg;
+      source: unknown;
+      recordPrng: ReturnType<typeof createPrng>;
+      fieldPrng: ReturnType<typeof createPrng>;
+      fieldPath: string;
+      recordId: string;
+      overrides: Record<string, unknown> | undefined;
+    },
+    captured: CapturedField[] | null,
+  ): FieldResolution {
+    const reads: Set<string> | null = captured !== null ? new Set() : null;
+    const current = reads !== null ? trackReads(result, reads) : result;
+    const fieldCtx = this.makeFieldCtx(
+      f.reg,
+      f.source,
+      f.recordPrng,
+      f.fieldPrng,
+      f.fieldPath,
+      f.recordId,
+      current,
+    );
+    const fieldOverride = f.overrides?.[key];
+    const explainMeta = captured !== null ? {} : null;
+    const resolution = walkPipeline(PIPELINE, {
+      fieldSchema: fs,
+      fieldName: key,
+      fieldCtx,
+      fieldOverride,
+      reg: f.reg,
+      outerSchema: f.schema,
+      resolvedSchema: f.current,
+      // B97-R15: empty sentinels avoid a per-world Map allocation when
+      // neither was wired through `withGenerators` / `withKeyMap`.
+      customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
+      schemaKeyMaps: this.schemaKeyMaps ?? EMPTY_SCHEMA_KEY_MAPS,
+      optionalProbability: this.options.optionalProbability ?? 0.2,
+      dryRun: false,
+      state: { inner: fs },
+      explainMeta,
+    });
+    if (captured !== null) {
+      captured.push(captureField(key, resolution, fieldOverride !== undefined, explainMeta, reads));
+    }
+    return resolution;
   }
 
   // -------------------------------------------------------------------------

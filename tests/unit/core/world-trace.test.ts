@@ -191,12 +191,18 @@ describe("world-trace — B85-R5 / derived lineage and primary omission", () => 
 });
 
 // ---------------------------------------------------------------------------
-// B85-R6: empty fields + edges at the stub, even with trace: true
+// B85-R6: edges empty + default-world fields empty.
+//
+// B86 supersedes the original B85 stub assertion that a `trace: true` world
+// ALSO emits `fields: []` — B86 now populates per-field provenance under the
+// gate. Edges stay `[]` until B87 (relation-edge capture). The default world
+// (no flag) still emits empty fields. (See the B86 implementer report:
+// updated alongside the B86 field-capture contract.)
 // ---------------------------------------------------------------------------
 
-describe("world-trace — B85-R6 / stub emits empty provenance even with trace enabled", () => {
-  it("B85-R6 / empty provenance — trace.edges === [] and every node.fields === []", () => {
-    const world = createWorld({ seed: 1, trace: true }).withSchema(ItemSchema);
+describe("world-trace — B85-R6 / edges empty; default world emits empty fields", () => {
+  it("B85-R6 / trace.edges === [] and the default world's node.fields === []", () => {
+    const world = createWorld({ seed: 1 }).withSchema(ItemSchema);
     world.generate(ItemSchema);
 
     const trace = world.trace();
@@ -210,20 +216,28 @@ describe("world-trace — B85-R6 / stub emits empty provenance even with trace e
 });
 
 // ---------------------------------------------------------------------------
-// B85-R7: `trace?: boolean` opt-in flag on createWorld; default ≡ enabled at stub
+// B85-R7: `trace?: boolean` opt-in flag on createWorld; records agree.
+//
+// B86 supersedes the original "deep-equal trace()" assertion: a `trace: true`
+// world now captures per-field provenance, so its `nodes[i].fields` diverges
+// from the no-flag world. The flag remains observation-only (D4/D10), so the
+// generated RECORDS (`nodes[i].value`) still deep-equal between the two worlds.
 // ---------------------------------------------------------------------------
 
-describe("world-trace — B85-R7 / flag accepted, default and enabled agree at the stub", () => {
-  it("B85-R7 / flag accepted — no-flag and trace:true worlds deep-equal", () => {
-    // `createWorld({ trace: true })` must compile (WorldOptions.trace exists) —
-    // RED at typecheck today; RED at runtime via the trace() calls regardless.
+describe("world-trace — B85-R7 / flag accepted, records agree between default and enabled", () => {
+  it("B85-R7 / flag accepted — no-flag and trace:true worlds' records deep-equal", () => {
     const noFlag = createWorld({ seed: 1 }).withSchema(ItemSchema);
     noFlag.generate(ItemSchema);
 
     const enabled = createWorld({ seed: 1, trace: true }).withSchema(ItemSchema);
     enabled.generate(ItemSchema);
 
-    expect(enabled.trace()).toEqual(noFlag.trace());
+    const noFlagNodes = noFlag.trace().nodes;
+    const enabledNodes = enabled.trace().nodes;
+    expect(enabledNodes).toHaveLength(noFlagNodes.length);
+    enabledNodes.forEach((node, i) => {
+      expect(node.value).toEqual(noFlagNodes[i]!.value);
+    });
   });
 });
 

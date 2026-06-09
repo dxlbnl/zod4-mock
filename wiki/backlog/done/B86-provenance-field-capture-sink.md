@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-03
 predecessor: B85
 phase: 4a
+spec: wiki/specs/B86-provenance-field-capture-sink.md
 ---
 
 ## Description
@@ -61,6 +62,19 @@ overhead in the bench output. Used to inform the v2 "always-on" ADR.
 - Absent-optional fields appear with `resolution: "absent"` / `value: undefined`.
 - Hot-path bench with `trace: false` shows no regression.
 - Tests cover each of the 7 resolution rungs (`override`, `matcher`, `key-map`, `default`/`absent`, `custom-gen`, `key-based`, `schema-based`).
+
+## Open questions
+
+- **(RESOLVED — review checkpoint 2026-06-09) `dependsOn` sibling-read mechanism.**
+  Maintainer chose **(a) a read-tracking `Proxy` over `ctx.current`, installed only under
+  the `trace: true` gate**: a get-trap records each sibling key a field's matcher reads, so
+  `TraceField.dependsOn` is populated from observed reads. The off-path (`trace:false`) stays
+  allocation-neutral — no Proxy is installed. The proxy-under-gate pattern is a local
+  constraint; the implementer records its rationale in `decisions.md` and the manager decides
+  on promotion at close.
+- **(RESOLVED — review checkpoint 2026-06-09) `forkKey` exact composite.** Maintainer chose
+  the **friendly composite `` `${node.id} ▸ ${path}` ``** (e.g. `"person#1 ▸ firstName"`) — a
+  display-only projection; the internal `recordPrng.fork(<field>)` seed key stays byte-identical.
 
 ### Notes
 

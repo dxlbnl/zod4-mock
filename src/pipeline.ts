@@ -20,6 +20,7 @@
 
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, KeyGenerator } from "./types.js";
+import type { TraceResolution } from "./trace.js";
 import {
   def,
   unwrap,
@@ -139,6 +140,29 @@ export interface PipelineStepContext {
 }
 
 export type PipelineStep = (ctx: PipelineStepContext) => FieldResolution | null;
+
+// ---------------------------------------------------------------------------
+// B86 — total map from the internal `FieldResolution["kind"]` to the public
+// `TraceResolution` union at the capture boundary. Kept exhaustive (the
+// `satisfies` record covers all eight kinds) so a future internal rung rename
+// forces a deliberate update here rather than silently breaking the public
+// `world.trace()` contract (D26).
+// ---------------------------------------------------------------------------
+
+const KIND_TO_TRACE_RESOLUTION = {
+  override: "override",
+  matcher: "matcher",
+  keymap: "keymap",
+  absent: "absent",
+  default: "default",
+  "custom-gen": "custom-gen",
+  "key-based": "key-based",
+  "schema-based": "schema-based",
+} satisfies Record<FieldResolution["kind"], TraceResolution>;
+
+export function traceResolutionForKind(kind: FieldResolution["kind"]): TraceResolution {
+  return KIND_TO_TRACE_RESOLUTION[kind];
+}
 
 // ---------------------------------------------------------------------------
 // B12 deep-merge helper
@@ -280,11 +304,14 @@ export function overrideEagerStep(ctx: PipelineStepContext): FieldResolution | n
 export function matcherStep(ctx: PipelineStepContext): FieldResolution | null {
   const m = ctx.reg.matchers[ctx.fieldName];
   if (!m) return null;
+  // B86: populate the explain vocabulary on both the dry-run (explain) and the
+  // live (trace-gated) path. `explainMeta` is `null` on the off-path hot path
+  // (B97), so the writes are skipped there.
+  if (ctx.explainMeta !== null) {
+    ctx.explainMeta.identifier = `matcher:${ctx.fieldName}`;
+    ctx.explainMeta.reason = "matcher registered via withSchema";
+  }
   if (ctx.dryRun) {
-    if (ctx.explainMeta !== null) {
-      ctx.explainMeta.identifier = `matcher:${ctx.fieldName}`;
-      ctx.explainMeta.reason = "matcher registered via withSchema";
-    }
     return { kind: "matcher", value: undefined };
   }
   const matched = m(ctx.fieldCtx);
@@ -318,6 +345,11 @@ export function schemaKeyMapStep(ctx: PipelineStepContext): FieldResolution | nu
     ctx.schemaKeyMaps.get(ctx.outerSchema)?.[ctx.fieldName] ??
     ctx.schemaKeyMaps.get(ctx.resolvedSchema)?.[ctx.fieldName];
   if (fn === undefined) return null;
+  // B86: live-path explain vocabulary (trace gate); null on the off-path.
+  if (ctx.explainMeta !== null) {
+    ctx.explainMeta.identifier = `key-map:${ctx.fieldName}`;
+    ctx.explainMeta.reason = "per-schema key map registered via withKeyMap";
+  }
   const mapped = fn(ctx.fieldCtx);
   return {
     kind: "keymap",
@@ -366,11 +398,12 @@ export function customKeyGenStep(ctx: PipelineStepContext): FieldResolution | nu
   const lk = ctx.fieldName.toLowerCase();
   const customGen = ctx.customKeyGenerators.get(lk);
   if (customGen === undefined) return null;
+  // B86: live-path explain vocabulary (trace gate); null on the off-path.
+  if (ctx.explainMeta !== null) {
+    ctx.explainMeta.identifier = `custom:${lk}`;
+    ctx.explainMeta.reason = "custom generator registered via withGenerators";
+  }
   if (ctx.dryRun) {
-    if (ctx.explainMeta !== null) {
-      ctx.explainMeta.identifier = `custom:${lk}`;
-      ctx.explainMeta.reason = "custom generator registered via withGenerators";
-    }
     return { kind: "custom-gen", value: undefined };
   }
   const innerSchema = ctx.state.inner;
@@ -412,6 +445,23 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
   const innerSchema = ctx.state.inner;
   const keyResult = generateFromKey(ctx.fieldName, innerSchema, ctx.fieldCtx);
   if (keyResult === undefined) return null;
+  // B86: live-path explain vocabulary (trace gate); null on the off-path. Mirror
+  // the dry-run exact-key / pattern lookup so trace() and explain() agree.
+  if (ctx.explainMeta !== null) {
+    const leafType = def(unwrap(innerSchema)).type;
+    const lk = ctx.fieldName.toLowerCase();
+    const exact = identifierForExactKey(leafType, lk);
+    if (exact !== undefined) {
+      ctx.explainMeta.identifier = exact;
+      ctx.explainMeta.reason = `exact key: "${lk}"`;
+    } else {
+      const hit = patternHit(leafType, lk);
+      if (hit !== undefined) {
+        ctx.explainMeta.identifier = hit.identifier;
+        ctx.explainMeta.reason = `key-pattern: ${hit.label}`;
+      }
+    }
+  }
   // Today's contract: key-based step's fieldOverride **replaces** the result
   // (not deep-merge). Preserved verbatim from `world.ts:1300-1301`.
   return {
@@ -451,6 +501,20 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
   const innerSchema = ctx.state.inner;
   const innerUnwrapped = unwrap(innerSchema);
   const innerDef = def(innerUnwrapped);
+  // B86: live-path explain vocabulary (trace gate); null on the off-path.
+  if (ctx.explainMeta !== null) {
+    const leafType = innerDef.type;
+    if (leafType === "object" || leafType === "lazy") {
+      ctx.explainMeta.identifier = "schema-based:object";
+      ctx.explainMeta.reason = "nested object — call explain(<FieldSchema>) for details";
+    } else if (leafType === "array") {
+      ctx.explainMeta.identifier = "schema-based:array";
+      ctx.explainMeta.reason = "array — element type explained on demand";
+    } else {
+      ctx.explainMeta.identifier = "schema-based";
+      ctx.explainMeta.reason = "no key match, no matcher";
+    }
+  }
   const isObjectLike = innerDef.type === "object" || innerDef.type === "lazy";
   if (isObjectLike) {
     return {

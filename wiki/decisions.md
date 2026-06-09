@@ -1120,3 +1120,29 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   display-name collisions auto-disambiguate by registration order `-N`, never throwing) — a binding
   public contract under D26. The friendly id is a `trace()`-projection only; the internal PRNG seed
   keys MUST stay byte-identical. (→ D32)
+
+## D33 — `dependsOn` sibling-read provenance is captured by a read-tracking `Proxy` over `ctx.current`, installed only under the trace gate (pairs with D26)
+
+- **Date**: 2026-06-09.
+- **By**: implementer (B86), to be promoted by the manager at Done.
+- **Context**: B86 must populate `TraceField.dependsOn` — the sibling field keys a field's matcher
+  reads from `ctx.current` during its resolution. There was no existing mechanism that tracked which
+  sibling keys a matcher reads; `ctx.current` is the in-progress record object passed by reference
+  into `makeFieldCtx`, and matchers read `ctx.current.<sibling>` directly. The maintainer resolved the
+  formerly-blocking question at the B86 review checkpoint (2026-06-09).
+- **Decision**: under the opt-in `createWorld({ trace: true })` gate (D26), the engine wraps the
+  in-progress record in a read-tracking `Proxy` whose `get`-trap records each string sibling key the
+  field's matcher reads, and passes that Proxy as the field's `ctx.current`. `TraceField.dependsOn` is
+  the set of observed reads. The off-path (`trace: false`, the default) installs **no** Proxy and
+  passes the bare record object unchanged — capture allocates nothing and consumes no PRNG state, so a
+  `trace: true` world produces byte-identical records to a `trace: false` world (D4/D10, B86-R10/R11).
+  Sibling-read provenance MUST be captured this way — by trapping reads on a gated Proxy — never by
+  mutating `ctx.current`'s shape or re-deriving reads after the fact (the B113 spike rejected
+  re-derivation; pool/read state is path-dependent).
+- **Consequences**: a new local constraint future trace/sibling-read work follows. The Proxy is a
+  `world.trace()`-capture concern only; it never enters the shipped value or the off-path. Determinism
+  untouched (the B86 R6/R9/R11 controls + the existing trace/determinism suites stay green).
+- **Rule proposed** (manager to decide on promotion): sibling-read provenance for `TraceField.dependsOn`
+  MUST be captured by a read-tracking `Proxy` over `ctx.current` installed **only** under the
+  `createWorld({ trace: true })` gate; the off-path installs no Proxy and stays allocation- and
+  PRNG-neutral. (→ D33)
