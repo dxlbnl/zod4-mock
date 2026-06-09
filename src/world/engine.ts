@@ -1268,6 +1268,7 @@ export class WorldImpl implements World {
     schema: ZodTypeAny,
     reg: SchemaReg | null,
     options?: GenerateOptions<unknown>,
+    explicitRecordIndex?: number,
   ): unknown {
     // B97-R15: pendingCounts is lazily allocated. The first invocation of
     // `generateAndStorePrimary` for any schema triggers allocation. A
@@ -1275,7 +1276,23 @@ export class WorldImpl implements World {
     // store-on path (ad-hoc / store: false) keeps `pendingCounts === null`.
     const pendingMap = this.ensurePendingCounts();
     const pending = pendingMap.get(schema) ?? 0;
-    const recordIndex = this.registry.count(schema) + pending;
+    // B135: under `store: false` an array's per-element seed index self-cancels
+    // — the registry write is suppressed so `registry.count` never advances and
+    // `pending` cycles 0→1→0 across sequential siblings, collapsing every
+    // element to the same `reg<id>#<count>`. When an array generator supplies an
+    // explicit per-element index, use it so the i-th element seeds distinctly,
+    // matching the store-on record at index i.
+    //
+    // The explicit index is honoured ONLY on the store-off path: when storing,
+    // `registry.count + pending` already yields distinct indices AND is the
+    // mechanism that re-entrant (self-referential) generation relies on — a
+    // child record generated mid-parent enters at `pending > 0`, so forcing an
+    // explicit `existingCount + i` there would collide parent and child. Gating
+    // on `!effectiveStore` keeps the store-on path byte-identical (D4/D10).
+    const recordIndex =
+      !this.effectiveStore && explicitRecordIndex !== undefined
+        ? explicitRecordIndex
+        : this.registry.count(schema) + pending;
     pendingMap.set(schema, pending + 1);
 
     try {
@@ -1577,13 +1594,30 @@ export class WorldImpl implements World {
 
     // Auto-provision more sources if min constraint requires it
     const minRequired = resolveMinRequired(arraySchema, defMin);
+    // B135-R4: track how many sources we've auto-provisioned per `from:` schema
+    // so each provisioned source gets a distinct explicit `sourceIndex`. Under
+    // `store: false` the source write is suppressed, so `registry.count` stays
+    // frozen and the original `sourceIndex = registry.count(fromSchema)` would
+    // collapse every source to the same index → identical derived records keyed
+    // on `dreg<id>#<sourceIndex>`. We base each index on the count captured
+    // BEFORE provisioning that schema (`fromBase`) plus a per-schema offset.
+    const fromBase = new Map<ZodTypeAny, number>();
+    const fromProvisioned = new Map<ZodTypeAny, number>();
     while (pairs.length < minRequired) {
       const regIdx = pairs.length % derivedRegs.length;
       const reg = derivedRegs[regIdx]!;
       const fromSchema = reg.from!;
       const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
-      const sourceIndex = this.registry.count(fromSchema);
-      const newSource = this.generateAndStorePrimary(fromSchema, fromReg);
+      if (!fromBase.has(fromSchema)) {
+        fromBase.set(fromSchema, this.registry.count(fromSchema));
+      }
+      const offset = fromProvisioned.get(fromSchema) ?? 0;
+      // Store-on is byte-identical: the write advances the count by one per
+      // iteration, so the original `registry.count(fromSchema)` yielded
+      // `base, base+1, …` — exactly what `fromBase + offset` gives here.
+      const sourceIndex = fromBase.get(fromSchema)! + offset;
+      fromProvisioned.set(fromSchema, offset + 1);
+      const newSource = this.generateAndStorePrimary(fromSchema, fromReg, undefined, sourceIndex);
       pairs.push({ source: newSource, reg, sourceIndex });
     }
 
@@ -1676,9 +1710,21 @@ export class WorldImpl implements World {
     if (!this.effectiveStore) {
       const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
       return Array.from({ length: storeOffLength }, (_, i) =>
-        this.generateAndStorePrimary(innerSchema, primaryReg, {
-          overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
-        }),
+        // B135: thread an explicit per-element index (`existingCount + i`) so
+        // the i-th store-off element seeds from the same `recordId`
+        // (`reg<id>#<existingCount+i>`) the store-on `while` loop produces at
+        // that position. The `registry.count + pending` derivation collapses
+        // under suppressed writes (every sibling enters at count==existingCount,
+        // pending==0), yielding identical records. B53 per-index override
+        // threading (`overrides: overridesArr?.[i]`) is preserved unchanged.
+        this.generateAndStorePrimary(
+          innerSchema,
+          primaryReg,
+          {
+            overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
+          },
+          existingCount + i,
+        ),
       );
     }
 
@@ -2035,7 +2081,14 @@ export class WorldImpl implements World {
     primaryReg: SchemaReg,
     options: GenerateOptions<unknown> | undefined,
   ): unknown {
-    return this.generateAndStorePrimary(schema, primaryReg, options);
+    // B135: an array generator may thread an explicit per-element `recordIndex`
+    // (the nested-field array path runs through `generateZodArray` →
+    // `ctx.generate(element)` per element, not `generateArrayPrimary`). Pass it
+    // through so each store-off element seeds from a distinct `reg<id>#<index>`.
+    // Store-on is byte-identical: the index equals `existingCount + i`, exactly
+    // what `registry.count + pending` already yields once each prior element is
+    // stored.
+    return this.generateAndStorePrimary(schema, primaryReg, options, options?.recordIndex);
   }
 
   /**

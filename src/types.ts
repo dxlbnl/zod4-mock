@@ -240,6 +240,16 @@ export interface GenerateOptions<T> extends GenerationDefaults {
    */
   readonly prng?: ReturnType<typeof createPrng>;
   /**
+   * Explicit per-record seed index for a registered-primary record. Threaded by
+   * the array generators (B135) so the i-th element of an array of a registered
+   * schema seeds from `reg<id>#<recordIndex>` regardless of the `store` toggle:
+   * under `store: false` the registry write is suppressed, so the default
+   * `registry.count + pending` derivation freezes and every sibling collapses to
+   * one index. Engine-internal plumbing with no user call path.
+   * @internal
+   */
+  readonly recordIndex?: number;
+  /**
    * When `false`, suppress the registry write for this `world.generate` call —
    * useful for ephemeral generation (search-bucket envelopes, paginated
    * responses, one-off fixtures). Propagates through nested generation so inner

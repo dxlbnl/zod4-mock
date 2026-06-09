@@ -58,6 +58,17 @@ export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unk
   const [defMin, defMax] = ctx.defaultArrayLength ?? [1, 5];
   const length = resolveArrayLength(schema, defMin, defMax, ctx.prng);
 
+  // B135: an array of a REGISTERED-primary element runs each element through
+  // `ctx.generate(element)`, which resolves to the engine's registered-primary
+  // record path. Under `store: false` that path's default `registry.count +
+  // pending` seed index self-cancels (writes suppressed, `pending` cycles 0→1→0)
+  // so every element collapses to `reg<id>#<existingCount>` → identical records.
+  // Thread an explicit per-element `recordIndex` (`existingCount + i`) so the
+  // i-th element seeds distinctly — identical to the store-on path, where the
+  // count advances by one per stored element. For unregistered element schemas
+  // the engine ignores `recordIndex`, so this is inert there.
+  const elementExistingCount = ctx.registry.count(d.element!);
+
   const innerDef = def(d.element!);
   if (innerDef.type === "object" && innerDef.shape) {
     const parentSeed = ctx.prng.seed;
@@ -70,6 +81,7 @@ export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unk
       return ctx.generate(d.element!, {
         prng: createBatchElementPrng(baseSeeds, elementSeed),
         fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+        recordIndex: elementExistingCount + i,
       });
     });
   }
@@ -78,6 +90,7 @@ export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unk
     ctx.generate(d.element!, {
       prng: ctx.prng.fork(`el-${i}`),
       fieldPath: ctx.fieldPath ? `${ctx.fieldPath}.${i}` : `${i}`,
+      recordIndex: elementExistingCount + i,
     }),
   );
 }

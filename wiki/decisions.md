@@ -1191,3 +1191,50 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   the generated value; array → generate then per-index merge, override never resizing); pipeline
   rungs **MUST** stay override-agnostic and there **MUST** be no post-record whole-record override
   merge. (→ D34)
+
+## D35 — The `store` toggle is value-neutral; store-off registered-array elements seed from explicit per-element indices
+
+- **Date**: 2026-06-09.
+- **By**: spec-writer (B135), to be promoted by the manager at Done.
+- **Context**: B135 found that `world.generate(RegisteredSchema.array(), { store: false })`
+  returned N **identical** records. `generateArrayPrimary`'s store-off `Array.from` branch
+  (`src/world/engine.ts:1676-1683`) calls `generateAndStorePrimary` per element, which derives
+  the per-record seed from `recordIndex = registry.count(schema) + pending`
+  (`src/world/engine.ts:1277-1278`). `pending` is incremented at entry and **decremented in
+  `finally`** (it exists for *re-entrant* generation, not sequential array siblings), so each
+  sibling in the synchronous loop enters at `pending == 0`; and under `store: false` the
+  `registry.store` write is suppressed (B10-R4), so `registry.count` never advances. Every
+  element therefore computed `recordIndex = existingCount + 0` → identical `recordId`
+  (`reg<id>#<existingCount>`) → identical field seed → identical record. The store-**on**
+  `while` loop reads `i = registry.count` and its writes advance the count, so its records get
+  distinct indices `existingCount..existingCount+N-1`. That asymmetry violated D4/D10
+  ("toggling `store` MUST NOT change a record's values"). The same `registry.count`-frozen
+  collapse occurs in the derived arm's **auto-provision-under-`store:false`** floor loop
+  (`src/world/engine.ts:1580-1588`, `sourceIndex = registry.count(fromSchema)` frozen); the
+  common derived path (pre-populated sources) is unaffected because `collectSourcePairs`
+  assigns distinct `sourceIndex` from the registry contents.
+- **Decision**: the store-off registered-array branch MUST seed each element from an
+  **explicit per-element index** — the i-th element uses `recordId = reg<id>#<existingCount+i>`,
+  identical to the record the store-on path produces at that position — rather than relying on
+  the `registry.count + pending` derivation that self-cancels under suppressed writes. Threading
+  is via a private parameter on `generateAndStorePrimary` (preferred; no public-type change) or
+  an `@internal` `GenerateOptions` field (D29) if the option route is taken (non-breaking,
+  engine-internal plumbing). The store-on path is unchanged (it already derives distinct indices
+  from `registry.count`). The B53 per-index override threading and the D34 single per-field
+  override-application site are preserved unchanged — only the seed index is corrected. The
+  derived auto-provision-under-`store:false` collapse is fixed by the same principle (distinct
+  per-element `sourceIndex`).
+- **Consequences**: a standing constraint future array/`store:false` work follows — the `store`
+  toggle is **value-neutral**: store-off array elements occupy indices
+  `existingCount..existingCount+N-1` and seed identically to the store-on path's records at the
+  same positions, so `generate(S.array().length(N), { store: false })` is element-wise byte-equal
+  to the store-on equivalent. D4/D10 (determinism), D8 (vacuous under `store:false`; store-on
+  unchanged), D11 (`PIPELINE` untouched), D14/D34 (override threading preserved), and B10
+  (transitive suppression) all hold. Patch bump (correctness/determinism fix; no public API
+  surface change). See
+  `wiki/specs/B135-store-false-registered-array-identical-elements.md`.
+- **Rule proposed** (manager to decide on promotion): generation under `store: false` **MUST**
+  be value-neutral with respect to the store-on path — store-off registered-array elements
+  **MUST** seed from explicit per-element indices `existingCount..existingCount+N-1`, identical
+  to the store-on path's records at the same positions, so the i-th element's values do not
+  depend on the `store` toggle. (→ D35)
