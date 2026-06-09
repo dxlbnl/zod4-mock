@@ -1146,3 +1146,48 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   MUST be captured by a read-tracking `Proxy` over `ctx.current` installed **only** under the
   `createWorld({ trace: true })` gate; the off-path installs no Proxy and stays allocation- and
   PRNG-neutral. (→ D33)
+
+## D34 — Field-level overrides are applied at a single per-field site; pipeline rungs are override-agnostic; no whole-record override merge
+
+- **Date**: 2026-06-09.
+- **By**: spec-writer (B134), to be promoted by the manager at Done.
+- **Context**: B134 found that an **array-valued field override** replaced the generated array
+  wholesale (dropping generated siblings) through **two independent, compounding** mechanisms:
+  (1) step 0 `overrideEagerStep` (`src/pipeline.ts:289-301`) returns any array override verbatim
+  before any rung generates the array, and (2) the post-record whole-record
+  `deepMerge(result, options.overrides)` (`src/world/engine.ts:1870`) replaces array fields too,
+  because `deepMerge` treats arrays as leaves (B18). Beyond the bug, the override logic was
+  **scattered**: step 0 consumed primitives/arrays eagerly; the matcher / keymap / custom-gen
+  rungs called `applyObjectOverride`; the key-based and schema-based-leaf rungs replaced raw via
+  `ctx.fieldOverride !== undefined ? ctx.fieldOverride : …`; and the whole-record pass applied a
+  third time. The maintainer's directive was "reduce complexity → a single override-application
+  flow, without a performance regression."
+- **Decision**: field-level override application is unified at **exactly one per-field site** (a
+  single `applyOverride(override, innerSchema, generateRaw)` helper that dispatches on the
+  override's **shape** and is **lazy** over generation): `undefined` → `generateRaw()` (the
+  no-override hot path, the first fast exit, allocation- and PRNG-neutral); primitive → return the
+  override without drawing (no `generateRaw()`); plain object → `deepMerge(generateRaw(), override)`;
+  array → generate then per-index deep-merge each present slot onto the generated element (object
+  slot merges, primitive slot replaces, missing slot untouched; the override never resizes — schema
+  length governs, B53-R2 / D14). The **pipeline rungs MUST be override-agnostic** (they produce a
+  raw value; the single site applies the override). The **post-record whole-record
+  `deepMerge(result, options.overrides)` is removed** — overrides are fully resolved per-field
+  before the record is stored, so the second pass is redundant and would re-clobber the per-index
+  array merge. `deepMerge` (`src/utils/merge.ts`) stays byte-identical (B18 array-as-leaf is
+  load-bearing). Sibling-visibility is preserved: the override-applied value is written to the
+  in-progress record (`result[key]`) before later siblings resolve, so a later matcher reading
+  `ctx.current.<earlier>` sees the overridden value. The only determinism change is local: an
+  array-overridden field now draws its element PRNG to generate the base array it merges onto
+  (D4/D10 — per-field-local, matches an un-overridden generation of that field).
+- **Consequences**: a new standing constraint future override work follows — apply overrides at
+  the one per-field site, keep rungs override-agnostic, never re-introduce a whole-record override
+  pass. The no-override hot path is unchanged (B97/B98 stay green). D8 (stored == returned), D11
+  (`PIPELINE` canonical ladder), D14 (array-arm semantics reused, not re-implemented), and B12 /
+  B18 / B53 semantics are all preserved. Patch bump (internal unification + correctness fix; no
+  public API surface change). See `wiki/specs/B134-nested-array-field-overrides-replace-instead-of-merge.md`.
+- **Rule proposed** (manager to decide on promotion): field-level `options.overrides` **MUST** be
+  applied at a single per-field override-application site that dispatches on the override's shape
+  (undefined → generate; primitive → replace without generating; plain object → `deepMerge` onto
+  the generated value; array → generate then per-index merge, override never resizing); pipeline
+  rungs **MUST** stay override-agnostic and there **MUST** be no post-record whole-record override
+  merge. (→ D34)

@@ -111,6 +111,17 @@ regression — the card's exact repro MUST be present as its own test case.
 
 ### B12-R3: existing behaviours preserved
 
+> **Partially superseded by [[B134-nested-array-field-overrides-replace-instead-of-merge]].**
+> Sub-behaviour 3's "array override on a matcher-backed field replaces wholesale" assertion (the
+> last scenario below) is **superseded by B134**: B134 unifies the override-application flow so
+> array overrides merge **per-index** onto the generated base and **never resize** it. A
+> matcher-produced array counts as the generated base, so when the matcher base is **longer**
+> than the override the tail survives — matcher `() => ["m1","m2","m3"]` + override
+> `["alpha","beta"]` now yields `["alpha","beta","m3"]`, not `["alpha","beta"]`. B12-R3 only
+> held when the matcher base length equalled the override length. The superseding expectation is
+> pinned by **B134-R6**; the rest of B12-R3 (sub-behaviours 1 and 2, primitive override replace)
+> is unchanged.
+
 Other interactions of the field pipeline MUST continue to behave as they do today; this
 fix changes only the in-step override-merge behaviour for object overrides and does not
 alter the resolution-order pipeline or the array/primitive replace semantics:
@@ -155,12 +166,17 @@ These three sub-behaviours MUST be pinned by scenarios so the fix cannot regress
   THEN the returned `result.name` equals `"overridden-name"` (the primitive override
   replaces the matcher's value — unchanged from today's step 0 behaviour).
 
-- Scenario: array override on a matcher-backed field replaces (no element-wise merge)
+- Scenario: array override on a matcher-backed field — **SUPERSEDED by
+  [[B134-nested-array-field-overrides-replace-instead-of-merge]]** (now per-index, no resize;
+  see B134-R6)
   GIVEN a world with `z.object({ tags: z.array(z.string()) })` registered with a matcher
   `tags: () => ["m1", "m2", "m3"]`
   WHEN `world.generate(Schema, { overrides: { tags: ["alpha", "beta"] } })` is called
-  THEN the returned `result.tags` deep-equals `["alpha", "beta"]` (the array override
-  replaces wholesale; matcher elements at indices 2+ are NOT preserved).
+  THEN ~~the returned `result.tags` deep-equals `["alpha", "beta"]` (the array override
+  replaces wholesale; matcher elements at indices 2+ are NOT preserved)~~ — **under B134 the
+  override merges per-index onto the matcher base without resizing, so the result deep-equals
+  `["alpha", "beta", "m3"]`** (positions 0–1 replaced, the matcher's `"m3"` tail survives). This
+  scenario's test now asserts the B134 outcome and maps to **B134-R6**.
 
 ### B12-R4: no regressions in the full test suite
 

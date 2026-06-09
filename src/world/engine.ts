@@ -86,7 +86,7 @@ import { deepMerge, deepEqual } from "../utils/merge.js";
 import { defaultLocale } from "../default-locale.js";
 import type { LocaleData } from "@zod4-mock/locale-core";
 import { explainSchema } from "../explain.js";
-import { PIPELINE, walkPipeline, traceResolutionForKind } from "../pipeline.js";
+import { PIPELINE, walkPipeline, traceResolutionForKind, applyOverride } from "../pipeline.js";
 import type { FieldResolution } from "../pipeline.js";
 import {
   EMPTY_REG,
@@ -1434,7 +1434,7 @@ export class WorldImpl implements World {
     );
     const fieldOverride = f.overrides?.[key];
     const explainMeta = captured !== null ? {} : null;
-    const resolution = walkPipeline(PIPELINE, {
+    const stepCtx = {
       fieldSchema: fs,
       fieldName: key,
       fieldCtx,
@@ -1450,7 +1450,24 @@ export class WorldImpl implements World {
       dryRun: false,
       state: { inner: fs },
       explainMeta,
-    });
+    };
+    // B134: the single per-field override-application site. The no-override hot
+    // path (the overwhelming majority) walks the pipeline directly — no closure
+    // allocated, no extra PRNG draw vs. today (B134-R8). Only an overridden
+    // field allocates the `generateRaw` closure and dispatches on shape.
+    //
+    // An EXPLICIT `undefined` override (the key is present in `overrides` with
+    // value `undefined`) forces the field to `undefined`, matching the pre-B134
+    // whole-record `deepMerge(result, overrides)` pass (which set the key to
+    // `undefined`); `overrides[key]` alone can't distinguish this from an absent
+    // key, so the `key in overrides` check restores it.
+    const explicitUndefined =
+      fieldOverride === undefined && f.overrides !== undefined && key in f.overrides;
+    const resolution: FieldResolution = explicitUndefined
+      ? { kind: "override", value: undefined }
+      : fieldOverride === undefined
+        ? walkPipeline(PIPELINE, stepCtx)
+        : applyOverride(fieldOverride, () => walkPipeline(PIPELINE, stepCtx));
     if (captured !== null) {
       captured.push(captureField(key, resolution, fieldOverride !== undefined, explainMeta, reads));
     }
@@ -1867,7 +1884,10 @@ export class WorldImpl implements World {
       }
     }
 
-    if (options?.overrides) result = deepMerge(result, options.overrides);
+    // B134-R7: the whole-record `deepMerge(result, options.overrides)` second
+    // pass is removed. Overrides are now fully resolved per-field at the single
+    // override-application site inside `generateObjectFields`; a second
+    // whole-record application would re-clobber the per-index array merge.
     if (options?.transform && !transformApplied) {
       result = options.transform(result as input<ZodTypeAny>);
     }

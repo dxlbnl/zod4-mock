@@ -165,18 +165,87 @@ export function traceResolutionForKind(kind: FieldResolution["kind"]): TraceReso
 }
 
 // ---------------------------------------------------------------------------
-// B12 deep-merge helper
+// B134 — the single per-field override-application site.
 //
-// Applies a plain-object override on top of a step's matcher / keymap /
-// custom-gen result. Primitive/array overrides were consumed by step 0
-// (`overrideEagerStep`); reaching here means `fieldOverride` is either
-// `undefined` or a plain object. `deepMerge` is B18-safe (atomic-object
-// guarded in `src/utils/merge.ts`).
+// The pipeline rungs are override-agnostic: each produces a RAW generated
+// value (no merge / replace). `applyOverride` is the one place an override is
+// applied, dispatching on the override's SHAPE and lazy over generation (it
+// decides whether `generateRaw()` runs):
+//
+//   - `override === undefined` → `generateRaw()`. The un-overridden hot path
+//     and the first, fast exit — no extra allocation, no extra PRNG draw vs.
+//     today (B134-R8).
+//   - primitive (string / number / boolean / bigint / null / symbol) → return
+//     the override WITHOUT generating (no PRNG draw — matches today's step-0
+//     primitive short-circuit; preserves determinism).
+//   - plain object → `deepMerge(generateRaw(), override)` (B12 semantics).
+//   - array → generate the array via `generateRaw()`, then per-index
+//     deep-merge each present override slot onto the generated element — the
+//     array arms' semantics (engine.ts:1718-1726; D14). The override array does
+//     NOT resize the array; schema length governance wins (B134-R3).
+//
+// `deepMerge` stays byte-identical (B18-R / B134-R5); the per-index array
+// merge lives here, never inside `deepMerge`.
 // ---------------------------------------------------------------------------
 
+/**
+ * Same-realm plain-object predicate, mirroring `src/utils/merge.ts`'s private
+ * `isPlainObject` (B18). A value is a plain object iff its prototype is
+ * `Object.prototype` or `null`. Atomic objects (`Date`, `Map`, `Set`, `RegExp`,
+ * class instances, …) are NOT plain — an atomic-object override replaces the
+ * generated value verbatim WITHOUT generating a base (matching `deepMerge`'s
+ * leaf treatment and the pre-B134 raw-replace branch). Defined here (not
+ * imported) because B134-R5 forbids editing `src/utils/merge.ts`.
+ */
+function isPlainObjectOverride(o: object): boolean {
+  const proto = Object.getPrototypeOf(o);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * B12 deep-merge helper. Applies a plain-object override on top of a value
+ * (arrays / primitives / atomic objects replace verbatim via `deepMerge`).
+ * Retained as a standalone helper (the B23-R6 contract); the per-rung override
+ * application now flows through {@link applyOverride} (B134).
+ */
 export function applyObjectOverride(value: unknown, fieldOverride: unknown): unknown {
   if (fieldOverride === undefined) return value;
   return deepMerge(value, fieldOverride);
+}
+
+export function applyOverride(
+  fieldOverride: unknown,
+  generateRaw: () => FieldResolution,
+): FieldResolution {
+  if (fieldOverride === undefined) return generateRaw();
+  // Primitive (string / number / boolean / bigint / null / symbol) or atomic
+  // object (Date / Map / Set / RegExp / class instance) → replace verbatim,
+  // WITHOUT generating a base (no PRNG draw). `deepMerge` would return the
+  // source for these anyway, but skipping generation also avoids generating a
+  // schema the override is replacing (e.g. an `z.instanceof(RegExp)` field that
+  // is otherwise un-mockable — B18-R4).
+  if (
+    fieldOverride === null ||
+    typeof fieldOverride !== "object" ||
+    (!Array.isArray(fieldOverride) && !isPlainObjectOverride(fieldOverride))
+  ) {
+    return { kind: "override", value: fieldOverride };
+  }
+  const raw = generateRaw();
+  // A plain-object / array override forces the field present (`unwrapOptionalStep`
+  // runs with `allowAbsent = false`), so `raw.kind` is never "absent" here; the
+  // guard narrows the union (the "absent" arm constrains `value` to undefined|null).
+  if (raw.kind === "absent") return raw;
+  if (Array.isArray(fieldOverride)) {
+    const overrides = fieldOverride;
+    const base = Array.isArray(raw.value) ? raw.value : [];
+    const merged = base.map((item, i) => {
+      const ov = overrides[i];
+      return ov !== undefined ? deepMerge(item, ov) : item;
+    });
+    return { kind: raw.kind, value: merged };
+  }
+  return { kind: raw.kind, value: deepMerge(raw.value, fieldOverride) };
 }
 
 // ---------------------------------------------------------------------------
@@ -285,18 +354,10 @@ function patternLabel(leafType: string, index: number, lowerKey: string): string
 // Pipeline steps
 // ---------------------------------------------------------------------------
 
-// Step 0 — eager primitive/array override.
-export function overrideEagerStep(ctx: PipelineStepContext): FieldResolution | null {
-  const o = ctx.fieldOverride;
-  if (o === undefined) return null;
-  if (typeof o !== "object" || o === null || Array.isArray(o)) {
-    // Dry-run: explain-mode emits no `kind: "override"` identifier (B16's
-    // pre-B23 behaviour did not surface overrides). Reaching this branch under
-    // `dryRun: true` would require user-supplied `overrides` in `explain()`,
-    // which the explain API does not accept — so it's effectively unreachable.
-    // For safety, still return the resolution so future explain callers see it.
-    return { kind: "override", value: o };
-  }
+// Step 0 — B134: rung is override-agnostic. The override is applied at the
+// single per-field site (`applyOverride`), not consumed here. Kept in the
+// `PIPELINE` list (D11) as an explicit no-op so the ladder shape is unchanged.
+export function overrideEagerStep(_ctx: PipelineStepContext): FieldResolution | null {
   return null;
 }
 
@@ -314,11 +375,9 @@ export function matcherStep(ctx: PipelineStepContext): FieldResolution | null {
   if (ctx.dryRun) {
     return { kind: "matcher", value: undefined };
   }
-  const matched = m(ctx.fieldCtx);
-  return {
-    kind: "matcher",
-    value: applyObjectOverride(matched, ctx.fieldOverride),
-  };
+  // B134: rung produces the raw matcher value; the override is applied at the
+  // single per-field site (`applyOverride`).
+  return { kind: "matcher", value: m(ctx.fieldCtx) };
 }
 
 // Step 2 — per-schema key map registered via `withKeyMap`.
@@ -350,11 +409,8 @@ export function schemaKeyMapStep(ctx: PipelineStepContext): FieldResolution | nu
     ctx.explainMeta.identifier = `key-map:${ctx.fieldName}`;
     ctx.explainMeta.reason = "per-schema key map registered via withKeyMap";
   }
-  const mapped = fn(ctx.fieldCtx);
-  return {
-    kind: "keymap",
-    value: applyObjectOverride(mapped, ctx.fieldOverride),
-  };
+  // B134: raw keymap value; override applied at the single per-field site.
+  return { kind: "keymap", value: fn(ctx.fieldCtx) };
 }
 
 // Step 3 — unwrap optional/nullable/default, rolling for absence.
@@ -407,10 +463,10 @@ export function customKeyGenStep(ctx: PipelineStepContext): FieldResolution | nu
     return { kind: "custom-gen", value: undefined };
   }
   const innerSchema = ctx.state.inner;
-  const val = applyModifiers(customGen(innerSchema, ctx.fieldCtx), innerSchema);
+  // B134: raw custom-gen value; override applied at the single per-field site.
   return {
     kind: "custom-gen",
-    value: applyObjectOverride(val, ctx.fieldOverride),
+    value: applyModifiers(customGen(innerSchema, ctx.fieldCtx), innerSchema),
   };
 }
 
@@ -462,12 +518,10 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
       }
     }
   }
-  // Today's contract: key-based step's fieldOverride **replaces** the result
-  // (not deep-merge). Preserved verbatim from `world.ts:1300-1301`.
+  // B134: raw key-based value; override applied at the single per-field site.
   return {
     kind: "key-based",
-    value:
-      ctx.fieldOverride !== undefined ? ctx.fieldOverride : applyModifiers(keyResult, innerSchema),
+    value: applyModifiers(keyResult, innerSchema),
   };
 }
 
@@ -515,19 +569,20 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
       ctx.explainMeta.reason = "no key match, no matcher";
     }
   }
+  // B134: rung produces the raw generated value; the override is applied at the
+  // single per-field site (`applyOverride`). The nested-object branch no longer
+  // threads `overrides` down — the deep-merge of the field override onto this
+  // raw object happens at the single site (B12 semantics preserved).
   const isObjectLike = innerDef.type === "object" || innerDef.type === "lazy";
   if (isObjectLike) {
     return {
       kind: "schema-based",
-      value: ctx.fieldCtx.generate(innerSchema, { overrides: ctx.fieldOverride }),
+      value: ctx.fieldCtx.generate(innerSchema),
     };
   }
   return {
     kind: "schema-based",
-    value:
-      ctx.fieldOverride !== undefined
-        ? ctx.fieldOverride
-        : generateFromSchema(innerSchema, ctx.fieldCtx),
+    value: generateFromSchema(innerSchema, ctx.fieldCtx),
   };
 }
 

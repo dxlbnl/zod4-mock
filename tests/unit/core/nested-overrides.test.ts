@@ -152,7 +152,13 @@ describe("B12-R3: existing behaviours preserved", () => {
     expect(result.name).toBe("overridden-name");
   });
 
-  it("B12-R3 / array override on a matcher-backed field replaces wholesale (no element-wise merge)", () => {
+  it("B12-R3 / array override on a matcher-backed field merges per-index, no resize (superseded by B134-R6)", () => {
+    // SUPERSEDED by B134: under the unified override-application flow an array
+    // override merges positionally onto the generated base and never resizes it.
+    // A matcher-produced array IS the generated base, so when the matcher base
+    // (length 3) is longer than the override (length 2), positions 0–1 are
+    // replaced by the override and the matcher's trailing element ("m3") at
+    // position 2 survives. See wiki/specs/B134-...md (B134-R6).
     const Schema = z.object({ tags: z.array(z.string()) });
 
     const world = createWorld({ seed: 42 }).withSchema(Schema, {
@@ -163,7 +169,7 @@ describe("B12-R3: existing behaviours preserved", () => {
       overrides: { tags: ["alpha", "beta"] },
     });
 
-    expect(result.tags).toEqual(["alpha", "beta"]);
+    expect(result.tags).toEqual(["alpha", "beta", "m3"]);
   });
 });
 

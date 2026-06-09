@@ -215,7 +215,12 @@ export interface GenerationDefaults {
  * for optional probability, array length, recursion, and registry writes.
  */
 export interface GenerateOptions<T> extends GenerationDefaults {
-  /** Partial values deep-merged onto the generated result, overriding any field. */
+  /**
+   * Partial values deep-merged onto the generated result, overriding any field.
+   * An array override merges per index: `overrides[i]` deep-merges onto the
+   * i-th generated element (un-overridden siblings preserved); it does not
+   * resize the array — the schema's length governs.
+   */
   readonly overrides?: DeepPartial<T>;
   /** Post-processor applied to the generated value before it is returned/stored. */
   readonly transform?: (data: T) => T;
