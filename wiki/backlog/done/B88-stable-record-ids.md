@@ -7,6 +7,7 @@ flags: [review]
 created: 2026-06-03
 predecessor: B85
 phase: 4a
+spec: wiki/specs/B88-stable-record-ids.md
 ---
 
 ## Description

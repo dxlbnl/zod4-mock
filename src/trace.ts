@@ -58,19 +58,28 @@ export interface TraceField extends FieldExplanation {
 }
 
 /**
- * One generated record in a {@link WorldTrace}. `id` is the stable
- * registration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``
- * for a primary record or `` `derived${regId}` `` for a derived one; `index` is
- * the record's position within its registration; `value` is the stored record;
- * `store` reflects whether the record was written to the registry. `derivedFrom`
- * is present only for derived records and holds the source node's id. `fields`
+ * One generated record in a {@link WorldTrace}.
+ *
+ * `id` is the stable, human-friendly `` `${typeName}#${index}` `` id (e.g.
+ * `"person#1"`, `"order#5"`) — a binding public contract: the `typeName` is the
+ * registration's display name (the Zod schema's `.description`, else the stable
+ * `` `schema${id}` `` fallback), and the `<index>` is **1-based** (the first
+ * record of a type is `#1`). When two registrations of the same polarity resolve
+ * to the same display name, the id auto-disambiguates by registration order
+ * (`user`, `user-2`, `user-3`, …) rather than throwing. `type` is that same
+ * resolved `typeName`. `index` is the record's **0-based** position within its
+ * registration. `value` is the stored record; `store` reflects whether the
+ * record was written to the registry. `derivedFrom` is present only for derived
+ * records and holds the source node's friendly id (e.g. `"person#1"`). `fields`
  * is the per-field provenance (empty at the B85 stub; B86 populates it).
  */
 export interface TraceNode {
+  /** Friendly `` `${typeName}#${index}` `` id (1-based index), e.g. `"person#1"`. */
   readonly id: string;
   readonly type: string;
   readonly index: number;
   readonly value: unknown;
+  /** For derived records, the friendly id of the source node (e.g. `"person#1"`). */
   readonly derivedFrom?: string;
   readonly store: boolean;
   readonly fields: TraceField[];

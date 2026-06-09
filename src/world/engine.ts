@@ -167,6 +167,40 @@ function getSchemaId(schema: ZodTypeAny): number {
 }
 
 // ---------------------------------------------------------------------------
+// B88 — friendly trace type-name resolution (display/projection only)
+//
+// Resolve each registration's display name: the schema's `.description` when a
+// non-empty string, else the stable `schema<id>` fallback keyed on the
+// module-global `getSchemaId`. When two registrations of the SAME polarity
+// resolve to the SAME name, auto-disambiguate by registration order (R7): the
+// first keeps the bare name, the Nth (N≥2) becomes `<name>-N`. Fallback
+// `schema<id>` names are unique per schema reference, so only described names
+// ever collide. Returns a `regId → typeName` map. Pure projection — no PRNG.
+// ---------------------------------------------------------------------------
+
+function resolveTraceTypeName(schema: ZodTypeAny): string {
+  const description = schema.description;
+  if (typeof description === "string" && description.length > 0) return description;
+  return `schema${getSchemaId(schema)}`;
+}
+
+function resolveTraceTypeNames(regs: readonly SchemaReg[]): Map<number, string> {
+  const names = new Map<number, string>();
+  // Per `(name, polarity)` group, count occurrences in registration order so the
+  // Nth colliding registration takes the `-N` suffix.
+  const counts = new Map<string, number>();
+  for (const reg of regs) {
+    const base = resolveTraceTypeName(reg.schema);
+    const polarity = reg.from !== null ? "d" : "p";
+    const groupKey = `${polarity}:${base}`;
+    const n = (counts.get(groupKey) ?? 0) + 1;
+    counts.set(groupKey, n);
+    names.set(reg.regId, n === 1 ? base : `${base}-${n}`);
+  }
+  return names;
+}
+
+// ---------------------------------------------------------------------------
 // Array constraint resolvers
 // ---------------------------------------------------------------------------
 
@@ -767,30 +801,49 @@ export class WorldImpl implements World {
   // -------------------------------------------------------------------------
 
   trace(): WorldTrace {
-    const nodes: TraceNode[] = [];
+    // B88: the friendly `<typeName>#<index>` projection. Dedup the registrations
+    // by schema reference (re-registering the same reference is not a new node
+    // source and never advances a collision suffix), preserving registration
+    // order, then resolve each registration's display name with deterministic
+    // collision disambiguation (see `resolveTraceTypeNames`).
+    const regs: SchemaReg[] = [];
     const seen = new Set<ZodTypeAny>();
     for (const reg of this.schemaRegs) {
       if (seen.has(reg.schema)) continue;
       seen.add(reg.schema);
+      regs.push(reg);
+    }
 
+    const typeNames = resolveTraceTypeNames(regs);
+
+    const nodes: TraceNode[] = [];
+    for (const reg of regs) {
       const derived = reg.from !== null;
-      const type = `${derived ? "derived" : "node"}${reg.regId}`;
-      const sourceRegId = derived ? (this.findPrimaryRegs(reg.from!)[0]?.regId ?? -1) : -1;
+      const type = typeNames.get(reg.regId)!;
+      // Derived nodes resolve `derivedFrom` to the friendly source node id
+      // (`<sourceTypeName>#<index+1>`); the source is the first primary
+      // registration of `reg.from`.
+      const sourceReg = derived ? (this.findPrimaryRegs(reg.from!)[0] ?? null) : null;
+      const sourceType = sourceReg ? typeNames.get(sourceReg.regId) : undefined;
 
       const records = this.registry.all(reg.schema);
       records.forEach((value, index) => {
         const node: TraceNode = {
-          id: `${type}#${index}`,
+          id: `${type}#${index + 1}`,
           type,
+          // The numeric `index` field stays 0-based (B85-R3); only the string
+          // `id` (and `derivedFrom`) is 1-based friendly.
           index,
           value,
           store: true,
           fields: [],
-          // Derived records carry their source node's id; primary records OMIT
-          // the key entirely (R5: `"derivedFrom" in node === false`). The stub
-          // pairs derived record `index` with source record `index` (mirroring
-          // `populateFrom`'s in-order iteration).
-          ...(derived ? { derivedFrom: `node${sourceRegId}#${index}` } : {}),
+          // Derived records carry their source node's friendly id; primary
+          // records OMIT the key entirely (R5: `"derivedFrom" in node === false`).
+          // The stub pairs derived record `index` with source record `index`
+          // (mirroring `populateFrom`'s in-order iteration).
+          ...(derived && sourceType !== undefined
+            ? { derivedFrom: `${sourceType}#${index + 1}` }
+            : {}),
         };
         nodes.push(node);
       });

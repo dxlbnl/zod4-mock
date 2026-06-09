@@ -142,9 +142,13 @@ describe("world-trace — B85-R4 / id shape and stability", () => {
     const traceA = buildWorld().trace();
     const traceB = buildWorld().trace();
 
-    expect(traceA.nodes[0]!.id).toBe("node0#0");
-    expect(traceA.nodes[1]!.id).toBe("node0#1");
-    expect(traceA.nodes[0]!.type).toBe("node0");
+    // B88 superseded the B85 raw `node<regId>#<index>` stub with the friendly
+    // `<typeName>#<index>` id (1-based). `PersonSchema` carries no `.description`,
+    // so its typeName is the stable `schema<id>` fallback; the id's first record
+    // is `#1`, and `type` is that same typeName.
+    expect(traceA.nodes[0]!.id).toMatch(/^schema\d+#1$/);
+    expect(traceA.nodes[1]!.id).toMatch(/^schema\d+#2$/);
+    expect(traceA.nodes[0]!.type).toBe(traceA.nodes[0]!.id.split("#")[0]);
 
     const idsA = traceA.nodes.map((n) => n.id);
     const idsB = traceB.nodes.map((n) => n.id);
@@ -172,8 +176,10 @@ describe("world-trace — B85-R5 / derived lineage and primary omission", () => 
 
     const trace = world.trace();
 
-    const personNode = trace.nodes.find((n) => n.type === "node0");
-    const profileNode = trace.nodes.find((n) => n.type === "derived1");
+    // B88: nodes are selected by polarity via `derivedFrom` presence (the B85
+    // `node0`/`derived1` raw type strings are superseded by friendly typeNames).
+    const personNode = trace.nodes.find((n) => !("derivedFrom" in n));
+    const profileNode = trace.nodes.find((n) => "derivedFrom" in n);
     expect(personNode).toBeDefined();
     expect(profileNode).toBeDefined();
 

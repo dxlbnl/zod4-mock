@@ -370,13 +370,18 @@ root `seed`, one {@link TraceNode} per stored record, and one
 interface TraceNode
 ```
 
-One generated record in a {@link WorldTrace}. `id` is the stable
-registration-order id `` `${type}#${index}` ``; `type` is `` `node${regId}` ``
-for a primary record or `` `derived${regId}` `` for a derived one; `index` is
-the record's position within its registration; `value` is the stored record;
+One generated record in a {@link WorldTrace}. `id` is the friendly, stable
+`<typeName>#<index>` id (e.g. `person#1`, `order#5`): `typeName` is the
+registration's display name (the Zod schema's `.description`, else the stable
+`schema<id>` fallback) and `<index>` is **1-based** (the first record of a type
+is `#1`). Two registrations of the same polarity that resolve to the same
+display name auto-disambiguate by registration order (`user`, `user-2`,
+`user-3`, …). `type` is that same resolved `typeName`; `index` is the record's
+**0-based** position within its registration; `value` is the stored record;
 `store` reflects whether the record was written to the registry. `derivedFrom`
-is present only for derived records and holds the source node's id. `fields`
-is the per-field provenance (empty at the B85 stub; B86 populates it).
+is present only for derived records and holds the source node's friendly id
+(e.g. `person#1`). `fields` is the per-field provenance (empty at the B85 stub;
+B86 populates it).
 
 ## TraceField
 

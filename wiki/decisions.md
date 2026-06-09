@@ -1085,3 +1085,38 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   present at build time — produced by the build-time id-injection step using the shared `slugify`
   (so Pagefind anchors them and `#fragment` deep-links resolve on load); HTML MUST be mutated with a
   real parser (`node-html-parser`, build-time/D13-exempt), never regex. (→ D31)
+
+## D32 — `TraceNode.id` is the friendly `<typeName>#<index>` public contract (1-based, description-else-`schema<id>`, registration-order collision suffix)
+
+- **Date**: 2026-06-09.
+- **By**: implementer (B88), to be promoted by the manager at Done.
+- **Context**: B85 emitted a raw registration-order stub id (`node0#0` / `derived1#2`) — readable to
+  the engine but opaque to a human who copies an id into a bug report or shares a trace. B88 surfaces
+  the same records under a friendly id form. The internal `reg<id>#<i>` / `dreg<id>#<i>` keys that
+  seed `Prng.fork()` are a separate generation-layer concern and are NOT the `TraceNode.id`; B88 is a
+  pure `trace()` projection change and does not touch generation or determinism (R4).
+- **Decision**: `TraceNode.id` is the string `` `${typeName}#${index}` ``, a binding public contract
+  (users copy ids into bug reports / shared traces — part of the SemVer surface, under D26):
+  - **typeName** = the registration's display name: the Zod schema's `.description` when a non-empty
+    string, else the stable fallback `` `schema${getSchemaId(schema)}` `` (the module-global
+    schema-identity id, unique per schema reference, stable across runs/machines for module-scope
+    schemas per D4/D10). Derived registrations use the **derived** schema's name, not the source's.
+  - **index** = **1-based** in the string id (first record of a type → `#1`); the numeric
+    `TraceNode.index` field stays **0-based** (B85-R3).
+  - **Collision (R7)**: when two registrations of the same polarity resolve to the same typeName,
+    auto-disambiguate by **registration order** (no throw, rejecting the earlier D12-style throw
+    proposal): the first keeps the bare name, the Nth (N≥2) takes `` `${name}-${N}` `` (`user`,
+    `user-2`, `user-3`, …). Re-registering the same schema reference is not a new node source and
+    never advances N. Deterministic because collision order equals (deterministic) registration order.
+    Fallback `schema<id>` names are unique per schema-ref, so only described names ever collide.
+  - **`derivedFrom`** (a `TraceNode` field under D26) resolves to the **friendly source id** (e.g.
+    `person#1`) for derived records; primary records omit the key.
+- **Consequences**: documented per D5/D27 — the `TraceNode.id` TSDoc in `src/trace.ts` and
+  `docs/api-reference.md` carry the format; the `/docs/api` reference regenerates from the TSDoc.
+  Determinism untouched (R4 control + the existing trace/determinism suites stay green).
+- **Rule proposed** (manager to promote): `TraceNode.id` MUST be the friendly `<typeName>#<index>`
+  string (1-based index; `typeName` = schema `.description` else `schema<id>` fallback; derived nodes
+  use the derived schema's name and set `derivedFrom` to the friendly source id; same-polarity
+  display-name collisions auto-disambiguate by registration order `-N`, never throwing) — a binding
+  public contract under D26. The friendly id is a `trace()`-projection only; the internal PRNG seed
+  keys MUST stay byte-identical. (→ D32)
