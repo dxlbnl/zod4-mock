@@ -8,9 +8,9 @@
  *
  * These types are pure declarations — no class instances, functions, or symbols —
  * so a `WorldTrace` round-trips losslessly through `JSON.stringify` /
- * `JSON.parse`. They are a binding public contract: B86 (field capture), B87
- * (edge capture), and B88 (friendly type names) fill in the substance against
- * these exact shapes.
+ * `JSON.parse`. They are a binding public contract: field capture, edge
+ * capture, and friendly type names fill in the substance against these exact
+ * shapes.
  */
 
 import type { FieldExplanation } from "./types.js";
@@ -19,7 +19,7 @@ import type { FieldExplanation } from "./types.js";
  * Which pipeline rung resolved a {@link TraceField}'s value. A standalone,
  * public-stable union — intentionally decoupled from the internal
  * `FieldResolution["kind"]` so a future pipeline rename forces a deliberate
- * update to the capture-boundary mapping (B86) rather than silently breaking
+ * update to the capture-boundary mapping rather than silently breaking
  * this public contract.
  */
 export type TraceResolution =
@@ -71,7 +71,7 @@ export interface TraceField extends FieldExplanation {
  * registration. `value` is the stored record; `store` reflects whether the
  * record was written to the registry. `derivedFrom` is present only for derived
  * records and holds the source node's friendly id (e.g. `"person#1"`). `fields`
- * is the per-field provenance (empty at the B85 stub; B86 populates it).
+ * is the per-field provenance.
  */
 export interface TraceNode {
   /** Friendly `` `${typeName}#${index}` `` id (1-based index), e.g. `"person#1"`. */
@@ -89,7 +89,7 @@ export interface TraceNode {
  * One relation pick in a {@link WorldTrace}: the `from` node's `fromField`
  * referenced the `to` node via the named `relation`, a one-to-one (`"one"`) or
  * one-to-many (`"many"`) pick drawn from a pool of `poolSize` candidates at
- * `pickedIndex`. (Empty at the B85 stub; B87 populates `edges`.)
+ * `pickedIndex`.
  */
 export interface TraceEdge {
   readonly from: string;

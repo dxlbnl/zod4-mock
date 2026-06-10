@@ -87,7 +87,7 @@ export interface GeneratorContext<T = any> {
    */
   readonly defaultArrayLength: readonly [number, number];
   /**
-   * B136 — when this field carries an ARRAY `options.overrides` value, the
+   * When this field carries an ARRAY `options.overrides` value, the
    * override's length, threaded so the field's array generation produces
    * exactly that many base elements (override length wins; schema bounds /
    * `defaultArrayLength` govern only the no-override count). Engine-internal
@@ -255,7 +255,7 @@ export interface GenerateOptions<T> extends GenerationDefaults {
   readonly prng?: ReturnType<typeof createPrng>;
   /**
    * Explicit per-record seed index for a registered-primary record. Threaded by
-   * the array generators (B135) so the i-th element of an array of a registered
+   * the array generators so the i-th element of an array of a registered
    * schema seeds from `reg<id>#<recordIndex>` regardless of the `store` toggle:
    * under `store: false` the registry write is suppressed, so the default
    * `registry.count + pending` derivation freezes and every sibling collapses to
@@ -310,8 +310,8 @@ export interface WorldOptions extends GenerationDefaults {
 /**
  * A relation entry on `SchemaOpts.relations`. Either a bare Zod schema (the
  * historic form) or an object `{ schema, where? }` that filters the candidate
- * pool by a predicate (B11). The predicate sees `z.infer<TRelation>` — the
- * registry-read shape (per B7).
+ * pool by a predicate. The predicate sees `z.infer<TRelation>` — the
+ * registry-read shape.
  */
 export type RelationEntry<TRelation extends ZodTypeAny = ZodTypeAny> =
   | TRelation
@@ -350,7 +350,7 @@ export interface SchemaOpts<
 }
 
 // ---------------------------------------------------------------------------
-// ExplainResult — B16 introspection helper
+// ExplainResult — introspection helper
 // ---------------------------------------------------------------------------
 
 /**
@@ -368,7 +368,7 @@ export interface FieldExplanation {
 /**
  * Per-relation record on `ExplainResult.relations`. `schema` is the leaf
  * `def.type` of the related schema (e.g. `'object'`, `'lazy'`); `where`
- * reports whether the relation entry was the B11 object form
+ * reports whether the relation entry was the object form
  * `{ schema, where }` with a predicate.
  */
 export interface RelationExplanation {
@@ -380,8 +380,7 @@ export interface RelationExplanation {
  * Structured introspection result for `world.explain(schema)`. The `fields`
  * map is keyed by top-level field name in schema-shape order; the
  * `relations` map is keyed by relation name (empty `{}` when none). The
- * `toString()` method produces a human-readable aligned table — see
- * B16-R7.
+ * `toString()` method produces a human-readable aligned table.
  */
 export interface ExplainResult<TSchema extends ZodTypeAny> {
   readonly fields: { readonly [K in keyof z.infer<TSchema> & string]: FieldExplanation };
@@ -495,7 +494,7 @@ export interface World {
    * `populate`'s index-based factory) and returns `GenerateOptions<TDerived>`
    * that flow through the delegated `generate` call.
    *
-   * Idempotence comes from B8's per-`(derivedSchema, identity(source))` upsert:
+   * Idempotence comes from the per-`(derivedSchema, identity(source))` upsert:
    * re-running `populateFrom` with the same arguments leaves the derived bucket
    * unchanged. The source bucket is snapshotted at call start — mid-loop
    * inserts to it are visible only to the next `populateFrom` call.
@@ -518,7 +517,7 @@ export interface World {
    * a `toString()` formatter for human-readable output. PRNG-neutral and
    * registry-neutral — calling `explain` does not consume the world PRNG,
    * does not write to the registry, and does not advance any generation
-   * counter (B16).
+   * counter.
    */
   explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema>;
 

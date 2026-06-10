@@ -1,9 +1,9 @@
 /**
  * @module explain
  *
- * B16 — read-only, PRNG-neutral introspection helper for `world.explain(schema)`.
+ * Read-only, PRNG-neutral introspection helper for `world.explain(schema)`.
  *
- * B23: walks the same `PIPELINE` list as `WorldImpl.generateObjectFields` with
+ * Walks the same `PIPELINE` list as `WorldImpl.generateObjectFields` with
  * `dryRun: true`. Each step that would fire writes a `{ identifier, reason }`
  * pair into `ctx.explainMeta`, which this module renders into the
  * `FieldExplanation` shape. The per-rung decision logic lives in the seven
@@ -123,7 +123,7 @@ export function explainSchema<TSchema extends ZodTypeAny>(
 }
 
 // ---------------------------------------------------------------------------
-// toString formatter — aligned per-field table (B16-R7)
+// toString formatter — aligned per-field table
 // ---------------------------------------------------------------------------
 
 function formatExplainResult(

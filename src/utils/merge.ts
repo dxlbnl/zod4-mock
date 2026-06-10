@@ -5,7 +5,7 @@
  * `Set`, `RegExp`, `URL`, `Buffer`, typed arrays, class instances — have a
  * different prototype and are therefore rejected, so `deepMerge` treats them
  * as leaves and replaces verbatim instead of reducing them to `{}` via an
- * empty `Object.keys` recursion. See `wiki/specs/B18-deepmerge-atomic-objects.md`.
+ * empty `Object.keys` recursion.
  */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object") return false;

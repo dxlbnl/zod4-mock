@@ -11,7 +11,7 @@ import { quantity as quantityGen, count as countGen } from "./discrete.js";
 /**
  * Log-uniform integer draw on `[min, max]`. Falls back to uniform-int when
  * the range crosses zero or `min ≤ 0`. Used by `fileSize` / `bytes` / `views`
- * / `population` per B57-R1.
+ * / `population`.
  */
 function logUniformInt(prng: Prng, min: number, max: number): number {
   if (min > 0) {
@@ -22,7 +22,7 @@ function logUniformInt(prng: Prng, min: number, max: number): number {
 
 /**
  * Log-uniform continuous draw on `[min, max]`. Falls back to uniform when
- * the range crosses zero or `min ≤ 0`. Used by `distance` per B57-R1.
+ * the range crosses zero or `min ≤ 0`. Used by `distance`.
  */
 function logUniformFloat(prng: Prng, min: number, max: number): number {
   if (min > 0) return prng.logUniform(min, max);
@@ -314,7 +314,6 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
       return yearGen(p, min, max);
     },
 
-    // B57-R1: log-uniform money keys (Benford-conforming, 2-decimal).
     balance: (p, _ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 100000);
       return data.finance.amount(p, min, max);
@@ -344,7 +343,6 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
       return data.finance.amount(p, min, max);
     },
 
-    // B57-R1: log-uniform integer measurement keys (round after the draw).
     filesize: (p, _ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 100, 1e9);
       return logUniformInt(p, min, max);
@@ -362,13 +360,11 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
       return logUniformInt(p, min, max);
     },
 
-    // B57-R1: log-uniform continuous measurement key.
     distance: (p, _ctx, schema) => {
       const { min, max } = resolveNumberBounds(schema, 1, 10000);
       return logUniformFloat(p, min, max);
     },
 
-    // B57-R1: bounded-uniform shaped keys (semantic-meaningful default range).
     rating: (p, _ctx, schema) => {
       return generateNumberWithBounds(p, resolveNumberBounds(schema, 0, 5));
     },

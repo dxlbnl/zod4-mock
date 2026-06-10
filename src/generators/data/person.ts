@@ -5,7 +5,7 @@ import { defaultLocale } from "../../default-locale.js";
 /**
  * Resolve the effective Zipf exponent for an open-corpus call site:
  * per-corpus override > locale-level default > literature default of 1.0.
- * Closed corpora must NOT call this — they stay on `prng.pick` (B55-R3).
+ * Closed corpora must NOT call this — they stay on `prng.pick`.
  */
 function resolveFrequencyExponent(locale: LocaleData, corpusName: string): number {
   return locale.frequencyExponentOverrides?.[corpusName] ?? locale.frequencyExponent ?? 1.0;
@@ -62,7 +62,7 @@ function pick<T extends string>(prng: Prng, arr: readonly T[]): T {
  * Samples one entry from a name pool via `prng.pickZipf(pool, s)`. Empty /
  * missing pool returns the "Unknown" sentinel; this preserves a structured
  * fallback for locales that do not populate the relevant pool. The `s`
- * exponent is resolved by the caller from the active locale (B55-R3).
+ * exponent is resolved by the caller from the active locale.
  */
 function sampleName(prng: Prng, pool: readonly string[] | undefined, s: number): string {
   if (!pool || pool.length === 0) return "Unknown";
@@ -100,11 +100,6 @@ export function lastName(prng: Prng, ctx?: GeneratorContext): string {
   const stem = sampleName(prng, locale.person.lastNames, s);
   const pfxList = locale.person.lastNamePrefixes;
   if (!pfxList || pfxList.length === 0) return stem;
-  // Decide the prefix on an independent fork so the leaf `lastName` call
-  // consumes exactly one draw from the caller's PRNG (B48-R7). Forking does
-  // not consume parent state (see src/prng.ts:112-116), so the prefix
-  // decision stays deterministic per (seed, "lastNamePrefix") without
-  // disturbing sibling generators that share the parent counter.
   const prefixPrng = prng.fork("lastNamePrefix");
   // Weight "no prefix" at 100, then select proportionally
   const prefixTotal = pfxList.reduce((s: number, p) => s + p.weight, 0);

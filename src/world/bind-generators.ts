@@ -1,16 +1,16 @@
 /**
  * @module world/bind-generators
  *
- * Generator binding layer — extracted from `engine.ts` under B60, then
- * re-shaped under B97 to a **lazy per-namespace holder** pattern.
+ * Generator binding layer — extracted from `engine.ts`, then
+ * re-shaped to a **lazy per-namespace holder** pattern.
  *
- * ## B97 — lazy per-namespace getters with mutable `{ prng, ctx }` holder
+ * ## Lazy per-namespace getters with mutable `{ prng, ctx }` holder
  *
- * Pre-B97, `engine.ts` rebuilt all 14 generator namespaces (each with ~10
+ * Previously, `engine.ts` rebuilt all 14 generator namespaces (each with ~10
  * helper closures) on **every field** of every record — `makeFieldCtx`
  * called `bindNamespace` 14 times per field. A 4-field schema therefore
  * allocated ~560 closures per `generate()` call. That cost showed up in
- * `pnpm --filter=@zod4-mock/site bench` as a ~7× slowdown vs the pre-B36
+ * `pnpm --filter=@zod4-mock/site bench` as a ~7× slowdown vs the earlier
  * (lazy Proxy) shape — bisected to commit `9717326`.
  *
  * The fix is structural: one `FieldState` holder per outer `generate()` call,
@@ -30,22 +30,22 @@
  *
  * ## Invariants
  *
- * - **D4 / D10 determinism** — the holder reads `state.prng` at call time,
+ * - **Determinism** — the holder reads `state.prng` at call time,
  *   so a per-field PRNG fork is observed by every matcher that calls
  *   `ctx.gen.<ns>.<fn>()` from that field. No bind-time snapshotting.
- * - **B40 ctx-forwarding contract** — preserved byte-identically. The four
+ * - **ctx-forwarding contract** — preserved byte-identically. The four
  *   `CTX_SLOTS` buckets keep their meanings:
  *     - `number`        — bucket 1 / 3: inject `ctx` at the declared slot
  *                         index when the caller didn't supply one.
  *     - `"no-args-only"` — bucket 2: inject `ctx` only when the caller
  *                         passes zero args. The Gender-string-without-locale
- *                         residual is preserved (out of scope for B97).
+ *                         residual is preserved.
  *     - absent          — bucket 4: forward args verbatim, no `ctx`
  *                         injection.
- * - **D1 no `any`** — `BoundGenerators` is the typed `CoreGenerators`
+ * - **No `any`** — `BoundGenerators` is the typed `CoreGenerators`
  *   produced by `Object.defineProperty`-installed getters.
  *
- * ## Test seam (B97-R3)
+ * ## Test seam
  *
  * The module exposes a private `bindCount` counter that increments each
  * time a namespace's closures are materialised, plus `__getBindCount` /
@@ -58,7 +58,7 @@ import type { GeneratorContext, BoundGenerators, Prng } from "../types.js";
 import * as generatorsData from "../generators/data/index.js";
 
 // ---------------------------------------------------------------------------
-// B40 — per-helper ctx-slot table for bindGenerators
+// Per-helper ctx-slot table for bindGenerators
 //
 // Maps `<namespace>.<helper-name>` → the positional index at which the
 // helper accepts a `ctx?: GeneratorContext` argument. The binder consults
@@ -77,7 +77,7 @@ import * as generatorsData from "../generators/data/index.js";
 //                    OR `GeneratorContext`). Inject boundCtx ONLY when the
 //                    caller passes no args; any explicit arg (string Gender
 //                    or ctx) wins verbatim. The Gender-string-without-locale
-//                    residual is documented and deferred to B36.
+//                    residual is documented and deferred.
 //   - (absent)      — bucket 4: pure prng-only helpers. The adapter MUST
 //                    NOT inject ctx; injecting an extra arg could clash
 //                    with a numeric/string positional parameter (e.g.
@@ -202,7 +202,7 @@ const CTX_SLOTS: Readonly<Record<string, Readonly<Record<string, CtxSlot>>>> = {
 };
 
 // ---------------------------------------------------------------------------
-// B97 — FieldState: the mutable per-`generate()` holder
+// FieldState: the mutable per-`generate()` holder
 //
 // One allocation per outer `generate()` call. The engine's field loop swaps
 // `state.prng` and `state.ctx` in place at the top of each field iteration;
@@ -224,7 +224,7 @@ export interface FieldState {
 }
 
 // ---------------------------------------------------------------------------
-// B97-R3 — test-only `bindCount` instrumentation
+// Test-only `bindCount` instrumentation
 //
 // Module-scope counter incremented exactly once per `(state × namespace)`
 // materialisation. Lazy-bound namespaces materialise their closure set on
@@ -268,7 +268,7 @@ function recordMaterialisation(world: object): void {
 }
 
 // ---------------------------------------------------------------------------
-// B36 / B97 — namespace binder
+// Namespace binder
 //
 // `bindNamespace` walks one namespace object once and produces a typed
 // object whose function members are wrapped per `CTX_SLOTS[nsName]`. The
@@ -276,7 +276,7 @@ function recordMaterialisation(world: object): void {
 // the holder reference) rather than at bind time — this is what lets the
 // engine mutate the holder per field without rebuilding the closure set.
 //
-// Bucket semantics are preserved verbatim from B40 (see CTX_SLOTS docstring).
+// Bucket semantics are preserved verbatim (see CTX_SLOTS docstring).
 // ---------------------------------------------------------------------------
 
 type CtxAwareFn = (prng: Prng, ...args: unknown[]) => unknown;
@@ -310,7 +310,7 @@ export function bindNamespace<T extends Readonly<Record<string, unknown>>>(
 
     if (slot === "no-args-only") {
       // Bucket 2: inject boundCtx only when the caller passes zero args.
-      // Gender-string-without-locale residual preserved (B40 / B36 / B97).
+      // Gender-string-without-locale residual preserved.
       out[name] = (...args: unknown[]) =>
         args.length === 0 ? fn(state.prng, state.ctx) : fn(state.prng, ...args);
       continue;
@@ -338,7 +338,7 @@ export function bindNamespace<T extends Readonly<Record<string, unknown>>>(
 }
 
 // ---------------------------------------------------------------------------
-// B97 — buildLazyGen (round-2: prototype-based shape)
+// buildLazyGen (prototype-based shape)
 //
 // Returns a typed `BoundGenerators` whose 14 namespace properties are
 // exposed as lazy getters hosted on a single **module-global prototype**

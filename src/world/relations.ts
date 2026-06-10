@@ -2,23 +2,23 @@
  * @module world/relations
  *
  * Relation resolution — both the pure cache-key/fork-key/error-message helpers
- * (originally extracted in B32) and the stateful `RelationResolver` collaborator
- * (B62) that owns the per-record relation pool cache and the
+ * and the stateful `RelationResolver` collaborator
+ * that owns the per-record relation pool cache and the
  * resolve-single / resolve-many / ensure-primary pipeline.
  *
  * What lives here:
  *   - `RelationCacheKind` — the "single" vs "many" tag used as a discriminator
- *     in the shared `resolveRelationPool` (B32-R1 / R2).
+ *     in the shared `resolveRelationPool`.
  *   - `relationCacheKey(...)` — the cache-key string builder; the `":many"`
  *     suffix on the many path keeps it disjoint from the single path
- *     (B11-R3 / B11-R4 / B11-R7 — both caches are scoped per record).
+ *     (both caches are scoped per record).
  *   - `relationForkKey(...)` — the per-relation PRNG fork-key builder
- *     (D4 / D10 byte-identical fork-key shape; the `rel-many:` prefix on the
+ *     (byte-identical fork-key shape; the `rel-many:` prefix on the
  *     many path keeps its fork independent of the single path's `rel:` fork).
  *   - `relationEmptyPoolMessage(...)` / `relationShortPoolMessage(...)` — the
- *     B11-R6 error messages thrown when a `where`-filtered pool is empty or
+ *     error messages thrown when a `where`-filtered pool is empty or
  *     undersupplied.
- *   - `RelationResolver` (B62) — collaborator class owning `relationPools`,
+ *   - `RelationResolver` — collaborator class owning `relationPools`,
  *     constructed with the world's registry, primary-reg lookup, a
  *     `generateAndStorePrimary` callback, and an `isStoreActive` getter.
  *     Hosts the four entangled methods that previously lived on `WorldImpl`:
@@ -51,14 +51,14 @@ export function relationCacheKey(
  * Per-relation PRNG fork key — derived from `recordPrng` so all fields in one
  * record pick the same related entity (single) or set (many). The `rel-many:`
  * prefix on the many path keeps its fork independent of the single path's
- * `rel:` fork — D4 / D10 byte-identical fork-key shape.
+ * `rel:` fork — byte-identical fork-key shape.
  */
 export function relationForkKey(relName: string, kind: RelationCacheKind): string {
   return kind === "many" ? `rel-many:${relName}` : `rel:${relName}`;
 }
 
 /**
- * B11-R6 — error thrown when the `where`-filtered pool is empty on the single
+ * Error thrown when the `where`-filtered pool is empty on the single
  * path. Surfaced before any PRNG fork is taken so no state is consumed.
  */
 export function relationEmptyPoolMessage(relName: string): string {
@@ -69,7 +69,7 @@ export function relationEmptyPoolMessage(relName: string): string {
 }
 
 /**
- * B11-R6 — error thrown when the `where`-filtered pool is undersupplied on
+ * Error thrown when the `where`-filtered pool is undersupplied on
  * the many path (`items.length < count`). Surfaced before any PRNG fork is
  * taken so no state is consumed.
  */
@@ -86,7 +86,7 @@ export function relationShortPoolMessage(
 }
 
 // ---------------------------------------------------------------------------
-// RelationResolver (B62)
+// RelationResolver
 // ---------------------------------------------------------------------------
 
 /**
@@ -101,7 +101,7 @@ export function relationShortPoolMessage(
 export interface RelationResolverDeps {
   readonly registry: Registry;
   /**
-   * B97-R15 — lazy accessor for the relation pool cache. The
+   * Lazy accessor for the relation pool cache. The
    * `WorldImpl`-side helper allocates the map on first call and returns it;
    * a world that never resolves a relation never triggers allocation.
    */
@@ -112,7 +112,7 @@ export interface RelationResolverDeps {
 }
 
 /**
- * B62 — owns the per-record relation pool cache and the four entangled methods
+ * Owns the per-record relation pool cache and the four entangled methods
  * extracted from `WorldImpl` (`resolveRelated`, `resolveRelatedMany`,
  * `resolveRelationPool`, `ensurePrimaryRecord`). Behaviour-neutral with respect
  * to the previous in-engine implementation; collaborator surface narrowed to
@@ -154,7 +154,7 @@ export class RelationResolver {
   /**
    * Shared snapshot+fork pipeline for `ctx.related` (kind="single") and
    * `ctx.related.many` (kind="many"). Builds the per-record candidate pool —
-   * applying `where` once before caching (B11-R3 / B11-R4 / B11-R7) — and
+   * applying `where` once before caching — and
    * returns it alongside a per-relation PRNG fork.
    *
    * Diverges by `kind`:
@@ -166,7 +166,7 @@ export class RelationResolver {
    * - empty-pool throw threshold (`< 1` vs `< count`).
    *
    * Self-referential relations are exempt from auto-provision (would recurse)
-   * and from the empty-pool throw (B5-R6 / B11-R6); callers handle the empty
+   * and from the empty-pool throw; callers handle the empty
    * pool themselves.
    */
   resolveRelationPool(
@@ -187,7 +187,7 @@ export class RelationResolver {
     const where = rel.where;
     const isSelfRef = relSchema === reg.schema;
 
-    // B97-R15: the relation-pool map is lazily allocated. Resolving any
+    // The relation-pool map is lazily allocated. Resolving any
     // relation triggers allocation; worlds without relations never pay.
     const relationPools = this.deps.getRelationPools();
     const cacheKey = relationCacheKey(recordId, relName, kind);
@@ -208,7 +208,7 @@ export class RelationResolver {
             items = [];
           } else {
             const provisioned = this.ensurePrimaryRecord(relSchema);
-            // B10-R4: when the outer call opted out of storage, the
+            // When the outer call opted out of storage, the
             // auto-provisioned record was NOT written to the registry. Use
             // the in-memory value directly so the matcher still sees a
             // related instance.
@@ -221,14 +221,14 @@ export class RelationResolver {
         // kind === "many": auto-provision the shortfall until at least `count`
         // records exist — except for self-referential relations (would recurse,
         // see the single guard above). Under `where`, auto-provision cannot
-        // guarantee the predicate is satisfied (B11-R6) — we do not attempt to
+        // guarantee the predicate is satisfied — we do not attempt to
         // coax matchers into producing predicate-satisfying records; if the
         // filtered pool falls short, we throw below.
         const want = count ?? 0;
         if (!isSelfRef && !where) {
           const relReg = this.deps.findPrimaryReg(relSchema);
           if (!this.deps.isStoreActive()) {
-            // B10-R4: under `store: false`, the registry is not written;
+            // Under `store: false`, the registry is not written;
             // collect provisioned records directly into the pool so the
             // matcher still sees them.
             const pool: unknown[] = [...this.deps.registry.all(relSchema)];
@@ -247,13 +247,13 @@ export class RelationResolver {
       if (!items) {
         items = [...this.deps.registry.all(relSchema)];
       }
-      // B11-R3 / B11-R4 / B11-R7: apply `where` once, here, when building the
+      // Apply `where` once, here, when building the
       // snapshot. Filtering before caching means subsequent cache hits do not
-      // re-evaluate the predicate (D9 — cache neutrality).
+      // re-evaluate the predicate (cache neutrality).
       if (where) {
         items = items.filter((it) => where(it));
       }
-      // B11-R6: empty / undersupplied filtered pool throws for
+      // Empty / undersupplied filtered pool throws for
       // non-self-referential relations. The throw happens before the PRNG fork
       // so no PRNG state is consumed.
       if (where && !isSelfRef) {
@@ -270,7 +270,7 @@ export class RelationResolver {
     // Derive a stable per-relation PRNG so all fields in one record pick the
     // same related entity (single) or set (many). The `rel-many:` prefix on
     // the many path keeps its fork independent of the single path's `rel:`
-    // fork — D4 / D10 byte-identical fork-key shape.
+    // fork — byte-identical fork-key shape.
     const prng = recordPrng.fork(relationForkKey(relName, kind));
     return { items, prng };
   }

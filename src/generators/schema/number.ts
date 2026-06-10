@@ -69,9 +69,9 @@ export function generateNumberWithBounds(
   if (multipleOf !== undefined) {
     const lower = Math.ceil(min / multipleOf) * multipleOf;
     const upper = Math.floor(max / multipleOf) * multipleOf;
-    // B57-R9: empty-window degenerate case — no multiple of `m` lies in
+    // Empty-window degenerate case — no multiple of `m` lies in
     // `[min, max]`. Fall back to uniform-bounded (returns `min` for the
-    // single-point range case the spec calls out).
+    // single-point range case).
     if (lower > upper) {
       return min + prng.random() * (max - min);
     }
@@ -88,7 +88,7 @@ export function generateZodNumber(schema: ZodTypeAny, ctx: GeneratorContext): nu
   const bounds = resolveNumberBounds(schema);
   const { min, max, isInt, multipleOf } = bounds;
 
-  // B57-R7: un-keyed auto-flip to log-uniform when `min > 0` AND
+  // Un-keyed auto-flip to log-uniform when `min > 0` AND
   // `log10(max/min) ≥ 3` AND `!isInt` AND no `.multipleOf`. All four
   // preconditions must hold; otherwise fall through to the uniform path.
   if (!isInt && multipleOf === undefined && min > 0 && max > 0) {
@@ -97,10 +97,6 @@ export function generateZodNumber(schema: ZodTypeAny, ctx: GeneratorContext): nu
     }
   }
 
-  // B57-R9: round-after-the-draw on `.multipleOf` for the log-uniform path
-  // does not apply here (we just returned uniform when multipleOf was set).
-  // The auto-flip path above is gated on `multipleOf === undefined`, so
-  // there's no log-uniform-with-multipleOf collision in the un-keyed branch.
   return generateNumberWithBounds(ctx.prng, bounds);
 }
 

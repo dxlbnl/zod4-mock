@@ -8,7 +8,7 @@
  *     `EMPTY_REG` sentinel used by the ad-hoc / no-source-derived branches.
  *   - The `SchemaMode` tagged union returned by `resolveMode`.
  *   - `normalizeRelationEntry` + the `isZodSchema` predicate that backs the
- *     B11 discriminated `RelationEntry` union (bare schema vs `{ schema, where? }`).
+ *     discriminated `RelationEntry` union (bare schema vs `{ schema, where? }`).
  *   - The `findPrimaryRegs` / `findDerivedRegs` / `resolveMode` lookups over a
  *     `SchemaReg[]` array — `WorldImpl` keeps that array as a private field
  *     and threads it through these free helpers.
@@ -49,7 +49,7 @@ export const EMPTY_REG: SchemaReg = {
 };
 
 /**
- * B25 — internal discriminated union describing a schema's registration mode.
+ * Internal discriminated union describing a schema's registration mode.
  * Returned by `resolveMode(schemaRegs, schema)`; consumed by the four
  * dispatchers (`generateSingleItem`, `generateArray`, `populate`'s explicit
  * primary-first variant, and `get`'s registered/not check). Not exported from
@@ -61,7 +61,7 @@ export type SchemaMode =
   | { kind: "ad-hoc" };
 
 /**
- * B11: discriminate the bare-schema form (`relations: { post: Schema }`)
+ * Discriminate the bare-schema form (`relations: { post: Schema }`)
  * from the object form (`relations: { post: { schema, where? } }`). An entry
  * is the object form when it is a non-Zod object carrying a `schema` property
  * whose value is itself a Zod schema. A `ZodTypeAny` carries its definition
@@ -104,12 +104,12 @@ export function findDerivedRegs(schemaRegs: readonly SchemaReg[], schema: ZodTyp
 }
 
 /**
- * B25 — tagged-union resolution of a schema's registration mode. Replaces
+ * Tagged-union resolution of a schema's registration mode. Replaces
  * the `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
  * ? ... : ad-hoc` cascade at the dispatcher sites.
  *
  * Derived-first precedence is uniform across all four dispatchers
- * (`generateSingleItem`, `generateArray`, `populate`, `get`) post-D12/B52 —
+ * (`generateSingleItem`, `generateArray`, `populate`, `get`) —
  * `withSchema` forbids dual primary+derived registration at registration
  * time, so the inversion-observable config can't exist and `populate`'s
  * former primary-first pre-check was removed. Operates on whatever schema

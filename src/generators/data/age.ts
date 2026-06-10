@@ -1,15 +1,13 @@
 /**
  * @module age
- * B57-R4: `age` clipped log-normal distribution.
+ * `age` clipped log-normal distribution.
  *
  * Closed-form inverse-CDF via the Beasley–Springer–Moro `normInv` polynomial.
  * Parameters: μ = ln(36), σ = 0.35 → ~95% in [18, 80] (US Census median adult
  * age 2020 = 38.5). For tight bounds (`max - min < 20`), falls back to
  * uniform-int.
  *
- * Pure-`Math.*` only — D13 isomorphic.
- *
- * See B54 research report §2 / B57 spec R4.
+ * Pure-`Math.*` only — isomorphic.
  */
 
 import type { Prng } from "../../types.js";

@@ -125,7 +125,7 @@ export type {
   // Key maps
   SchemaKeyMap,
 
-  // Explain (B16)
+  // Explain
   ExplainResult,
   FieldExplanation,
   RelationExplanation,
@@ -137,7 +137,7 @@ export type {
 } from "./types.js";
 
 export type {
-  // World Explorer provenance (B85)
+  // World Explorer provenance
   WorldTrace,
   TraceNode,
   TraceField,

@@ -52,7 +52,7 @@ function generateJson(ctx: GeneratorContext, depth = 0): unknown {
   }
 }
 
-// B26 — dispatch table for `generateFromSchema`.
+// Dispatch table for `generateFromSchema`.
 //
 // `ZodDefType` enumerates every `def.type` value the router knows how to handle.
 // Adding a new Zod type that should be mockable means adding an entry here; the

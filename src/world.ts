@@ -1,8 +1,8 @@
 /**
  * @module world
  *
- * Thin re-export shim for the `world/` subdirectory. B28 split the legacy
- * monolithic `src/world.ts` into four concern-grouped files
+ * Thin re-export shim for the `world/` subdirectory. The legacy
+ * monolithic `src/world.ts` was split into four concern-grouped files
  * (`world/engine.ts`, `world/registration.ts`, `world/derived.ts`,
  * `world/relations.ts`) re-aggregated through `world/index.ts`.
  *

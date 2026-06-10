@@ -1,7 +1,7 @@
 /**
  * @module world/derived
  *
- * B8 — per-pair derived upsert map and source-identity helpers.
+ * Per-pair derived upsert map and source-identity helpers.
  *
  * The upsert map is keyed `<DerivedSchema, source-identity → derived record>`.
  * `WorldImpl` holds the outer `Map<ZodTypeAny, Map<unknown, unknown>>` as a
@@ -10,11 +10,11 @@
  * (the write path).
  *
  * The cache short-circuit and `derivedPairCounter--` rollback live in the
- * dispatcher in `engine.ts` (D9 / B8-R9 — cache-neutral); these helpers are
+ * dispatcher in `engine.ts` (cache-neutral); these helpers are
  * pure read/write of the map and pure computation of the source identity.
  *
  * The stored value is the post-transform derived record — the same reference
- * that lives in the registry (D8 — see `wiki/decisions.md`).
+ * that lives in the registry.
  */
 
 import type { ZodTypeAny } from "zod";
@@ -40,7 +40,7 @@ export function computeSourceIdentity(
 /**
  * Cache lookup: return the previously-derived record for `(schema, identity)`
  * if present. The dispatcher in `engine.ts` short-circuits the rest of the
- * branch on a hit and rolls back `derivedPairCounter` (D9 / B8-R9).
+ * branch on a hit and rolls back `derivedPairCounter`.
  */
 export function getDerivedUpsert(
   upsertMap: DerivedUpsertMap,

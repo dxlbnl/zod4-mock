@@ -56,15 +56,14 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
 export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unknown[] {
   const d = def(schema);
   const [defMin, defMax] = ctx.defaultArrayLength ?? [1, 5];
-  // B136: when an array `options.overrides` value targets this field array, the
+  // When an array `options.overrides` value targets this field array, the
   // override length sets the element count — it wins even over `.length(N)` /
   // `.min` / `.max` / `defaultArrayLength`, which govern only the no-override
   // case. The per-element seeding loop below then runs `0..override.length-1`,
-  // so the bases stay per-element distinct and store-neutral (B135/D35).
-  const length =
-    ctx.overrideArrayLength ?? resolveArrayLength(schema, defMin, defMax, ctx.prng);
+  // so the bases stay per-element distinct and store-neutral.
+  const length = ctx.overrideArrayLength ?? resolveArrayLength(schema, defMin, defMax, ctx.prng);
 
-  // B135: an array of a REGISTERED-primary element runs each element through
+  // An array of a REGISTERED-primary element runs each element through
   // `ctx.generate(element)`, which resolves to the engine's registered-primary
   // record path. Under `store: false` that path's default `registry.count +
   // pending` seed index self-cancels (writes suppressed, `pending` cycles 0→1→0)
@@ -130,11 +129,11 @@ export function generateZodRecord(
 ): Record<string, unknown> {
   const d = def(schema);
 
-  // B17: finite-key path — when keyType is z.enum([...]), Zod v4 makes the
+  // Finite-key path — when keyType is z.enum([...]), Zod v4 makes the
   // record strict-keyed over the enum's member set, so emit exactly one entry
   // per enum member in declared order. Per-key value PRNG is forked by index
   // (`rv-${i}`) so appending an enum member only disturbs the new member's
-  // value (D4). Empty enum → {} naturally (loop body never runs).
+  // value. Empty enum → {} naturally (loop body never runs).
   const keyDef = def(d.keyType!);
   if (keyDef.type === "enum") {
     const enumValues = Object.values(keyDef.entries ?? {});
@@ -218,7 +217,7 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
 }
 
 /**
- * B23 — walks the same `PIPELINE_NO_REGISTRATION` subset
+ * Walks the same `PIPELINE_NO_REGISTRATION` subset
  * (unwrapOptional → keyHeuristic → schemaBased) as `WorldImpl.generateObjectFields`
  * does for the registration-free path. The four omitted rungs (override,
  * matcher, schemaKeyMap, customKeyGen) are explicitly absent because this

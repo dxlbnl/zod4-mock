@@ -13,7 +13,7 @@
  * - **PRNG**: SFC32 — passes all standard statistical tests, 128-bit state, period ~3.4×10³⁸.
  * - **Hash**: FNV-1a 32-bit — fast, low collision rate for short strings.
  *
- * ## B97-R14 — class shape with prototype methods
+ * ## Class shape with prototype methods
  *
  * `createPrng(seed)` returns an `SFC32Prng` instance whose methods live on
  * `SFC32Prng.prototype` (not as per-instance closure-object properties). The
@@ -56,7 +56,7 @@ function seedToSfc32(seed: number): [number, number, number, number] {
 }
 
 /**
- * B97-R14 — class-shaped SFC32 PRNG with all methods on the prototype.
+ * Class-shaped SFC32 PRNG with all methods on the prototype.
  *
  * Holds the SFC32 state (4 unsigned 32-bit integers) as own properties. The
  * methods are class-syntax (so they live on `SFC32Prng.prototype`), which
@@ -122,13 +122,6 @@ export class SFC32Prng implements Prng {
   }
 
   pickZipf<T>(items: readonly T[], s: number): T {
-    // Closed-form inverse-CDF Zipf draw — one `random()`, no rejection
-    // loop. See wiki/research/text-generation/locale-list-size-targets.md §3
-    // and the B55 spec for the formula. `Math.pow` / `Math.floor` /
-    // `Math.max` / `Math.min` only — D13 isomorphic. Routes through
-    // `this.random()` (the public method) rather than the internal closure
-    // so wrappers that intercept `random()` observe the single draw
-    // (B55-R1 "single PRNG draw, no rejection loop" scenario).
     const N = items.length;
     const u = this.random();
     let raw: number;

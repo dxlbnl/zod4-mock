@@ -6,7 +6,7 @@
  * callers — namely `src/index.ts` and the inline-schema integration test —
  * can keep importing from `./world.js` byte-identically).
  *
- * B28 layout: the legacy `src/world.ts` was split into four modules grouped
+ * The legacy `src/world.ts` was split into four modules grouped
  * by concern (`engine`, `registration`, `derived`, `relations`). This barrel
  * is the single re-aggregation point so consumers see no diff. The thin
  * `src/world.ts` re-exports from this barrel so the existing

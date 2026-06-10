@@ -74,7 +74,7 @@ export function getLeafDef(schema: ZodTypeAny): ZodDef {
 }
 
 /**
- * B63 — strip outer `optional` / `nullable` wrappers, returning the inner
+ * Strip outer `optional` / `nullable` wrappers, returning the inner
  * schema and the list of stripped wrapper types in outer-to-inner order.
  *
  * Shared by `WorldImpl.generate` (which rolls absent per wrapper) and
@@ -98,7 +98,7 @@ export function stripOuterOptionalNullable(schema: ZodTypeAny): {
 }
 
 /**
- * B31 — collapses the `while (d.type === "lazy")` loop that previously
+ * Collapses the `while (d.type === "lazy")` loop that previously
  * appeared in four near-identical places (`world.ts` ×3 + `explain.ts` ×1).
  *
  * Walks `z.lazy(...)` references to their resolved targets. When a `cache`
@@ -129,7 +129,7 @@ export function resolveLazyChain(
 }
 
 /**
- * B30 — collapses the optional/nullable/default unwrap loop that previously
+ * Collapses the optional/nullable/default unwrap loop that previously
  * appeared in two near-identical places (`world.ts:generateObjectFields` +
  * `collection.ts:generateZodObject`).
  *
@@ -202,7 +202,7 @@ export function unwrapOptionalChainForField(
   return { inner, absent: null };
 }
 
-// B29 — string-modifier pipeline split into named passes.
+// String-modifier pipeline split into named passes.
 // Order is the call chain at the bottom of `applyStringModifiers`:
 //   1. overwritePass        — case/trim transforms on the base string
 //   2. formatAddPass        — add missing prefix/suffix/inclusion
@@ -277,7 +277,7 @@ function overwriteRefixPass(value: string, overwrites: ZodCheck[]): string {
   return runOverwriteTransforms(value, overwrites);
 }
 
-/** Runs the 5-stage string-modifier pipeline (see B29). */
+/** Runs the 5-stage string-modifier pipeline. */
 export function applyStringModifiers(value: string, allChecks: ZodCheck[]): string {
   const overwrites: ZodCheck[] = [];
   const formats: ZodCheck[] = [];
@@ -304,7 +304,7 @@ export function applyStringModifiers(value: string, allChecks: ZodCheck[]): stri
   return result;
 }
 
-// B29 — number-modifier passes. Order is the call chain at the bottom of
+// Number-modifier passes. Order is the call chain at the bottom of
 // `applyNumberModifiers`:
 //   1. intCoercePass    — floor when the schema is an int format
 //   2. multipleOfPass   — snap to the nearest multiple
@@ -318,7 +318,7 @@ function multipleOfPass(value: number, multipleOf: number | undefined): number {
   return Math.round(value / multipleOf) * multipleOf;
 }
 
-/** Runs the number-modifier pipeline (see B29). */
+/** Runs the number-modifier pipeline. */
 export function applyNumberModifiers(value: number, allChecks: ZodCheck[]): number {
   let isInt = false;
   let multipleOf: number | undefined;
@@ -341,7 +341,7 @@ export function applyNumberModifiers(value: number, allChecks: ZodCheck[]): numb
 /**
  * Applies formatting modifiers (case, trim, transform) to a value based on the schema.
  *
- * B29: thin dispatcher over the two split pipelines. Most callers don't statically
+ * Thin dispatcher over the two split pipelines. Most callers don't statically
  * know whether the value is a string or a number (e.g. `generateFromKey` returns
  * `unknown`), so this shim keeps the runtime type-routing at one place. Callers
  * that DO know the type (e.g. `generateZodString`) can call

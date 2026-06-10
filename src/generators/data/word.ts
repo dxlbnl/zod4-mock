@@ -122,7 +122,7 @@ export function words(prng: Prng, count = 3, ctx?: GeneratorContext): string {
  * English object-form pronouns. Used by `sentence()` Template 3's object slot
  * (Template 2's subject slot stays on `loc.pronouns`). Inlined as a closed
  * grammar-specific list — a `LocaleData.word.pronounsObject?` field would
- * force every locale to populate it for zero downstream gain (per B66 spec).
+ * force every locale to populate it for zero downstream gain.
  */
 const OBJECT_PRONOUNS = ["him", "her", "it", "them", "us", "me"] as const;
 
