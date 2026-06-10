@@ -1238,3 +1238,53 @@ GenerationDefaults` add only their own fields. The reference shows each type's o
   **MUST** seed from explicit per-element indices `existingCount..existingCount+N-1`, identical
   to the store-on path's records at the same positions, so the i-th element's values do not
   depend on the `store` toggle. (→ D35)
+
+## D36 — An array `options.overrides` value governs the array element count; schema bounds constrain only generated data (fixtures may override bounds)
+
+- **Date**: 2026-06-10.
+- **By**: spec-writer (B136), to be promoted by the manager at Done.
+- **Context**: B134 fixed array-field overrides to per-index deep-merge (preserving generated
+  siblings) but deliberately kept "the override never resizes — schema length governs" (B134-R3,
+  mirroring B53-R2 and D14's array-arm wording). The maintainer reported that as a wrong
+  side-effect: an override **longer** than the generated base dropped the extra entries; an override
+  **shorter** kept the schema-generated tail; and getting exactly N elements required a
+  `defaultArrayLength: [N, N]` (or `.length(N)`) workaround. The maintainer's decision reverses the
+  length rule: the override array length **wins**. The per-index *merge* semantics (object slot →
+  `deepMerge`, primitive slot → replace, empty/`undefined` slot → fully generated; D34) are
+  **unchanged** — only the *length* rule changes.
+- **Decision**: when `options.overrides` supplies an **array** for an array-typed target (a nested
+  array **field** or a standalone array **path** — primary / derived / ad-hoc), the result **MUST**
+  have exactly `override.length` elements. The library generates `override.length` base elements
+  (per-element seeded, extending B135/D35's explicit per-element index to `0..override.length-1` so
+  the bases stay pairwise-distinct and store-neutral), then per-index deep-merges each override slot
+  onto its base element (object → merge, primitive → replace, empty/`undefined` slot → fully
+  generated base). Override length **always** wins — even over an explicit `.length(N)`. Schema length
+  bounds (`.length()` / `.min()` / `.max()`) and `defaultArrayLength` govern **only the no-override
+  case** (they constrain *generated* data); an override array **MAY** exceed or undercut them —
+  **fixtures may override schema bounds**. Applied **uniformly** to every array-override path (D14
+  cross-arm consistency preserved). The only D8 carveout: on the standalone **primary** array path
+  with a pre-populated registry, already-stored records cannot be un-generated, so the result length
+  is `max(existingCount, override.length)` with overrides applied at positions `0..override.length-1`
+  and pre-existing stored records returned untouched (B136-R6, mirroring B53-R3). The override
+  application stays at the single per-field site (D34) for the field path; `deepMerge`
+  (`src/utils/merge.ts`) stays byte-identical (B18 array-as-leaf). The no-override hot path is
+  unchanged (B97/B98 stay green).
+- **Consequences**: a standing constraint future override work follows — an array override's length is
+  the element count; schema bounds constrain only generated (no-override) data; fixtures may override
+  bounds. **Supersedes** the "no resize" length rules: **B134-R3**, **B53-R2**, **D14's "no resize"
+  clause** (the cross-arm-consistency invariant of D14 is kept), **D34's array-branch length
+  sub-clause** (the single-site / override-agnostic-rungs / no-whole-record-merge invariants are
+  kept), and **B134-R6's length clause** (no-override matcher length unchanged). D4/D10 (determinism),
+  D8 (stored == returned, via the primary carveout), D11 (`PIPELINE` untouched), D34 (single site +
+  merge semantics kept), D35 (per-element seeding extended to the new base count), and B18 (`deepMerge`
+  unchanged) all hold. **Minor** bump (observable behaviour change to `options.overrides` for arrays —
+  a contract change). See `wiki/specs/B136-override-array-length-wins.md`.
+- **Rule proposed** (manager to decide on promotion; the manager also amends/supersedes the D14 "no
+  resize" Rule line and re-words D34's array sub-clause at close): when `options.overrides` supplies an
+  **array** for an array-typed target, the result **MUST** have exactly `override.length` elements
+  (generated base elements per-index-merged with their override slot; object → merge, primitive →
+  replace, empty slot → fully generated); override length **MUST** win even over an explicit
+  `.length(N)`; schema bounds (`.length()` / `.min()` / `.max()`) and `defaultArrayLength` govern
+  **only** the no-override case; the rule applies uniformly to nested-field, primary, derived, and
+  ad-hoc array paths, with the sole D8 carveout that a pre-populated primary array yields
+  `max(existingCount, override.length)` elements (pre-existing stored records untouched). (→ D36)

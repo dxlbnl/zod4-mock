@@ -1184,6 +1184,7 @@ export class WorldImpl implements World {
     fieldPath: string,
     recordId: string,
     current?: Record<string, unknown>,
+    overrideArrayLength?: number,
   ): GeneratorContext {
     const related = (<T = Record<string, unknown>>(relName: string): T =>
       this.relations.resolveRelated<T>(
@@ -1246,6 +1247,11 @@ export class WorldImpl implements World {
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
       defaultArrayLength: this.effectiveDefaultArrayLength ??
         this.options.defaultArrayLength ?? [1, 5],
+      // B136: thread the array-override length so the field's array generation
+      // produces exactly `override.length` base elements (omitted when no array
+      // override is present — `exactOptionalPropertyTypes` keeps the slot absent
+      // so the no-override path is byte-identical).
+      ...(overrideArrayLength !== undefined ? { overrideArrayLength } : {}),
     };
     state.ctx = ctx;
     return ctx;
@@ -1440,6 +1446,12 @@ export class WorldImpl implements World {
   ): FieldResolution {
     const reads: Set<string> | null = captured !== null ? new Set() : null;
     const current = reads !== null ? trackReads(result, reads) : result;
+    const fieldOverride = f.overrides?.[key];
+    // B136: an array-valued field override sets the array element count — thread
+    // its length so the field's array generation produces exactly that many base
+    // elements (override length wins; schema bounds govern only the no-override
+    // count). Non-array overrides leave this `undefined`.
+    const overrideArrayLength = Array.isArray(fieldOverride) ? fieldOverride.length : undefined;
     const fieldCtx = this.makeFieldCtx(
       f.reg,
       f.source,
@@ -1448,8 +1460,8 @@ export class WorldImpl implements World {
       f.fieldPath,
       f.recordId,
       current,
+      overrideArrayLength,
     );
-    const fieldOverride = f.overrides?.[key];
     const explainMeta = captured !== null ? {} : null;
     const stepCtx = {
       fieldSchema: fs,
@@ -1592,8 +1604,16 @@ export class WorldImpl implements World {
   ): unknown[] {
     const pairs = this.collectSourcePairs(derivedRegs);
 
+    // B136: an override array sets the element count — its length wins over the
+    // schema bounds / `defaultArrayLength` (D14 uniform with the field, primary,
+    // and ad-hoc paths). It raises the floor so enough sources are
+    // auto-provisioned and the cap below resolves to exactly `override.length`.
+    const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
     // Auto-provision more sources if min constraint requires it
-    const minRequired = resolveMinRequired(arraySchema, defMin);
+    const minRequired =
+      overridesArr !== undefined
+        ? Math.max(resolveMinRequired(arraySchema, defMin), overridesArr.length)
+        : resolveMinRequired(arraySchema, defMin);
     // B135-R4: track how many sources we've auto-provisioned per `from:` schema
     // so each provisioned source gets a distinct explicit `sourceIndex`. Under
     // `store: false` the source write is suppressed, so `registry.count` stays
@@ -1628,9 +1648,15 @@ export class WorldImpl implements World {
     // arm's `Math.min(min, max), Math.max(min, max)` framing so an
     // impossible `.min(6).max(3)` configuration collapses to a defined
     // length rather than throwing.
+    // B136: when an override array is present the count is exactly its length
+    // (override wins over the caller `.max()` / `.length()` bound, like the
+    // field + primary + ad-hoc paths). Otherwise the B52-R8 cap stands.
     const callerMax = readCallerMaxBound(arraySchema);
     const upper = callerMax ?? defMax;
-    const cap = Math.max(minRequired, Math.min(upper, pairs.length));
+    const cap =
+      overridesArr !== undefined
+        ? overridesArr.length
+        : Math.max(minRequired, Math.min(upper, pairs.length));
     const capped = pairs.slice(0, cap);
 
     let result: unknown[] = capped.map(({ source, reg, sourceIndex }) => {
@@ -1687,19 +1713,28 @@ export class WorldImpl implements World {
 
     const minRequired = resolveMinRequired(arraySchema, defMin);
     const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
-    const target = Math.max(
-      existingCount,
-      // minRequired always wins as lower bound — schema .min(N) must be
-      // honoured even when N exceeds defMax.
-      genPrng.int(minRequired, Math.max(minRequired, maxAllowed)),
-    );
+    const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
+    // B136: an override array sets the element count — the result length is
+    // `max(existingCount, override.length)` (the D8 carveout, B136-R6: already
+    // stored records can't be un-generated, so they pin the floor; the override
+    // length wins over the schema/default count and over an explicit `.length(N)`).
+    // Without an override array the no-override length resolution is unchanged.
+    const target =
+      overridesArr !== undefined
+        ? Math.max(existingCount, overridesArr.length)
+        : Math.max(
+            existingCount,
+            // minRequired always wins as lower bound — schema .min(N) must be
+            // honoured even when N exceeds defMax.
+            genPrng.int(minRequired, Math.max(minRequired, maxAllowed)),
+          );
 
     // B43 / B52-R2: honour caller-side `.max()` / `.length()` slice on
     // BOTH store-on and store-off paths. Only slice when the caller
     // actually wrote a bound — we MUST NOT slice on the library-side
-    // `defMax` fallback.
-    const callerMax = readCallerMaxBound(arraySchema);
-    const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
+    // `defMax` fallback. B136: an override array wins over the caller bound,
+    // so the slice is suppressed when an override array is present.
+    const callerMax = overridesArr !== undefined ? undefined : readCallerMaxBound(arraySchema);
 
     // B44: under store:false, the while-loop below would never terminate —
     // generateAndStorePrimary skips the registry write (B10-R4 transitive
@@ -1765,9 +1800,13 @@ export class WorldImpl implements World {
     // B52-R7: share the bound-resolution helpers instead of inlining.
     const minN = resolveMinRequired(arraySchema, defMin);
     const maxN = resolveMaxAllowed(arraySchema, defMax);
-    // minN always wins as lower bound — schema .min(N) must be honoured even
+    // B136: an override array sets the element count — its length wins over the
+    // schema bounds / `defaultArrayLength`, which govern only the no-override
+    // case (D14 uniform with the field + primary paths). minN always wins as
+    // lower bound in the no-override case — schema .min(N) must be honoured even
     // when N exceeds defMax (e.g. defaultArrayLength:[1,4] + .min(100) → 100).
-    const N = genPrng.int(minN, Math.max(minN, maxN));
+    const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
+    const N = overridesArr !== undefined ? overridesArr.length : genPrng.int(minN, Math.max(minN, maxN));
 
     let result: unknown[] = Array.from({ length: N }, (_, i) => {
       const elemPrng = genPrng.fork(`[${i}]`);

@@ -181,8 +181,13 @@ export function traceResolutionForKind(kind: FieldResolution["kind"]): TraceReso
 //   - plain object → `deepMerge(generateRaw(), override)` (B12 semantics).
 //   - array → generate the array via `generateRaw()`, then per-index
 //     deep-merge each present override slot onto the generated element — the
-//     array arms' semantics (engine.ts:1718-1726; D14). The override array does
-//     NOT resize the array; schema length governance wins (B134-R3).
+//     array arms' semantics (engine.ts:1718-1726; D14). B136: the override array
+//     SETS the element count — the field's array generation is threaded the
+//     override length (`ctx.overrideArrayLength`, set at `resolveField`) so the
+//     generated base already has exactly `override.length` elements; the
+//     per-index merge below then aligns 1:1 with the override. Override length
+//     wins over schema bounds / `defaultArrayLength`, which govern only the
+//     no-override count (supersedes B134-R3 / B53-R2 / D14's "no resize").
 //
 // `deepMerge` stays byte-identical (B18-R / B134-R5); the per-index array
 // merge lives here, never inside `deepMerge`.
@@ -239,9 +244,19 @@ export function applyOverride(
   if (Array.isArray(fieldOverride)) {
     const overrides = fieldOverride;
     const base = Array.isArray(raw.value) ? raw.value : [];
-    const merged = base.map((item, i) => {
+    // B136: the override array SETS the element count to `override.length`. On
+    // the schema-based field path the base was already generated to that length
+    // (the override length threaded via `ctx.overrideArrayLength`), so this maps
+    // 1:1. On the matcher / key-map paths the base is the raw produced array
+    // (not length-threaded): a base longer than the override is truncated (tail
+    // dropped) and a base shorter leaves the surplus override slots as their own
+    // value (no base to merge onto). A hole (`overrides[i] === undefined`) leaves
+    // the base element fully generated.
+    const merged = Array.from({ length: overrides.length }, (_, i) => {
       const ov = overrides[i];
-      return ov !== undefined ? deepMerge(item, ov) : item;
+      const item = base[i];
+      if (ov === undefined) return item;
+      return item !== undefined ? deepMerge(item, ov) : ov;
     });
     return { kind: raw.kind, value: merged };
   }

@@ -81,43 +81,34 @@ describe("B53: per-index overrides on primary-registered arrays", () => {
   //      Two scenarios per the spec's table — split into two tests.
   // -------------------------------------------------------------------------
 
-  it("B53-R2 / overrides shorter than result; trailing positions matcher-generated", () => {
-    // Spec §R2 scenario 1. RED today: throws on entry (B38 guard).
-    // Post-B53: positions 0-1 carry the override, positions 2-4 are produced
-    // with no override and resolve via the schema-based / key-based pipeline
-    // (non-empty strings that are NOT "a" or "b").
+  it("B53-R2 / override shorter than .length(N); override length wins (B136 supersedes tail)", () => {
+    // B136 SUPERSEDES B53-R2's no-resize length rule: an override array now sets
+    // the element count to `override.length`, winning over `.length(5)` — there
+    // is no schema-generated tail.
     const world = createWorld({ seed: 1 }).withSchema(Person);
 
     const overrides: PersonOverride[] = [{ name: "a" }, { name: "b" }];
 
     const result = world.generate(Person.array().length(5), { overrides });
 
-    expect(result.length).toBe(5);
+    expect(result.length).toBe(2); // B136: 2-entry override wins over .length(5)
     expect(result[0]!.name).toBe("a");
     expect(result[1]!.name).toBe("b");
-
-    for (const i of [2, 3, 4] as const) {
-      const name = result[i]!.name;
-      expect(typeof name).toBe("string");
-      expect(name.length).toBeGreaterThan(0);
-      expect(["a", "b"]).not.toContain(name);
-    }
   });
 
-  it("B53-R2 / overrides longer than result; extras silently ignored", () => {
-    // Spec §R2 scenario 2. RED today: throws on entry (B38 guard).
-    // Post-B53: positions 0-1 carry the override, the third entry is
-    // silently discarded — same shape as the ad-hoc branch's
-    // `overrides[i] === undefined` skip.
+  it("B53-R2 / override longer than .length(N); override length wins (B136 supersedes drop)", () => {
+    // B136 SUPERSEDES B53-R2's no-resize length rule: the extras are no longer
+    // dropped — the override length wins over `.length(2)`.
     const world = createWorld({ seed: 1 }).withSchema(Person);
 
     const overrides: PersonOverride[] = [{ name: "x" }, { name: "y" }, { name: "z" }];
 
     const result = world.generate(Person.array().length(2), { overrides });
 
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(3); // B136: 3-entry override wins over .length(2)
     expect(result[0]!.name).toBe("x");
     expect(result[1]!.name).toBe("y");
+    expect(result[2]!.name).toBe("z");
   });
 
   // -------------------------------------------------------------------------
@@ -196,14 +187,12 @@ describe("B53: per-index overrides on primary-registered arrays", () => {
       ) => z.input<typeof Person>[],
     });
 
-    expect(result.length).toBe(2);
+    // B136: the 1-entry override sets the length to 1 (wins over .length(2));
+    // the cap → overrides → transform sequence (D14) is unchanged — the
+    // transform still sees the override-merged record.
+    expect(result.length).toBe(1);
 
     expect(result[0]!.name).toBe("x");
     expect((result[0] as unknown as PersonHidden).hidden).toBe(true);
-
-    const tailName = result[1]!.name;
-    expect(typeof tailName).toBe("string");
-    expect(tailName.length).toBeGreaterThan(0);
-    expect((result[1] as unknown as PersonHidden).hidden).toBe(true);
   });
 });

@@ -101,12 +101,13 @@ describe("B134-R2: array-field override merges per index on the ad-hoc (unregist
 });
 
 // ---------------------------------------------------------------------------
-// B134-R3 — short / long override arrays follow B53-R2 / D14 parity: the
-// override is applied positionally onto a schema-length-governed array and
-// never resizes it. Two scenarios in the spec → two tests.
+// B134-R3 — short / long override arrays. B136 SUPERSEDES the prior "no resize"
+// length rule (B53-R2 / D14): an array override now SETS the element count to
+// `override.length`, winning even over an explicit `.length(N)`. The per-index
+// MERGE semantics (sibling preserved) are unchanged. Two scenarios → two tests.
 // ---------------------------------------------------------------------------
 
-describe("B134-R3: override array does not resize the field array (B53-R2 / D14 parity)", () => {
+describe("B134-R3: override array sets the field array length to override.length (B136 supersedes no-resize)", () => {
   const LongSchema = z.object({
     items: z.object({ k: z.number(), v: z.string() }).array().length(2),
   });
@@ -114,35 +115,30 @@ describe("B134-R3: override array does not resize the field array (B53-R2 / D14 
     items: z.object({ k: z.number(), v: z.string() }).array().length(3),
   });
 
-  it("B134-R3 / override longer than the generated array — extras ignored", () => {
+  it("B134-R3 / override longer than .length(2) — override length wins (4 elements, B136)", () => {
     const world = createWorld({ seed: 1 }).withSchema(LongSchema);
 
     const r = world.generate(LongSchema, {
       overrides: { items: [{ k: 10 }, { k: 11 }, { k: 12 }, { k: 13 }] },
     });
 
-    expect(r.items.length).toBe(2); // .length(2) governs, not the 4-entry override
-    expect(r.items[0]!.k).toBe(10);
-    expect(r.items[1]!.k).toBe(11);
-    for (const i of [0, 1] as const) {
+    expect(r.items.length).toBe(4); // B136: 4-entry override wins over .length(2)
+    for (const i of [0, 1, 2, 3] as const) {
+      expect(r.items[i]!.k).toBe(10 + i);
       expect(typeof r.items[i]!.v).toBe("string");
       expect(r.items[i]!.v.length).toBeGreaterThan(0); // sibling preserved
     }
   });
 
-  it("B134-R3 / override shorter than the generated array — tail stays schema-generated", () => {
+  it("B134-R3 / override shorter than .length(3) — override length wins (1 element, B136)", () => {
     const world = createWorld({ seed: 1 }).withSchema(ShortSchema);
 
     const r = world.generate(ShortSchema, { overrides: { items: [{ k: 100 }] } });
 
-    expect(r.items.length).toBe(3);
+    expect(r.items.length).toBe(1); // B136: 1-entry override wins over .length(3) — no tail
     expect(r.items[0]!.k).toBe(100);
-    for (const i of [1, 2] as const) {
-      const el = r.items[i]!; // fully generated, no override
-      expect(typeof el.k).toBe("number");
-      expect(typeof el.v).toBe("string");
-      expect(el.v.length).toBeGreaterThan(0);
-    }
+    expect(typeof r.items[0]!.v).toBe("string");
+    expect(r.items[0]!.v.length).toBeGreaterThan(0); // sibling preserved
   });
 });
 
@@ -189,22 +185,22 @@ describe("B134-R5: deepMerge continues to treat arrays as leaves (B18 preserved)
 
 // ---------------------------------------------------------------------------
 // B134-R6 — primitive-element array field: per-index override replaces its
-// element, the schema length wins (no B12-R3 regression).
+// element (merge semantics unchanged). B136 SUPERSEDES the length clause — the
+// override array now sets the count to `override.length`, winning over
+// `.length(3)`.
 // ---------------------------------------------------------------------------
 
-describe("B134-R6: primitive-element array field keeps positional replace, schema length governs", () => {
+describe("B134-R6: primitive-element array field keeps positional replace, override length governs (B136)", () => {
   const Schema = z.object({ tags: z.string().array().length(3) });
 
-  it("B134-R6 / primitive-element array field, positional replace, schema length wins", () => {
+  it("B134-R6 / primitive-element array field, positional replace, override length wins (B136)", () => {
     const world = createWorld({ seed: 1 }).withSchema(Schema);
 
     const r = world.generate(Schema, { overrides: { tags: ["alpha", "beta"] } });
 
-    expect(r.tags.length).toBe(3);
+    expect(r.tags.length).toBe(2); // B136: 2-entry override wins over .length(3)
     expect(r.tags[0]).toBe("alpha");
     expect(r.tags[1]).toBe("beta");
-    expect(typeof r.tags[2]).toBe("string");
-    expect(r.tags[2]!.length).toBeGreaterThan(0); // position 2 schema-generated
   });
 });
 

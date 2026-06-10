@@ -152,13 +152,13 @@ describe("B12-R3: existing behaviours preserved", () => {
     expect(result.name).toBe("overridden-name");
   });
 
-  it("B12-R3 / array override on a matcher-backed field merges per-index, no resize (superseded by B134-R6)", () => {
-    // SUPERSEDED by B134: under the unified override-application flow an array
-    // override merges positionally onto the generated base and never resizes it.
-    // A matcher-produced array IS the generated base, so when the matcher base
-    // (length 3) is longer than the override (length 2), positions 0–1 are
-    // replaced by the override and the matcher's trailing element ("m3") at
-    // position 2 survives. See wiki/specs/B134-...md (B134-R6).
+  it("B12-R3 / array override on a matcher-backed field sets the count to override.length (B136 supersedes B134-R6 tail)", () => {
+    // SUPERSEDED by B136: an array override now SETS the element count to
+    // `override.length`. A matcher-produced array IS the base, so when the
+    // matcher base (length 3) is longer than the override (length 2), the
+    // matcher's trailing element ("m3") is dropped — the override length wins
+    // (B136-R6 / B134-R6 supersession). The per-index merge (positional replace)
+    // is unchanged. See wiki/specs/B136-override-array-length-wins.md.
     const Schema = z.object({ tags: z.array(z.string()) });
 
     const world = createWorld({ seed: 42 }).withSchema(Schema, {
@@ -169,7 +169,7 @@ describe("B12-R3: existing behaviours preserved", () => {
       overrides: { tags: ["alpha", "beta"] },
     });
 
-    expect(result.tags).toEqual(["alpha", "beta", "m3"]);
+    expect(result.tags).toEqual(["alpha", "beta"]); // B136: override length wins, "m3" dropped
   });
 });
 

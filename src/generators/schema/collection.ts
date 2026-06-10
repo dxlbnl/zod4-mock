@@ -56,7 +56,13 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
 export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unknown[] {
   const d = def(schema);
   const [defMin, defMax] = ctx.defaultArrayLength ?? [1, 5];
-  const length = resolveArrayLength(schema, defMin, defMax, ctx.prng);
+  // B136: when an array `options.overrides` value targets this field array, the
+  // override length sets the element count — it wins even over `.length(N)` /
+  // `.min` / `.max` / `defaultArrayLength`, which govern only the no-override
+  // case. The per-element seeding loop below then runs `0..override.length-1`,
+  // so the bases stay per-element distinct and store-neutral (B135/D35).
+  const length =
+    ctx.overrideArrayLength ?? resolveArrayLength(schema, defMin, defMax, ctx.prng);
 
   // B135: an array of a REGISTERED-primary element runs each element through
   // `ctx.generate(element)`, which resolves to the engine's registered-primary

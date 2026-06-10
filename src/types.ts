@@ -87,6 +87,16 @@ export interface GeneratorContext<T = any> {
    */
   readonly defaultArrayLength: readonly [number, number];
   /**
+   * B136 — when this field carries an ARRAY `options.overrides` value, the
+   * override's length, threaded so the field's array generation produces
+   * exactly that many base elements (override length wins; schema bounds /
+   * `defaultArrayLength` govern only the no-override count). Engine-internal
+   * plumbing with no user call path; `undefined` on every non-array-override
+   * field, leaving the no-override length resolution unchanged.
+   * @internal
+   */
+  readonly overrideArrayLength?: number;
+  /**
    * When generating nested object fields, holds the partial sibling-field values
    * accumulated so far. Used internally for gender-aware name generation.
    */
@@ -217,9 +227,13 @@ export interface GenerationDefaults {
 export interface GenerateOptions<T> extends GenerationDefaults {
   /**
    * Partial values deep-merged onto the generated result, overriding any field.
-   * An array override merges per index: `overrides[i]` deep-merges onto the
-   * i-th generated element (un-overridden siblings preserved); it does not
-   * resize the array — the schema's length governs.
+   * An array override sets the array element count: the result has exactly
+   * `override.length` elements, and `overrides[i]` deep-merges onto the i-th
+   * generated base element (un-overridden siblings preserved; a sparse hole /
+   * `undefined` slot leaves that element fully generated). The override length
+   * wins even over an explicit `.length(N)`; schema bounds (`.length()` /
+   * `.min()` / `.max()`) and `defaultArrayLength` govern only the no-override
+   * count.
    */
   readonly overrides?: DeepPartial<T>;
   /** Post-processor applied to the generated value before it is returned/stored. */
