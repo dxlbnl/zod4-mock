@@ -1,5 +1,11 @@
 # zod4-mock
 
+## 0.12.1
+
+### Patch Changes
+
+- 09e1fce: Fix `store: false` arrays of a registered schema collapsing to identical elements: each element seeded from a self-cancelling `registry.count + pending` index that froze under suppressed writes. Thread an explicit per-element index so the i-th store-off element matches the store-on record at index i.
+
 ## 0.12.0
 
 ### Minor Changes

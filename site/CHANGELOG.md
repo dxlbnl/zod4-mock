@@ -1,5 +1,12 @@
 # @zod4-mock/site
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [09e1fce]
+  - zod4-mock@0.12.1
+
 ## 0.0.5
 
 ### Patch Changes
