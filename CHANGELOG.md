@@ -1,5 +1,11 @@
 # zod4-mock
 
+## 0.13.0
+
+### Minor Changes
+
+- 61014ce: An array `options.overrides` value now sets the array element count: the result has exactly `override.length` elements (extras generated, short tails dropped), winning even over an explicit `.length(N)`. This supersedes the prior "override never resizes / schema length governs" behaviour across the nested-field, primary, derived, and ad-hoc array paths. Per-index merge semantics and `deepMerge` are unchanged.
+
 ## 0.12.1
 
 ### Patch Changes
