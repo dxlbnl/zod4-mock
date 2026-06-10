@@ -1,11 +1,7 @@
 import type { GeneratorContext } from "../../types.js";
 
-/**
- * Looks up a string sibling value by checking ctx.current for each candidate
- * field name. Matching is normalised (case-insensitive, underscores stripped),
- * so "firstName", "first_name", and "voornaam" all resolve against the same slot.
- * Returns the first non-empty match, or undefined if nothing is found.
- */
+// Matching is normalised (case-insensitive, underscores stripped) so
+// "firstName"/"first_name"/"voornaam" resolve against the same slot.
 export function siblingString(
   ctx: GeneratorContext | undefined,
   ...candidates: string[]

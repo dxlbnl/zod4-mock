@@ -8,11 +8,7 @@ import { age as ageGen } from "./age.js";
 import { year as yearGen } from "./year.js";
 import { quantity as quantityGen, count as countGen } from "./discrete.js";
 
-/**
- * Log-uniform integer draw on `[min, max]`. Falls back to uniform-int when
- * the range crosses zero or `min ≤ 0`. Used by `fileSize` / `bytes` / `views`
- * / `population`.
- */
+// Falls back to uniform when the range crosses zero or min ≤ 0.
 function logUniformInt(prng: Prng, min: number, max: number): number {
   if (min > 0) {
     return Math.round(prng.logUniform(min, max));
@@ -20,20 +16,12 @@ function logUniformInt(prng: Prng, min: number, max: number): number {
   return prng.int(Math.ceil(min), Math.floor(max));
 }
 
-/**
- * Log-uniform continuous draw on `[min, max]`. Falls back to uniform when
- * the range crosses zero or `min ≤ 0`. Used by `distance`.
- */
+// Falls back to uniform when the range crosses zero or min ≤ 0.
 function logUniformFloat(prng: Prng, min: number, max: number): number {
   if (min > 0) return prng.logUniform(min, max);
   return prng.random() * (max - min) + min;
 }
 
-/**
- * Accumulates sentences until the result is at least `minLen` characters,
- * then clips to `maxLen`. Used by bio/description-type key generators so
- * they produce naturally fitting text rather than x-padded strings.
- */
 function generateTextToLength(
   prng: Prng,
   ctx: GeneratorContext | undefined,
@@ -45,24 +33,12 @@ function generateTextToLength(
   return result.length > maxLen ? result.slice(0, maxLen) : result;
 }
 
-// ---------------------------------------------------------------------------
-// PrngGen — map value type
-// ---------------------------------------------------------------------------
-
 /** A generator that takes a Prng and an optional full context. */
 export type PrngGen<T = unknown> = (prng: Prng, ctx?: GeneratorContext, schema?: ZodTypeAny) => T;
 
-// ---------------------------------------------------------------------------
-// DEFAULT_KEY_MAP
-// ---------------------------------------------------------------------------
-
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("") as [string, ...string[]];
 
-/**
- * Field-name aliases that all share the same length-aware text generator.
- * Built programmatically into DEFAULT_KEY_MAP below so the table reads as
- * data, not a literal copy per key.
- */
+// Aliases sharing one length-aware closure, populated into DEFAULT_KEY_MAP below.
 const TEXT_ALIASES = [
   "text",
   "description",
@@ -265,9 +241,7 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
 
     // Word/Text
     word: data.word.noun as PrngGen,
-    // text, description, note, summary, comment, body, content, message,
-    // omschrijving, bericht — populated programmatically from TEXT_ALIASES
-    // below (each shares the same length-aware closure).
+    // TEXT_ALIASES keys are added programmatically below.
 
     // Dutch names
     voornaam: data.person.firstName as PrngGen,
@@ -377,18 +351,12 @@ export const DEFAULT_KEY_MAP: Record<string, Record<string, PrngGen> | undefined
   },
 };
 
-// Populate the length-aware text aliases programmatically — all share one
-// closure, so listing them as data avoids ten near-identical literals.
 {
   const stringMap = DEFAULT_KEY_MAP.string;
   if (stringMap !== undefined) {
     for (const k of TEXT_ALIASES) stringMap[k] = textWithLength;
   }
 }
-
-// ---------------------------------------------------------------------------
-// DEFAULT_KEY_PATTERNS
-// ---------------------------------------------------------------------------
 
 /**
  * Built-in suffix/prefix field-name heuristics, keyed by Zod leaf type (e.g. a
@@ -447,10 +415,6 @@ export const DEFAULT_KEY_PATTERNS: Record<string, KeyPattern[]> = {
 
 /** A pattern rule: a key test function + a PrngGen generator. */
 export type KeyPattern = { test: (key: string) => boolean; generate: PrngGen };
-
-// ---------------------------------------------------------------------------
-// generateFromKey
-// ---------------------------------------------------------------------------
 
 /**
  * Key-based heuristic generator: resolves a value from a field's name by

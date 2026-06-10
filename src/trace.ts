@@ -1,18 +1,3 @@
-/**
- * @module trace
- *
- * Public, JSON-serializable provenance types for {@link World.trace}. The World
- * Explorer (and the future standalone HTML artifact) read this structure to make
- * a generated universe walkable: which records exist, where each field's value
- * came from, and which relation picks wired records together.
- *
- * These types are pure declarations — no class instances, functions, or symbols —
- * so a `WorldTrace` round-trips losslessly through `JSON.stringify` /
- * `JSON.parse`. They are a binding public contract: field capture, edge
- * capture, and friendly type names fill in the substance against these exact
- * shapes.
- */
-
 import type { FieldExplanation } from "./types.js";
 
 /**

@@ -1,9 +1,5 @@
 import type { Prng } from "../../types.js";
 
-// ---------------------------------------------------------------------------
-// Datasets
-// ---------------------------------------------------------------------------
-
 const MANUFACTURERS = [
   "Tesla",
   "BMW",
@@ -131,10 +127,6 @@ const BICYCLE_BRANDS = [
 
 const VIN_CHARS = "0123456789ABCDEFGHJKLMNPRSTUVWXYZ".split("") as [string, ...string[]];
 const VRM_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ".split("") as [string, ...string[]];
-
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
 
 export function manufacturer(prng: Prng): string {
   return prng.pick(MANUFACTURERS);

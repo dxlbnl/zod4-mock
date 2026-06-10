@@ -1,23 +1,3 @@
-/**
- * @module pipeline
- *
- * The per-field generation pipeline, promoted from a flat `for` body
- * with 7 inline rungs in `WorldImpl.generateObjectFields` to a `PIPELINE`
- * list of named `PipelineStep` functions returning a `FieldResolution`
- * tagged union.
- *
- * The same list powers three call sites:
- *   - `WorldImpl.generateObjectFields` walks `PIPELINE` per field;
- *   - `explainSchema` (in `src/explain.ts`) walks `PIPELINE` with
- *     `dryRun: true` for read-only inspection;
- *   - `generateZodObject` (in `src/generators/schema/collection.ts`) walks
- *     `PIPELINE_NO_REGISTRATION` — a 3-step subset omitting the four
- *     registration-dependent rungs.
- *
- * PRNG fork keys, deep-merge contracts, and absent-roll
- * semantics are preserved byte-identically.
- */
-
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext, KeyGenerator } from "./types.js";
 import type { TraceResolution } from "./trace.js";
@@ -35,14 +15,6 @@ import {
 } from "./generators/data/key-map.js";
 import * as data from "./generators/data/index.js";
 import { deepMerge } from "./utils/merge.js";
-
-// ---------------------------------------------------------------------------
-// SchemaReg — re-exported shape carried by the pipeline context
-//
-// Mirrors the internal interface in `world.ts`. Only `matchers` is read by
-// the pipeline itself; `from` / `sourceKey` / `relations` / `regId` are
-// kept here so the same record can be threaded through.
-// ---------------------------------------------------------------------------
 
 export interface SchemaReg {
   readonly schema: ZodTypeAny;
@@ -65,10 +37,6 @@ export const EMPTY_SCHEMA_REG: SchemaReg = {
   regId: -1,
 };
 
-// ---------------------------------------------------------------------------
-// FieldResolution — tagged union returned by a pipeline step
-// ---------------------------------------------------------------------------
-
 export type FieldResolution =
   | { kind: "override"; value: unknown }
   | { kind: "matcher"; value: unknown }
@@ -79,76 +47,38 @@ export type FieldResolution =
   | { kind: "key-based"; value: unknown }
   | { kind: "schema-based"; value: unknown };
 
-// ---------------------------------------------------------------------------
-// PipelineStepContext — per-field context built by `walkPipeline` callers
-// ---------------------------------------------------------------------------
-
-/**
- * Mutable side-channel used by `unwrapOptionalStep` to communicate the
- * unwrapped inner schema to downstream steps. The context reference itself
- * is readonly on `PipelineStepContext`, but the slot inside it is mutated
- * by step 3 before falling through to steps 4-6.
- */
 export interface PipelineState {
   inner: ZodTypeAny;
 }
 
 export interface PipelineStepContext {
-  /** The field's Zod schema (pre-unwrap-optional). */
   readonly fieldSchema: ZodTypeAny;
-  /** The field name (the property key on the Zod object's shape). */
   readonly fieldName: string;
-  /** The field's `GeneratorContext` — carries `prng`, `gen`, `source`, etc. */
   readonly fieldCtx: GeneratorContext;
-  /** Pre-extracted override slice for this field (`overrides?.[key]`). */
   readonly fieldOverride: unknown;
-  /** Registration record for the outer (registered) schema; `EMPTY_SCHEMA_REG` for ad-hoc. */
   readonly reg: SchemaReg;
-  /** The outer object schema reference (used by `schemaKeyMapStep`'s two-level lookup). */
   readonly outerSchema: ZodTypeAny;
-  /** Lazy-resolved schema for the same lookup. */
   readonly resolvedSchema: ZodTypeAny;
-  /** World-level custom key generators (registered via `withGenerators`). */
   readonly customKeyGenerators: ReadonlyMap<string, KeyGenerator>;
-  /** Per-schema key maps (registered via `withKeyMap`). */
   readonly schemaKeyMaps: ReadonlyMap<
     ZodTypeAny,
     Record<string, (ctx: GeneratorContext) => unknown>
   >;
-  /** Optional-roll probability (`world.options.optionalProbability ?? 0.2`). */
   readonly optionalProbability: number;
-  /**
-   * Read-only dry-run flag. When `true`, steps MUST NOT execute side-effects
-   * (no PRNG draws, no `applyModifiers`, no generator invocations). Steps
-   * report the resolution they would produce as a `FieldResolution` with
-   * `value: undefined`; the `explainSchema` walk consumes the `kind` field
-   * and the `meta` slot (for keyHeuristicStep's identifier/reason).
-   */
+  // When true, steps MUST NOT execute side-effects (no PRNG draws,
+  // applyModifiers, or generator invocations) — they report the would-be
+  // resolution with value: undefined.
   readonly dryRun: boolean;
-  /** Mutable slot for the unwrapped inner schema (written by step 3, read by 4-6). */
   readonly state: PipelineState;
-  /**
-   * Mutable slot for explain-mode metadata (rendered identifier + reason).
-   *
-   * On the hot generate() path this is `null` so the per-field ctx
-   * literal stores one slot instead of allocating a nested `{}`. Pipeline
-   * steps that write to `explainMeta` MUST null-check first; only the
-   * `explain()` path in `src/explain.ts` constructs a `{}` and reads the
-   * captured identifier/reason.
-   */
+  // null on the hot generate() path so the per-field ctx avoids allocating a
+  // nested object; only the explain() path constructs a {}. Writers null-check.
   readonly explainMeta: { identifier?: string; reason?: string } | null;
 }
 
 export type PipelineStep = (ctx: PipelineStepContext) => FieldResolution | null;
 
-// ---------------------------------------------------------------------------
-// Total map from the internal `FieldResolution["kind"]` to the public
-// `TraceResolution` union at the capture boundary. Kept exhaustive (the
-// `satisfies` record covers all eight kinds) so a future internal rung rename
-// forces a deliberate update here rather than silently breaking the public
-// `world.trace()` contract.
-// ---------------------------------------------------------------------------
-
+// `satisfies` keeps this exhaustive so an internal rung rename forces an update
+// here rather than silently breaking the public world.trace() contract.
 const KIND_TO_TRACE_RESOLUTION = {
   override: "override",
   matcher: "matcher",
@@ -164,55 +94,11 @@ export function traceResolutionForKind(kind: FieldResolution["kind"]): TraceReso
   return KIND_TO_TRACE_RESOLUTION[kind];
 }
 
-// ---------------------------------------------------------------------------
-// The single per-field override-application site.
-//
-// The pipeline rungs are override-agnostic: each produces a RAW generated
-// value (no merge / replace). `applyOverride` is the one place an override is
-// applied, dispatching on the override's SHAPE and lazy over generation (it
-// decides whether `generateRaw()` runs):
-//
-//   - `override === undefined` → `generateRaw()`. The un-overridden hot path
-//     and the first, fast exit — no extra allocation, no extra PRNG draw vs.
-//     today.
-//   - primitive (string / number / boolean / bigint / null / symbol) → return
-//     the override WITHOUT generating (no PRNG draw — matches today's step-0
-//     primitive short-circuit; preserves determinism).
-//   - plain object → `deepMerge(generateRaw(), override)`.
-//   - array → generate the array via `generateRaw()`, then per-index
-//     deep-merge each present override slot onto the generated element — the
-//     array arms' semantics. The override array
-//     SETS the element count — the field's array generation is threaded the
-//     override length (`ctx.overrideArrayLength`, set at `resolveField`) so the
-//     generated base already has exactly `override.length` elements; the
-//     per-index merge below then aligns 1:1 with the override. Override length
-//     wins over schema bounds / `defaultArrayLength`, which govern only the
-//     no-override count.
-//
-// `deepMerge` stays byte-identical; the per-index array
-// merge lives here, never inside `deepMerge`.
-// ---------------------------------------------------------------------------
-
-/**
- * Same-realm plain-object predicate, mirroring `src/utils/merge.ts`'s private
- * `isPlainObject`. A value is a plain object iff its prototype is
- * `Object.prototype` or `null`. Atomic objects (`Date`, `Map`, `Set`, `RegExp`,
- * class instances, …) are NOT plain — an atomic-object override replaces the
- * generated value verbatim WITHOUT generating a base (matching `deepMerge`'s
- * leaf treatment and the raw-replace branch). Defined here (not
- * imported) so `src/utils/merge.ts` is not edited.
- */
 function isPlainObjectOverride(o: object): boolean {
   const proto = Object.getPrototypeOf(o);
   return proto === Object.prototype || proto === null;
 }
 
-/**
- * Deep-merge helper. Applies a plain-object override on top of a value
- * (arrays / primitives / atomic objects replace verbatim via `deepMerge`).
- * Retained as a standalone helper; the per-rung override
- * application now flows through {@link applyOverride}.
- */
 export function applyObjectOverride(value: unknown, fieldOverride: unknown): unknown {
   if (fieldOverride === undefined) return value;
   return deepMerge(value, fieldOverride);
@@ -223,12 +109,9 @@ export function applyOverride(
   generateRaw: () => FieldResolution,
 ): FieldResolution {
   if (fieldOverride === undefined) return generateRaw();
-  // Primitive (string / number / boolean / bigint / null / symbol) or atomic
-  // object (Date / Map / Set / RegExp / class instance) → replace verbatim,
-  // WITHOUT generating a base (no PRNG draw). `deepMerge` would return the
-  // source for these anyway, but skipping generation also avoids generating a
-  // schema the override is replacing (e.g. an `z.instanceof(RegExp)` field that
-  // is otherwise un-mockable).
+  // Primitive / atomic-object override → replace verbatim without generating a
+  // base: no PRNG draw, and it avoids generating an otherwise un-mockable schema
+  // the override is replacing (e.g. z.instanceof(RegExp)).
   if (
     fieldOverride === null ||
     typeof fieldOverride !== "object" ||
@@ -237,21 +120,15 @@ export function applyOverride(
     return { kind: "override", value: fieldOverride };
   }
   const raw = generateRaw();
-  // A plain-object / array override forces the field present (`unwrapOptionalStep`
-  // runs with `allowAbsent = false`), so `raw.kind` is never "absent" here; the
-  // guard narrows the union (the "absent" arm constrains `value` to undefined|null).
+  // A plain-object/array override forces the field present, so raw.kind is never
+  // "absent"; the guard narrows the union.
   if (raw.kind === "absent") return raw;
   if (Array.isArray(fieldOverride)) {
     const overrides = fieldOverride;
     const base = Array.isArray(raw.value) ? raw.value : [];
-    // The override array SETS the element count to `override.length`. On
-    // the schema-based field path the base was already generated to that length
-    // (the override length threaded via `ctx.overrideArrayLength`), so this maps
-    // 1:1. On the matcher / key-map paths the base is the raw produced array
-    // (not length-threaded): a base longer than the override is truncated (tail
-    // dropped) and a base shorter leaves the surplus override slots as their own
-    // value (no base to merge onto). A hole (`overrides[i] === undefined`) leaves
-    // the base element fully generated.
+    // Override length sets the element count: a base longer than the override is
+    // truncated, a shorter base leaves surplus override slots as their own value,
+    // and a hole leaves the base element fully generated.
     const merged = Array.from({ length: overrides.length }, (_, i) => {
       const ov = overrides[i];
       const item = base[i];
@@ -263,16 +140,6 @@ export function applyOverride(
   return { kind: raw.kind, value: deepMerge(raw.value, fieldOverride) };
 }
 
-// ---------------------------------------------------------------------------
-// Explain-mode helpers — pin the rendered `generator` and `reason` strings
-// when a step fires under `dryRun: true`. Live here (not `explain.ts`) so
-// the per-rung decision logic has exactly one home.
-// ---------------------------------------------------------------------------
-
-/**
- * Reverse-lookup map: PrngGen function reference → dotted `<namespace>.<fn>` id.
- * Built once at module load; mirrors `explain.ts`'s `FN_TO_ID`.
- */
 const FN_TO_ID: Map<unknown, string> = (() => {
   const m = new Map<unknown, string>();
   for (const [ns, mod] of Object.entries(data) as Array<[string, Record<string, unknown>]>) {
@@ -365,24 +232,13 @@ function patternLabel(leafType: string, index: number, lowerKey: string): string
   return `pattern:${leafType}:${lowerKey}`;
 }
 
-// ---------------------------------------------------------------------------
-// Pipeline steps
-// ---------------------------------------------------------------------------
-
-// Step 0 — rung is override-agnostic. The override is applied at the
-// single per-field site (`applyOverride`), not consumed here. Kept in the
-// `PIPELINE` list as an explicit no-op so the ladder shape is unchanged.
 export function overrideEagerStep(_ctx: PipelineStepContext): FieldResolution | null {
   return null;
 }
 
-// Step 1 — matcher registered via `withSchema`.
 export function matcherStep(ctx: PipelineStepContext): FieldResolution | null {
   const m = ctx.reg.matchers[ctx.fieldName];
   if (!m) return null;
-  // Populate the explain vocabulary on both the dry-run (explain) and the
-  // live (trace-gated) path. `explainMeta` is `null` on the off-path hot path,
-  // so the writes are skipped there.
   if (ctx.explainMeta !== null) {
     ctx.explainMeta.identifier = `matcher:${ctx.fieldName}`;
     ctx.explainMeta.reason = "matcher registered via withSchema";
@@ -390,20 +246,13 @@ export function matcherStep(ctx: PipelineStepContext): FieldResolution | null {
   if (ctx.dryRun) {
     return { kind: "matcher", value: undefined };
   }
-  // Rung produces the raw matcher value; the override is applied at the
-  // single per-field site (`applyOverride`).
   return { kind: "matcher", value: m(ctx.fieldCtx) };
 }
 
-// Step 2 — per-schema key map registered via `withKeyMap`.
 export function schemaKeyMapStep(ctx: PipelineStepContext): FieldResolution | null {
-  // Dry-run path: explain consulted only the schemaKeyMap directly
-  // (via `world.explain`'s `schemaKeyMap` shortlist for the outer schema).
-  // For byte-identical explain output, the dry-run branch checks the lookup
-  // by name on the supplied (post-merge) map, not the two-level outer/inner.
   if (ctx.dryRun) {
-    // The `schemaKeyMaps` Map carries one entry: the merged record built by
-    // `explainSchema`'s caller. Read whichever key matches.
+    // The schemaKeyMaps Map carries the single merged record built by
+    // explainSchema's caller; checking by name keeps explain output identical.
     for (const map of ctx.schemaKeyMaps.values()) {
       if (Object.prototype.hasOwnProperty.call(map, ctx.fieldName)) {
         if (ctx.explainMeta !== null) {
@@ -419,23 +268,17 @@ export function schemaKeyMapStep(ctx: PipelineStepContext): FieldResolution | nu
     ctx.schemaKeyMaps.get(ctx.outerSchema)?.[ctx.fieldName] ??
     ctx.schemaKeyMaps.get(ctx.resolvedSchema)?.[ctx.fieldName];
   if (fn === undefined) return null;
-  // Live-path explain vocabulary (trace gate); null on the off-path.
   if (ctx.explainMeta !== null) {
     ctx.explainMeta.identifier = `key-map:${ctx.fieldName}`;
     ctx.explainMeta.reason = "per-schema key map registered via withKeyMap";
   }
-  // Raw keymap value; override applied at the single per-field site.
   return { kind: "keymap", value: fn(ctx.fieldCtx) };
 }
 
-// Step 3 — unwrap optional/nullable/default, rolling for absence.
 export function unwrapOptionalStep(ctx: PipelineStepContext): FieldResolution | null {
   if (ctx.dryRun) {
-    // Explain-mode: do not consume PRNG state. The unwrap is purely static —
-    // we just need `state.inner` populated for the next steps. Walk the
-    // wrapper chain without rolling. No `kind: "absent"` / `"default"` is
-    // emitted (explain reported a non-absent decision for
-    // optional/nullable fields).
+    // Explain-mode: do not consume PRNG state — walk the wrapper chain
+    // statically just to populate state.inner.
     let inner = ctx.fieldSchema;
     let d = def(inner);
     while (
@@ -464,12 +307,10 @@ export function unwrapOptionalStep(ctx: PipelineStepContext): FieldResolution | 
   return null;
 }
 
-// Step 4 — world-level custom key generator (case-insensitive).
 export function customKeyGenStep(ctx: PipelineStepContext): FieldResolution | null {
   const lk = ctx.fieldName.toLowerCase();
   const customGen = ctx.customKeyGenerators.get(lk);
   if (customGen === undefined) return null;
-  // Live-path explain vocabulary (trace gate); null on the off-path.
   if (ctx.explainMeta !== null) {
     ctx.explainMeta.identifier = `custom:${lk}`;
     ctx.explainMeta.reason = "custom generator registered via withGenerators";
@@ -478,20 +319,14 @@ export function customKeyGenStep(ctx: PipelineStepContext): FieldResolution | nu
     return { kind: "custom-gen", value: undefined };
   }
   const innerSchema = ctx.state.inner;
-  // Raw custom-gen value; override applied at the single per-field site.
   return {
     kind: "custom-gen",
     value: applyModifiers(customGen(innerSchema, ctx.fieldCtx), innerSchema),
   };
 }
 
-// Step 5 — DEFAULT_KEY_MAP / DEFAULT_KEY_PATTERNS heuristic.
 export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | null {
   if (ctx.dryRun) {
-    // Explain consulted the wrapped fieldSchema (not the inner) for
-    // its leaf type — getLeafDef unwraps internally. Use the inner if step 3
-    // set it (it does, since unwrapOptionalStep precedes this), else
-    // fieldSchema. Both unwrap to the same leaf via getLeafDef.
     const inner = ctx.state.inner;
     const leafType = def(unwrap(inner)).type;
     const lk = ctx.fieldName.toLowerCase();
@@ -516,8 +351,7 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
   const innerSchema = ctx.state.inner;
   const keyResult = generateFromKey(ctx.fieldName, innerSchema, ctx.fieldCtx);
   if (keyResult === undefined) return null;
-  // Live-path explain vocabulary (trace gate); null on the off-path. Mirror
-  // the dry-run exact-key / pattern lookup so trace() and explain() agree.
+  // Mirror the dry-run exact-key / pattern lookup so trace() and explain() agree.
   if (ctx.explainMeta !== null) {
     const leafType = def(unwrap(innerSchema)).type;
     const lk = ctx.fieldName.toLowerCase();
@@ -533,14 +367,12 @@ export function keyHeuristicStep(ctx: PipelineStepContext): FieldResolution | nu
       }
     }
   }
-  // Raw key-based value; override applied at the single per-field site.
   return {
     kind: "key-based",
     value: applyModifiers(keyResult, innerSchema),
   };
 }
 
-// Step 6 — schema-based fallback.
 export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | null {
   if (ctx.dryRun) {
     const inner = ctx.state.inner;
@@ -570,7 +402,6 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
   const innerSchema = ctx.state.inner;
   const innerUnwrapped = unwrap(innerSchema);
   const innerDef = def(innerUnwrapped);
-  // Live-path explain vocabulary (trace gate); null on the off-path.
   if (ctx.explainMeta !== null) {
     const leafType = innerDef.type;
     if (leafType === "object" || leafType === "lazy") {
@@ -584,10 +415,6 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
       ctx.explainMeta.reason = "no key match, no matcher";
     }
   }
-  // Rung produces the raw generated value; the override is applied at the
-  // single per-field site (`applyOverride`). The nested-object branch no longer
-  // threads `overrides` down — the deep-merge of the field override onto this
-  // raw object happens at the single site (deep-merge semantics preserved).
   const isObjectLike = innerDef.type === "object" || innerDef.type === "lazy";
   if (isObjectLike) {
     return {
@@ -600,12 +427,6 @@ export function schemaBasedStep(ctx: PipelineStepContext): FieldResolution | nul
     value: generateFromSchema(innerSchema, ctx.fieldCtx),
   };
 }
-
-// ---------------------------------------------------------------------------
-// PIPELINE — exact seven named step functions in pipeline order.
-// PIPELINE_NO_REGISTRATION — three-step subset for `generateZodObject`
-// (omits override, matcher, schemaKeyMap, customKeyGen — explicit absence).
-// ---------------------------------------------------------------------------
 
 export const PIPELINE: ReadonlyArray<PipelineStep> = [
   overrideEagerStep,
@@ -623,15 +444,6 @@ export const PIPELINE_NO_REGISTRATION: ReadonlyArray<PipelineStep> = [
   schemaBasedStep,
 ];
 
-// ---------------------------------------------------------------------------
-// walkPipeline — sequential dispatcher
-// ---------------------------------------------------------------------------
-
-/**
- * Walks `pipeline` in order. Returns the first non-`null` `FieldResolution`
- * a step produces. `schemaBasedStep` always resolves, so the loop never
- * falls off the end for a valid context; the throw is a regression guard.
- */
 export function walkPipeline(
   pipeline: ReadonlyArray<PipelineStep>,
   ctx: PipelineStepContext,

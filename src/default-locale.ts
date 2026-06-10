@@ -1,12 +1,5 @@
 import { type LocaleData, type Prng } from "@zod4-mock/locale-core";
 
-/**
- * Minimal English locale used when no `locale` is passed to `createWorld()`.
- * Deliberately small — names and words come from short curated arrays. For
- * larger curated lists import a full locale package (`@zod4-mock/locale-en`,
- * `@zod4-mock/locale-nl`).
- */
-
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 export const defaultLocale: LocaleData = {

@@ -73,15 +73,8 @@ export function getLeafDef(schema: ZodTypeAny): ZodDef {
   return def(unwrap(schema));
 }
 
-/**
- * Strip outer `optional` / `nullable` wrappers, returning the inner
- * schema and the list of stripped wrapper types in outer-to-inner order.
- *
- * Shared by `WorldImpl.generate` (which rolls absent per wrapper) and
- * `explainSchema` (which discards the list). Restricted to
- * `optional`/`nullable` (not `default`/`readonly`/`catch`/`brand`) to match
- * the byte-identical pre-extraction loop semantics at both sites.
- */
+// Strips outer optional/nullable wrappers only (not default/readonly/catch/brand)
+// to match the per-wrapper absent-roll semantics at the call sites.
 export function stripOuterOptionalNullable(schema: ZodTypeAny): {
   inner: ZodTypeAny;
   wrappers: Array<"optional" | "nullable">;
@@ -97,19 +90,8 @@ export function stripOuterOptionalNullable(schema: ZodTypeAny): {
   return { inner: current, wrappers };
 }
 
-/**
- * Collapses the `while (d.type === "lazy")` loop that previously
- * appeared in four near-identical places (`world.ts` ×3 + `explain.ts` ×1).
- *
- * Walks `z.lazy(...)` references to their resolved targets. When a `cache`
- * is supplied (the per-world `lazyCache`) the resolved getter result is
- * memoized so repeated unwraps of the same outer lazy don't call the user's
- * getter twice — this is the existing `WorldImpl` semantics. `explain.ts`
- * passes no cache and gets the previous one-shot behaviour.
- *
- * Module-level (not an instance method) so the cache-less explain site
- * shares the same code path.
- */
+// Walks z.lazy(...) to its resolved target. When a cache is supplied the getter
+// result is memoized so the user's getter isn't called twice per outer lazy.
 export function resolveLazyChain(
   schema: ZodTypeAny,
   cache?: WeakMap<ZodTypeAny, ZodTypeAny>,
@@ -128,36 +110,10 @@ export function resolveLazyChain(
   return current;
 }
 
-/**
- * Collapses the optional/nullable/default unwrap loop that previously
- * appeared in two near-identical places (`world.ts:generateObjectFields` +
- * `collection.ts:generateZodObject`).
- *
- * Walks the `.optional()` / `.nullable()` / `.default()` wrapper chain on a
- * single field's schema. At each layer rolls `prng.random() < optProb`; on
- * the first absent roll the loop breaks and returns the appropriate absent
- * resolution. Otherwise the chain is fully unwrapped and `inner` carries the
- * non-wrapper schema for downstream generation.
- *
- * PRNG consumption: exactly one `prng.random()` per wrapper layer, terminated
- * on first absent roll (matching the two original sites byte-for-byte).
- *
- * `allowAbsent` — when `false`, every layer still rolls `prng.random()` but
- * the absent branch is never taken (the chain is fully unwrapped). This
- * preserves the world.ts call-site semantics where a non-undefined
- * `fieldOverride` suppresses the absent branch while still consuming PRNG
- * state at each layer.
- *
- * Return shape:
- *   - `absent === null`            — generate from `inner` normally.
- *   - `{ kind: "skip" }`           — optional layer with no captured `.default()`
- *                                    fallback; the caller assigns `undefined`
- *                                    (and typically `continue`s).
- *   - `{ kind: "default", value }` — assign `value` verbatim. Used for:
- *       • `.default()` absent (value = the default),
- *       • `.optional()` absent with a previously captured fallback,
- *       • `.nullable()` absent (value = `null`).
- */
+// Walks the optional/nullable/default chain, rolling exactly one prng.random()
+// per layer (so PRNG consumption is stable). With allowAbsent=false the roll still
+// happens but the absent branch is never taken (a non-undefined override forces
+// the field present while keeping PRNG state byte-identical).
 export type UnwrappedAbsent = { kind: "skip" } | { kind: "default"; value: unknown };
 
 export function unwrapOptionalChainForField(
@@ -202,14 +158,8 @@ export function unwrapOptionalChainForField(
   return { inner, absent: null };
 }
 
-// String-modifier pipeline split into named passes.
-// Order is the call chain at the bottom of `applyStringModifiers`:
-//   1. overwritePass        — case/trim transforms on the base string
-//   2. formatAddPass        — add missing prefix/suffix/inclusion
-//   3. lengthBoundsPass     — pad/slice to satisfy min/max
-//   4. formatRefixPass      — restore prefix/suffix/inclusion broken by (3)
-//   5. overwriteRefixPass   — re-apply case/trim so the final string respects them
-
+// String-modifier passes; the call order in applyStringModifiers is load-bearing
+// (formatRefixPass restores prefixes/suffixes that lengthBoundsPass may have broken).
 function runOverwriteTransforms(value: string, overwrites: ZodCheck[]): string {
   let result = value;
   for (const c of overwrites) {
@@ -304,11 +254,6 @@ export function applyStringModifiers(value: string, allChecks: ZodCheck[]): stri
   return result;
 }
 
-// Number-modifier passes. Order is the call chain at the bottom of
-// `applyNumberModifiers`:
-//   1. intCoercePass    — floor when the schema is an int format
-//   2. multipleOfPass   — snap to the nearest multiple
-
 function intCoercePass(value: number, isInt: boolean): number {
   return isInt ? Math.floor(value) : value;
 }
@@ -338,15 +283,8 @@ export function applyNumberModifiers(value: number, allChecks: ZodCheck[]): numb
   return result;
 }
 
-/**
- * Applies formatting modifiers (case, trim, transform) to a value based on the schema.
- *
- * Thin dispatcher over the two split pipelines. Most callers don't statically
- * know whether the value is a string or a number (e.g. `generateFromKey` returns
- * `unknown`), so this shim keeps the runtime type-routing at one place. Callers
- * that DO know the type (e.g. `generateZodString`) can call
- * `applyStringModifiers` / `applyNumberModifiers` directly.
- */
+// Runtime type-routing dispatcher for callers that don't statically know whether
+// the value is a string or number; typed callers may call the passes directly.
 export function applyModifiers(value: unknown, schema: ZodTypeAny): unknown {
   const unwrapped = unwrap(schema);
   const d = def(unwrapped);

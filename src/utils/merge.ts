@@ -1,24 +1,11 @@
-/**
- * Same-realm "plain object" predicate. A value is a plain object iff its
- * prototype is `Object.prototype` (an object literal `{}`) or `null`
- * (an `Object.create(null)`-backed dict). Atomic objects — `Date`, `Map`,
- * `Set`, `RegExp`, `URL`, `Buffer`, typed arrays, class instances — have a
- * different prototype and are therefore rejected, so `deepMerge` treats them
- * as leaves and replaces verbatim instead of reducing them to `{}` via an
- * empty `Object.keys` recursion.
- */
+// Atomic objects (Date, Map, Set, RegExp, class instances, …) are rejected so
+// deepMerge treats them as leaves rather than reducing them to {} via Object.keys.
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object") return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
 }
 
-/**
- * Deep merge two objects. Plain objects (prototype `Object.prototype` or
- * `null`) are merged recursively. Arrays, primitives, and any non-plain
- * object (e.g. `Date`, `Map`, `Set`, `RegExp`, class instances) from the
- * source replace the target verbatim — they are leaf values.
- */
 export function deepMerge(target: unknown, source: unknown): unknown {
   if (!isPlainObject(source) || !isPlainObject(target)) {
     return source;
@@ -31,11 +18,6 @@ export function deepMerge(target: unknown, source: unknown): unknown {
   return result;
 }
 
-/**
- * Structural deep equality. Primitives compared by `Object.is`; arrays compared
- * element-wise; plain objects compared by matching key sets and recursive value
- * equality.
- */
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) {

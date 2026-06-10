@@ -1,14 +1,4 @@
 /**
- * @module generators
- * Re-exports all generator functions.
- *
- * Generation pipeline (highest to lowest priority):
- * 1. Matchers declared in `world.withSchema(schema, type, matchers)`
- * 2. Key-based generators (`generateFromKey`) — field name semantics
- * 3. Schema-based generator (`generateFromSchema`) — Zod type introspection
- */
-
-/**
  * The raw built-in generator namespace (`data.person`, `data.internet`, …).
  * Each function takes a `Prng` as its first argument; prefer the `generators`
  * export or `ctx.gen` (which pre-bind the field-seeded `Prng`) in matchers.

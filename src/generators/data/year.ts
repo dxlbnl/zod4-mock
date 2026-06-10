@@ -1,14 +1,3 @@
-/**
- * @module year
- * `year` exponential recent-skew distribution.
- *
- * Closed-form: `offset = floor(-log(1 - u) / λ); v = max(min, max - offset)`,
- * with λ = 0.05 (half-life ~14 years). Tight bounds (`max - min < 10`) fall
- * back to uniform-int.
- *
- * Pure-`Math.*` only — isomorphic.
- */
-
 import type { Prng } from "../../types.js";
 
 const LAMBDA = 0.05;

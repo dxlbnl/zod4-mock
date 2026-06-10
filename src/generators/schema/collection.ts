@@ -29,8 +29,8 @@ export function resolveArrayLength(
   return prng.int(Math.min(min, max), Math.max(min, max));
 }
 
-// Pre-computes per-field base seeds once for a ZodObject inner schema, then
-// derives per-element field seeds via XOR+splitmix — no string allocation per element.
+// Derives per-element field seeds via XOR+splitmix from precomputed base seeds —
+// avoids a string allocation per element.
 function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: number): Prng {
   const inner = createPrng(elementSeed);
   return {
@@ -56,22 +56,13 @@ function createBatchElementPrng(baseSeeds: Record<string, number>, elementSeed: 
 export function generateZodArray(schema: ZodTypeAny, ctx: GeneratorContext): unknown[] {
   const d = def(schema);
   const [defMin, defMax] = ctx.defaultArrayLength ?? [1, 5];
-  // When an array `options.overrides` value targets this field array, the
-  // override length sets the element count — it wins even over `.length(N)` /
-  // `.min` / `.max` / `defaultArrayLength`, which govern only the no-override
-  // case. The per-element seeding loop below then runs `0..override.length-1`,
-  // so the bases stay per-element distinct and store-neutral.
+  // An array override length sets the element count, winning over schema bounds /
+  // defaultArrayLength (which govern only the no-override case).
   const length = ctx.overrideArrayLength ?? resolveArrayLength(schema, defMin, defMax, ctx.prng);
 
-  // An array of a REGISTERED-primary element runs each element through
-  // `ctx.generate(element)`, which resolves to the engine's registered-primary
-  // record path. Under `store: false` that path's default `registry.count +
-  // pending` seed index self-cancels (writes suppressed, `pending` cycles 0→1→0)
-  // so every element collapses to `reg<id>#<existingCount>` → identical records.
-  // Thread an explicit per-element `recordIndex` (`existingCount + i`) so the
-  // i-th element seeds distinctly — identical to the store-on path, where the
-  // count advances by one per stored element. For unregistered element schemas
-  // the engine ignores `recordIndex`, so this is inert there.
+  // Thread an explicit per-element recordIndex (existingCount + i) so a registered-
+  // primary element seeds distinctly under store:false (where registry.count + pending
+  // self-cancels and would collapse siblings); inert for unregistered elements.
   const elementExistingCount = ctx.registry.count(d.element!);
 
   const innerDef = def(d.element!);
@@ -129,11 +120,9 @@ export function generateZodRecord(
 ): Record<string, unknown> {
   const d = def(schema);
 
-  // Finite-key path — when keyType is z.enum([...]), Zod v4 makes the
-  // record strict-keyed over the enum's member set, so emit exactly one entry
-  // per enum member in declared order. Per-key value PRNG is forked by index
-  // (`rv-${i}`) so appending an enum member only disturbs the new member's
-  // value. Empty enum → {} naturally (loop body never runs).
+  // For an enum keyType, Zod v4 makes the record strict-keyed over the member set,
+  // so emit one entry per member. Forking by index keeps appending a member from
+  // disturbing existing members' values.
   const keyDef = def(d.keyType!);
   if (keyDef.type === "enum") {
     const enumValues = Object.values(keyDef.entries ?? {});
@@ -147,7 +136,6 @@ export function generateZodRecord(
     return result;
   }
 
-  // Open-key path (z.record(z.string()/z.number(), V)): unchanged byte-for-byte.
   const count = ctx.prng.int(2, 5);
   const result: Record<string, unknown> = {};
   for (let i = 0; i < count; i++) {
@@ -216,13 +204,8 @@ export function generateZodSet(schema: ZodTypeAny, ctx: GeneratorContext): Set<u
   return result;
 }
 
-/**
- * Walks the same `PIPELINE_NO_REGISTRATION` subset
- * (unwrapOptional → keyHeuristic → schemaBased) as `WorldImpl.generateObjectFields`
- * does for the registration-free path. The four omitted rungs (override,
- * matcher, schemaKeyMap, customKeyGen) are explicitly absent because this
- * nested-`z.object` entry path has no `SchemaReg` available.
- */
+// Uses PIPELINE_NO_REGISTRATION — the four registration-dependent rungs are
+// omitted because this nested z.object path has no SchemaReg available.
 export function generateZodObject(
   schema: ZodTypeAny,
   ctx: GeneratorContext,

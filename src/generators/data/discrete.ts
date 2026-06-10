@@ -1,14 +1,3 @@
-/**
- * @module discrete
- * `quantity` / `count` truncated-geometric distributions.
- *
- * Closed-form: `offset = floor(log(1 - u) / log(1 - p)); v = min + min(offset, max - min)`,
- * with `p = 0.5`. The `min = 0` case (e.g. `count`) is handled natively
- * (offset 0 → value 0); no special-case branch.
- *
- * Pure-`Math.*` only — isomorphic.
- */
-
 import type { Prng } from "../../types.js";
 
 const P = 0.5;

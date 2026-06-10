@@ -1,21 +1,9 @@
-/**
- * @module types
- * Core TypeScript interfaces and types for the zod-mock library.
- */
-
 import type { ZodTypeAny, input, z } from "zod";
 import type { createPrng } from "./prng.js";
-// Note: Prng is defined in @zod4-mock/locale-core (see packages/locale-core/src/types.ts).
+// Prng is defined in @zod4-mock/locale-core.
 import type { LocaleData, Prng } from "@zod4-mock/locale-core";
 import type { WorldTrace } from "./trace.js";
 export type { LocaleData, LastNamePrefix, Currency, Prng } from "@zod4-mock/locale-core";
-
-// ---------------------------------------------------------------------------
-// Registry — schema-reference based
-//
-// Keys are Zod schema object references (not strings). This gives typed
-// lookup results without string casts.
-// ---------------------------------------------------------------------------
 
 /**
  * In-memory store of every record generated within one world, keyed by Zod
@@ -50,10 +38,6 @@ export type CoreGenerators = {
  * call `ctx.gen.person.firstName()` instead of passing a `Prng` by hand.
  */
 export type BoundGenerators = CoreGenerators;
-
-// ---------------------------------------------------------------------------
-// Generator context
-// ---------------------------------------------------------------------------
 
 /**
  * The per-field context handed to every generator and matcher. Carries the
@@ -136,14 +120,6 @@ export interface GeneratorContext<T = any> {
   readonly locale: LocaleData;
 }
 
-// ---------------------------------------------------------------------------
-// MatcherCtx — GeneratorContext with typed related() for schema matchers
-//
-// TRelations is inferred from the `relations` property passed to withSchema.
-// When TRelations = Record<never, never> (no relations), the typed overload is
-// unreachable and the fallback (string → Record<string, unknown>) applies.
-// ---------------------------------------------------------------------------
-
 /**
  * The {@link GeneratorContext} variant passed to `withSchema` matchers, with
  * `related()` typed from the schema's declared `relations` and `source` typed
@@ -163,20 +139,12 @@ export type MatcherCtx<
   };
 };
 
-// ---------------------------------------------------------------------------
-// KeyGenerator: custom field-name generator
-// ---------------------------------------------------------------------------
-
 /**
  * A field-name generator registered via `world.withGenerators`. Receives the
  * field's Zod schema and its {@link GeneratorContext} and returns the value for
  * that field; matched case-insensitively by field name.
  */
 export type KeyGenerator<T = unknown> = (schema: ZodTypeAny, ctx: GeneratorContext) => T;
-
-// ---------------------------------------------------------------------------
-// SchemaKeyMap: per-schema key overrides
-// ---------------------------------------------------------------------------
 
 /**
  * A per-schema map of field name → generator, registered via
@@ -187,20 +155,12 @@ export type SchemaKeyMap<TSchema extends ZodTypeAny> = {
   [K in keyof input<TSchema>]?: (ctx: GeneratorContext) => input<TSchema>[K];
 };
 
-// ---------------------------------------------------------------------------
-// Deep partial (for overrides)
-// ---------------------------------------------------------------------------
-
 /**
  * Recursively makes every property of `T` optional. Used to type
  * `GenerateOptions.overrides`, so a caller may override only the nested fields
  * they care about.
  */
 export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
-
-// ---------------------------------------------------------------------------
-// generate() options
-// ---------------------------------------------------------------------------
 
 /**
  * World-wide generation defaults shared by `WorldOptions` (set once) and
@@ -280,10 +240,6 @@ export interface GenerateOptions<T> extends GenerationDefaults {
   readonly unique?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// World options
-// ---------------------------------------------------------------------------
-
 /**
  * Options passed to `createWorld`. Sets the master `seed` and world-wide
  * defaults — optional-field probability, unconstrained-array length, custom
@@ -302,10 +258,6 @@ export interface WorldOptions extends GenerationDefaults {
    */
   readonly trace?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Schema registration options
-// ---------------------------------------------------------------------------
 
 /**
  * A relation entry on `SchemaOpts.relations`. Either a bare Zod schema (the
@@ -349,10 +301,6 @@ export interface SchemaOpts<
   };
 }
 
-// ---------------------------------------------------------------------------
-// ExplainResult — introspection helper
-// ---------------------------------------------------------------------------
-
 /**
  * Per-field resolution record returned by `world.explain(schema)`.
  *
@@ -387,10 +335,6 @@ export interface ExplainResult<TSchema extends ZodTypeAny> {
   readonly relations: { readonly [relName: string]: RelationExplanation };
   toString(): string;
 }
-
-// ---------------------------------------------------------------------------
-// World interface
-// ---------------------------------------------------------------------------
 
 /**
  * One deterministic generation session, built fluently from `createWorld`.

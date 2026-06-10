@@ -1,9 +1,3 @@
-/**
- * @module registry
- * In-memory store for all data generated within a world.
- * Keys are Zod schema object references (not strings).
- */
-
 import type { ZodTypeAny } from "zod";
 import type { Registry, Prng } from "./types.js";
 

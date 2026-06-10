@@ -4,7 +4,6 @@ import { noun, TECH_WORDS } from "./word.js";
 import { defaultLocale } from "../../default-locale.js";
 import { siblingString } from "./sibling.js";
 
-/** Strip diacritics and keep only a-z. */
 function ascii(s: string): string {
   return s
     .normalize("NFD")
@@ -12,10 +11,6 @@ function ascii(s: string): string {
     .toLowerCase()
     .replace(/[^a-z]/g, "");
 }
-
-// ---------------------------------------------------------------------------
-// Datasets
-// ---------------------------------------------------------------------------
 
 export const DOMAINS = [
   "example.com",
@@ -108,10 +103,6 @@ const PASSWORD_CHARS =
     ...string[],
   ];
 
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
-
 export function domainSuffix(prng: Prng): string {
   return prng.pick(DOMAIN_SUFFIXES);
 }
@@ -187,16 +178,9 @@ export function displayName(prng: Prng, ctx?: GeneratorContext): string {
   return `${firstName(prng)} ${lastName(prng)}`;
 }
 
-// ---------------------------------------------------------------------------
-// Email local-part strategies
-//
-// Each strategy is a free, module-scope object declaring (a) what siblings it
-// needs and (b) how to build a local-part + domain when chosen. `email()`
-// gathers siblings, builds an `EmailCtx`, filters strategies by `needs`, picks
-// one at random, and runs `build` — values are only drawn for the strategy
-// that wins. No closures over per-call state; the context is passed in.
-// ---------------------------------------------------------------------------
-
+// Each strategy declares the siblings it `needs` and how to `build` a local-part
+// + domain. email() filters by needs, picks one, and runs build — values are only
+// drawn for the winning strategy (no closures over per-call state).
 interface EmailCtx {
   prng: Prng;
   /** All ascii-normalised at gather time; "" when the sibling is absent. */
@@ -253,13 +237,11 @@ const hasNoPersonalOrCompany = (c: EmailCtx): boolean =>
   !hasNick(c) && !hasFirst(c) && !hasLast(c) && !hasCompany(c);
 
 const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
-  // ── nickname ──────────────────────────────────────────────────────────────
   { needs: hasNick, build: (c) => ({ local: c.nick, domain: "" }) },
   {
     needs: hasNick,
     build: (c) => ({ local: `${c.nick}${c.prng.int(10, 99)}`, domain: "" }),
   },
-  // ── first + last ──────────────────────────────────────────────────────────
   {
     needs: hasFirstAndLast,
     build: (c) => ({
@@ -283,13 +265,11 @@ const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
   },
   { needs: hasFirstAndLast, build: (c) => ({ local: c.last, domain: "" }) },
   { needs: hasFirstAndLast, build: (c) => ({ local: c.first, domain: "" }) },
-  // ── first only ────────────────────────────────────────────────────────────
   { needs: hasOnlyFirst, build: (c) => ({ local: c.first, domain: "" }) },
   {
     needs: hasOnlyFirst,
     build: (c) => ({ local: `${c.first}${c.prng.int(10, 99)}`, domain: "" }),
   },
-  // ── last only ─────────────────────────────────────────────────────────────
   { needs: hasOnlyLast, build: (c) => ({ local: c.last, domain: "" }) },
   {
     needs: hasOnlyLast,
@@ -298,7 +278,6 @@ const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
       domain: "",
     }),
   },
-  // ── company-prefix @ company.com ──────────────────────────────────────────
   {
     needs: (c) => hasCompany(c) && c.companyPrefixes.length > 0,
     build: (c) => ({
@@ -306,7 +285,6 @@ const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
       domain: c.companyDomain,
     }),
   },
-  // ── personal @ company.com ────────────────────────────────────────────────
   {
     needs: (c) => hasCompany(c) && hasFirstAndLast(c),
     build: (c) => ({ local: `${c.first}.${c.last}`, domain: c.companyDomain }),
@@ -319,12 +297,10 @@ const EMAIL_STRATEGIES: readonly EmailStrategy[] = [
     needs: (c) => hasCompany(c) && hasNick(c),
     build: (c) => ({ local: c.nick, domain: c.companyDomain }),
   },
-  // ── first.company-slug @ random — playful "you + company" handle ─────────
   {
     needs: (c) => hasCompany(c) && hasFirst(c),
     build: (c) => ({ local: `${c.first}.${c.companySlug}`, domain: "" }),
   },
-  // ── composed handle (only when nothing else is eligible) ─────────────────
   {
     needs: (c) => hasNoPersonalOrCompany(c) && c.adjPool.length > 0 && c.nounPool.length > 0,
     build: (c) => ({ local: composeHandle(c), domain: "" }),
@@ -337,10 +313,7 @@ export function email(prng: Prng, ctx?: GeneratorContext): string {
   const nick = siblingString(ctx, "nickname", "nick", "bijnaam");
   let first = siblingString(ctx, "firstName", "first_name", "voornaam");
   let last = siblingString(ctx, "lastName", "last_name", "achternaam");
-  // If neither firstName nor lastName is present but a fullname-style sibling is,
-  // split on whitespace: first token → first, last token → last (drop middle).
-  // `siblingString` already normalises case + underscores, so this matches
-  // `fullName` / `full_name` / `fullname` / `FULLNAME` / `volledigeNaam` (nl).
+  // Fall back to splitting a fullname-style sibling (first token → first, last → last).
   if (!first && !last) {
     const full = siblingString(ctx, "fullName", "full_name", "volledigeNaam");
     if (full) {
@@ -355,10 +328,8 @@ export function email(prng: Prng, ctx?: GeneratorContext): string {
   }
   const company = siblingString(ctx, "company", "companyName", "company_name", "bedrijf");
 
-  // ALL company-name tokens contribute to the slug, joined with a random
-  // separator picked once per call. So "Karp Associates" yields karp.associates
-  // / karp_associates / karpassociates; "Hanley & Rizo" drops the `&` via
-  // ascii() and yields hanley.rizo / etc. Single-word names are unchanged.
+  // All company-name tokens contribute to the slug, joined with one separator
+  // picked per call (e.g. "Karp Associates" → karp.associates / karp_associates).
   const companyTokens = company
     ? company
         .split(/\s+/)

@@ -52,13 +52,8 @@ function generateJson(ctx: GeneratorContext, depth = 0): unknown {
   }
 }
 
-// Dispatch table for `generateFromSchema`.
-//
-// `ZodDefType` enumerates every `def.type` value the router knows how to handle.
-// Adding a new Zod type that should be mockable means adding an entry here; the
-// `Record<ZodDefType, GenFn>` typing turns "forgot to wire it up" into a compile
-// error at the `DISPATCH` literal. `def.type` itself is typed as `string` upstream
-// (Zod v4 does not export a discriminated union), hence the local enumeration.
+// Locally enumerated (Zod v4 types def.type as `string`) so the
+// Record<ZodDefType, GenFn> typing turns a missing DISPATCH entry into a compile error.
 type ZodDefType =
   | "string"
   | "number"
@@ -101,8 +96,6 @@ type ZodDefType =
 
 type GenFn = (schema: ZodTypeAny, ctx: GeneratorContext) => unknown;
 
-// --- Non-trivial dispatch arms, lifted to named functions. ---
-
 function generateXor(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const d = def(schema);
   const prng = ctx.prng;
@@ -115,8 +108,8 @@ function generateXor(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
 function generateUnion(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const d = def(schema);
   const prng = ctx.prng;
-  // In Zod v4, discriminatedUnion is often typed as 'union' but with discriminator/optionsMap.
-  // These fields are not part of the shared ZodDef interface; read them off a local view.
+  // Zod v4 types discriminatedUnion as 'union' with discriminator/optionsMap (not
+  // on the shared ZodDef); read them off a local view.
   const dWithDiscriminator = d as ZodDef & {
     discriminator?: string;
     optionsMap?: Map<unknown, ZodTypeAny>;
@@ -157,17 +150,14 @@ function generatePipe(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const dIn = def(pipeIn);
   const dOut = def(pipeOut);
 
-  // Zod v4 uses 'pipe' for effects (transform/preprocess).
-  // If one side is a 'transform' tag, we have an effect.
+  // Zod v4 models effects (transform/preprocess) as a 'pipe'.
   if (dOut.type === "transform") {
-    // This is a transform (post-process).
     const input = ctx.generate(pipeIn, ctx);
     const transformFn = (
       dOut as ZodDef & { transform?: (v: unknown, c: { addIssue: () => void }) => unknown }
     ).transform;
     if (typeof transformFn === "function") {
       try {
-        // Try to apply the transformation.
         const result = transformFn(input, { addIssue: () => {} });
         return result !== undefined ? result : input;
       } catch {
@@ -177,15 +167,12 @@ function generatePipe(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
     return input;
   }
 
+  // A preprocessor can't be inverted, so generate the output type. Real pipelines
+  // also prioritise the output side so the chain's final constraints are satisfied.
   if (dIn.type === "transform") {
-    // This is a preprocess (pre-process).
-    // Since we can't easily invert a preprocessor, we generate the output type.
     return ctx.generate(pipeOut, ctx);
   }
 
-  // If both are schemas, it's a real pipeline.
-  // We prioritize the output side for generation to ensure the final
-  // constraints of the pipe chain are satisfied.
   return ctx.generate(pipeOut, ctx);
 }
 
@@ -271,23 +258,7 @@ const DISPATCH: Record<ZodDefType, GenFn> = {
   file: generateUnsupported,
 };
 
-/**
- * Schema-based fallback generator: produces a value purely from Zod type
- * introspection (enum member, number in range, nested object, …). This is the
- * pipeline's always-resolving final rung, with no field-name heuristics.
- *
- * @param schema - The Zod schema to introspect.
- * @param ctx - The current field {@link GeneratorContext}.
- *
- * @example
- * ```ts
- * import { createWorld } from "zod4-mock";
- * import { z } from "zod";
- *
- * const world = createWorld({ seed: 1 });
- * const value = world.generate(z.number().int().min(1).max(10));
- * ```
- */
+// The pipeline's always-resolving final rung: a value from Zod type introspection.
 export function generateFromSchema(schema: ZodTypeAny, ctx: GeneratorContext): unknown {
   const d = def(schema);
   const handler = (DISPATCH as Record<string, GenFn | undefined>)[d.type];

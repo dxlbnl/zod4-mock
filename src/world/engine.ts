@@ -1,61 +1,3 @@
-/**
- * @module world/engine
- * The `WorldImpl` class — the central context for one data-generation session.
- *
- * Schemas are the primary anchor. Register schemas with `withSchema`, then
- * generate data with `generate`. All generation is deterministic given the seed.
- *
- * ## Registration modes
- *
- * Primary:   `world.withSchema(Schema, { matchers })`
- * Relational: `world.withSchema(Schema, { relations: { name: OtherSchema }, matchers })`
- * Derived:   `world.withSchema(Schema, { from: SourceSchema, matchers })`
- *
- * ## Generation pipeline (per field)
- *
- * The executable contract is the `PIPELINE` list in `src/pipeline.ts`. For every
- * field of a registered schema, the engine walks these seven steps in order; the
- * first step that produces a value wins.
- *
- * 0. **Eager overrides** — `options.overrides` primitive/array entries land in
- *    `ctx.current` so sibling matchers can read them via `ctx.current.<sibling>`.
- * 1. **Matchers** — user functions from `withSchema({ matchers })`. Explicit
- *    per-field functions; first to win.
- * 2. **Per-schema key map** — entries from `withKeyMap({ ... })` matched on the
- *    field name.
- * 3. **Unwrap optional** — strip `optional`/`nullable`/`default` and roll absent
- *    per layer; sets `ctx.inner` for downstream steps. Internal — does not
- *    produce a final value on its own.
- * 4. **World-level custom generators** — entries from `withGenerators({ ... })`
- *    matched on the field name.
- * 5. **Key-based heuristics** — built-in `DEFAULT_KEY_MAP` exact-key +
- *    `DEFAULT_KEY_PATTERNS` regex matches (`email` → realistic email,
- *    `firstName` → first name, `createdAt` → date).
- * 6. **Schema-based fallback** — Zod type introspection (`z.enum([...])` →
- *    random member, `z.number().int().min(1).max(100)` → integer in range,
- *    etc.). Always resolves.
- *
- * After the pipeline returns, two wrapping passes finish the record:
- *
- * - **Override deep-merge** — `options.overrides` is deep-merged onto the
- *   pipeline's value (covers nested-object slices step 0 didn't eagerly
- *   consume).
- * - **Transform** — `options.transform` is called on the merged value.
- *
- * ## File layout
- *
- * This module owns the `WorldImpl` class, its constructor, its public methods,
- * and the module-global stable schema identity machinery. Pure helpers
- * are split out:
- *   - `./registration.js` — `SchemaReg`, `EMPTY_REG`, `normalizeRelationEntry`,
- *     `findPrimaryRegs`, `findDerivedRegs`, `resolveMode`.
- *   - `./derived.js`       — derived-upsert map access helpers.
- *   - `./relations.js`     — relation cache-key / fork-key / error-message helpers,
- *                             and the `RelationResolver` collaborator that owns
- *                             `resolveRelated` / `resolveRelatedMany` / `resolveRelationPool` /
- *                             `ensurePrimaryRecord`. `WorldImpl` calls via `this.relations.X(...)`.
- */
-
 import { z } from "zod";
 import type { ZodTypeAny, input } from "zod";
 import type {
@@ -107,50 +49,15 @@ import {
 import { RelationResolver } from "./relations.js";
 import { buildLazyGen, type FieldState } from "./bind-generators.js";
 
-// ---------------------------------------------------------------------------
-// Module-global stable schema identity
-// ---------------------------------------------------------------------------
-//
-// To satisfy call-order independence ACROSS distinct schemas, the
-// integer ID assigned to a `ZodTypeAny` reference must be the same in two
-// independently constructed worlds even when their `generate(...)` call
-// sequences differ — e.g. `worldA.generate(X)` vs
-// `worldB.generate(Y); worldB.generate(X)` must produce the same value for
-// `X`. A per-world counter cannot satisfy that: it would give X different IDs
-// (worldA: 0, worldB: 1).
-//
-// The fix: assign each schema reference a process-stable integer ID via a
-// **module-global** `WeakMap`. Schemas are GC'd naturally; the global counter
-// monotonically advances. The per-world `schemaCallCounts` (below) stays
-// per-world — it counts how many times THIS world has called `generate` on
-// that schema (the "Nth call" component of the fork-key seed). The
-// call-order independence requirement takes precedence and forces the ID map
-// to be global.
-//
-// This WeakMap MUST remain a single module-level instance — splitting
-// the engine across files MUST NOT accidentally duplicate it. The map lives
-// here (engine.ts) and is consulted only from `WorldImpl.nextSchemaSlot`.
-//
-// ---------------------------------------------------------------------------
-
+// Schema-reference identity must be process-stable across worlds (call-order
+// independence: worldA.generate(X) and worldB.generate(Y); worldB.generate(X)
+// must agree on X), so the id map is module-global, not per-world. It MUST stay
+// a single module-level instance — splitting the engine MUST NOT duplicate it.
 const globalSchemaIds: WeakMap<ZodTypeAny, number> = new WeakMap();
 let nextGlobalSchemaId = 0;
 
-// ---------------------------------------------------------------------------
-// Empty-map singletons shared by every world.
-//
-// Read sites that need a `ReadonlyMap` view (e.g. the per-record pipeline
-// ctx) and don't need to mutate it use these sentinels instead of forcing
-// a per-world allocation of an empty `Map`. The sentinels are frozen at
-// module load; the pipeline never writes to them.
-// ---------------------------------------------------------------------------
-
-// Empty-map singletons shared across worlds. Read sites
-// (the per-record pipeline ctx, the `explain()` helper) consult these
-// when the world's per-instance map is still `null`, avoiding a
-// per-world allocation of an empty Map. Typed as mutable `Map<...>` to
-// match the caller interface contracts; by convention these are
-// read-only — never `.set(...)` into them.
+// Read-only empty-map sentinels shared across worlds (avoid a per-world empty-Map
+// allocation when the per-instance map is still null). Never `.set(...)` into them.
 const EMPTY_CUSTOM_KEY_GENERATORS: Map<string, KeyGenerator> = new Map();
 const EMPTY_SCHEMA_KEY_MAPS: Map<
   ZodTypeAny,
@@ -166,18 +73,6 @@ function getSchemaId(schema: ZodTypeAny): number {
   return id;
 }
 
-// ---------------------------------------------------------------------------
-// Friendly trace type-name resolution (display/projection only)
-//
-// Resolve each registration's display name: the schema's `.description` when a
-// non-empty string, else the stable `schema<id>` fallback keyed on the
-// module-global `getSchemaId`. When two registrations of the SAME polarity
-// resolve to the SAME name, auto-disambiguate by registration order (R7): the
-// first keeps the bare name, the Nth (N≥2) becomes `<name>-N`. Fallback
-// `schema<id>` names are unique per schema reference, so only described names
-// ever collide. Returns a `regId → typeName` map. Pure projection — no PRNG.
-// ---------------------------------------------------------------------------
-
 function resolveTraceTypeName(schema: ZodTypeAny): string {
   const description = schema.description;
   if (typeof description === "string" && description.length > 0) return description;
@@ -186,8 +81,6 @@ function resolveTraceTypeName(schema: ZodTypeAny): string {
 
 function resolveTraceTypeNames(regs: readonly SchemaReg[]): Map<number, string> {
   const names = new Map<number, string>();
-  // Per `(name, polarity)` group, count occurrences in registration order so the
-  // Nth colliding registration takes the `-N` suffix.
   const counts = new Map<string, number>();
   for (const reg of regs) {
     const base = resolveTraceTypeName(reg.schema);
@@ -200,23 +93,10 @@ function resolveTraceTypeNames(regs: readonly SchemaReg[]): Map<number, string> 
   return names;
 }
 
-// ---------------------------------------------------------------------------
-// Captured per-field provenance (trace gate). A `TraceField` minus its
-// `forkKey`, which the `trace()` projection composes from the node's friendly
-// id (`<node.id> ▸ <path>`). Stored keyed by the produced record object so the
-// projection can attach each record's fields by reference (cache short-circuits
-// fabricate nothing).
-// ---------------------------------------------------------------------------
-
 type CapturedField = Omit<TraceField, "forkKey">;
 
-/**
- * Read-tracking `Proxy` over the in-progress record, installed only under
- * the `trace: true` gate. Its `get` trap records each
- * string sibling key a field's matcher reads through `ctx.current`, populating
- * `TraceField.dependsOn` from observed reads without mutating `ctx.current`'s
- * shape. The off-path passes the bare record (no Proxy).
- */
+// Read-tracking Proxy installed only under the `trace: true` gate; its get-trap
+// records each sibling key a matcher reads to populate TraceField.dependsOn.
 function trackReads(target: Record<string, unknown>, reads: Set<string>): Record<string, unknown> {
   return new Proxy(target, {
     get(t, prop, receiver) {
@@ -226,13 +106,6 @@ function trackReads(target: Record<string, unknown>, reads: Set<string>): Record
   });
 }
 
-/**
- * Assemble a {@link CapturedField} at the capture boundary: the internal
- * `FieldResolution["kind"]` maps to the public `TraceResolution` (total map),
- * the explain `{ identifier, reason }` becomes `generator` / `reason`, and the
- * tracked sibling reads become `dependsOn`. `forkKey` is composed later by the
- * `trace()` projection from the friendly node id.
- */
 function captureField(
   path: string,
   resolution: FieldResolution,
@@ -251,10 +124,6 @@ function captureField(
     dependsOn: reads !== null ? [...reads] : [],
   };
 }
-
-// ---------------------------------------------------------------------------
-// Array constraint resolvers
-// ---------------------------------------------------------------------------
 
 function resolveMinRequired(schema: ZodTypeAny, defaultMin: number): number {
   let min = defaultMin;
@@ -278,21 +147,9 @@ function resolveMaxAllowed(schema: ZodTypeAny, defaultMax: number): number {
   return max;
 }
 
-/**
- * Read the caller-side upper bound on an array schema, returning
- * `undefined` when the caller did not write `.max()` / `.length()`. Distinct
- * from {@link resolveMaxAllowed}, which folds in the library-side
- * `defaultArrayLength[1]` fallback. The primary-mode arm of `generateArray`
- * needs the raw caller intent so it can slice the registry to `.max()` /
- * `.length()` when present and leave it untouched when absent — slicing on
- * the library fallback would silently cap `world.populate(S, 10)` +
- * `world.generate(S.array())` at `defaultArrayLength[1]`.
- *
- * `.length(N)` sets both min and max to N, so it is treated as `max = N`
- * for slicing purposes (the call site rolls `target >= existingCount` and
- * the slice trims down to N). `.min()` alone leaves the upper bound
- * unconstrained — returns `undefined`.
- */
+// Caller-side upper bound (`.max()` / `.length()`), `undefined` when absent.
+// Unlike resolveMaxAllowed it does NOT fold in the library `defaultArrayLength`
+// fallback — slicing on that fallback would silently cap populate + generate.
 function readCallerMaxBound(schema: ZodTypeAny): number | undefined {
   let max: number | undefined;
   for (const c of checks(schema)) {
@@ -304,51 +161,19 @@ function readCallerMaxBound(schema: ZodTypeAny): number | undefined {
   return max;
 }
 
-// ---------------------------------------------------------------------------
-// Derived array source pair
-// ---------------------------------------------------------------------------
-
-/**
- * One source record paired with the derived `SchemaReg` it feeds and the
- * index it occupies in its source registry. Built by `collectSourcePairs`
- * and consumed by both `generateArrayDerived` (one derived record per pair,
- * up to the cap) and `generateDerivedAutoSource` (single-item round-robin
- * pick by `derivedPairCounter`).
- */
 type SourcePair = { source: unknown; reg: SchemaReg; sourceIndex: number };
 
-/**
- * Derive a stable per-source field-PRNG index from a source identity, used by
- * the explicit-source derived path (`generateWithSourceOverride`). The index
- * seeds the record's field PRNG (`dreg<regId>#<index>`), so two distinct
- * sources MUST map to distinct indices or every derived record collapses to
- * the same field seed (only source-pulled fields like `ctx.source.id` would
- * vary). The index becomes the `#<index>` suffix of the derived record id
- * `dreg<schemaId>#<index>` (`<schemaId>` is the module-global schema
- * reference identity `getSchemaId(schema)`, not the registration ordinal).
- *
- * Keyed on the identity VALUE (not a call counter) so it stays order-
- * independent: the same identity always yields the same index
- * regardless of when it is generated, and the upsert short-circuit already
- * guarantees a repeat call returns the cached record.
- *
- * Identity is the output of `computeSourceIdentity`: a primitive (when the
- * registration set a `sourceKey`) or the source object itself (reference
- * identity). Primitives stringify directly; objects use a structural
- * `JSON.stringify` (two distinct references with identical content therefore
- * share an index — acceptable: they are a deterministic function of content,
- * and the contract only requires they remain SEPARATE registry records, which the
- * caller's distinct-reference upsert keys already ensure).
- */
+// Stable per-source field-PRNG index for the explicit-source derived path.
+// Keyed on the identity VALUE (not a call counter) so it stays order-independent;
+// distinct sources MUST map to distinct indices or every derived record collapses
+// to the same field seed.
 function sourceFieldIndex(identity: unknown): number {
   let key: string;
   if (identity !== null && typeof identity === "object") {
     try {
       key = JSON.stringify(identity);
     } catch {
-      // Circular/unstringifiable — fall back to the type tag. Collapses to a
-      // single index, i.e. the pre-fix behaviour, only for this pathological
-      // case rather than for every source.
+      // Circular/unstringifiable — fall back to the type tag.
       key = Object.prototype.toString.call(identity);
     }
   } else {
@@ -357,48 +182,22 @@ function sourceFieldIndex(identity: unknown): number {
   return fnv1a(key);
 }
 
-// ---------------------------------------------------------------------------
-// WorldImpl
-// ---------------------------------------------------------------------------
-
 export class WorldImpl implements World {
   readonly prng: ReturnType<typeof createPrng>;
   readonly registry: Registry;
 
   private readonly schemaRegs: SchemaReg[] = [];
-  /**
-   * Round-robin index for the derived-without-source pair picker
-   * (`generateSingleItem`'s derived-fallback branch). Was historically named
-   * `generationCounter` and used for PRNG fork keys too; those
-   * fork keys moved to per-schema slots (`schemaCallCounts`), leaving this
-   * counter with one remaining consumer: `pairs[idx]` at the derived-without-
-   * source path. Incremented at the top of `generateSingleItem` and rolled
-   * back by the upsert short-circuit (cache neutrality).
-   */
+  // Round-robin index for the derived-without-source pair picker; incremented at
+  // the top of generateSingleItem and rolled back by the upsert short-circuit.
   private derivedPairCounter = 0;
-  /**
-   * Per-schema call index, advanced exactly once at each top-level
-   * `generateSingleItem` ad-hoc / `generateArray` / outer-wrapper roll site.
-   * Keyed by the same `ZodTypeAny` reference the call was made with. Two
-   * `generate(X)` calls on one world get slots 1, 2, ...; an intervening
-   * `generate(Y)` on a different schema reference leaves X's slot
-   * untouched (the call-order-independence invariant). Scoped per-world so two worlds with
-   * the same call sequence on X both see X's first call at slot 1.
-   *
-   * NB: the schema *identity* component of the fork key (`<id>`) is a
-   * module-global `WeakMap` (see `getSchemaId` above). The per-world map
-   * holds only the call count.
-   */
+  // Per-schema call slot (the "Nth call" fork-key component). Scoped per-world;
+  // an intervening generate(Y) leaves X's slot untouched (call-order independence).
+  // The schema-identity component of the fork key is module-global (getSchemaId).
   private readonly schemaCallCounts: WeakMap<ZodTypeAny, number> = new WeakMap();
   private readonly rootSeed: number;
 
-  /**
-   * Five mutable maps lazily allocated on first write. A
-   * freshly-constructed world that never calls `withSchema` / `withKeyMap`
-   * / `withGenerators` and never resolves a relation leaves all five at
-   * `null`. Reads check via `?.get(...)`; writes route through the
-   * `ensureXxx()` helpers below.
-   */
+  // The lazy maps below allocate on first write (via the ensureXxx helpers); a
+  // world that configures nothing leaves them null. Reads use `?.get(...)`.
   private customKeyGenerators: Map<string, KeyGenerator> | null = null;
   private schemaKeyMaps: Map<
     ZodTypeAny,
@@ -406,88 +205,32 @@ export class WorldImpl implements World {
   > | null = null;
   private relationPools: Map<string, unknown[]> | null = null;
   private pendingCounts: Map<ZodTypeAny, number> | null = null;
-  /**
-   * Per-pair upsert map for derived schemas registered with `from:`.
-   * Outer key: derived schema reference. Inner key: source identity (the
-   * source reference itself, or `source[sourceKey]` when declared). The
-   * stored value is the post-transform derived record — the same reference
-   * that lives in the registry.
-   *
-   * Lazy: starts `null`; first write goes through
-   * `ensureDerivedUpsert()`.
-   */
+  // Per-(derived schema, source identity) upsert map; stores the post-transform
+  // record (same reference held in the registry). Lazy via ensureDerivedUpsert.
   private derivedUpsert: DerivedUpsertMap | null = null;
   private lazyCache = new WeakMap<ZodTypeAny, ZodTypeAny>();
-  /**
-   * Effective storage mode for the current outer `generate` call. When `false`,
-   * `generateAndStorePrimary` and `generateDerivedRecord` skip their
-   * `registry.store` side-effect. Propagates through nested recursion; scoped
-   * to the outer call via try/finally in `WorldImpl.generate`.
-   */
+  // Effective per-outer-call storage mode; when false the registry.store side-
+  // effects are skipped. Propagates through recursion, scoped via try/finally.
   private effectiveStore = true;
 
-  /**
-   * Per-call locale, set when the caller passes `{ locale }` to
-   * `world.generate(...)`. Read by {@link makeFieldCtx} so matcher closures
-   * see the per-call locale on `ctx.locale` (and therefore through
-   * `ctx.gen.*` calls). When `undefined`, `makeFieldCtx` falls back to the
-   * world-construction `options.locale`. Push/pop in
-   * {@link withEffectiveLocale} mirrors {@link withEffectiveStore}.
-   */
+  // Per-call overrides set from generate() options, propagated through recursion
+  // via the matching withEffectiveX push/pop scopes; undefined ⇒ inherit/fall back.
   private effectiveLocale: LocaleData | undefined = undefined;
-
-  /**
-   * Per-call `defaultArrayLength`, set when the caller passes
-   * `{ defaultArrayLength }` to `world.generate(...)`. Propagates through
-   * nested recursion (object fields, nested arrays) via the
-   * `withEffectiveDefaultArrayLength` push/pop scope so inner
-   * `generateArray` calls honour the outer call's intent. When `undefined`,
-   * `generateArray` falls back to `this.options.defaultArrayLength ?? [1, 5]`.
-   */
   private effectiveDefaultArrayLength: readonly [number, number] | undefined = undefined;
-
-  /**
-   * Per-call unique-mode flag, set when the caller passes
-   * `{ unique: true }` to `world.generate(...)`. Read by {@link makeFieldCtx}
-   * so the field-bound `ctx.prng.pickZipf` substitutes `s = 0` for the
-   * duration of the call (uniqueness wins over realism).
-   * Push/pop in {@link withEffectiveUniqueMode} mirrors {@link withEffectiveLocale}.
-   */
+  // unique:true makes pickZipf substitute s=0 (uniqueness wins over realism).
   private effectiveUniqueMode = false;
 
-  /**
-   * Relation-resolution collaborator. Owns `relationPools` (shared with
-   * this `WorldImpl` via the deps surface) and hosts `resolveRelated` /
-   * `resolveRelatedMany` / `resolveRelationPool` / `ensurePrimaryRecord`. The
-   * `WorldImpl` remains the public face; this field is module-private.
-   */
   private readonly relations: RelationResolver;
 
-  /**
-   * Mutable per-`generate()` holder threaded through the lazy generator
-   * binder (see `./bind-generators.ts`). Allocated lazily at the top of the
-   * outer `generate()` entry path; the field loop mutates `state.prng` /
-   * `state.ctx` in place so bound closures observe per-field state at call
-   * time without rebinding.
-   *
-   * Lifetime: scoped to the outer `generate()` call. Reused across nested
-   * `generate()` recursion (the holder is overwritten each `makeFieldCtx`
-   * call). When the call returns, the holder remains live until the next
-   * outer call replaces it — that's fine because every `makeFieldCtx` call
-   * rewrites both fields before passing the holder back through `ctx.gen`.
-   */
+  // Mutable per-generate() holder for the lazy generator binder. The field loop
+  // mutates state.prng / state.ctx in place so bound closures observe per-field
+  // state at call time without rebinding; scoped to the outer call.
   private fieldState: FieldState | null = null;
   private boundGen: BoundGenerators | null = null;
 
-  /**
-   * Provenance field-capture gate + sink. `traceEnabled` mirrors
-   * `createWorld({ trace: true })` (opt-in gate). When `false` (the
-   * default) the per-field capture in {@link generateObjectFields} is a no-op:
-   * no Proxy is installed over `ctx.current` and no `CapturedField` is
-   * allocated, so the off-path stays allocation- and PRNG-neutral.
-   * `captureSink` keys each produced record object to its captured fields; the
-   * {@link trace} projection attaches them by reference.
-   */
+  // traceEnabled mirrors createWorld({ trace: true }). When false (default) the
+  // per-field capture is a no-op (no Proxy, no allocation) so the off-path stays
+  // allocation- and PRNG-neutral. captureSink keys each record to its fields.
   private readonly traceEnabled: boolean;
   private captureSink: WeakMap<object, CapturedField[]> | null = null;
 
@@ -496,8 +239,6 @@ export class WorldImpl implements World {
     this.rootSeed = (options || {}).seed ?? Math.floor(Math.random() * 0xffffffff);
     this.prng = createPrng(this.rootSeed);
     this.registry = new SchemaRegistry(this.prng.fork("registry"));
-    // Only allocate `customKeyGenerators` if construction options
-    // supply any. The empty-no-options shape leaves it at `null`.
     if (options.generators) {
       const entries = Object.entries(options.generators);
       if (entries.length > 0) {
@@ -509,23 +250,12 @@ export class WorldImpl implements World {
     }
     this.relations = new RelationResolver({
       registry: this.registry,
-      // Pass a callback so the relation pool map is allocated only
-      // when the resolver actually reads/writes it (i.e. the first relation
-      // resolution); a world with no relations never allocates it.
       getRelationPools: () => this.ensureRelationPools(),
       findPrimaryReg: (schema) => this.findPrimaryRegs(schema)[0] ?? null,
       generateAndStorePrimary: (schema, reg) => this.generateAndStorePrimary(schema, reg),
       isStoreActive: () => this.effectiveStore,
     });
   }
-
-  // -------------------------------------------------------------------------
-  // Lazy map ensure helpers
-  //
-  // Each `ensureXxx()` returns the corresponding map, allocating it on first
-  // call. Used at every write site; read sites prefer `?.get(...)` so they
-  // do not trigger allocation when the map is still `null`.
-  // -------------------------------------------------------------------------
 
   private ensureCustomKeyGenerators(): Map<string, KeyGenerator> {
     if (this.customKeyGenerators === null) {
@@ -572,23 +302,8 @@ export class WorldImpl implements World {
     return this.derivedUpsert;
   }
 
-  /**
-   * Assign a stable identity to `schema` (lazily, on first sight) and
-   * return the next per-schema call slot for the three fork-key sites
-   * (`generateSingleItem` ad-hoc, `generateArray`, outer-wrapper roll).
-   *
-   * @param schema  The outer schema reference the caller invoked
-   *                `generate(...)` with — NOT a re-resolved inner type. Using
-   *                the outer reference preserves identity across `lazy`
-   *                re-resolutions and `.optional()` / `.array()` wrappers.
-   * @param commit  When `true` (default) the slot is consumed and the
-   *                per-schema counter advances. When `false`, the next slot
-   *                that *would* be assigned is returned without mutating the
-   *                counter — useful for peek-before-cache-check patterns.
-   *                Currently always commits and rolls back on cache hit
-   *                via `rollbackSchemaSlot`; the parameter is here for
-   *                future use.
-   */
+  // Pass the OUTER schema reference (not a re-resolved inner type) so identity
+  // is stable across lazy re-resolutions and .optional()/.array() wrappers.
   private nextSchemaSlot(schema: ZodTypeAny, commit: boolean = true): { id: number; slot: number } {
     const id = getSchemaId(schema);
     const slot = (this.schemaCallCounts.get(schema) ?? 0) + 1;
@@ -598,19 +313,13 @@ export class WorldImpl implements World {
     return { id, slot };
   }
 
-  // -------------------------------------------------------------------------
-  // withSchema
-  // -------------------------------------------------------------------------
-
   withSchema<
     TSchema extends ZodTypeAny,
     TSource extends ZodTypeAny | undefined = undefined,
     TRelations extends Record<string, ZodTypeAny> = Record<never, never>,
   >(schema: TSchema, opts?: SchemaOpts<TSchema, TSource, TRelations>): this {
-    // A schema reference MAY be registered only as one of primary OR
-    // derived on a given world. Mixing the two polarities throws at
-    // `withSchema` time, before the new `SchemaReg` is appended — so the
-    // failed call leaves `this.schemaRegs` unchanged.
+    // Mixing primary/derived polarity for one schema reference throws BEFORE the
+    // SchemaReg is appended, so a failed call leaves schemaRegs unchanged.
     const incomingDerived = opts?.from !== undefined;
     if (incomingDerived && this.findPrimaryRegs(schema).length > 0) {
       throw new Error(
@@ -663,18 +372,13 @@ export class WorldImpl implements World {
     return this;
   }
 
-  // -------------------------------------------------------------------------
-  // populate
-  // -------------------------------------------------------------------------
-
   populate<TSchema extends ZodTypeAny>(
     schema: TSchema,
     count: number,
     factory?: (index: number) => GenerateOptions<z.infer<TSchema>>,
   ): this {
-    // `populate`'s contract is to write the registry. A factory return
-    // including `store: false` MUST be silently ignored — strip the field
-    // before threading the options into the generate helpers.
+    // populate always writes the registry — a factory's `store: false` is
+    // silently ignored, so strip it before threading options through.
     const factoryOpts = factory
       ? (i: number): GenerateOptions<unknown> => {
           const raw = factory(i) as GenerateOptions<unknown> & { store?: boolean };
@@ -683,21 +387,12 @@ export class WorldImpl implements World {
         }
       : undefined;
 
-    // The historical primary-first pre-check is dead code
-    // (`withSchema` throws on dual primary/derived registration, so the
-    // inversion-observable configuration cannot exist). Dispatch directly via
-    // `resolveMode` — matching how `generate`, `generateArray`, and `get`
-    // dispatch.
     const mode = this.resolveMode(schema);
     switch (mode.kind) {
       case "derived": {
         const reg = mode.regs[0]!;
         const fromSchema = reg.from!;
         const sources = this.registry.all(fromSchema);
-        // Auto-provision additional sources when sources.length < count,
-        // mirroring `generateArray`'s derived auto-provision. populate's
-        // always-write contract writes the auto-provisioned sources
-        // to the source registry via `generateAndStorePrimary`.
         const fromReg = this.findPrimaryRegs(fromSchema)[0] ?? null;
         for (let i = 0; i < count; i++) {
           let source: unknown;
@@ -713,8 +408,6 @@ export class WorldImpl implements World {
         break;
       }
       case "primary": {
-        // The new primary arm replaces the removed pre-check;
-        // observable behaviour identical.
         for (let i = 0; i < count; i++) {
           const opts = factoryOpts ? factoryOpts(i) : undefined;
           this.generateAndStorePrimary(schema, mode.reg, opts);
@@ -722,7 +415,6 @@ export class WorldImpl implements World {
         break;
       }
       case "ad-hoc":
-        // Default to primary if not registered
         for (let i = 0; i < count; i++) {
           const opts = factoryOpts ? factoryOpts(i) : undefined;
           this.generateAndStorePrimary(schema, null, opts);
@@ -732,34 +424,26 @@ export class WorldImpl implements World {
     return this;
   }
 
-  // -------------------------------------------------------------------------
-  // populateFrom
-  // -------------------------------------------------------------------------
-
   populateFrom<TDerived extends ZodTypeAny, TSource extends ZodTypeAny>(
     derivedSchema: TDerived,
     sourceSchema: TSource,
     predicate?: (item: z.infer<TSource>) => boolean,
     factory?: (source: z.infer<TSource>) => GenerateOptions<z.infer<TDerived>>,
   ): this {
-    // Snapshot the source bucket at call start so mid-loop inserts
-    // (a matcher side-effect, an auto-provisioned source) do not extend the
-    // iteration of the current call.
+    // Snapshot the source bucket so mid-loop inserts don't extend this call.
     const snapshot = [...this.registry.all(sourceSchema)];
-    // Filter by predicate if present.
     const sources = predicate ? snapshot.filter(predicate) : snapshot;
 
     for (const source of sources) {
-      // Strip any `store: false` returned by the factory — populateFrom
-      // always writes, mirroring populate's contract.
+      // populateFrom always writes — strip any factory `store: false`.
       const factoryReturn = factory?.(source);
       const { store: _ignored, ...rest } = (factoryReturn ?? {}) as GenerateOptions<
         z.infer<TDerived>
       > & {
         store?: boolean;
       };
-      // Idempotence: delegate to generate, which hits the per-pair
-      // upsert on a repeat call with the same source identity.
+      // Delegate to generate so a repeat call with the same source identity
+      // hits the per-pair upsert (idempotence).
       this.generate(derivedSchema, {
         ...rest,
         source,
@@ -769,26 +453,11 @@ export class WorldImpl implements World {
     return this;
   }
 
-  // -------------------------------------------------------------------------
-  // generate
-  // -------------------------------------------------------------------------
-
   generate<TSchema extends ZodTypeAny>(
     schema: TSchema,
     options?: GenerateOptions<z.infer<TSchema>>,
   ): z.infer<TSchema> {
-    // Scope the lazy generator-binder holder to this outer call so a
-    // matcher's `ctx.gen.<ns>.<fn>()` always observes the holder set up for
-    // its own field, even when the matcher invokes nested `ctx.generate(...)`
-    // that allocates its own per-call holder. Save/restore via try/finally.
     return this.withFieldStateScope(() =>
-      // Scope the effective store mode to this outer call. When the
-      // caller passes `store: false`, this mode propagates through nested
-      // recursion (generateObjectFields / generateArray / ctx.generate which
-      // re-enters this method); restore the previous value on exit so a separate
-      // top-level call is unaffected. Explicit `store: true` overrides
-      // an inherited `store: false` (used by `world.get` to force storage on its
-      // create-path delegate call).
       this.withEffectiveLocale(options?.locale, () =>
         this.withEffectiveUniqueMode(options?.unique, () =>
           this.withEffectiveDefaultArrayLength(options?.defaultArrayLength, () =>
@@ -802,18 +471,15 @@ export class WorldImpl implements World {
 
               if (d.type === "array") {
                 if (outerWrappers.length > 0) {
-                  // Site 3: outer-wrapper optional/nullable roll. Key on the
-                  // outer `schema` reference (the `.optional()` wrapper) so the Nth
-                  // call to the same `.optional()` schema reuses the same fork key
-                  // regardless of intervening `generate(Y)` calls.
+                  // Key the wrapper roll on the outer schema reference so the Nth
+                  // call to the same .optional() reuses the same fork key
+                  // regardless of intervening generate(Y) calls.
                   const { id, slot } = this.nextSchemaSlot(schema);
                   const prng = this.prng.fork(`wrap:${id}:${slot}`);
                   const optProb =
                     options?.optionalProbability ?? this.options.optionalProbability ?? 0.2;
                   for (const wrapper of outerWrappers) {
                     if (prng.random() < optProb) {
-                      // No counter mutation on skip — the per-schema slot was already
-                      // advanced by `nextSchemaSlot` above (the next call gets slot+1).
                       return (wrapper === "optional" ? undefined : null) as z.infer<TSchema>;
                     }
                   }
@@ -836,13 +502,8 @@ export class WorldImpl implements World {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // explain — read-only, PRNG-neutral per-field decision summary
-  // -------------------------------------------------------------------------
-
   explain<TSchema extends ZodTypeAny>(schema: TSchema): ExplainResult<TSchema> {
-    // Use the most recent registration (last `withSchema` wins for matchers,
-    // mirroring how `generateObjectFields` resolves `reg.matchers`).
+    // Last withSchema wins for matchers (mirrors generateObjectFields).
     const primaryRegs = this.findPrimaryRegs(schema);
     const reg = primaryRegs.length > 0 ? primaryRegs[primaryRegs.length - 1]! : null;
     const schemaKeyMap =
@@ -855,29 +516,14 @@ export class WorldImpl implements World {
     return explainSchema(schema, {
       matchers: reg?.matchers ?? {},
       schemaKeyMap,
-      // Explain reads the map for lookups; an empty Map is the
-      // null-equivalent. Avoid allocation on the read path.
       customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
       relations: reg?.relations ?? {},
     });
   }
 
-  // -------------------------------------------------------------------------
-  // trace — JSON-serializable provenance projection
-  //
-  // Emits one TraceNode per stored registry record, in registration order.
-  // Node id / type derive from the schema's registration order (`regId`) and
-  // polarity (primary → `node<regId>`, derived → `derived<regId>`). Field-
-  // level provenance (`fields`) and relation edges (`edges`) are captured
-  // under the opt-in `trace` gate.
-  // -------------------------------------------------------------------------
-
   trace(): WorldTrace {
-    // The friendly `<typeName>#<index>` projection. Dedup the registrations
-    // by schema reference (re-registering the same reference is not a new node
-    // source and never advances a collision suffix), preserving registration
-    // order, then resolve each registration's display name with deterministic
-    // collision disambiguation (see `resolveTraceTypeNames`).
+    // Dedup registrations by schema reference (re-registering the same reference
+    // is not a new node source and never advances a collision suffix).
     const regs: SchemaReg[] = [];
     const seen = new Set<ZodTypeAny>();
     for (const reg of this.schemaRegs) {
@@ -892,20 +538,12 @@ export class WorldImpl implements World {
     for (const reg of regs) {
       const derived = reg.from !== null;
       const type = typeNames.get(reg.regId)!;
-      // Derived nodes resolve `derivedFrom` to the friendly source node id
-      // (`<sourceTypeName>#<index+1>`); the source is the first primary
-      // registration of `reg.from`.
       const sourceReg = derived ? (this.findPrimaryRegs(reg.from!)[0] ?? null) : null;
       const sourceType = sourceReg ? typeNames.get(sourceReg.regId) : undefined;
 
       const records = this.registry.all(reg.schema);
       records.forEach((value, index) => {
         const nodeId = `${type}#${index + 1}`;
-        // Attach the per-field provenance captured during generation
-        // (keyed by the produced record object). Off-path (or a cache-short-
-        // circuited record the pipeline never produced) yields no captured
-        // fields, so `fields` stays `[]`. `forkKey` is composed
-        // here from the friendly node id (`<node id> ▸ <path>`).
         const captured =
           value !== null && typeof value === "object"
             ? this.captureSink?.get(value as object)
@@ -916,16 +554,12 @@ export class WorldImpl implements World {
         const node: TraceNode = {
           id: nodeId,
           type,
-          // The numeric `index` field stays 0-based; only the string
-          // `id` (and `derivedFrom`) is 1-based friendly.
+          // The numeric index stays 0-based; only the string id/derivedFrom is 1-based.
           index,
           value,
           store: true,
           fields,
-          // Derived records carry their source node's friendly id; primary
-          // records OMIT the key entirely (R5: `"derivedFrom" in node === false`).
-          // The stub pairs derived record `index` with source record `index`
-          // (mirroring `populateFrom`'s in-order iteration).
+          // Primary records OMIT derivedFrom entirely ("derivedFrom" in node === false).
           ...(derived && sourceType !== undefined
             ? { derivedFrom: `${sourceType}#${index + 1}` }
             : {}),
@@ -935,10 +569,6 @@ export class WorldImpl implements World {
     }
     return { seed: this.rootSeed, nodes, edges: [] };
   }
-
-  // -------------------------------------------------------------------------
-  // get — find an existing matching record, or generate-and-store one
-  // -------------------------------------------------------------------------
 
   get<TSchema extends ZodTypeAny>(
     schema: TSchema,
@@ -954,9 +584,8 @@ export class WorldImpl implements World {
     const existing = this.registry.find(schema, matches);
     if (existing !== undefined) return existing;
 
-    // `world.get`'s create path MUST always store regardless of any
-    // ambient store mode — its idempotence requires the created record
-    // to be discoverable by a later find/get.
+    // get's create path MUST always store (idempotence: a later find/get must
+    // discover it) regardless of any ambient store mode.
     const created = this.generate(
       schema,
       predicate
@@ -967,26 +596,16 @@ export class WorldImpl implements World {
     const isRegistered = this.resolveMode(schema).kind !== "ad-hoc";
 
     if (!isRegistered) {
-      // `generate` does not store ad-hoc, unregistered schemas — store the
-      // created record ourselves so a later `find`/`get` can discover it.
+      // generate does not store ad-hoc schemas — store it so find/get discovers it.
       this.registry.store(schema, created as input<TSchema>);
       return created;
     }
 
-    // Registered schemas are stored by `generate`, but the instance it returns
-    // is a post-merge copy distinct from the one in the registry. Return the
-    // stored instance so subsequent `get` calls resolve by reference.
+    // generate's returned instance is a post-merge copy distinct from the stored
+    // one; return the stored instance so later get calls resolve by reference.
     const stored = this.registry.find(schema, matches);
     return stored ?? created;
   }
-
-  // -------------------------------------------------------------------------
-  // Private: registration lookups
-  //
-  // Thin wrappers over the pure helpers in `./registration.js` — they keep
-  // the call sites in this file readable and let `WorldImpl`'s private
-  // `schemaRegs` array stay encapsulated.
-  // -------------------------------------------------------------------------
 
   private findPrimaryRegs(schema: ZodTypeAny): SchemaReg[] {
     return findPrimaryRegsPure(this.schemaRegs, schema);
@@ -996,40 +615,13 @@ export class WorldImpl implements World {
     return findDerivedRegsPure(this.schemaRegs, schema);
   }
 
-  // -------------------------------------------------------------------------
-  // Private: schema-mode resolution
-  //
-  // Tagged union over the three registration modes. Replaces the
-  // `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
-  // ? ... : ad-hoc` cascade that previously appeared in `generateSingleItem`,
-  // `generateArray`, `populate`, and `get`.
-  //
-  // Derived-first precedence is uniform across all four dispatchers
-  // `withSchema` forbids dual primary+derived registration at
-  // registration time (so the inversion-observable config cannot exist) and
-  // `populate`'s former primary-first pre-check was removed. Operates on
-  // whatever schema reference it is given — callers handle the two-level
-  // (`schema` then `targetSchema`) fallback themselves where they need it.
-  // -------------------------------------------------------------------------
-
   private resolveMode(schema: ZodTypeAny): SchemaMode {
     return resolveModePure(this.schemaRegs, schema);
   }
 
-  // -------------------------------------------------------------------------
-  // Private: effective-store scope helper
-  // -------------------------------------------------------------------------
-
-  /**
-   * Push/pop the {@link effectiveStore} flag for the duration of `fn`,
-   * encapsulating the store-mode state machine. When `value` is
-   * `undefined` no push/pop happens (the call inherits the ambient mode); when
-   * `value` is `true` or `false` the flag is set for the duration of `fn` and
-   * restored in `finally`.
-   *
-   * The try/finally is what makes the transitive-suppression contract
-   * scoped to one outer `generate` call.
-   */
+  // Push/pop a per-outer-call effective flag for the duration of fn; undefined
+  // inherits the ambient value. The try/finally scopes transitive suppression
+  // (e.g. store: false) to one outer generate call.
   private withEffectiveStore<R>(value: boolean | undefined, fn: () => R): R {
     if (value === undefined) return fn();
     const previous = this.effectiveStore;
@@ -1041,13 +633,6 @@ export class WorldImpl implements World {
     }
   }
 
-  /**
-   * Push/pop {@link effectiveLocale} for the duration of `fn`. When
-   * `value` is `undefined` no push/pop happens (the call inherits the ambient
-   * locale); when `value` is provided the per-call locale is set for the
-   * duration of `fn` and restored in `finally`. Mirrors
-   * {@link withEffectiveStore}.
-   */
   private withEffectiveLocale<R>(value: LocaleData | undefined, fn: () => R): R {
     if (value === undefined) return fn();
     const previous = this.effectiveLocale;
@@ -1073,12 +658,7 @@ export class WorldImpl implements World {
     }
   }
 
-  /**
-   * Push/pop {@link effectiveUniqueMode} for the duration of `fn`.
-   * Only `value === true` activates the mode (the default is false, and an
-   * explicit `false` is a no-op pass-through — matching the locale scope's
-   * "undefined ⇒ inherit" pattern but specialised for the boolean opt-in).
-   */
+  // Only value === true activates unique mode; an explicit false is a no-op.
   private withEffectiveUniqueMode<R>(value: boolean | undefined, fn: () => R): R {
     if (value !== true) return fn();
     const previous = this.effectiveUniqueMode;
@@ -1090,20 +670,9 @@ export class WorldImpl implements World {
     }
   }
 
-  /**
-   * Push/pop the lazy generator-binder holder for the duration of `fn`.
-   *
-   * The holder is allocated lazily by {@link ensureFieldState} on first
-   * `makeFieldCtx` call within the outer `generate()`. Nested `ctx.generate`
-   * calls would otherwise mutate the same holder and break a captured outer
-   * `ctx.gen` reference; saving/restoring the holder + `boundGen` pair here
-   * ensures each outer call gets its own pair while still amortising binding
-   * across all fields of the same call.
-   *
-   * Also wires the test-only `__setCurrentWorld` seam so the
-   * `bind-generators-lazy.test.ts` per-world bind counter can attribute
-   * materialisations to this `WorldImpl` instance.
-   */
+  // Save/restore the lazy-binder holder + boundGen pair so a nested ctx.generate
+  // doesn't clobber a captured outer ctx.gen reference; each outer call gets its
+  // own pair while binding stays amortised across that call's fields.
   private withFieldStateScope<R>(fn: () => R): R {
     const previousState = this.fieldState;
     const previousGen = this.boundGen;
@@ -1117,27 +686,6 @@ export class WorldImpl implements World {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Private: generators binding
-  // -------------------------------------------------------------------------
-
-  /**
-   * Lazy generator binding via mutable holder.
-   *
-   * Returns the shared `BoundGenerators` for the current outer `generate()`
-   * call, allocating the `FieldState` + `buildLazyGen` pair on first
-   * invocation and reusing them on every subsequent `makeFieldCtx` within
-   * the same call. Each namespace is a property-getter on the returned
-   * object that materialises its closure set on first touch and caches the
-   * result — see `./bind-generators.ts` for the binder.
-   *
-   * The bound closures read `state.prng` / `state.ctx` at call time, so the
-   * field loop only needs to mutate the holder's two fields per iteration
-   * instead of re-binding 14 namespaces × ~10 helpers per field.
-   *
-   * The ctx-forwarding contract is preserved byte-identically (see
-   * `CTX_SLOTS` in `./bind-generators.ts`).
-   */
   private ensureFieldState(prng: Prng, ctx: GeneratorContext): FieldState {
     let state = this.fieldState;
     if (state === null) {
@@ -1151,30 +699,10 @@ export class WorldImpl implements World {
     return state;
   }
 
-  // -------------------------------------------------------------------------
-  // Private: context construction
-  //
-  // recordPrng — stable per-record PRNG used for relation resolution.
-  //   Calling ctx.related("owner") must return the SAME owner for all
-  //   fields in one record. We fork from recordPrng (not fieldPrng) so the
-  //   pick is field-independent.
-  // fieldPrng  — field-seeded PRNG used for all data generation.
-  // -------------------------------------------------------------------------
-
-  /**
-   * Build a fresh per-field `GeneratorContext` literal. R13's
-   * `makeRecordCtx` + `updateFieldCtx` split was reverted (see spec
-   * Context → "R13 was also tried and reverted"): the per-field literal
-   * preserves monomorphic shape for V8 inline caching, which dominates the
-   * allocation cost on small (no-matcher) workloads.
-   *
-   * Per-field PRNG (`fieldPrng`) seeds all data generation; `recordPrng`
-   * is the stable per-record PRNG used for relation resolution so
-   * `ctx.related("owner")` returns the same owner across every field of
-   * the record. The lazy-bind holder (`fieldState`) is updated to point
-   * at this field's PRNG + ctx so any bound closures `ctx.gen.<ns>.<fn>()`
-   * triggers see the current field's state at call time.
-   */
+  // recordPrng is the stable per-record PRNG used for relation resolution so
+  // ctx.related("owner") returns the same owner across every field; fieldPrng is
+  // field-seeded and drives all data generation. The per-field ctx literal (not a
+  // shared+mutated object) keeps a monomorphic shape for V8 inline caching.
   private makeFieldCtx(
     reg: SchemaReg,
     source: unknown,
@@ -1194,14 +722,9 @@ export class WorldImpl implements World {
       )) as GeneratorContext["related"];
     related.many = <T = unknown>(relName: string, count: number): T[] =>
       this.relations.resolveRelatedMany<T>(reg, recordPrng, recordId, relName, count);
-    // When the outer `generate` call passes `unique: true`,
-    // `effectiveUniqueMode` is true for the duration of the call. Wrap
-    // `fieldPrng` so its `pickZipf` substitutes `s = 0` regardless of the
-    // configured exponent (uniqueness wins over realism). All other methods
-    // delegate verbatim — no PRNG state semantics change. Wrapping at the
-    // field boundary covers both the direct `ctx.prng.pickZipf(...)` path
-    // and the `ctx.gen.*` namespace (whose generators receive this same
-    // wrapped prng through `bindGenerators`).
+    // Under unique mode, wrap fieldPrng so pickZipf substitutes s = 0 (uniqueness
+    // wins over realism); all other methods delegate verbatim. Wrapping at the
+    // field boundary covers both ctx.prng and the ctx.gen.* namespace.
     const exposedPrng: Prng = this.effectiveUniqueMode
       ? {
           get seed(): number {
@@ -1221,10 +744,6 @@ export class WorldImpl implements World {
         }
       : fieldPrng;
 
-    // Allocate / refresh the lazy-bind holder so `ctx.gen.<ns>.<fn>()`
-    // observes this field's prng + ctx at call time. The holder shape is
-    // stable across fields; the per-namespace getters in `buildLazyGen`
-    // materialise closures only when a matcher actually reads them.
     const state = this.ensureFieldState(exposedPrng, undefined as unknown as GeneratorContext);
     const ctx: GeneratorContext = {
       prng: exposedPrng,
@@ -1240,34 +759,16 @@ export class WorldImpl implements World {
       },
       recursionLimit: this.options.recursionLimit ?? 5,
       current: (current ?? {}) as Partial<unknown>,
-      // Per-call `generate(S, { locale })` wins over the world-level
-      // construction option. `withEffectiveLocale` set it in scope; without it,
-      // fall back to the world's `options.locale`, then `defaultLocale`.
       locale: this.effectiveLocale ?? this.options.locale ?? defaultLocale,
       defaultArrayLength: this.effectiveDefaultArrayLength ??
         this.options.defaultArrayLength ?? [1, 5],
-      // Thread the array-override length so the field's array generation
-      // produces exactly `override.length` base elements (omitted when no array
-      // override is present — `exactOptionalPropertyTypes` keeps the slot absent
-      // so the no-override path is byte-identical).
+      // Omitted when no array override (exactOptionalPropertyTypes) so the
+      // no-override path stays byte-identical.
       ...(overrideArrayLength !== undefined ? { overrideArrayLength } : {}),
     };
     state.ctx = ctx;
     return ctx;
   }
-
-  // -------------------------------------------------------------------------
-  // Private: relation resolution
-  //
-  // The four entangled methods (`resolveRelated`, `resolveRelatedMany`,
-  // `resolveRelationPool`, `ensurePrimaryRecord`) now live on the
-  // `RelationResolver` collaborator in `./relations.js`. Call sites in this
-  // file go through `this.relations.X(...)`.
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-  // Private: primary record generation
-  // -------------------------------------------------------------------------
 
   private generateAndStorePrimary(
     schema: ZodTypeAny,
@@ -1275,25 +776,13 @@ export class WorldImpl implements World {
     options?: GenerateOptions<unknown>,
     explicitRecordIndex?: number,
   ): unknown {
-    // pendingCounts is lazily allocated. The first invocation of
-    // `generateAndStorePrimary` for any schema triggers allocation. A
-    // zero-config `world.generate(schema)` that does not hit the
-    // store-on path (ad-hoc / store: false) keeps `pendingCounts === null`.
     const pendingMap = this.ensurePendingCounts();
     const pending = pendingMap.get(schema) ?? 0;
-    // Under `store: false` an array's per-element seed index self-cancels
-    // — the registry write is suppressed so `registry.count` never advances and
-    // `pending` cycles 0→1→0 across sequential siblings, collapsing every
-    // element to the same `reg<id>#<count>`. When an array generator supplies an
-    // explicit per-element index, use it so the i-th element seeds distinctly,
-    // matching the store-on record at index i.
-    //
-    // The explicit index is honoured ONLY on the store-off path: when storing,
-    // `registry.count + pending` already yields distinct indices AND is the
-    // mechanism that re-entrant (self-referential) generation relies on — a
-    // child record generated mid-parent enters at `pending > 0`, so forcing an
-    // explicit `existingCount + i` there would collide parent and child. Gating
-    // on `!effectiveStore` keeps the store-on path byte-identical.
+    // Under store:false the per-element index self-cancels (registry.count never
+    // advances, pending cycles 0→1→0) and collapses siblings to one seed, so an
+    // explicit per-element index is honoured there. It MUST stay gated on
+    // !effectiveStore: on the store-on path registry.count + pending is also what
+    // re-entrant generation relies on (a child mid-parent enters at pending > 0).
     const recordIndex =
       !this.effectiveStore && explicitRecordIndex !== undefined
         ? explicitRecordIndex
@@ -1318,22 +807,15 @@ export class WorldImpl implements World {
       if (options?.transform) {
         result = options.transform(result as input<ZodTypeAny>);
       }
-      // Skip the registry write when the outer call opted out.
       if (this.effectiveStore) {
         this.registry.store(schema, result);
       }
       return result;
     } finally {
-      // pendingCounts was allocated at the top of this method via
-      // ensurePendingCounts(); it cannot be null here.
       const currentPending = pendingMap.get(schema) ?? 1;
       pendingMap.set(schema, currentPending - 1);
     }
   }
-
-  // -------------------------------------------------------------------------
-  // Private: derived record generation
-  // -------------------------------------------------------------------------
 
   private generateDerivedRecord(
     schema: ZodTypeAny,
@@ -1342,13 +824,9 @@ export class WorldImpl implements World {
     sourceIndex: number,
     options?: GenerateOptions<unknown>,
   ): unknown {
-    // Key the derived field-PRNG seed on the module-global schema
-    // reference identity (`getSchemaId`, as the other paths do), NOT
-    // on the registration ordinal `reg.regId`. Keying on `regId` made derived
-    // output depend on how many unrelated `withSchema(...)` calls preceded it,
-    // violating "call order across distinct schemas MUST NOT affect any
-    // value". The `#<sourceIndex>` suffix is preserved so distinct source
-    // indices keep distinct draws.
+    // Key the derived field-PRNG seed on the module-global schema identity
+    // (getSchemaId), NOT reg.regId — keying on regId made output depend on how
+    // many unrelated withSchema calls preceded it (call-order independence).
     const recordId = `dreg${getSchemaId(schema)}#${sourceIndex}`;
     const recordPrng = createPrng(fieldSeed(this.rootSeed, recordId, ""));
     let result = this.generateObjectFields(
@@ -1365,14 +843,6 @@ export class WorldImpl implements World {
     }
     return result;
   }
-
-  // -------------------------------------------------------------------------
-  // Private: object field generation
-  //
-  // recordPrng — used for relation resolution (stable across fields).
-  // The field PRNG is forked from recordPrng per field key.
-  // fieldPathPrefix — prepended to the field key for ctx.fieldPath (e.g. "reg0#0.lines").
-  // -------------------------------------------------------------------------
 
   private generateObjectFields(
     schema: ZodTypeAny,
@@ -1398,9 +868,8 @@ export class WorldImpl implements World {
 
     const shape = d.shape!;
     const result: Record<string, unknown> = {};
-    // Under the trace gate, collect each field's provenance into `captured`
-    // and attach it to the produced record object after the loop. Off-path
-    // `captured` stays `null` (no allocation, no Proxy).
+    // null off-path (no allocation, no Proxy); under the trace gate, collects each
+    // field's provenance and attaches it to the record after the loop.
     const captured: CapturedField[] | null = this.traceEnabled ? [] : null;
 
     for (const [key, fieldSchema] of Object.entries(shape)) {
@@ -1414,18 +883,13 @@ export class WorldImpl implements World {
         { schema, current, reg, source, recordPrng, fieldPrng, fieldPath, recordId, overrides },
         captured,
       );
-      // A skipped optional (`kind: "absent"`) omits the key from the record so
-      // `"key" in record === false`; all other rungs assign the value.
+      // A skipped optional ("absent") omits the key ("key" in record === false).
       if (resolution.kind !== "absent") result[key] = resolution.value;
     }
     if (captured !== null) this.ensureCaptureSink().set(result, captured);
     return result;
   }
 
-  // Resolve one field through PIPELINE, capturing its provenance into
-  // `captured` when the trace gate is on (a read-tracking Proxy over the
-  // in-progress record feeds `dependsOn`). Extracted from the per-field loop so
-  // `generateObjectFields` stays under the 50-LOC body guard.
   private resolveField(
     key: string,
     fs: ZodTypeAny,
@@ -1446,10 +910,8 @@ export class WorldImpl implements World {
     const reads: Set<string> | null = captured !== null ? new Set() : null;
     const current = reads !== null ? trackReads(result, reads) : result;
     const fieldOverride = f.overrides?.[key];
-    // An array-valued field override sets the array element count — thread
-    // its length so the field's array generation produces exactly that many base
-    // elements (override length wins; schema bounds govern only the no-override
-    // count). Non-array overrides leave this `undefined`.
+    // An array override sets the element count; thread its length so the field's
+    // array generation produces exactly that many base elements (override wins).
     const overrideArrayLength = Array.isArray(fieldOverride) ? fieldOverride.length : undefined;
     const fieldCtx = this.makeFieldCtx(
       f.reg,
@@ -1470,8 +932,6 @@ export class WorldImpl implements World {
       reg: f.reg,
       outerSchema: f.schema,
       resolvedSchema: f.current,
-      // Empty sentinels avoid a per-world Map allocation when
-      // neither was wired through `withGenerators` / `withKeyMap`.
       customKeyGenerators: this.customKeyGenerators ?? EMPTY_CUSTOM_KEY_GENERATORS,
       schemaKeyMaps: this.schemaKeyMaps ?? EMPTY_SCHEMA_KEY_MAPS,
       optionalProbability: this.options.optionalProbability ?? 0.2,
@@ -1479,16 +939,10 @@ export class WorldImpl implements World {
       state: { inner: fs },
       explainMeta,
     };
-    // The single per-field override-application site. The no-override hot
-    // path (the overwhelming majority) walks the pipeline directly — no closure
-    // allocated, no extra PRNG draw vs. today. Only an overridden
-    // field allocates the `generateRaw` closure and dispatches on shape.
-    //
-    // An EXPLICIT `undefined` override (the key is present in `overrides` with
-    // value `undefined`) forces the field to `undefined`, matching the legacy
-    // whole-record `deepMerge(result, overrides)` pass (which set the key to
-    // `undefined`); `overrides[key]` alone can't distinguish this from an absent
-    // key, so the `key in overrides` check restores it.
+    // An EXPLICIT undefined override (key present with value undefined) forces the
+    // field to undefined; overrides[key] can't distinguish that from an absent key,
+    // so the `key in overrides` check restores it. The no-override path walks the
+    // pipeline directly (no closure, no extra PRNG draw).
     const explicitUndefined =
       fieldOverride === undefined && f.overrides !== undefined && key in f.overrides;
     const resolution: FieldResolution = explicitUndefined
@@ -1502,23 +956,6 @@ export class WorldImpl implements World {
     return resolution;
   }
 
-  // -------------------------------------------------------------------------
-  // Private: array generation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Thin dispatcher: resolves recursion-depth, the array PRNG fork, and the
-   * inner-schema mode, then delegates to one of three per-mode methods. The
-   * shared trailing pass ({@link applyArrayTrailingPass}) closes the
-   * sequence (cap → overrides → transform) by applying `options.transform`
-   * uniformly across all three arms — the cap and per-index overrides are
-   * already applied AT PRODUCTION TIME inside each per-mode method, where
-   * stored-equals-returned requires they precede `registry.store`.
-   *
-   * Mirrors {@link generateSingleItem}'s decomposition: dispatcher + named
-   * branch helpers, with the trailing tail in one shared place so any new
-   * cross-arm behaviour lands once.
-   */
   private generateArray(
     innerSchema: ZodTypeAny,
     arraySchema: ZodTypeAny,
@@ -1528,11 +965,9 @@ export class WorldImpl implements World {
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
     if (depth > (options?.recursionLimit ?? this.options.recursionLimit ?? 5)) return [];
 
-    // Site 2: key the array's PRNG on the outer `arraySchema` reference
-    // (NOT the inner element schema). Keying on the inner schema would
-    // coalesce `z.array(X).min(3)` and `z.array(X).max(5)` into one slot
-    // bucket; keying on the outer ZodArray reference preserves their
-    // independence.
+    // Key the array PRNG on the outer arraySchema reference, NOT the inner
+    // element schema — the latter would coalesce z.array(X).min(3) and
+    // z.array(X).max(5) into one slot bucket.
     const { id: arrayId, slot: arraySlot } = this.nextSchemaSlot(arraySchema);
     const genPrng = this.prng.fork(`array:${arrayId}:${arraySlot}`);
 
@@ -1578,21 +1013,6 @@ export class WorldImpl implements World {
     return this.applyArrayTrailingPass(result, options);
   }
 
-  /**
-   * Derived arm — one output per source record across all derived `mode.regs`.
-   *
-   * Preserved contracts:
-   *   - Auto-provisions sources via `generateAndStorePrimary` until pair count
-   *     reaches `minRequired`.
-   *   - Caps at `callerMax ?? defMax` BEFORE production so no
-   *     `generateDerivedRecord` runs and no record is stored past the cap
-   *     (preserves `registry.count(Derived) === result.length`).
-   *   - Applies per-index `options.overrides` via post-production
-   *     `deepMerge` — matching the existing semantics (the stored record is
-   *     the pre-merge value; returned record is post-merge).
-   *   - Returns the result PRE-transform; the dispatcher's shared trailing
-   *     pass applies `options.transform`.
-   */
   private generateArrayDerived(
     innerSchema: ZodTypeAny,
     arraySchema: ZodTypeAny,
@@ -1603,23 +1023,16 @@ export class WorldImpl implements World {
   ): unknown[] {
     const pairs = this.collectSourcePairs(derivedRegs);
 
-    // An override array sets the element count — its length wins over the
-    // schema bounds / `defaultArrayLength` (uniform with the field, primary,
-    // and ad-hoc paths). It raises the floor so enough sources are
-    // auto-provisioned and the cap below resolves to exactly `override.length`.
+    // An override array sets the element count (length wins over schema bounds /
+    // defaultArrayLength) and raises the floor so enough sources are provisioned.
     const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
-    // Auto-provision more sources if min constraint requires it
     const minRequired =
       overridesArr !== undefined
         ? Math.max(resolveMinRequired(arraySchema, defMin), overridesArr.length)
         : resolveMinRequired(arraySchema, defMin);
-    // Track how many sources we've auto-provisioned per `from:` schema
-    // so each provisioned source gets a distinct explicit `sourceIndex`. Under
-    // `store: false` the source write is suppressed, so `registry.count` stays
-    // frozen and the original `sourceIndex = registry.count(fromSchema)` would
-    // collapse every source to the same index → identical derived records keyed
-    // on `dreg<id>#<sourceIndex>`. We base each index on the count captured
-    // BEFORE provisioning that schema (`fromBase`) plus a per-schema offset.
+    // Base each provisioned sourceIndex on the count captured BEFORE provisioning
+    // (fromBase) + a per-schema offset: under store:false registry.count stays
+    // frozen, so the naive registry.count would collapse all sources to one index.
     const fromBase = new Map<ZodTypeAny, number>();
     const fromProvisioned = new Map<ZodTypeAny, number>();
     while (pairs.length < minRequired) {
@@ -1631,25 +1044,17 @@ export class WorldImpl implements World {
         fromBase.set(fromSchema, this.registry.count(fromSchema));
       }
       const offset = fromProvisioned.get(fromSchema) ?? 0;
-      // Store-on is byte-identical: the write advances the count by one per
-      // iteration, so the original `registry.count(fromSchema)` yielded
-      // `base, base+1, …` — exactly what `fromBase + offset` gives here.
+      // Store-on is byte-identical: registry.count yielded base, base+1, … —
+      // exactly what fromBase + offset gives.
       const sourceIndex = fromBase.get(fromSchema)! + offset;
       fromProvisioned.set(fromSchema, offset + 1);
       const newSource = this.generateAndStorePrimary(fromSchema, fromReg, undefined, sourceIndex);
       pairs.push({ source: newSource, reg, sourceIndex });
     }
 
-    // Cap at `callerMax ?? defMax` BEFORE production —
-    // never call `generateDerivedRecord` for pairs beyond the cap, never
-    // store records past the cap (stored = returned). The floor
-    // (`minRequired`) wins when it exceeds the cap — mirror the primary
-    // arm's `Math.min(min, max), Math.max(min, max)` framing so an
-    // impossible `.min(6).max(3)` configuration collapses to a defined
-    // length rather than throwing.
-    // When an override array is present the count is exactly its length
-    // (override wins over the caller `.max()` / `.length()` bound, like the
-    // field + primary + ad-hoc paths). Otherwise the cap stands.
+    // Cap BEFORE production so no record past the cap is generated or stored
+    // (stored = returned). The floor (minRequired) wins when it exceeds the cap.
+    // An override array forces the count to exactly its length (override wins).
     const callerMax = readCallerMaxBound(arraySchema);
     const upper = callerMax ?? defMax;
     const cap =
@@ -1660,17 +1065,12 @@ export class WorldImpl implements World {
 
     let result: unknown[] = capped.map(({ source, reg, sourceIndex }) => {
       const record = this.generateDerivedRecord(innerSchema, reg, source, sourceIndex);
-      // Every returned record is also stored, gated on
-      // `effectiveStore` so `{ store: false }` suppresses the write.
       if (this.effectiveStore) {
         this.registry.store(innerSchema, record as input<ZodTypeAny>);
       }
       return record;
     });
 
-    // Apply per-index overrides on derived path (mirror the ad-hoc
-    // arm's post-production `deepMerge`). Transform lives in the shared
-    // trailing pass.
     if (options?.overrides) {
       const overrides = options.overrides as unknown[];
       result = result.map((item, i) => {
@@ -1681,24 +1081,6 @@ export class WorldImpl implements World {
     return result;
   }
 
-  /**
-   * Primary arm — generate N items, store each in the registry, return all.
-   *
-   * Preserved contracts:
-   *   - Target length is `max(existingCount, int(min, max))` so previously
-   *     populated records are respected.
-   *   - Honours caller `.max()` / `.length()` on BOTH
-   *     store-on and store-off paths; does NOT slice on the library-side
-   *     `defMax` fallback.
-   *   - Under `store: false`, allocates `Array.from(length=callerMax-capped)`
-   *     directly (the while-loop would never terminate because
-   *     `registry.count` never advances).
-   *   - Per-index `options.overrides` are threaded into
-   *     `generateAndStorePrimary`, merging at field-level BEFORE
-   *     `registry.store` (stored == returned).
-   *   - Returns the result PRE-transform; the dispatcher's shared trailing
-   *     pass applies `options.transform`.
-   */
   private generateArrayPrimary(
     innerSchema: ZodTypeAny,
     arraySchema: ZodTypeAny,
@@ -1713,44 +1095,30 @@ export class WorldImpl implements World {
     const minRequired = resolveMinRequired(arraySchema, defMin);
     const maxAllowed = resolveMaxAllowed(arraySchema, defMax);
     const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
-    // An override array sets the element count — the result length is
-    // `max(existingCount, override.length)` (the stored-equals-returned carveout:
-    // already stored records can't be un-generated, so they pin the floor; the override
-    // length wins over the schema/default count and over an explicit `.length(N)`).
-    // Without an override array the no-override length resolution is unchanged.
+    // An override array sets the result length to max(existingCount, override.length)
+    // — already-stored records pin the floor (stored = returned), the override wins
+    // over schema/default count and over an explicit .length(N).
     const target =
       overridesArr !== undefined
         ? Math.max(existingCount, overridesArr.length)
         : Math.max(
             existingCount,
-            // minRequired always wins as lower bound — schema .min(N) must be
-            // honoured even when N exceeds defMax.
+            // minRequired wins as lower bound — schema .min(N) honoured even past defMax.
             genPrng.int(minRequired, Math.max(minRequired, maxAllowed)),
           );
 
-    // Honour caller-side `.max()` / `.length()` slice on
-    // BOTH store-on and store-off paths. Only slice when the caller
-    // actually wrote a bound — we MUST NOT slice on the library-side
-    // `defMax` fallback. An override array wins over the caller bound,
-    // so the slice is suppressed when an override array is present.
+    // Slice only on a caller-written .max()/.length() (NOT the library defMax
+    // fallback) on both store paths; an override array wins, suppressing the slice.
     const callerMax = overridesArr !== undefined ? undefined : readCallerMaxBound(arraySchema);
 
-    // Under store:false, the while-loop below would never terminate —
-    // generateAndStorePrimary skips the registry write (transitive
-    // suppression) so `registry.count(innerSchema)` never advances past
-    // `existingCount`. Generate directly via Array.from instead. The
-    // length already incorporates the callerMax cap so no work
-    // is allocated beyond what we will return (no while loop).
+    // Under store:false the while-loop never terminates (registry.count never
+    // advances past existingCount), so generate directly via Array.from.
     if (!this.effectiveStore) {
       const storeOffLength = callerMax !== undefined ? Math.min(target, callerMax) : target;
       return Array.from({ length: storeOffLength }, (_, i) =>
-        // Thread an explicit per-element index (`existingCount + i`) so
-        // the i-th store-off element seeds from the same `recordId`
-        // (`reg<id>#<existingCount+i>`) the store-on `while` loop produces at
-        // that position. The `registry.count + pending` derivation collapses
-        // under suppressed writes (every sibling enters at count==existingCount,
-        // pending==0), yielding identical records. Per-index override
-        // threading (`overrides: overridesArr?.[i]`) is preserved unchanged.
+        // Thread an explicit per-element index (existingCount + i) so the i-th
+        // store-off element seeds from the same recordId the store-on while loop
+        // produces at that position (suppressed writes would otherwise collapse them).
         this.generateAndStorePrimary(
           innerSchema,
           primaryReg,
@@ -1763,31 +1131,16 @@ export class WorldImpl implements World {
     }
 
     while (this.registry.count(innerSchema) < target) {
-      const i = this.registry.count(innerSchema); // index of the about-to-be-produced record
+      const i = this.registry.count(innerSchema);
       this.generateAndStorePrimary(innerSchema, primaryReg, {
         overrides: overridesArr?.[i] as Record<string, unknown> | undefined,
       });
     }
 
     const all = this.registry.all(innerSchema);
-    // Stored-equals-returned preserved — every returned record was first stored, so
-    // the slice is a read-only narrowing of an already-consistent
-    // registry view.
     return callerMax !== undefined && all.length > callerMax ? all.slice(0, callerMax) : all;
   }
 
-  /**
-   * Ad-hoc arm — no registration; pure schema-based generation.
-   *
-   * Preserved contracts:
-   *   - Shares `resolveMinRequired` / `resolveMaxAllowed` with the
-   *     other arms.
-   *   - Element PRNG forks via `genPrng.fork("[i]")` so element order doesn't
-   *     disturb other fields' seeds.
-   *   - Applies per-index `options.overrides` via `deepMerge`.
-   *   - Returns the result PRE-transform; the dispatcher's shared trailing
-   *     pass applies `options.transform`.
-   */
   private generateArrayAdHoc(
     innerSchema: ZodTypeAny,
     arraySchema: ZodTypeAny,
@@ -1796,14 +1149,10 @@ export class WorldImpl implements World {
     genPrng: ReturnType<typeof createPrng>,
     options: GenerateOptions<unknown[]> | undefined,
   ): unknown[] {
-    // Share the bound-resolution helpers instead of inlining.
     const minN = resolveMinRequired(arraySchema, defMin);
     const maxN = resolveMaxAllowed(arraySchema, defMax);
-    // An override array sets the element count — its length wins over the
-    // schema bounds / `defaultArrayLength`, which govern only the no-override
-    // case (uniform with the field + primary paths). minN always wins as
-    // lower bound in the no-override case — schema .min(N) must be honoured even
-    // when N exceeds defMax (e.g. defaultArrayLength:[1,4] + .min(100) → 100).
+    // An override array's length wins over schema bounds / defaultArrayLength;
+    // otherwise minN wins as lower bound (schema .min(N) honoured even past defMax).
     const overridesArr = Array.isArray(options?.overrides) ? options.overrides : undefined;
     const N =
       overridesArr !== undefined ? overridesArr.length : genPrng.int(minN, Math.max(minN, maxN));
@@ -1830,16 +1179,9 @@ export class WorldImpl implements World {
     return result;
   }
 
-  /**
-   * Shared trailing pass for `generateArray`. The full sequence is
-   * cap → per-index overrides → transform; the cap and per-index overrides
-   * are applied AT PRODUCTION TIME inside each per-mode method (required to
-   * preserve stored-equals-returned for derived/primary, where the cap gates `registry.store`
-   * and overrides on the primary arm merge before store via
-   * `generateAndStorePrimary`). This shared method closes the sequence with
-   * `options.transform`, which is uniformly safe to apply post-production
-   * across all three arms.
-   */
+  // Closes the cap → overrides → transform sequence with transform only; the cap
+  // and per-index overrides are applied at production time inside each arm (they
+  // must precede registry.store to preserve stored = returned).
   private applyArrayTrailingPass(
     result: unknown[],
     options: GenerateOptions<unknown[]> | undefined,
@@ -1850,14 +1192,8 @@ export class WorldImpl implements World {
     return result;
   }
 
-  /**
-   * Collect `(source, reg, sourceIndex)` triples across the given derived
-   * registrations by iterating each `reg.from`'s registry sources. When
-   * `captured` is provided and a `reg.from` registry is empty, falls back
-   * to the captured map (local-capture for `store: false` derived
-   * auto-source). Shared between {@link generateArrayDerived} and
-   * {@link generateDerivedAutoSource}.
-   */
+  // When captured is provided and a reg.from registry is empty, falls back to the
+  // captured map (local-capture for the store:false derived auto-source path).
   private collectSourcePairs(
     derivedRegs: SchemaReg[],
     captured?: Map<ZodTypeAny, unknown>,
@@ -1876,54 +1212,23 @@ export class WorldImpl implements World {
     return pairs;
   }
 
-  // -------------------------------------------------------------------------
-  // Private: single-item generation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Thin dispatcher: resolves the schema mode (with-source override / no-source
-   * derived / primary / ad-hoc), routes to one of the four private branch
-   * helpers, and applies the trailing `overrides` + `transform` pass when the
-   * branch helper hasn't already done so internally.
-   *
-   * Responsibilities kept here:
-   *   - recursion-depth guard,
-   *   - `derivedPairCounter++` increment at top,
-   *   - lazy-resolve `while` producing `targetSchema`,
-   *   - two-level `findDerivedRegs` / `findPrimaryRegs` detection,
-   *   - `sourceOverride` extraction,
-   *   - upsert cache short-circuit (cache-neutral — rolls back
-   *     `derivedPairCounter--` so an upsert hit advances no counter),
-   *   - trailing `overrides` deep-merge + `transform` application.
-   */
   private generateSingleItem(schema: ZodTypeAny, options?: GenerateOptions<unknown>): unknown {
     const fieldPath = options?.fieldPath ?? "";
     const depth = fieldPath ? fieldPath.split(".").filter(Boolean).length : 0;
     if (depth > (options?.recursionLimit ?? this.options.recursionLimit ?? 5)) return null;
 
-    // Only the derived-without-source pair picker (below, at the
-    // `pairs[idx]` site) still reads this counter. The three former
-    // PRNG-fork-key consumers (ad-hoc, array, outer-wrap) moved to
-    // `schemaCallCounts` via `nextSchemaSlot`.
     this.derivedPairCounter++;
 
     const current = resolveLazyChain(schema, this.lazyCache);
     const targetSchema = current;
 
-    // Two-level fallback for the lazy-resolve interaction: prefer registrations
-    // keyed on the outer `schema` reference; fall back to the lazy-resolved
-    // `targetSchema` if the outer reference has no registration. The two-level
-    // check is specific to this dispatcher (lazy-resolved schemas may have been
-    // registered under either reference); `resolveMode` itself operates on
-    // whatever schema it is given.
+    // Two-level fallback for lazy-resolve: prefer the outer schema reference,
+    // fall back to the resolved targetSchema (either may carry the registration).
     let mode = this.resolveMode(schema);
     if (mode.kind === "ad-hoc" && targetSchema !== schema) {
       mode = this.resolveMode(targetSchema);
     }
 
-    // The `source` field on GenerateOptions is intentionally typed `any` at
-    // registration time (the input/output type story); the cast is preserved
-    // verbatim from the legacy dispatcher (no new `any`).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sourceOverride = (options as any)?.source;
 
@@ -1931,10 +1236,8 @@ export class WorldImpl implements World {
     let transformApplied = false;
 
     if (sourceOverride !== undefined) {
-      // Upsert cache short-circuit lives here (dispatcher) so the
-      // `derivedPairCounter--` rollback runs before we call into the helper.
-      // An upsert hit must leave no observable per-world
-      // generation state behind.
+      // The upsert short-circuit lives here so the derivedPairCounter-- rollback
+      // runs before the helper — an upsert hit must leave no per-world state behind.
       const derivedRegs = mode.kind === "derived" ? mode.regs : [];
       const reg = (derivedRegs[0] ?? { ...EMPTY_REG, schema }) as SchemaReg;
       const identity = computeSourceIdentity(reg.sourceKey, sourceOverride);
@@ -1942,8 +1245,6 @@ export class WorldImpl implements World {
       const canUseUpsert = isUnique && this.effectiveStore;
 
       if (canUseUpsert && this.derivedUpsert !== null) {
-        // Read-only path — skip the allocation entirely when the
-        // map has never been written.
         const existing = getDerivedUpsert(this.derivedUpsert, schema, identity);
         if (existing !== undefined) {
           this.derivedPairCounter--;
@@ -1969,33 +1270,15 @@ export class WorldImpl implements World {
       }
     }
 
-    // The whole-record `deepMerge(result, options.overrides)` second
-    // pass is removed. Overrides are now fully resolved per-field at the single
-    // override-application site inside `generateObjectFields`; a second
-    // whole-record application would re-clobber the per-index array merge.
+    // No whole-record override merge here: overrides are resolved per-field at the
+    // single site inside generateObjectFields (a second pass would re-clobber the
+    // per-index array merge).
     if (options?.transform && !transformApplied) {
       result = options.transform(result as input<ZodTypeAny>);
     }
     return result;
   }
 
-  /**
-   * Branch 1 — `sourceOverride !== undefined`: with-source per-(DerivedSchema,
-   * source-identity) upsert path.
-   *
-   * Preserved contracts:
-   *   - Writes the derived record to the registry and records
-   *     the `(identity → derived)` entry in `derivedUpsert` when
-   *     `effectiveStore === true && isUnique === true`.
-   *   - Under `effectiveStore === false`, both the `registry.store`
-   *     and the `derivedUpsert` write are suppressed.
-   *   - `generateDerivedRecord` applies `options.overrides` and
-   *     `options.transform` internally; the dispatcher's trailing block is
-   *     gated by `transformApplied = true` so neither is re-applied here.
-   *
-   * The upsert cache short-circuit and `derivedPairCounter--` rollback live in
-   * the dispatcher above.
-   */
   private generateWithSourceOverride(
     schema: ZodTypeAny,
     derivedRegs: SchemaReg[],
@@ -2006,16 +1289,9 @@ export class WorldImpl implements World {
     const identity = computeSourceIdentity(reg.sourceKey, source);
     const isUnique = options?.unique !== false;
 
-    // `generateDerivedRecord` already applies `options.overrides` (via
-    // `generateObjectFields`'s per-field deep-merge) AND `options.transform`
-    // Trust its return value here; do NOT re-apply overrides
-    // or transform in this branch (would double-apply for any non-idempotent
-    // transform).
-    //
-    // Seed the field PRNG from the SOURCE IDENTITY, not a hardcoded 0.
-    // A literal 0 made every explicit-source `generate(Derived, { source })`
-    // collapse to the same `dreg<regId>#0` field seed, so all derived records
-    // shared identical field values (only `ctx.source.*`-pulled fields varied).
+    // Seed the field PRNG from the SOURCE IDENTITY, not a hardcoded 0 — a literal 0
+    // collapsed every explicit-source derived record to the same field seed.
+    // (generateDerivedRecord already applies overrides + transform; don't re-apply.)
     const result = this.generateDerivedRecord(
       schema,
       reg,
@@ -2024,14 +1300,11 @@ export class WorldImpl implements World {
       options,
     );
 
-    // When the outer call opted out of storage, do NOT touch
-    // the registry and do NOT write to the upsert map — both side effects
-    // are suppressed together so a later default-mode call cannot resolve
-    // to a record that isn't in the registry.
+    // Suppress BOTH the registry and upsert writes together under store:false so a
+    // later default-mode call can't resolve to a record absent from the registry.
     if (this.effectiveStore) {
       this.registry.store(schema, result as input<ZodTypeAny>);
       if (isUnique) {
-        // Allocate on first write.
         setDerivedUpsert(this.ensureDerivedUpsert(), schema, identity, result);
       }
     }
@@ -2039,43 +1312,14 @@ export class WorldImpl implements World {
     return result;
   }
 
-  /**
-   * Branch 2 — `derivedRegs.length > 0` with no explicit source: the no-source
-   * derived auto-source path.
-   *
-   * Preserved contracts:
-   *   - Auto-provisions one source per distinct `reg.from` with an empty
-   *     source registry, via `generateAndStorePrimary`.
-   *   - Local-capture: under `store: false` the auto-provision write is
-   *     suppressed, so the freshly generated source is captured in a local
-   *     `Map<ZodTypeAny, unknown>` keyed by `reg.from`. Multiple derivedRegs
-   *     sharing the same `reg.from` reuse one captured source.
-   *   - Pair-pick by `(derivedPairCounter - 1) % pairs.length` round-robin.
-   *   - `generateDerivedRecord` applies `options.overrides` /
-   *     `options.transform` internally; the dispatcher's trailing block is
-   *     gated by `transformApplied = true`.
-   *   - Under `if (this.effectiveStore)`, write the
-   *     derived record to the registry. Mirrors the with-source branch's
-   *     existing line. The new store does NOT touch `derivedUpsert` — that
-   *     map is keyed on explicit source identity and the no-source path has
-   *     none.
-   *   - The new store call is gated on `this.effectiveStore`,
-   *     preserving transitive `store: false` suppression.
-   */
   private generateDerivedAutoSource(
     schema: ZodTypeAny,
     derivedRegs: SchemaReg[],
     options: GenerateOptions<unknown> | undefined,
   ): unknown {
-    // Pick first available source across all derived regs, auto-provisioning
-    // if needed. Under `store: false` (transitive suppression) the
-    // `generateAndStorePrimary` call generates but does NOT write to the
-    // registry — so we capture the freshly generated source locally and
-    // fall back to it when the registry read still returns []. The local
-    // map is keyed by `reg.from` so multiple derivedRegs sharing the same
-    // source schema reuse one auto-provisioned source (matching the
-    // existing behaviour: `registry.count(reg.from) === 0` skips after
-    // the first call writes).
+    // Under store:false the auto-provision write is suppressed, so capture the
+    // freshly generated source locally (keyed by reg.from, reused across regs that
+    // share a source) and fall back to it when the registry read still returns [].
     const captured = new Map<ZodTypeAny, unknown>();
     for (const reg of derivedRegs) {
       if (this.registry.count(reg.from!) === 0 && !captured.has(reg.from!)) {
@@ -2085,22 +1329,12 @@ export class WorldImpl implements World {
       }
     }
 
-    // Collect all (source, reg, index) pairs and pick by derivedPairCounter.
-    // The non-empty path reads from the registry exactly as today;
-    // the local capture is consulted only when the registry is still empty
-    // after the auto-provision attempt (i.e. only under `store: false`).
     const pairs = this.collectSourcePairs(derivedRegs, captured);
 
     const idx = (this.derivedPairCounter - 1) % pairs.length;
     const { source, reg, sourceIndex } = pairs[idx]!;
     const result = this.generateDerivedRecord(schema, reg, source, sourceIndex, options);
 
-    // The no-source-derived path now stores the derived
-    // record by default, symmetric with the with-source branch. The store is
-    // gated on `effectiveStore` so `world.generate(D, { store: false })`
-    // still suppresses both source and derived writes.
-    // Does NOT touch `derivedUpsert` — that map is keyed on explicit source
-    // identity, which the no-source path does not have.
     if (this.effectiveStore) {
       this.registry.store(schema, result as input<ZodTypeAny>);
     }
@@ -2108,43 +1342,16 @@ export class WorldImpl implements World {
     return result;
   }
 
-  /**
-   * Branch 3 — `primaryRegs.length > 0`: registered-primary path.
-   *
-   * Delegates to `generateAndStorePrimary`, which applies `options.transform`
-   * internally and stores under `if (this.effectiveStore)`. The dispatcher's
-   * trailing `transform` is suppressed via `transformApplied = true`.
-   */
   private generatePrimary(
     schema: ZodTypeAny,
     primaryReg: SchemaReg,
     options: GenerateOptions<unknown> | undefined,
   ): unknown {
-    // An array generator may thread an explicit per-element `recordIndex`
-    // (the nested-field array path runs through `generateZodArray` →
-    // `ctx.generate(element)` per element, not `generateArrayPrimary`). Pass it
-    // through so each store-off element seeds from a distinct `reg<id>#<index>`.
-    // Store-on is byte-identical: the index equals `existingCount + i`, exactly
-    // what `registry.count + pending` already yields once each prior element is
-    // stored.
+    // Thread an explicit per-element recordIndex (the nested-field array path
+    // generates one element at a time) so each store-off element seeds distinctly.
     return this.generateAndStorePrimary(schema, primaryReg, options, options?.recordIndex);
   }
 
-  /**
-   * Branch 4 — ad-hoc fallback for an unregistered schema.
-   *
-   * Preserved contracts:
-   *   - Site 1: keys the ad-hoc PRNG on the OUTER `schema`
-   *     reference via `nextSchemaSlot(schema)`, NOT on the lazy-resolved
-   *     `targetSchema`. The outer reference is stable across `z.lazy(...)`
-   *     re-resolutions, matching the spec's identity model.
-   *   - Fork key literal shape: `adhoc:${id}:${slot}`.
-   *   - Dispatches on `def(targetSchema).type === "object"` to either
-   *     `generateObjectFields` (objects, threading through `options?.overrides`)
-   *     or `generateFromSchema` (non-objects).
-   *   - The dispatcher applies the trailing `overrides` + `transform` block
-   *     to the result of this branch (it does not set `transformApplied`).
-   */
   private generateAdHoc(
     schema: ZodTypeAny,
     targetSchema: ZodTypeAny,
@@ -2172,10 +1379,6 @@ export class WorldImpl implements World {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public factory
-// ---------------------------------------------------------------------------
-
 /**
  * Create a {@link World} — the central, deterministic generation session.
  * Chain `.withSchema` / `.withGenerators` / `.withKeyMap` to configure it, then
@@ -2197,15 +1400,7 @@ export function createWorld(options?: WorldOptions): World {
   return new WorldImpl(options ?? {});
 }
 
-// ---------------------------------------------------------------------------
-// Test-only escape hatch
-//
-// Test-only accessor for the lazy `WorldImpl` map invariants. Same
-// marker as `__bindCount` in `bind-generators.ts`: NOT part of the public
-// API, not re-exported from `src/index.ts`, no entry in
-// `docs/api-reference.md`.
-// ---------------------------------------------------------------------------
-
+// Test-only accessor for the lazy WorldImpl map invariants; not public API.
 interface LazyMapsSnapshot {
   customKeyGenerators: Map<string, KeyGenerator> | null;
   schemaKeyMaps: Map<ZodTypeAny, Record<string, (ctx: GeneratorContext) => unknown>> | null;

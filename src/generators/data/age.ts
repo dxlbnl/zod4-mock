@@ -1,15 +1,3 @@
-/**
- * @module age
- * `age` clipped log-normal distribution.
- *
- * Closed-form inverse-CDF via the Beasley–Springer–Moro `normInv` polynomial.
- * Parameters: μ = ln(36), σ = 0.35 → ~95% in [18, 80] (US Census median adult
- * age 2020 = 38.5). For tight bounds (`max - min < 20`), falls back to
- * uniform-int.
- *
- * Pure-`Math.*` only — isomorphic.
- */
-
 import type { Prng } from "../../types.js";
 
 // Beasley–Springer–Moro coefficients (Moro 1995). Three regions of u.
@@ -32,10 +20,6 @@ const D = [
 const P_LOW = 0.02425;
 const P_HIGH = 1 - P_LOW;
 
-/**
- * Closed-form inverse of the standard normal CDF — `Φ⁻¹(u)` — via the
- * Beasley–Springer–Moro polynomial. `u ∈ (0, 1)` → standard-normal `z`.
- */
 export function normInv(u: number): number {
   if (u < P_LOW) {
     const q = Math.sqrt(-2 * Math.log(u));
@@ -59,11 +43,7 @@ export function normInv(u: number): number {
   );
 }
 
-/**
- * Clipped log-normal age draw centred on μ = ln(36), σ = 0.35.
- *
- * Tight-bound fallback (`max - min < 20`): uniform-int over `[min, max]`.
- */
+// Tight-bound fallback (max - min < 20): uniform-int over [min, max].
 export function age(prng: Prng, min = 18, max = 80): number {
   if (max - min < 20) {
     return prng.int(Math.ceil(min), Math.floor(max));

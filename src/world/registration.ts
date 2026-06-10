@@ -1,29 +1,5 @@
-/**
- * @module world/registration
- *
- * Pure registration types and helpers extracted from `WorldImpl`.
- *
- * Concerns:
- *   - The internal `SchemaReg` record + its `NormalizedRelation` shape and the
- *     `EMPTY_REG` sentinel used by the ad-hoc / no-source-derived branches.
- *   - The `SchemaMode` tagged union returned by `resolveMode`.
- *   - `normalizeRelationEntry` + the `isZodSchema` predicate that backs the
- *     discriminated `RelationEntry` union (bare schema vs `{ schema, where? }`).
- *   - The `findPrimaryRegs` / `findDerivedRegs` / `resolveMode` lookups over a
- *     `SchemaReg[]` array — `WorldImpl` keeps that array as a private field
- *     and threads it through these free helpers.
- *
- * These helpers are pure functions of their inputs (no `WorldImpl` access);
- * the class methods in `engine.ts` call them. Splitting them out keeps the
- * registration concern testable in isolation and trims the engine file.
- */
-
 import type { ZodTypeAny } from "zod";
 import type { GeneratorContext } from "../types.js";
-
-// ---------------------------------------------------------------------------
-// Internal schema registration record
-// ---------------------------------------------------------------------------
 
 export interface NormalizedRelation {
   schema: ZodTypeAny;
@@ -48,25 +24,11 @@ export const EMPTY_REG: SchemaReg = {
   regId: -1,
 };
 
-/**
- * Internal discriminated union describing a schema's registration mode.
- * Returned by `resolveMode(schemaRegs, schema)`; consumed by the four
- * dispatchers (`generateSingleItem`, `generateArray`, `populate`'s explicit
- * primary-first variant, and `get`'s registered/not check). Not exported from
- * the package — internal to the `world/` subdirectory.
- */
 export type SchemaMode =
   | { kind: "derived"; regs: SchemaReg[] }
   | { kind: "primary"; reg: SchemaReg }
   | { kind: "ad-hoc" };
 
-/**
- * Discriminate the bare-schema form (`relations: { post: Schema }`)
- * from the object form (`relations: { post: { schema, where? } }`). An entry
- * is the object form when it is a non-Zod object carrying a `schema` property
- * whose value is itself a Zod schema. A `ZodTypeAny` carries its definition
- * at `_zod.def` — we use that brand to discriminate.
- */
 export function isZodSchema(value: unknown): value is ZodTypeAny {
   return (
     typeof value === "object" && value !== null && "_zod" in (value as Record<string, unknown>)
@@ -91,10 +53,6 @@ export function normalizeRelationEntry(entry: unknown): NormalizedRelation {
   throw new Error("Invalid relations entry: expected a Zod schema or `{ schema, where? }` object.");
 }
 
-// ---------------------------------------------------------------------------
-// Registration lookups
-// ---------------------------------------------------------------------------
-
 export function findPrimaryRegs(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaReg[] {
   return schemaRegs.filter((r) => r.schema === schema && r.from === null);
 }
@@ -103,19 +61,7 @@ export function findDerivedRegs(schemaRegs: readonly SchemaReg[], schema: ZodTyp
   return schemaRegs.filter((r) => r.schema === schema && r.from !== null);
 }
 
-/**
- * Tagged-union resolution of a schema's registration mode. Replaces
- * the `findDerivedRegs(...).length > 0 ? ... : findPrimaryRegs(...).length > 0
- * ? ... : ad-hoc` cascade at the dispatcher sites.
- *
- * Derived-first precedence is uniform across all four dispatchers
- * (`generateSingleItem`, `generateArray`, `populate`, `get`) —
- * `withSchema` forbids dual primary+derived registration at registration
- * time, so the inversion-observable config can't exist and `populate`'s
- * former primary-first pre-check was removed. Operates on whatever schema
- * reference it is given — callers handle the two-level (`schema` then
- * `targetSchema`) fallback themselves where they need it.
- */
+// Derived-first precedence (withSchema forbids dual primary+derived registration).
 export function resolveMode(schemaRegs: readonly SchemaReg[], schema: ZodTypeAny): SchemaMode {
   const derivedRegs = findDerivedRegs(schemaRegs, schema);
   if (derivedRegs.length > 0) return { kind: "derived", regs: derivedRegs };

@@ -1,9 +1,5 @@
 import type { Prng } from "../../types.js";
 
-// ---------------------------------------------------------------------------
-// Datasets
-// ---------------------------------------------------------------------------
-
 const PLATFORMS = ["windows", "macos", "linux", "ios", "android"] as const;
 const BROWSERS = ["chrome", "firefox", "safari", "edge"] as const;
 
@@ -71,10 +67,6 @@ const DIR_COMPONENTS = [
   "src",
   "dist",
 ] as const;
-
-// ---------------------------------------------------------------------------
-// Generators
-// ---------------------------------------------------------------------------
 
 export function platform(prng: Prng): string {
   return prng.pick(PLATFORMS);

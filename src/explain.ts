@@ -1,15 +1,3 @@
-/**
- * @module explain
- *
- * Read-only, PRNG-neutral introspection helper for `world.explain(schema)`.
- *
- * Walks the same `PIPELINE` list as `WorldImpl.generateObjectFields` with
- * `dryRun: true`. Each step that would fire writes a `{ identifier, reason }`
- * pair into `ctx.explainMeta`, which this module renders into the
- * `FieldExplanation` shape. The per-rung decision logic lives in the seven
- * step bodies in `src/pipeline.ts` — no duplication here.
- */
-
 import type { ZodTypeAny } from "zod";
 import {
   def,
@@ -32,18 +20,10 @@ import {
   type SchemaReg,
 } from "./pipeline.js";
 
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
-
 export interface ExplainInputs {
-  /** Matchers registered on the most recent `withSchema(...)` for this schema. */
   matchers: Record<string, unknown>;
-  /** Per-schema key-map (registered via `withKeyMap`). */
   schemaKeyMap: Record<string, unknown>;
-  /** World-level custom generators (registered via `withGenerators`). */
   customKeyGenerators: Map<string, unknown>;
-  /** Normalised relations for the schema (name → { schema, where }). */
   relations: Record<string, { schema: ZodTypeAny; where: unknown }>;
 }
 
@@ -51,16 +31,13 @@ export function explainSchema<TSchema extends ZodTypeAny>(
   schema: TSchema,
   inputs: ExplainInputs,
 ): ExplainResult<TSchema> {
-  // Mirror the unwrapping `WorldImpl.generate` does for the outer schema:
-  // strip optional / nullable / lazy wrappers to reach an object.
+  // Mirror the unwrapping WorldImpl.generate does for the outer schema.
   let current: ZodTypeAny = stripOuterOptionalNullable(schema).inner;
   current = resolveLazyChain(current);
   const d = def(current);
 
   const fields: Record<string, FieldExplanation> = {};
   if (d.type === "object" && d.shape) {
-    // Build a per-call `SchemaReg` carrying the supplied matchers, and a
-    // 1-entry schemaKeyMaps that the pipeline's dry-run branches consult.
     const reg: SchemaReg = {
       ...EMPTY_SCHEMA_REG,
       schema: current,
@@ -77,8 +54,7 @@ export function explainSchema<TSchema extends ZodTypeAny>(
       const stepCtx: PipelineStepContext = {
         fieldSchema: fieldSchema as ZodTypeAny,
         fieldName: key,
-        // Dry-run never invokes generators — the fieldCtx is a stub. Use `null`
-        // through a cast for fields the dry-run path never reads.
+        // Dry-run never invokes generators — fieldCtx is a stub.
         fieldCtx: undefined as unknown as GeneratorContext,
         fieldOverride: undefined,
         reg,
@@ -92,10 +68,6 @@ export function explainSchema<TSchema extends ZodTypeAny>(
         explainMeta: {},
       };
       walkPipeline(PIPELINE, stepCtx);
-      // `explainMeta` is `{}` here because the dry-run path needs the
-      // identifier/reason capture. The hot-path ctx in `engine.ts` uses
-      // `null` instead and pipeline steps skip the writes — but on this
-      // path the slot is always non-null.
       const meta = stepCtx.explainMeta;
       fields[key] = {
         generator: meta?.identifier ?? "schema-based",
@@ -121,10 +93,6 @@ export function explainSchema<TSchema extends ZodTypeAny>(
   };
   return result as ExplainResult<TSchema>;
 }
-
-// ---------------------------------------------------------------------------
-// toString formatter — aligned per-field table
-// ---------------------------------------------------------------------------
 
 function formatExplainResult(
   fields: Record<string, FieldExplanation>,
